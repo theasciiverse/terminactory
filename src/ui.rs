@@ -2314,7 +2314,7 @@ mod tests {
         app.menu = Some(Category::Create);
         let buf = render(&mut app, 130, 42);
         assert!(text(&buf).contains("BUILD > CREATE"));
-        assert!(text(&buf).contains("Copper press"));
+        assert!(text(&buf).contains("Press"));
         std::fs::write("target/snapshot.html", to_html(&buf)).unwrap();
 
         app.menu = None;
@@ -2326,7 +2326,7 @@ mod tests {
         app.power_view = false;
         app.tree = true;
         let buf = render(&mut app, 130, 42);
-        assert!(text(&buf).contains("Copper press") && text(&buf).contains("make copper wire first"));
+        assert!(text(&buf).contains("Press") && text(&buf).contains("make copper wire first"));
 
         app.tree = false;
         app.letter = Some(Company::Ashgrove);
@@ -2379,9 +2379,9 @@ mod tests {
         let buf = render(&mut app, 130, 42);
         let t = text(&buf);
         assert!(t.contains("17,687 research") && !t.contains("Upgrades"), "{t}");
-        assert!(t.contains("Making        ● Copper press"), "{t}");
+        assert!(t.contains("Making        ● Press"), "{t}");
         assert!(t.contains("make copper wire first") && t.contains("Floors") && t.contains("Belt tunnels"), "{t}");
-        assert!(t.contains("Copper press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
+        assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
         assert!(!t.contains("more "), "{t}");
         std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
         // Narrow: group names on their own lines; small: it scrolls, with markers.
@@ -2422,7 +2422,7 @@ mod tests {
         let t = text(&buf);
         assert!(t.contains("Made by") && t.contains("Used in") && !t.contains("MADE BY"), "{t}");
         assert!(t.contains("molten copper  ──→  copper ingot"), "a word equation, with the fluid in it: {t}");
-        assert!(t.contains("copper ingot  ──→  copper plate   in Copper press, Assembler"), "{t}");
+        assert!(t.contains("copper ingot  ──→  copper plate   in Press, Assembler"), "{t}");
         assert!(t.contains("6.0 now, fading to a floor of 0.18") && t.contains("0.18 ┤") && t.contains("← floor"), "{t}");
         std::fs::write("target/snapshot-book.html", to_html(&buf)).unwrap();
 
@@ -2633,7 +2633,7 @@ mod tests {
         app.cam_ready = true;
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("PR") && t.contains("PUMP") && t.contains("FURN"), "{t}");
-        assert!(text(&render(&mut app, 64, 16)).contains("Copper press  $150  2x1  facing"));
+        assert!(text(&render(&mut app, 64, 16)).contains("Press  $150  2x1  facing"));
         app.cam = (x - 4, y - 2);
         let east = render(&mut app, 130, 42);
         // Turned north the ghost is one wide and two tall, and the label says so.
@@ -2641,7 +2641,7 @@ mod tests {
         app.cursor = (x + 6, y + 13);
         app.cam = (x - 4, y - 2);
         let north = render(&mut app, 130, 42);
-        assert!(text(&render(&mut app, 64, 16)).contains("Copper press  $150  1x2  facing"));
+        assert!(text(&render(&mut app, 64, 16)).contains("Press  $150  1x2  facing"));
         std::fs::write("target/snapshot-long-machines.html", to_html(&east)).unwrap();
         std::fs::write("target/snapshot-long-machines-north.html", to_html(&north)).unwrap();
         // A narrow, tall pane keeps the map readable.

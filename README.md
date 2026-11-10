@@ -31,7 +31,7 @@ Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a sp
 
 ## What's in it
 
-Phase 1: ore is melted in a furnace into molten metal, a molder casts it into ingots, and a press makes plates. Sell for money and research, research the copper press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company.
+Phase 1: ore is melted in a furnace into molten metal, a molder casts it into ingots, and a press makes plates. Sell for money and research, research the press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company.
 
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
@@ -151,7 +151,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `A>` | Filtering arm | 1×1 | |
 | `FURN` | Furnace (letter = recipe: M molten copper, I molten iron, K coke) | 3×3 | `~` wire, `0` pipe |
 | `MOLD` | Molder (C copper ingot, I iron ingot, S steel) | 2×2 | `i` ingot (copper orange, iron blue) |
-| `PRW>` | Copper press (= copper plate, - iron plate, W wire, P pipe, C coil; the letter sits before the arrow) | 2×1 | `@` coil, `#` coke |
+| `PRW>` | Press (= copper plate, - iron plate, W wire, P pipe, C coil; the letter sits before the arrow) | 2×1 | `@` coil, `#` coke |
 | `DRL2` | Basic drill (iron twice as fast) | 2×2 | `o` (blue) iron ore, `o` (grey) stone |
 | `C>` | Crate | 1×1 | |
 | `TRADE` | Trade post (`$ $ $` money, `$ / R` split, `R R R` research) | 3×3 | |

@@ -320,7 +320,7 @@ impl Tech {
     }
     pub fn name(self) -> &'static str {
         match self {
-            Tech::Press => "Copper press",
+            Tech::Press => "Press",
             Tech::Coking => "Coking",
             Tech::BasicDrill => "Basic drill",
             Tech::Pumps => "Pumps & pipes",

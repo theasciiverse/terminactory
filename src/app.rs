@@ -886,7 +886,7 @@ mod tests {
         assert_eq!(app.selected, Some(Kind::Arm));
         key(&mut app, KeyCode::Char('~'));
         assert_eq!((app.menu, app.selected), (None, None));
-        // Create > 3 is the copper press, still locked in a new game.
+        // Create > 3 is the press, still locked in a new game.
         key(&mut app, KeyCode::Char('1'));
         key(&mut app, KeyCode::Char('3'));
         assert_eq!(app.selected, None);

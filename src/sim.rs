@@ -264,7 +264,7 @@ impl Kind {
             Kind::Arm => "Filtering arm",
             Kind::Furnace => "Furnace",
             Kind::Molder => "Molder",
-            Kind::Press => "Copper press",
+            Kind::Press => "Press",
             Kind::Assembler => "Assembler",
             Kind::Crate => "Crate",
             Kind::TradePost => "Trade post",
