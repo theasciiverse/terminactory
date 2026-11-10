@@ -15,7 +15,7 @@ use crate::sim::{in_bounds, Category, Company, Dir, Kind, Tech, World, H, MAX_LI
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
     use Kind::*;
     match cat {
-        Category::Create => &[&[Drill, BasicDrill], &[Furnace, BlastFurnace], &[Press, Assembler], &[Pump, Pipe]],
+        Category::Create => &[&[Drill, BasicDrill], &[Furnace, Molder, BlastFurnace], &[Press, Assembler], &[Pump, Pipe]],
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator]],
         Category::Power => &[&[Solar], &[Pole], &[Boiler], &[SteamEngine]],
         Category::Misc => &[&[Crate, Warehouse], &[TradePost]],
@@ -41,7 +41,8 @@ pub enum Entry {
 }
 
 /// Machines with their own page in the recipe book.
-pub const BOOK_PARTS: [Kind; 6] = [Kind::Drill, Kind::BasicDrill, Kind::Furnace, Kind::BlastFurnace, Kind::Press, Kind::Assembler];
+pub const BOOK_PARTS: [Kind; 7] =
+    [Kind::Drill, Kind::BasicDrill, Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::Press, Kind::Assembler];
 
 impl Entry {
     pub fn name(self) -> &'static str {
@@ -78,7 +79,7 @@ pub struct App {
     pub msg: String,
     pub msg_at: Instant,
     pub help: bool,
-    /// Show where power reaches.
+    /// Show where EC reaches.
     pub power_view: bool,
     /// The build category whose parts the number keys pick (None = keys pick a category).
     pub menu: Option<Category>,
@@ -333,7 +334,7 @@ impl App {
             }
             Action::Power => {
                 self.power_view = !self.power_view;
-                self.say(if self.power_view { "Showing power range (blue)" } else { "Power range hidden" });
+                self.say(if self.power_view { "Showing EC range (blue)" } else { "EC range hidden" });
             }
             Action::Place => self.place_here(),
             Action::Rotate => self.rotate(),
@@ -428,7 +429,7 @@ impl App {
         let (x, y) = self.cursor;
         let here = self.world.tile(self.floor, x, y).and_then(|b| match &b.st {
             crate::sim::St::Drill { mines: Some(m), .. } => Some(Entry::Item(*m)),
-            _ => b.recipe().map(|r| Entry::Item(r.outputs[0].0)).or(BOOK_PARTS.contains(&b.kind).then_some(Entry::Part(b.kind))),
+            _ => b.recipe().and_then(|r| r.outputs.first()).map(|o| Entry::Item(o.0)).or(BOOK_PARTS.contains(&b.kind).then_some(Entry::Part(b.kind))),
         });
         if let Some(e) = here {
             self.book_query.clear();

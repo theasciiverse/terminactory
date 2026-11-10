@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 16;
+pub const ITEMS: usize = 19;
 pub const COMPANIES: usize = 10;
 pub const TECHS: usize = 14;
 
@@ -26,6 +26,9 @@ pub enum Item {
     IronGear,
     Gearbox,
     DrillingRig,
+    CopperIngot,
+    IronIngot,
+    Stone,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -74,6 +77,9 @@ impl Item {
         Item::IronGear,
         Item::Gearbox,
         Item::DrillingRig,
+        Item::CopperIngot,
+        Item::IronIngot,
+        Item::Stone,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -96,19 +102,22 @@ impl Item {
             Item::IronGear => "iron gear",
             Item::Gearbox => "gearbox",
             Item::DrillingRig => "drilling rig",
+            Item::CopperIngot => "copper ingot",
+            Item::IronIngot => "iron ingot",
+            Item::Stone => "stone",
         }
     }
     pub fn price(self) -> f64 {
         match self {
-            Item::CopperOre => 1.0,
-            Item::Coal => 0.5,
+            Item::CopperOre => 0.5,
+            Item::Coal => 0.2,
             Item::CopperPlate => 4.0,
             Item::CopperWire => 2.5,
             Item::CopperPipe => 9.0,
             Item::CopperCoil => 14.0,
             Item::Coke => 2.0,
-            Item::IronOre => 1.5,
-            Item::IronPlate => 6.0,
+            Item::IronOre => 2.5,
+            Item::IronPlate => 2.0,
             Item::Steel => 22.0,
             // Waste costs money to get rid of.
             Item::Waste => -0.5,
@@ -117,6 +126,9 @@ impl Item {
             Item::IronGear => 14.0,
             Item::Gearbox => 70.0,
             Item::DrillingRig => 600.0,
+            Item::CopperIngot => 2.0,
+            Item::IronIngot => 1.5,
+            Item::Stone => 0.3,
         }
     }
     pub fn curve(self) -> Curve {
@@ -139,6 +151,9 @@ impl Item {
             Item::IronGear => c(30.0, 0.996, 0.05),
             Item::Gearbox => c(120.0, 0.997, 0.08),
             Item::DrillingRig => c(800.0, 0.998, 0.1),
+            Item::CopperIngot => c(6.0, 0.995, 0.03),
+            Item::IronIngot => c(8.0, 0.995, 0.03),
+            Item::Stone => c(1.0, 0.99, 0.02),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going.
@@ -201,7 +216,7 @@ impl Company {
         match self {
             Company::Hollowmere | Company::Brannock => "Copper Works",
             Company::Ashgrove | Company::Cinderhall => "Iron & Steel",
-            Company::Wellbourne | Company::Kettering => "Steam & Power",
+            Company::Wellbourne | Company::Kettering => "Steam & EC",
             Company::Pillar | Company::Underhill => "Construction",
             Company::Gearwright | Company::Swiftline => "Machinery",
         }
@@ -225,11 +240,11 @@ impl Company {
     pub fn letter(self) -> &'static str {
         match self {
             Company::Hollowmere => "We've dug these hills for four generations. Our drills are cheap, honest, and they don't complain. Neither should you.",
-            Company::Brannock => "Furnaces, belts, panels, poles: if it works, the three of us will sell it to you. If it doesn't, one of us will fix it.",
-            Company::Ashgrove => "We hear you've been drawing copper wire. Charming. Copper is pretty, but iron builds the world. Our basic drill cuts the ironstone your cheap drills can't touch.",
-            Company::Cinderhall => "Coke! Now you're cooking. Our blast furnaces turn ironstone into plate and plate into steel. They leave waste behind, mind. Nobody buys it, so plan where it goes.",
+            Company::Brannock => "Furnaces, molders, belts, panels, poles: if it works, the three of us will sell it to you. If it doesn't, one of us will fix it.",
+            Company::Ashgrove => "We hear you've been drawing copper wire. Charming. Copper is pretty, but iron builds the world. Our basic drill cuts ironstone twice as fast as your cheap ones.",
+            Company::Cinderhall => "Coke! Now you're cooking. Our blast furnaces melt ironstone fast and turn plate into steel. They leave waste behind, mind. Nobody buys it, so plan where it goes.",
             Company::Wellbourne => "A good pipe is a promise. Set one of our pumps down anywhere and the water will go wherever your pipes do, quietly and at your own pace.",
-            Company::Kettering => "Mr Kettering says your coil is crude. Mr Vane says it's charming. We both say: give our boilers water and coal, and our engines will out-power a field of panels.",
+            Company::Kettering => "Mr Kettering says your coil is crude. Mr Vane says it's charming. We both say: give our boilers water and coal, and our engines will out-charge a field of panels.",
             Company::Pillar => "A girder! Let's see how much it holds. Hm. Enough. Pillar & Sons can raise you a floor above the ground, and when your beams get stronger, we'll raise you higher.",
             Company::Underhill => "A girder? You're one of us. Underhill Excavation digs the floor beneath your feet, cheerfully, and the ore down there is richer than anything on top.",
             Company::Gearwright => "A gearbox with tolerances like these deserves a proper home. Gearwright's assembler will make anything you've learned to make, precisely, and twice as fast.",
@@ -246,7 +261,7 @@ pub enum Category {
     Create,
     /// Belts, splitters, arms, pipes, elevators: things that carry.
     Transport,
-    /// Solar, poles, boilers, engines.
+    /// Solar, poles, boilers, engines (EC: electric charge).
     Power,
     /// Crates and trade posts.
     Misc,
@@ -258,7 +273,7 @@ impl Category {
         match self {
             Category::Create => "Create",
             Category::Transport => "Transport",
-            Category::Power => "Power",
+            Category::Power => "EC",
             Category::Misc => "Misc",
         }
     }
@@ -309,7 +324,7 @@ impl Tech {
             Tech::Coking => "Coking",
             Tech::BasicDrill => "Basic drill",
             Tech::Pumps => "Pumps & pipes",
-            Tech::Steam => "Steam power",
+            Tech::Steam => "Steam engines",
             Tech::BlastFurnace => "Blast furnace",
             Tech::SupportBeams => "Support beams",
             Tech::Excavation => "Excavation",
@@ -323,12 +338,12 @@ impl Tech {
     }
     pub fn about(self) -> &'static str {
         match self {
-            Tech::Press => "a machine that presses plates into wire, pipe, coils and later gears and girders",
-            Tech::Coking => "lets copper furnaces bake coal into coke",
-            Tech::BasicDrill => "a faster drill that can also cut iron",
+            Tech::Press => "a machine that presses ingots into plates, and plates into wire, pipe, coils and later gears and girders",
+            Tech::Coking => "lets furnaces bake coal into coke",
+            Tech::BasicDrill => "a drill that is faster, and cuts iron twice as fast as a cheap one",
             Tech::Pumps => "pumps that draw water from the ground, and pipes that carry it",
-            Tech::Steam => "boilers that turn water and coal into steam, and engines that turn steam into power",
-            Tech::BlastFurnace => "smelts iron ore with coke, and makes steel (leaving waste)",
+            Tech::Steam => "boilers that turn water and coal into steam, and engines that turn steam into EC",
+            Tech::BlastFurnace => "melts iron ore fast with coke, and makes steel (leaving waste)",
             Tech::SupportBeams => "build one floor above the ground, and elevators to reach it",
             Tech::Excavation => "dig one floor below the ground, where ore is richer, and elevators to reach it",
             Tech::Assembler => "one big machine that makes any recipe you know, twice as fast, plus the drilling rig",
@@ -388,7 +403,7 @@ impl Tech {
     /// The free way to unlock: make this many of an item (nothing is used up).
     pub fn milestone(self) -> (Item, u64) {
         match self {
-            Tech::Press => (Item::CopperPlate, 50),
+            Tech::Press => (Item::CopperIngot, 50),
             Tech::Coking => (Item::Coal, 150),
             Tech::BasicDrill => (Item::CopperWire, 100),
             Tech::Pumps => (Item::CopperPipe, 40),
@@ -411,7 +426,7 @@ impl Tech {
 pub const UNLOCK_GROUPS: [(&str, &[Tech]); 4] = [
     ("Making", &[Tech::Press, Tech::Coking, Tech::BasicDrill, Tech::BlastFurnace, Tech::Assembler]),
     ("Moving", &[Tech::Tunnels, Tech::LongArms, Tech::Warehouses, Tech::FilterSplitters, Tech::FastBelts]),
-    ("Power", &[Tech::Pumps, Tech::Steam]),
+    ("EC", &[Tech::Pumps, Tech::Steam]),
     ("Floors", &[Tech::SupportBeams, Tech::Excavation]),
 ];
 
@@ -455,10 +470,36 @@ pub fn tree_children(i: usize) -> Vec<usize> {
     TREE.iter().enumerate().filter(|(_, (_, p))| *p == Some(i)).map(|(j, _)| j).collect()
 }
 
+/// Things that flow through pipes. A pipe network holds one at a time.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Fluid {
+    Water,
+    Steam,
+    MoltenCopper,
+    MoltenIron,
+    MoltenSteel,
+}
+
+impl Fluid {
+    pub fn name(self) -> &'static str {
+        match self {
+            Fluid::Water => "water",
+            Fluid::Steam => "steam",
+            Fluid::MoltenCopper => "molten copper",
+            Fluid::MoltenIron => "molten iron",
+            Fluid::MoltenSteel => "molten steel",
+        }
+    }
+}
+
 pub struct Recipe {
     pub name: &'static str,
     pub inputs: &'static [(Item, u32)],
     pub outputs: &'static [(Item, u32)],
+    /// A fluid taken from pipes (or from a machine right behind it), in whole units.
+    pub fluid_in: Option<(Fluid, u32)>,
+    /// A fluid pushed out of the front, into a pipe or straight into a machine.
+    pub fluid_out: Option<(Fluid, u32)>,
     pub ticks: u32,
     /// What it burns while working, if anything.
     pub fuel: Option<Item>,
@@ -467,41 +508,129 @@ pub struct Recipe {
     pub tag: char,
 }
 
+/// A recipe with items only (no fluids).
+const fn item_recipe(
+    name: &'static str,
+    inputs: &'static [(Item, u32)],
+    outputs: &'static [(Item, u32)],
+    ticks: u32,
+    fuel: Option<Item>,
+    needs: Option<Tech>,
+    tag: char,
+) -> Recipe {
+    Recipe { name, inputs, outputs, fluid_in: None, fluid_out: None, ticks, fuel, needs, tag }
+}
+
+/// Furnaces melt ore into molten metal (5 s each; iron is slow) and bake coal into coke.
 pub const FURNACE_RECIPES: &[Recipe] = &[
-    Recipe { name: "copper plate", inputs: &[(Item::CopperOre, 1)], outputs: &[(Item::CopperPlate, 1)], ticks: 30, fuel: Some(Item::Coal), needs: None, tag: 'P' },
-    Recipe { name: "coke", inputs: &[(Item::Coal, 2)], outputs: &[(Item::Coke, 1)], ticks: 120, fuel: None, needs: Some(Tech::Coking), tag: 'K' },
+    Recipe {
+        name: "molten copper",
+        inputs: &[(Item::CopperOre, 1)],
+        outputs: &[],
+        fluid_in: None,
+        fluid_out: Some((Fluid::MoltenCopper, 1)),
+        ticks: 300,
+        fuel: Some(Item::Coal),
+        needs: None,
+        tag: 'M',
+    },
+    Recipe {
+        name: "molten iron",
+        inputs: &[(Item::IronOre, 3)],
+        outputs: &[],
+        fluid_in: None,
+        fluid_out: Some((Fluid::MoltenIron, 2)),
+        ticks: 600,
+        fuel: Some(Item::Coal),
+        needs: None,
+        tag: 'I',
+    },
+    item_recipe("coke", &[(Item::Coal, 3)], &[(Item::Coke, 1)], 300, None, Some(Tech::Coking), 'K'),
+];
+
+/// Molders cast molten metal into ingots. The metal comes from pipes, or straight from a furnace.
+pub const MOLDER_RECIPES: &[Recipe] = &[
+    Recipe {
+        name: "copper ingot",
+        inputs: &[],
+        outputs: &[(Item::CopperIngot, 1)],
+        fluid_in: Some((Fluid::MoltenCopper, 1)),
+        fluid_out: None,
+        ticks: 150,
+        fuel: None,
+        needs: None,
+        tag: 'C',
+    },
+    Recipe {
+        name: "iron ingot",
+        inputs: &[],
+        outputs: &[(Item::IronIngot, 1)],
+        fluid_in: Some((Fluid::MoltenIron, 1)),
+        fluid_out: None,
+        ticks: 150,
+        fuel: None,
+        needs: None,
+        tag: 'I',
+    },
+    Recipe {
+        name: "steel",
+        inputs: &[],
+        outputs: &[(Item::Steel, 1)],
+        fluid_in: Some((Fluid::MoltenSteel, 1)),
+        fluid_out: None,
+        ticks: 150,
+        fuel: None,
+        needs: None,
+        tag: 'S',
+    },
 ];
 
 pub const PRESS_RECIPES: &[Recipe] = &[
-    Recipe { name: "copper wire", inputs: &[(Item::CopperPlate, 1)], outputs: &[(Item::CopperWire, 2)], ticks: 60, fuel: None, needs: None, tag: 'W' },
-    Recipe { name: "copper pipe", inputs: &[(Item::CopperPlate, 2)], outputs: &[(Item::CopperPipe, 1)], ticks: 90, fuel: None, needs: None, tag: 'P' },
-    Recipe { name: "copper coil", inputs: &[(Item::CopperWire, 4)], outputs: &[(Item::CopperCoil, 1)], ticks: 120, fuel: None, needs: None, tag: 'C' },
-    Recipe { name: "iron gear", inputs: &[(Item::IronPlate, 2)], outputs: &[(Item::IronGear, 1)], ticks: 90, fuel: None, needs: Some(Tech::BlastFurnace), tag: 'G' },
-    Recipe { name: "steel girder", inputs: &[(Item::Steel, 2)], outputs: &[(Item::SteelGirder, 1)], ticks: 120, fuel: None, needs: Some(Tech::BlastFurnace), tag: 'R' },
-    Recipe { name: "gearbox", inputs: &[(Item::IronGear, 3), (Item::Steel, 1)], outputs: &[(Item::Gearbox, 1)], ticks: 180, fuel: None, needs: Some(Tech::BlastFurnace), tag: 'B' },
+    item_recipe("copper plate", &[(Item::CopperIngot, 1)], &[(Item::CopperPlate, 1)], 150, None, None, '='),
+    item_recipe("iron plate", &[(Item::IronIngot, 1)], &[(Item::IronPlate, 1)], 150, None, None, '-'),
+    item_recipe("copper wire", &[(Item::CopperPlate, 1)], &[(Item::CopperWire, 2)], 60, None, None, 'W'),
+    item_recipe("copper pipe", &[(Item::CopperPlate, 2)], &[(Item::CopperPipe, 1)], 90, None, None, 'P'),
+    item_recipe("copper coil", &[(Item::CopperWire, 4)], &[(Item::CopperCoil, 1)], 120, None, None, 'C'),
+    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 90, None, Some(Tech::BlastFurnace), 'G'),
+    item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 120, None, Some(Tech::BlastFurnace), 'R'),
+    item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 180, None, Some(Tech::BlastFurnace), 'B'),
 ];
 
-/// Steel leaves waste behind: it comes out the front with the steel and has to go somewhere.
+/// Blast furnaces melt iron ore fast, and make steel. Steel leaves waste behind: it comes
+/// out the front with the steel and has to go somewhere.
 pub const BLAST_RECIPES: &[Recipe] = &[
-    Recipe { name: "iron plate", inputs: &[(Item::IronOre, 1)], outputs: &[(Item::IronPlate, 1)], ticks: 90, fuel: Some(Item::Coke), needs: None, tag: 'I' },
-    Recipe { name: "steel", inputs: &[(Item::IronPlate, 3)], outputs: &[(Item::Steel, 1), (Item::Waste, 1)], ticks: 240, fuel: Some(Item::Coke), needs: None, tag: 'S' },
+    Recipe {
+        name: "molten iron",
+        inputs: &[(Item::IronOre, 1)],
+        outputs: &[],
+        fluid_in: None,
+        fluid_out: Some((Fluid::MoltenIron, 1)),
+        ticks: 300,
+        fuel: Some(Item::Coke),
+        needs: None,
+        tag: 'I',
+    },
+    item_recipe("steel", &[(Item::IronPlate, 3)], &[(Item::Steel, 1), (Item::Waste, 1)], 240, Some(Item::Coke), None, 'S'),
 ];
 
 /// The assembler knows every press recipe (at twice the speed) plus the drilling rig.
 pub const ASSEMBLER_RECIPES: &[Recipe] = &[
-    Recipe { name: "copper wire", inputs: &[(Item::CopperPlate, 1)], outputs: &[(Item::CopperWire, 2)], ticks: 30, fuel: None, needs: None, tag: 'W' },
-    Recipe { name: "copper pipe", inputs: &[(Item::CopperPlate, 2)], outputs: &[(Item::CopperPipe, 1)], ticks: 45, fuel: None, needs: None, tag: 'P' },
-    Recipe { name: "copper coil", inputs: &[(Item::CopperWire, 4)], outputs: &[(Item::CopperCoil, 1)], ticks: 60, fuel: None, needs: None, tag: 'C' },
-    Recipe { name: "iron gear", inputs: &[(Item::IronPlate, 2)], outputs: &[(Item::IronGear, 1)], ticks: 45, fuel: None, needs: None, tag: 'G' },
-    Recipe { name: "steel girder", inputs: &[(Item::Steel, 2)], outputs: &[(Item::SteelGirder, 1)], ticks: 60, fuel: None, needs: None, tag: 'R' },
-    Recipe { name: "gearbox", inputs: &[(Item::IronGear, 3), (Item::Steel, 1)], outputs: &[(Item::Gearbox, 1)], ticks: 90, fuel: None, needs: None, tag: 'B' },
-    Recipe {
-        name: "drilling rig",
-        inputs: &[(Item::SteelGirder, 4), (Item::Gearbox, 2), (Item::Steel, 4)],
-        outputs: &[(Item::DrillingRig, 1)],
-        ticks: 600,
-        fuel: None,
-        needs: None,
-        tag: 'D',
-    },
+    item_recipe("copper plate", &[(Item::CopperIngot, 1)], &[(Item::CopperPlate, 1)], 75, None, None, '='),
+    item_recipe("iron plate", &[(Item::IronIngot, 1)], &[(Item::IronPlate, 1)], 75, None, None, '-'),
+    item_recipe("copper wire", &[(Item::CopperPlate, 1)], &[(Item::CopperWire, 2)], 30, None, None, 'W'),
+    item_recipe("copper pipe", &[(Item::CopperPlate, 2)], &[(Item::CopperPipe, 1)], 45, None, None, 'P'),
+    item_recipe("copper coil", &[(Item::CopperWire, 4)], &[(Item::CopperCoil, 1)], 60, None, None, 'C'),
+    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 45, None, None, 'G'),
+    item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 60, None, None, 'R'),
+    item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 90, None, None, 'B'),
+    // for now: steel stands in for concrete until the mixer arrives
+    item_recipe(
+        "drilling rig",
+        &[(Item::SteelGirder, 4), (Item::Gearbox, 2), (Item::Steel, 4)],
+        &[(Item::DrillingRig, 1)],
+        600,
+        None,
+        None,
+        'D',
+    ),
 ];

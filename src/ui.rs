@@ -112,7 +112,7 @@ pub fn floor_label(level: i32) -> String {
     }
 }
 
-/// "Power 20/12": the grid under the cursor (labelled "regional") when it's on a power
+/// "EC 20/12": the grid under the cursor (labelled "regional") when it's on a power
 /// source or a powered machine, otherwise every grid together ("global").
 fn power_spans(app: &App, label: &str) -> Vec<Span<'static>> {
     let w = &app.world;
@@ -149,10 +149,10 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(format!("Research {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold)),
         Span::raw("   "),
     ];
-    spans.extend(power_spans(app, "Power "));
+    spans.extend(power_spans(app, "EC "));
     spans.extend([
         Span::styled(
-            if unpowered > 0 { format!("  {unpowered} unpowered") } else { String::new() },
+            if unpowered > 0 { format!("  {unpowered} no EC") } else { String::new() },
             Style::new().fg(Color::Indexed(214)),
         ),
         Span::raw("   "),
@@ -167,7 +167,7 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-/// Small-pane top line: money, research, power, idle machines, floor, waiting mail.
+/// Small-pane top line: money, research, EC, idle machines, floor, waiting mail.
 fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
     let w = &app.world;
     let (_, _, _, _, unpowered, _) = w.power_summary();
@@ -177,7 +177,7 @@ fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(format!(" ${:.0}", w.econ.money), Style::new().fg(Color::Green).add_modifier(bold)),
         Span::styled(format!("  R {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold)),
     ];
-    spans.extend(power_spans(app, "  pwr "));
+    spans.extend(power_spans(app, "  EC "));
     let (idle, why) = w.idle_summary();
     if idle > 0 {
         spans.push(Span::styled(format!("  {idle} idle"), warn));
@@ -186,7 +186,7 @@ fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
         }
     }
     if unpowered > 0 {
-        spans.push(Span::styled(format!("  {unpowered} unpowered"), warn));
+        spans.push(Span::styled(format!("  {unpowered} no EC"), warn));
     }
     let level = w.floors[app.floor].level;
     if level != 0 {
@@ -433,6 +433,9 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::IronGear => ('g', 153),
         Item::Gearbox => ('G', 110),
         Item::DrillingRig => ('R', 214),
+        Item::CopperIngot => ('i', 209),
+        Item::IronIngot => ('i', 153),
+        Item::Stone => ('o', 245),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -446,6 +449,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Splitter => (INK, 44),
         Kind::Arm => (PAPER, 133),
         Kind::Furnace => (INK, 196),
+        Kind::Molder => (INK, 208),
         Kind::Press => (INK, 180),
         Kind::Crate => (INK, 178),
         Kind::TradePost => match mode.unwrap_or(SellMode::Money) {
@@ -489,6 +493,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Splitter => ('S', 'P'),
         Kind::Arm => ('A', a),
         Kind::Furnace => ('F', 'U'),
+        Kind::Molder => ('M', 'O'),
         Kind::Press => ('P', 'R'),
         Kind::Crate => ('C', a),
         Kind::TradePost => ('$', '$'),
@@ -549,6 +554,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Drill => labelled("DRIL"),
         Kind::BasicDrill => labelled("DRL2"),
         Kind::Furnace => labelled("FURN"),
+        Kind::Molder => labelled("MOLD"),
         // 2x1 facing east or west; a 1-wide column facing north or south.
         Kind::Press => match dir {
             Dir::E => vec![format!("PR{tag}{a}")],
@@ -641,8 +647,19 @@ pub fn tile_glyph(w: &World, f: usize, x: i32, y: i32) -> Cells {
     }
 }
 
+/// The colour of a fluid in pipes and in the book.
+fn fluid_colour(fl: Fluid) -> u8 {
+    match fl {
+        Fluid::Water => 45,
+        Fluid::Steam => 255,
+        Fluid::MoltenCopper => 208,
+        Fluid::MoltenIron => 160,
+        Fluid::MoltenSteel => 229,
+    }
+}
+
 /// A pipe joins up with neighbouring pipes and machines that use them; its colour shows
-/// what its network holds (blue water, white steam, grey empty).
+/// what its network holds (blue water, white steam, orange copper, red iron, pale steel, grey empty).
 fn pipe_cell(w: &World, f: usize, x: i32, y: i32) -> Cells {
     let joins = |d: Dir| {
         let (dx, dy) = d.delta();
@@ -664,11 +681,7 @@ fn pipe_cell(w: &World, f: usize, x: i32, y: i32) -> Cells {
         .filter(|&p| p >= 0)
         .and_then(|p| w.fluids.pools.get(p as usize))
         .and_then(|p| p.fluid);
-    let fg = match fluid {
-        Some(Fluid::Water) => 45,
-        Some(Fluid::Steam) => 255,
-        None => 244,
-    };
+    let fg = fluid.map_or(244, fluid_colour);
     let st = Style::new().fg(Color::Indexed(fg)).bg(GROUND).add_modifier(Modifier::BOLD);
     [(a, st), (b, st)]
 }
@@ -1004,15 +1017,15 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
     let (ax, ay) = w.anchor_of(f, x, y).unwrap_or((x, y));
     if b.kind.power_draw() > 0.0 {
         match w.building_net(f, idx(ax, ay)) {
-            Some(n) => v.push(format!("power {:.0}% (grid {:.0}/{:.0})", n.ratio * 100.0, n.supply, n.demand)),
-            None => v.push("NO POWER: out of range (v)".into()),
+            Some(n) => v.push(format!("EC {:.0}% (grid {:.0}/{:.0})", n.ratio * 100.0, n.supply, n.demand)),
+            None => v.push("NO EC: out of range (v)".into()),
         }
     }
     if coverage(b.kind, (1, 1), 0, 0).is_some() {
         if let Some((n, sources)) = w.source_net(f, idx(ax, ay)) {
             let with = if sources == 1 { "on its own".to_string() } else { format!("{sources} sources") };
             if n.demand <= 0.0 {
-                v.push(format!("grid: {:.0} supply, nothing to power ({with})", n.supply));
+                v.push(format!("grid: {:.0} supply, nothing to charge ({with})", n.supply));
             } else {
                 v.push(format!("grid: {:.0} supply / {:.0} demand ({with})", n.supply, n.demand));
             }
@@ -1058,12 +1071,21 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             v.push(format!("holding {}", hold.map_or("nothing".to_string(), |i| format!("{} {}", item_cell(i, GROUND).0, i.name()))));
             v.push("f changes the filter".into());
         }
-        St::Crafter { stock, fuel, out, busy, .. } => {
+        St::Crafter { stock, fuel, out, busy, fluid, fluid_out, .. } => {
             if let Some(r) = b.recipe() {
                 v.push(format!("making {}  (f changes)", r.name));
-                let needs: Vec<String> =
+                let mut needs: Vec<String> =
                     r.inputs.iter().map(|(it, n)| format!("{} {}/{}", it.name(), stock[it.idx()], n)).collect();
+                if let Some((fl, n)) = r.fluid_in {
+                    needs.push(format!("{} {}/{}", fl.name(), fluid, n));
+                }
                 v.push(format!("has {}", needs.join(", ")));
+                if r.fluid_in.is_some() {
+                    v.push(format!("fluid comes from pipes (not the {} side)", b.dir.arrow()));
+                }
+                if let Some((fl, n)) = r.fluid_out {
+                    v.push(format!("gives {n} {}  ({}/{} held)", fl.name(), fluid_out, CRAFTER_FLUID_OUT_CAP));
+                }
                 if r.outputs.len() > 1 {
                     let outs: Vec<&str> = r.outputs.iter().map(|o| o.0.name()).collect();
                     v.push(format!("gives {} (all out the front)", outs.join(" + ")));
@@ -1098,8 +1120,8 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                 }
             }
         }
-        St::Solar => v.push(format!("+{:.0} power, reaches {} tiles around it", SOLAR_OUTPUT, SOLAR_REACH)),
-        St::Pole => v.push(format!("carries power {} tiles around it", POLE_REACH)),
+        St::Solar => v.push(format!("+{:.0} EC, reaches {} tiles around it", SOLAR_OUTPUT, SOLAR_REACH)),
+        St::Pole => v.push(format!("carries EC {} tiles around it", POLE_REACH)),
         St::Elevator { inbox, outbox, mode } => {
             let s = b.dims().0;
             v.push(format!("{s}x{s}, holds {}   door here: {}  (f changes)", LIFT_PER_TILE * (s * s) as usize, mode.name()));
@@ -1123,7 +1145,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             }
         }
         St::Pump { busy } => {
-            v.push(if *busy { "pumping water into its pipes".into() } else { "idle: needs power and a pipe with room".into() });
+            v.push(if *busy { "pumping water into its pipes".into() } else { "idle: needs EC and a pipe with room".into() });
         }
         St::Boiler { coal, fuel, busy } => {
             v.push(format!("coal {}/{}   {}", coal, BOILER_COAL_CAP, if *fuel > 0 { "burning" } else { "no fire" }));
@@ -1132,8 +1154,8 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         }
         St::Engine { steam, output } => {
             v.push(format!("steam {:.1}/{:.0}", steam, ENGINE_BUF));
-            v.push(format!("giving {:.0} of {:.0} power", output, ENGINE_POWER));
-            v.push(format!("powers parts {} tiles around it", ENGINE_REACH));
+            v.push(format!("giving {:.0} of {:.0} EC", output, ENGINE_POWER));
+            v.push(format!("charges parts {} tiles around it", ENGINE_REACH));
         }
     }
     let (waste, fee) = w.removal_fee(f, x, y);
@@ -1463,14 +1485,13 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 4] = [Kind::Furnace, Kind::Press, Kind::BlastFurnace, Kind::Assembler];
+const CRAFTERS: [Kind; 5] = [Kind::Furnace, Kind::Molder, Kind::Press, Kind::BlastFurnace, Kind::Assembler];
 const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
 fn item_known(w: &World, item: Item) -> bool {
     let mined = match item {
-        Item::CopperOre | Item::Coal => true,
-        Item::IronOre => w.progress.part_unlocked(Kind::BasicDrill),
+        Item::CopperOre | Item::Coal | Item::IronOre | Item::Stone => true,
         _ => false,
     };
     mined
@@ -1575,9 +1596,24 @@ fn equation(r: &Recipe, here: Entry) -> Vec<Seg> {
         Some(f) => format!("  ─{}─→  ", f.name()),
         None => "  ──→  ".to_string(),
     };
+    // A fluid is plain coloured text (it has no page of its own).
+    let fluid = |f: Option<(Fluid, u32)>, after: bool| -> Vec<Seg> {
+        let Some((fl, n)) = f else { return Vec::new() };
+        let mut v = Vec::new();
+        if after {
+            v.push(seg(" + ", Style::new().fg(Color::DarkGray)));
+        }
+        if n > 1 {
+            v.push(seg(format!("{n} "), Style::new().add_modifier(Modifier::BOLD)));
+        }
+        v.push(seg(fl.name(), Style::new().fg(Color::Indexed(fluid_colour(fl)))));
+        v
+    };
     let mut out = side(r.inputs);
+    out.extend(fluid(r.fluid_in, !r.inputs.is_empty()));
     out.push(seg(arrow, Style::new().fg(Color::Indexed(244))));
     out.extend(side(r.outputs));
+    out.extend(fluid(r.fluid_out, !r.outputs.is_empty()));
     out
 }
 
@@ -1630,7 +1666,8 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let mined: Option<(Vec<Kind>, &str)> = match item {
                 Item::CopperOre => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere: press f on a drill to pick its ore; faster underground")),
                 Item::Coal => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore); a drill on coal fuels itself")),
-                Item::IronOre => Some((vec![Kind::BasicDrill], "anywhere (f picks the ore); cheap drills can't cut it")),
+                Item::IronOre => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore); a cheap drill is half as fast")),
+                Item::Stone => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore)")),
                 _ => None,
             };
             if let Some((drills, how)) = mined {
@@ -1767,9 +1804,8 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
 
             match k {
                 Kind::Drill | Kind::BasicDrill => {
-                    let mines: &[Item] = if k == Kind::Drill { &[Item::CopperOre, Item::Coal] } else { &[Item::CopperOre, Item::Coal, Item::IronOre] };
                     let mut segs = Vec::new();
-                    for (i, m) in mines.iter().enumerate() {
+                    for (i, m) in k.ores().iter().enumerate() {
                         if i > 0 {
                             segs.push(seg(" · ", dim));
                         }
@@ -1777,11 +1813,14 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     }
                     labelled(&mut out, "Mines", GUTTER, segs);
                     labelled(&mut out, "Burns", GUTTER, vec![link(Entry::Item(Item::Coal), e), seg(" (a drill on coal fuels itself)", dim)]);
+                    if k == Kind::Drill {
+                        labelled(&mut out, "", GUTTER, vec![seg("iron at half the basic drill's speed", dim)]);
+                    }
                 }
                 _ => {
                     let mut first = true;
                     for r in k.recipes() {
-                        let made = r.outputs[0].1;
+                        let made = r.outputs.first().map(|o| o.1).or(r.fluid_out.map(|f| f.1)).unwrap_or(1);
                         let mut segs = equation(r, e);
                         segs.push(seg(format!("   {}", timing(r, made)), dim));
                         if let Some(l) = r.needs.filter(|t| !w.progress.has(*t)).map(|t| format!("needs {}", t.name())) {
@@ -2164,29 +2203,35 @@ READING THE MAP
   The arrow on a building's edge is its output side; machines also show a
   letter for what they make. A grey block is idle.
   Arrows are belts; items ride on them. Point at anything to see what it is.
-  Drills mine anywhere: press f on one to pick copper, coal or iron.
+  Drills mine anywhere: press f on one to pick copper, coal, iron or stone.
   Items: o copper ore  * coal  = plate  ~ wire  0 pipe  @ coil  # coke
          o iron ore (blue)  = iron plate (blue)  % steel  , waste  H girder
-         c concrete  g gear  G gearbox  R drilling rig
+         c concrete  g gear  G gearbox  R drilling rig  i ingot  o stone
+  Pipes show what they hold: blue water, white steam, orange copper,
+         red iron, pale steel (molten) and grey when empty.
 
 HOW IT WORKS
   Buildings take input from any side and output from the arrow side only:
     onto a belt, or straight into the next building (drill -> furnace).
-  Drills burn coal; a drill on coal fuels itself. Only basic drills cut iron.
-  Furnaces and presses make whatever recipe they're set to (f changes it).
-  Belts, splitters, arms and presses need power. Solar panels and poles
-    power every electric part in range (v shows it); overlapping ranges
-    join into one grid that shares only its own power. Panels never join
-    each other directly: put poles between them.
+  Drills burn coal; a drill on coal fuels itself. Cheap ones cut iron slower.
+  Furnaces melt ore into molten metal and push it out the front, into a pipe
+    or straight into a molder. Molders cast it into ingots (EC); presses
+    make plates from ingots. Machines make whatever recipe they're set to
+    (f changes it). A pipe network holds one fluid. A machine with two
+    outputs waits (FULL) until both have room.
+  Belts, splitters, arms, molders and presses need EC (electric charge).
+    Solar panels and poles charge every electric part in range (v shows
+    it); overlapping ranges join into one grid that shares only its own
+    EC. Panels never join each other directly: put poles between them.
   Pumps draw water anywhere on the ground. Pipes join into networks, each holding one fluid.
     Boilers burn coal to turn water into steam (out their front); steam
-    engines turn steam into power, only as much as their grid needs.
+    engines turn steam into EC, only as much as their grid needs.
   Blast furnaces burn coke. Steel leaves waste: a trade post set to money
     takes it for $0.50 each; research posts refuse it and it backs up.
   Floors: support beams open +1, excavation opens -1 (ore there is richer).
     Elevators (2x2 to 8x8, +/- to resize) have a door on every open floor;
     f sets each door to load, unload or pass. A car leaves only when full.
-  Idle machines flash a word saying why (FULL, NEED, COAL, PWR, WATR...).
+  Idle machines flash a word saying why (FULL, NEED, FLUD, COAL, EC?...).
   Everything unlocks free once you've made enough of its milestone item;
     research is the shortcut.
   Trade posts sell what they receive: f switches money / 40-40 / research.
@@ -2198,13 +2243,13 @@ HOW IT WORKS
 
 CONTROLS
   Move ......... arrows / WASD       Lay belts .... Shift+arrows / Shift+WASD
-  Build menu ... 1-4 opens a category (1 Create, 2 Transport, 3 Power,
+  Build menu ... 1-4 opens a category (1 Create, 2 Transport, 3 EC,
                  4 Misc); then 1-4 picks a part. Press it again to switch
                  kind (belt / fast belt / splitter...). ` ~ Esc back.
   Place ........ Space / Enter
   Rotate ....... r (output side)     Remove ....... x (full refund)
   Set up ....... f                   Research ..... t
-  Power range .. v                   Floors ....... < >
+  EC range ..... v                   Floors ....... < >
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
   Production ... o (the last minute, per item; the game keeps running)
@@ -2327,7 +2372,6 @@ mod tests {
     fn research_tree_fits_the_window() {
         use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
         let mut w = World::new();
-        w.build_demo().unwrap();
         w.econ.research = 17_687.0;
         let mut app = App::new(w);
         app.tree = true;
@@ -2369,17 +2413,17 @@ mod tests {
         w.build_demo().unwrap();
         let mut app = App::new(w);
         let key = |app: &mut App, c: KeyCode| app.on_key(KeyEvent::from(c));
-        // Pointing at the demo's furnace opens the book on copper plate.
-        app.cursor = (54, 38);
+        // Pointing at the demo molder opens the book on copper ingot.
+        app.cursor = (56, 38);
         key(&mut app, KeyCode::Char('b'));
         assert!(app.book);
-        assert_eq!(app.book_entry, Entry::Item(Item::CopperPlate));
+        assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
         let buf = render(&mut app, 130, 42);
         let t = text(&buf);
         assert!(t.contains("Made by") && t.contains("Used in") && !t.contains("MADE BY"), "{t}");
-        assert!(t.contains("copper ore  ─coal─→  copper plate"), "a word equation, fuel over the arrow: {t}");
-        assert!(t.contains("copper plate  ──→  2 copper wire   in Copper press, Assembler"), "{t}");
-        assert!(t.contains("12.0 now, fading to a floor of 0.36") && t.contains("0.36 ┤") && t.contains("← floor"), "{t}");
+        assert!(t.contains("molten copper  ──→  copper ingot"), "a word equation, with the fluid in it: {t}");
+        assert!(t.contains("copper ingot  ──→  copper plate   in Copper press, Assembler"), "{t}");
+        assert!(t.contains("6.0 now, fading to a floor of 0.18") && t.contains("0.18 ┤") && t.contains("← floor"), "{t}");
         std::fs::write("target/snapshot-book.html", to_html(&buf)).unwrap();
 
         // Tab switches to the machines tab and back to the item you were on.
@@ -2389,21 +2433,33 @@ mod tests {
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("Basic drill") && !t.contains("iron gear "), "machines only: {t}");
         key(&mut app, KeyCode::Tab);
-        assert_eq!(app.book_entry, Entry::Item(Item::CopperPlate));
+        assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
 
         // Clicking a machine's name opens its page (on the machines tab); Backspace comes back.
         render(&mut app, 130, 42);
-        let (r, _) = *app.book_links.iter().find(|(_, e)| *e == Entry::Part(Kind::Furnace)).unwrap();
+        let (r, _) = *app.book_links.iter().find(|(_, e)| *e == Entry::Part(Kind::Molder)).unwrap();
         app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
-        assert_eq!(app.book_entry, Entry::Part(Kind::Furnace));
+        assert_eq!(app.book_entry, Entry::Part(Kind::Molder));
         key(&mut app, KeyCode::Backspace);
-        assert_eq!(app.book_entry, Entry::Item(Item::CopperPlate));
+        assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
         app.book_go(Entry::Part(Kind::Furnace));
         let buf = render(&mut app, 130, 42);
         let t = text(&buf);
         assert!(t.contains("Status") && t.contains("ready to build") && t.contains("Makes"), "{t}");
-        assert!(t.contains("2 coal  ──→  coke"), "{t}");
+        assert!(t.contains("copper ore  ─coal─→  molten copper"), "{t}");
+        assert!(t.contains("3 iron ore  ─coal─→  2 molten iron"), "{t}");
+        assert!(t.contains("3 coal  ──→  coke"), "{t}");
         std::fs::write("target/snapshot-book-machine.html", to_html(&buf)).unwrap();
+        app.book_go(Entry::Part(Kind::Molder));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("molten iron  ──→  iron ingot") && t.contains("molten steel  ──→  steel"), "{t}");
+        // Stone and iron ore are mined by both drills.
+        app.book_go(Entry::Item(Item::Stone));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("Cheap drill or Basic drill"), "{t}");
+        app.book_go(Entry::Part(Kind::Drill));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("iron ore") && t.contains("stone") && t.contains("half the basic drill's speed"), "{t}");
 
         // Steel: the waste shows, and it's locked behind the blast furnace.
         app.book_go(Entry::Item(Item::Steel));
@@ -2658,7 +2714,7 @@ mod tests {
         app.menu = Some(Category::Create);
         app.selected = Some(Kind::Furnace);
         let buf = render(&mut app, 64, 16);
-        assert!(text(&buf).lines().last().unwrap().contains("Create › Copper furnace  $200  3x3  facing"));
+        assert!(text(&buf).lines().last().unwrap().contains("Create › Furnace  $200  3x3  facing"));
         std::fs::write("target/snapshot-small-menu.html", to_html(&buf)).unwrap();
         app.menu = Some(Category::Transport);
         app.selected = Some(Kind::Splitter);
@@ -2723,6 +2779,69 @@ mod tests {
         let buf = render(&mut app, 130, 42);
         assert!(text(&buf).contains("ENGN"));
         std::fs::write("target/snapshot-steam.html", to_html(&buf)).unwrap();
+    }
+
+    /// Molten metal in pipes (copper orange, iron red), furnaces pouring into molders.
+    #[test]
+    fn render_molten_snapshot() {
+        let mut w = World::blank();
+        let stock = |w: &mut World, x: i32, y: i32, item: Item, n: u32| {
+            let a = idx(x, y);
+            if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[a].as_mut() {
+                stock[item.idx()] = n;
+            }
+        };
+        // Copper: furnace -> pipes -> a molder set to iron, so the metal waits in the pipes.
+        w.place(0, 6, 5, Kind::Furnace, Dir::E).unwrap();
+        stock(&mut w, 6, 5, Item::CopperOre, 20);
+        stock(&mut w, 6, 5, Item::Coal, 20);
+        for x in 9..=11 {
+            w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+        }
+        w.place(0, 12, 4, Kind::Molder, Dir::E).unwrap();
+        w.configure(0, 12, 4);
+        // Iron, set the same way, one row down.
+        w.place(0, 6, 9, Kind::Furnace, Dir::E).unwrap();
+        w.configure(0, 6, 9);
+        stock(&mut w, 6, 9, Item::IronOre, 30);
+        stock(&mut w, 6, 9, Item::Coal, 20);
+        for x in 9..=11 {
+            w.place(0, x, 9, Kind::Pipe, Dir::E).unwrap();
+        }
+        w.place(0, 12, 8, Kind::Molder, Dir::E).unwrap();
+        // A furnace pouring straight into a working molder, ingots into a crate.
+        w.place(0, 6, 13, Kind::Furnace, Dir::E).unwrap();
+        stock(&mut w, 6, 13, Item::CopperOre, 20);
+        stock(&mut w, 6, 13, Item::Coal, 20);
+        w.place(0, 9, 13, Kind::Molder, Dir::E).unwrap();
+        w.place(0, 11, 13, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 12, 11, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 14, 9, Kind::Pole, Dir::E).unwrap();
+        w.place(0, 14, 6, Kind::Pole, Dir::E).unwrap();
+        for _ in 0..TPS * 42 {
+            w.tick();
+        }
+        let mut app = App::new(w);
+        app.cursor = (10, 5);
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("MOLD") && t.contains("FURN"), "{t}");
+        assert!(t.contains("molten copper") && t.contains("one fluid per network"), "the pipe names its fluid: {t}");
+        std::fs::write("target/snapshot-molten.html", to_html(&buf)).unwrap();
+        // The iron pipe, and a furnace's own page of the inspector.
+        app.cursor = (10, 9);
+        assert!(text(&render(&mut app, 130, 42)).contains("molten iron"));
+        app.cursor = (6, 5);
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("gives 1 molten copper"), "{t}");
+        // The molder says what it takes, and where from.
+        app.cursor = (12, 4);
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("making iron ingot") && t.contains("molten iron 0/1") && t.contains("EC 100%"), "{t}");
+        // A narrow, tall pane.
+        app.cursor = (10, 5);
+        let buf = render(&mut app, 64, 40);
+        std::fs::write("target/snapshot-molten-small.html", to_html(&buf)).unwrap();
     }
 
     /// Phase 3 screenshots: box elevators, idle words, floors above and below, the away summary.
