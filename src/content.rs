@@ -409,7 +409,7 @@ impl Tech {
             Tech::BlastFurnace => "melts iron ore or grit fast with coke, and makes steel (leaving waste)",
             Tech::SupportBeams => "build one floor above the ground, and elevators to reach it",
             Tech::Excavation => "dig one floor below the ground, where ore is richer, and elevators to reach it",
-            Tech::Assembler => "one big machine that makes any recipe you know, twice as fast, plus the drilling rig",
+            Tech::Assembler => "the crude assembler, a 4x4 machine that makes any press recipe twice as fast, plus the drilling rig",
             Tech::FastBelts => "belts that move twice as much",
             Tech::Tunnels => "belts that dive under up to 4 tiles: place an entrance, then its exit further along, and build anything in between",
             Tech::LongArms => "an arm that reaches 2 tiles: it grabs from 2 behind and drops 2 ahead, over whatever sits in between",
@@ -610,6 +610,7 @@ impl Fluid {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Recipe {
     pub name: &'static str,
     pub inputs: &'static [(Item, u32)],
@@ -767,8 +768,12 @@ pub const BLAST_RECIPES: &[Recipe] = &[
     },
 ];
 
-/// The assembler knows every press recipe (at twice the speed) plus the drilling rig.
-pub const ASSEMBLER_RECIPES: &[Recipe] = &[
+/// Assemblers come in tiers. Each recipe table below lists its tier's recipes, with the time
+/// the lowest assembler that can make them takes. Higher assemblers know the lower tables too,
+/// at a faster speed (see `assembler_list`).
+///
+/// Crude tier: every press recipe plus the drilling rig.
+pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("copper plate", &[(Item::CopperIngot, 1)], &[(Item::CopperPlate, 1)], 75, None, None, '='),
     item_recipe("iron plate", &[(Item::IronIngot, 1)], &[(Item::IronPlate, 1)], 75, None, None, '-'),
     item_recipe("copper wire", &[(Item::CopperPlate, 1)], &[(Item::CopperWire, 2)], 150, None, None, 'W'),
@@ -825,3 +830,65 @@ pub const WINDER_RECIPES: &[Recipe] = &[
     item_recipe("copper coil", &[(Item::CopperWire, 3)], &[(Item::CopperCoil, 1)], 240, None, None, 'C'),
     item_recipe("spring", &[(Item::IronRod, 2)], &[(Item::Spring, 1)], 300, None, None, 'S'),
 ];
+
+// for now: the tiers below hold placeholder recipes so every assembler can be tested.
+/// Basic tier (basic assembler and up).
+pub const BASIC_RECIPES: &[Recipe] =
+    &[item_recipe("bulk copper wire", &[(Item::CopperPlate, 4)], &[(Item::CopperWire, 10)], 120, None, None, 'w')];
+
+/// Advanced tier (advanced and precision assemblers).
+pub const ADVANCED_RECIPES: &[Recipe] =
+    &[item_recipe("heavy gearbox", &[(Item::IronGear, 6), (Item::Steel, 2)], &[(Item::Gearbox, 3)], 240, None, None, 'b')];
+
+/// Precision tier (precision assembler only).
+pub const PRECISION_RECIPES: &[Recipe] =
+    &[item_recipe("fine copper coil", &[(Item::CopperWire, 8)], &[(Item::CopperCoil, 3)], 200, None, None, 'c')];
+
+/// Large basic tier (large assemblers).
+pub const LARGE_BASIC_RECIPES: &[Recipe] =
+    &[item_recipe("bulk girders", &[(Item::Steel, 8)], &[(Item::SteelGirder, 5)], 300, None, None, 'r')];
+
+/// Large advanced tier (large advanced assembler only).
+pub const LARGE_ADVANCED_RECIPES: &[Recipe] = &[item_recipe(
+    "bulk drilling rigs",
+    &[(Item::SteelGirder, 8), (Item::Gearbox, 4), (Item::Steel, 8)],
+    &[(Item::DrillingRig, 3)],
+    800,
+    None,
+    None,
+    'd',
+)];
+
+/// What an assembler can make: each (table, speed) pair in turn, with the table's times
+/// divided by the speed (rounded to a whole tick). Built once per assembler kind.
+pub fn assembler_list(tiers: &[(&[Recipe], u32)]) -> Vec<Recipe> {
+    let mut out = Vec::new();
+    for (table, speed) in tiers {
+        for r in table.iter() {
+            out.push(Recipe { ticks: ((r.ticks as f64 / *speed as f64).round() as u32).max(1), ..*r });
+        }
+    }
+    out
+}
+
+// for now: placeholder recipes for the welder, kiln and mixer.
+/// The welder joins parts. It draws EC only while it works.
+pub const WELDER_RECIPES: &[Recipe] =
+    &[item_recipe("weld girder", &[(Item::Steel, 3), (Item::IronPlate, 2)], &[(Item::SteelGirder, 2)], 180, None, None, 'w')];
+
+/// The kiln fires 8 runs at once, burning coal.
+pub const KILN_RECIPES: &[Recipe] =
+    &[item_recipe("kiln iron plate", &[(Item::IronIngot, 1)], &[(Item::IronPlate, 1)], 240, Some(Item::Coal), None, 'k')];
+
+/// The mixer takes water from a pipe, and items from belts.
+pub const MIXER_RECIPES: &[Recipe] = &[Recipe {
+    name: "concrete",
+    inputs: &[(Item::Stone, 2)],
+    outputs: &[(Item::Concrete, 2)],
+    fluid_in: Some((Fluid::Water, 5)),
+    fluid_out: None,
+    ticks: 120,
+    fuel: None,
+    needs: None,
+    tag: 'c',
+}];

@@ -41,7 +41,7 @@ Phase 2: what those key items unlock.
 Phase 3: floors, elevators and machinery.
 - **Floors**: support beams (after steel girders) open floor +1; excavation (after steel girders) opens floor -1. Decking or digging costs $10 a tile (more on later floors), never any waiting. Drills underground mine 1.5x faster (2x and 3x on deeper floors later).
 - **Elevators**: boxes from 2x2 to 8x8 (`+`/`-` to resize while placing), holding 10 items per tile. Each open floor gets a door; `f` sets a door to load, unload or pass. A car leaves only when full: 0.5 s doors, 1 s per floor, 0.5 s doors, then unloads at 30 items/s out of the door's arrow side.
-- **Machinery**: the assembler (after an iron gear) makes any press recipe twice as fast, plus the drilling rig; fast belts (after a gearbox) move twice as much.
+- **Machinery**: the crude assembler (4×4, after an iron gear) makes any press recipe twice as fast, plus the drilling rig; fast belts (after a gearbox) move twice as much.
 - **The drilling rig** (4 girders + 2 gearboxes + 4 steel for now) is the most valuable thing you can make so far.
 - **Logistics toys** (research them in the Moving group):
   - **Belt tunnels** pass under up to 4 tiles. Place an entrance, then its exit up to 5 tiles further on facing the same way; build anything in between. They need no power.
@@ -89,7 +89,7 @@ Six new machines (all in Create), each from a company that opens when you first 
 
 ## Recipe book
 
-`b` opens it on whatever is under the cursor. It has a page for every item (Items tab) and for each machine that makes or mines them (drills, crusher, furnace, molder, blast furnace, coke oven, press, wire drawer, winder, rolling mill, lathe, assembler).
+`b` opens it on whatever is under the cursor. It has a page for every item (Items tab) and for each machine that makes or mines them (drills, crusher, furnace, molder, blast furnace, coke oven, press, wire drawer, winder, rolling mill, lathe, crude assembler).
 
 - **Item pages:** what makes it, as a word equation with the fuel over the arrow (`copper ore ─coal─→ molten copper`), plus timing and anything still locked. Also what uses it, what it unlocks, and a chart of research per sale that marks its floor and where you are.
 - **Machine pages:** cost, whether you can build it (and what opens it if not), and everything it makes.
@@ -140,7 +140,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 | --- | --- |
 | Move | arrows / WASD |
 | Lay belts | Shift+arrows / Shift+WASD, or drag with the mouse |
-| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 EC, 4 Misc); inside it, 1–4 picks a part, and pressing the same number again switches kind (copper drill / basic drill, belt / fast belt / splitter, furnace / molder / blast furnace / coke oven, press / wire drawer / winder / rolling mill / lathe / assembler); `` ` ``, `₹`, `~` or Esc goes back |
+| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 EC, 4 Misc); inside it, 1–4 picks a part, and pressing the same number again switches kind (copper drill / basic drill, belt / fast belt / splitter, furnace / molder / blast furnace / coke oven, press / wire drawer / winder / rolling mill / lathe / crude assembler); `` ` ``, `₹`, `~` or Esc goes back |
 | Place / remove | Space or click / x or right-click |
 | Copy a part | middle-click it: picks up its kind, facing and setting (recipe, arm filter, trade post mode), so clicks place copies; middle-click empty ground to empty your hand |
 | Rotate (belt direction / output side) | r |
@@ -187,7 +187,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `BLST` | Blast furnace (I molten iron, S steel) | 2×2 | `,` waste |
 | `BOIL` | Boiler | 2×2 | |
 | `ENGN` | Steam engine | 2×2 | |
-| `ASSMBL` | Assembler | 3×3 | `H` girder |
+| `CRD ASM` | Crude assembler | 4×4 | `H` girder |
 | `>>` (yellow) | Fast belt | 1×1 | `g` gear, `G` gearbox, `R` rig |
 | `CRSH` | Crusher (C copper grit, I iron grit, S sand) | 2×2 | `:` grit and sand |
 | `COKE` | Coke oven | 2×2 | `-` sheet, `!` rod |
@@ -202,5 +202,6 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 - `src/ui.rs`: terminal drawing (ASCII on a fixed dark map).
 - `src/app.rs`: keyboard and mouse.
 - `src/content.rs`: items, companies, research and recipes (data, kept apart from mechanics).
+- Later machines are in the simulation but not yet in the build menu (`Kind::in_game`): the assembler ladder (basic, advanced and precision 2×2 / 3×3 / 3×3, large basic and advanced 5×5; each assembler also makes the tiers below it faster, except the precision one, which makes only the top tiers), the welder (draws 30 EC only while it welds), the kiln (3×5, fires 8 runs at once), the mixer (water from pipes), the advanced drill (4×4, EC), large basic and advanced drills (8×8) and the advanced pump (2×2, 4× the water). Their recipes are placeholders for now.
 - `src/mail.rs`: agent telegrams: the inbox, `tfac msg` / `tfac hook`, and the Markdown renderer.
 - `cargo test`: simulation tests plus screen snapshots (`target/snapshot*.html` show the map, tree and a letter in colour).

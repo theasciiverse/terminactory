@@ -18,7 +18,7 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
         Category::Create => &[
             &[Drill, BasicDrill, Crusher],
             &[Furnace, Molder, BlastFurnace, CokeOven],
-            &[Press, WireDrawer, Winder, RollingMill, Lathe, Assembler],
+            &[Press, WireDrawer, Winder, RollingMill, Lathe, CrudeAssembler],
             &[Pump, Pipe],
         ],
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator]],
@@ -59,7 +59,7 @@ pub const BOOK_PARTS: [Kind; 13] = [
     Kind::Winder,
     Kind::RollingMill,
     Kind::Lathe,
-    Kind::Assembler,
+    Kind::CrudeAssembler,
 ];
 
 impl Entry {
@@ -948,7 +948,8 @@ mod tests {
 
     #[test]
     fn every_part_has_one_slot_in_its_own_category() {
-        for k in Kind::ALL {
+        // Machines that are not in the game yet have no slot.
+        for k in Kind::ALL.into_iter().filter(|k| k.in_game()) {
             let homes: Vec<Category> = Category::ALL.iter().copied().filter(|c| parts_in(*c).contains(&k)).collect();
             assert_eq!(homes, vec![k.category()], "{k:?}");
         }
