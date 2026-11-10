@@ -747,7 +747,7 @@ impl App {
                 }
             },
             Some(k) if k.is_belt() => {
-                self.world.set_dir(self.floor, x, y, d);
+                let _ = self.world.set_dir(self.floor, x, y, d);
                 true
             }
             Some(_) => true, // step over other buildings
@@ -781,7 +781,7 @@ impl App {
             }
             return;
         };
-        let (kind, dir, size) = (b.kind, b.dir, b.size());
+        let (kind, dir, size) = (b.kind, b.dir, b.dims().0);
         let set = self.world.setting_at(self.floor, x, y);
         self.pick_part(kind);
         if self.selected != Some(kind) {
@@ -819,8 +819,8 @@ impl App {
         let (x, y) = self.cursor;
         if let Some(b) = self.world.tile(self.floor, x, y) {
             let nd = b.dir.cw();
-            if !self.world.set_dir(self.floor, x, y, nd) {
-                self.say("This part has no output side to rotate");
+            if let Err(e) = self.world.set_dir(self.floor, x, y, nd) {
+                self.say(e);
             }
         } else {
             self.dir = self.dir.cw();
