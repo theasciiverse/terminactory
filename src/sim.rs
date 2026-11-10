@@ -47,6 +47,8 @@ pub const ELEVATOR_REACH: i32 = 1;
 pub const DRILL_COAL_CAP: u32 = 10;
 pub const DRILL_OUT_CAP: usize = 4;
 pub const CRAFTER_OUT_CAP: usize = 10;
+/// Units of fluid a machine holds waiting to leave its front.
+pub const CRAFTER_FLUID_OUT_CAP: u32 = 10;
 pub const CRATE_CAP: usize = 400;
 
 // Fluids and steam (per second unless noted).
@@ -193,12 +195,18 @@ pub enum Kind {
     LongArm,
     Sorter,
     Warehouse,
+    Molder,
+}
+
+#[cfg(test)]
+thread_local! {
+    static RECIPE_OVERRIDE: std::cell::Cell<Option<(Kind, &'static [Recipe])>> = const { std::cell::Cell::new(None) };
 }
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
     #[cfg_attr(not(test), allow(dead_code))]
-    pub const ALL: [Kind; 23] = [
+    pub const ALL: [Kind; 24] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Belt,
@@ -212,6 +220,7 @@ impl Kind {
         Kind::Pipe,
         Kind::Pump,
         Kind::Furnace,
+        Kind::Molder,
         Kind::Press,
         Kind::BlastFurnace,
         Kind::Assembler,
@@ -226,7 +235,15 @@ impl Kind {
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
         match self {
-            Kind::Drill | Kind::BasicDrill | Kind::Furnace | Kind::BlastFurnace | Kind::Press | Kind::Assembler | Kind::Pump | Kind::Pipe => {
+            Kind::Drill
+            | Kind::BasicDrill
+            | Kind::Furnace
+            | Kind::Molder
+            | Kind::BlastFurnace
+            | Kind::Press
+            | Kind::Assembler
+            | Kind::Pump
+            | Kind::Pipe => {
                 Category::Create
             }
             Kind::Belt | Kind::FastBelt | Kind::Tunnel | Kind::Splitter | Kind::Sorter | Kind::Arm | Kind::LongArm | Kind::Elevator => {
@@ -244,13 +261,14 @@ impl Kind {
             Kind::FastBelt => "Fast belt",
             Kind::Splitter => "Basic splitter",
             Kind::Arm => "Filtering arm",
-            Kind::Furnace => "Copper furnace",
+            Kind::Furnace => "Furnace",
+            Kind::Molder => "Molder",
             Kind::Press => "Copper press",
             Kind::Assembler => "Assembler",
             Kind::Crate => "Crate",
             Kind::TradePost => "Trade post",
             Kind::Solar => "Cheap solar panel",
-            Kind::Pole => "Power pole",
+            Kind::Pole => "EC pole",
             Kind::Elevator => "Elevator",
             Kind::Pipe => "Pipe",
             Kind::Pump => "Water pump",
@@ -273,6 +291,7 @@ impl Kind {
             Kind::Splitter => 10.0,
             Kind::Arm => 150.0,
             Kind::Furnace => 200.0,
+            Kind::Molder => 100.0,
             Kind::Press => 150.0,
             Kind::Assembler => 500.0,
             Kind::Crate => 50.0,
@@ -306,6 +325,7 @@ impl Kind {
             Kind::Drill
             | Kind::BasicDrill
             | Kind::Furnace
+            | Kind::Molder
             | Kind::Press
             | Kind::BlastFurnace
             | Kind::Solar
@@ -331,7 +351,7 @@ impl Kind {
         match self {
             Kind::Belt => 0.5,
             Kind::FastBelt | Kind::Pump => 1.0,
-            Kind::Splitter | Kind::Sorter => 2.0,
+            Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
             Kind::Press => 3.0,
             Kind::Assembler => 5.0,
             Kind::Arm => 10.0,
@@ -351,7 +371,10 @@ impl Kind {
     }
     /// Connects to neighbouring pipes.
     pub fn uses_pipes(self) -> bool {
-        matches!(self, Kind::Pipe | Kind::Pump | Kind::Boiler | Kind::SteamEngine)
+        matches!(
+            self,
+            Kind::Pipe | Kind::Pump | Kind::Boiler | Kind::SteamEngine | Kind::Furnace | Kind::BlastFurnace | Kind::Molder
+        )
     }
     /// Not part of the current tier; nothing is a preview any more.
     pub fn preview(self) -> bool {
@@ -389,8 +412,14 @@ impl Kind {
         }
     }
     pub fn recipes(self) -> &'static [Recipe] {
+        // Tests can swap a machine's recipes (this thread only) to try recipes no part has yet.
+        #[cfg(test)]
+        if let Some(list) = RECIPE_OVERRIDE.with(|o| o.get()).filter(|(k, _)| *k == self).map(|(_, l)| l) {
+            return list;
+        }
         match self {
             Kind::Furnace => FURNACE_RECIPES,
+            Kind::Molder => MOLDER_RECIPES,
             Kind::Press => PRESS_RECIPES,
             Kind::BlastFurnace => BLAST_RECIPES,
             Kind::Assembler => ASSEMBLER_RECIPES,
@@ -401,17 +430,18 @@ impl Kind {
         matches!(self, Kind::Drill | Kind::BasicDrill)
     }
     /// Ticks per item mined (on the surface), and items mined per coal burned.
-    fn drill_speed(self) -> (u32, u32) {
-        match self {
-            Kind::BasicDrill => (40, 10),
+    /// A cheap drill cuts iron at half the speed of a basic one.
+    fn drill_speed(self, ore: Item) -> (u32, u32) {
+        match (self, ore) {
+            (Kind::BasicDrill, _) => (40, 10),
+            (_, Item::IronOre) => (80, 8),
             _ => (60, 8),
         }
     }
-    /// What a drill can be set to mine (f cycles through these). Cheap drills can't cut iron.
+    /// What a drill can be set to mine (f cycles through these).
     pub fn ores(self) -> &'static [Item] {
         match self {
-            Kind::Drill => &[Item::CopperOre, Item::Coal],
-            Kind::BasicDrill => &[Item::CopperOre, Item::Coal, Item::IronOre],
+            Kind::Drill | Kind::BasicDrill => &[Item::CopperOre, Item::Coal, Item::IronOre, Item::Stone],
             _ => &[],
         }
     }
@@ -520,7 +550,7 @@ pub enum St {
         filter: Option<Item>,
     },
     Arm { filter: Option<Item>, hold: Option<Item>, progress: f64 },
-    /// Furnaces, presses and blast furnaces: a chosen recipe, a stock of inputs, and finished goods.
+    /// Furnaces, molders, presses and blast furnaces: a chosen recipe, a stock of inputs, and finished goods.
     Crafter {
         recipe: u8,
         #[serde(deserialize_with = "pad")]
@@ -529,6 +559,11 @@ pub enum St {
         progress: f64,
         busy: bool,
         out: VecDeque<Item>,
+        /// Whole units of the recipe's input fluid taken in, and of its output fluid waiting to leave.
+        #[serde(default)]
+        fluid: u32,
+        #[serde(default)]
+        fluid_out: u32,
     },
     Crate { items: VecDeque<Item> },
     Trade { mode: SellMode, money: f64, research: f64, count: u64 },
@@ -568,7 +603,7 @@ impl Building {
         let st = match kind {
             // A new drill comes with one coal's worth of fuel so it can start.
             Kind::Drill | Kind::BasicDrill => {
-                let (t, per_coal) = kind.drill_speed();
+                let (t, per_coal) = kind.drill_speed(Item::CopperOre);
                 St::Drill { mines: None, fuel: t * per_coal, coal: 0, progress: 0, out: VecDeque::new() }
             }
             Kind::Belt | Kind::FastBelt => St::Belt { items: Vec::new() },
@@ -576,8 +611,8 @@ impl Building {
                 St::Splitter { buf: VecDeque::new(), cooldown: 0.0, last_in: None, tried: 0, tried_prev: 0, filter: None }
             }
             Kind::Arm | Kind::LongArm => St::Arm { filter: None, hold: None, progress: 0.0 },
-            Kind::Furnace | Kind::Press | Kind::BlastFurnace | Kind::Assembler => {
-                St::Crafter { recipe: 0, stock: [0; ITEMS], fuel: 0, progress: 0.0, busy: false, out: VecDeque::new() }
+            Kind::Furnace | Kind::Molder | Kind::Press | Kind::BlastFurnace | Kind::Assembler => {
+                St::Crafter { recipe: 0, stock: [0; ITEMS], fuel: 0, progress: 0.0, busy: false, out: VecDeque::new(), fluid: 0, fluid_out: 0 }
             }
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
@@ -776,21 +811,6 @@ pub struct Grid {
     /// Every power source: (floor, anchor, grid). A source's tile can sit in a
     /// neighbour's range, so this, not the painted reach, says which grid it's on.
     pub sources: Vec<(usize, usize, usize)>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Fluid {
-    Water,
-    Steam,
-}
-
-impl Fluid {
-    pub fn name(self) -> &'static str {
-        match self {
-            Fluid::Water => "water",
-            Fluid::Steam => "steam",
-        }
-    }
 }
 
 /// Everything in one connected run of pipes. A pipe network holds one fluid at a time.
@@ -1302,9 +1322,11 @@ impl World {
                 *mines = Some(m);
                 *progress = 0;
             }
-            (St::Crafter { recipe, .. }, Setting::Recipe(v)) => {
+            (St::Crafter { recipe, fluid, fluid_out, .. }, Setting::Recipe(v)) => {
                 if kind.recipes().get(v as usize).is_some_and(|r| r.needs.map_or(true, |t| progress.has(t))) {
                     *recipe = v;
+                    *fluid = 0;
+                    *fluid_out = 0;
                 }
             }
             _ => {}
@@ -1341,14 +1363,14 @@ impl World {
                 let next = ores[at.map_or(0, |n| (n + 1) % ores.len())];
                 *mines = Some(next);
                 *progress = 0;
-                let note = if kind == Kind::Drill { " · iron needs a basic drill" } else { "" };
+                let note = if kind == Kind::Drill && next == Item::IronOre { " · half the speed of a basic drill" } else { "" };
                 Some(format!("{} now mines {}{note}", kind.name(), next.name()))
             }
             St::Trade { mode, .. } => {
                 *mode = mode.next();
                 Some(format!("Trade post: {}", mode.label()))
             }
-            St::Crafter { recipe, progress: p, .. } => {
+            St::Crafter { recipe, progress: p, fluid, fluid_out, .. } => {
                 let list = kind.recipes();
                 let usable = |r: &Recipe| r.needs.map_or(true, |t| progress.has(t));
                 if list.iter().filter(|r| usable(r)).count() < 2 {
@@ -1363,6 +1385,9 @@ impl World {
                 }
                 *recipe = n as u8;
                 *p = 0.0;
+                // Fluid held for the old recipe is let go.
+                *fluid = 0;
+                *fluid_out = 0;
                 Some(format!("{} now makes {}", kind.name(), list[n].name))
             }
             St::Elevator { mode, .. } => {
@@ -1881,7 +1906,7 @@ impl World {
         }
     }
 
-    /// A full building says PWR when everything in front of it is a belt with no power,
+    /// A full building says EC? when everything in front of it is a belt with no power,
     /// since that's the real reason it can't get rid of its output.
     fn full_word(&self, f: usize, a: usize) -> &'static str {
         let Some(b) = self.floors[f].tiles[a].as_ref() else { return "FULL" };
@@ -1905,7 +1930,7 @@ impl World {
                 None => {}
             }
         }
-        if belts > 0 { "PWR" } else { "FULL" }
+        if belts > 0 { "EC?" } else { "FULL" }
     }
 
     /// How many buildings are idle across every floor, and the most common reason.
@@ -1944,24 +1969,27 @@ impl World {
                     None
                 }
             }
-            St::Crafter { busy: false, stock, fuel, out, .. } => {
+            St::Crafter { busy: false, stock, fuel, out, fluid, fluid_out, .. } => {
                 let r = b.recipe()?;
                 let made: usize = r.outputs.iter().map(|o| o.1 as usize).sum();
-                if out.len() + made > CRAFTER_OUT_CAP {
+                let fluid_full = r.fluid_out.is_some_and(|(_, n)| *fluid_out + n > CRAFTER_FLUID_OUT_CAP);
+                if out.len() + made > CRAFTER_OUT_CAP || fluid_full {
                     Some(self.full_word(f, a))
                 } else if !r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n) {
                     Some("NEED")
+                } else if r.fluid_in.is_some_and(|(_, n)| *fluid < n) {
+                    Some("FLUD")
                 } else if let Some(fl) = r.fuel.filter(|fl| *fuel == 0 && stock[fl.idx()] == 0) {
                     Some(if fl == Item::Coke { "COKE" } else { "COAL" })
                 } else if b.kind.power_draw() > 0.0 && !powered {
-                    Some("PWR")
+                    Some("EC?")
                 } else {
                     None
                 }
             }
             St::Boiler { busy: false, fuel, coal, .. } => Some(if *fuel == 0 && *coal == 0 { "COAL" } else { "WATR" }),
             St::Engine { steam, .. } if *steam <= 0.0 => Some("STM?"),
-            St::Pump { busy: false } => Some(if powered { "FULL" } else { "PWR" }),
+            St::Pump { busy: false } => Some(if powered { "FULL" } else { "EC?" }),
             _ => None,
         }
     }
@@ -1970,12 +1998,15 @@ impl World {
     pub fn build_demo(&mut self) -> Result<(), String> {
         use Kind::*;
         let f = 0;
-        // Copper drill feeds the furnace directly; plates go east to the trade post.
+        // The press comes free with the demo.
+        self.progress.researched[Tech::Press.idx()] = true;
+        // Copper drill -> furnace -> molder -> press, each pushing straight into the next
+        // (ore, molten copper, ingots); plates ride a belt east to the trade post.
         self.place(f, 51, 37, Drill, Dir::E)?;
         self.place(f, 53, 37, Furnace, Dir::E)?;
-        for x in 55..=59 {
-            self.place(f, x, 37, Belt, Dir::E)?;
-        }
+        self.place(f, 55, 37, Molder, Dir::E)?;
+        self.place(f, 57, 37, Press, Dir::E)?;
+        self.place(f, 59, 37, Belt, Dir::E)?;
         self.place(f, 60, 36, TradePost, Dir::E)?;
         self.configure(f, 60, 36); // split 40/40
         // Coal drill sends coal west; a splitter shares it between the furnace and the copper drill.
@@ -1991,10 +2022,11 @@ impl World {
         for y in 39..=41 {
             self.place(f, 52, y, Belt, Dir::N)?;
         }
-        // Two solar panels, and poles carrying their power to every belt.
+        // Two solar panels, and poles carrying their power to the molder, press and every belt.
         self.place(f, 56, 33, Solar, Dir::E)?;
         self.place(f, 58, 33, Solar, Dir::E)?;
-        self.place(f, 57, 38, Pole, Dir::E)?;
+        self.place(f, 57, 36, Pole, Dir::E)?;
+        self.place(f, 57, 40, Pole, Dir::E)?;
         self.place(f, 63, 39, Pole, Dir::E)?;
         self.place(f, 51, 40, Pole, Dir::E)?;
         Ok(())
@@ -2063,7 +2095,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         }
         St::Drill { mines, fuel, coal, progress, out } => {
             let Some(item) = *mines else { return };
-            let (base, per_coal) = kind.drill_speed();
+            let (base, per_coal) = kind.drill_speed(item);
             let ticks = ((base as f64) / richness(level)).round().max(1.0) as u32;
             let per_fuel = ticks * per_coal;
             if *fuel == 0 && *coal > 0 {
@@ -2090,12 +2122,22 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             }
             push_front(tiles, owner, econ, x, y, size, dir, out, rr);
         }
-        St::Crafter { recipe, stock, fuel, progress, busy, out } => {
+        St::Crafter { recipe, stock, fuel, progress, busy, out, fluid, fluid_out } => {
             let r = &kind.recipes()[*recipe as usize];
             *busy = false;
-            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n);
+            // A fluid input comes from pipes on any side but the front.
+            if let Some((fl, n)) = r.fluid_in {
+                for p in pools_around(pipe_pool, x, y, size, Some(dir)) {
+                    while *fluid < fluid_cap(n) && pools[p].fluid == Some(fl) && pools[p].amount >= 1.0 {
+                        pools[p].take(fl, 1.0);
+                        *fluid += 1;
+                    }
+                }
+            }
+            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n) && r.fluid_in.map_or(true, |(_, n)| *fluid >= n);
             let made: usize = r.outputs.iter().map(|o| o.1 as usize).sum();
-            let room = out.len() + made <= CRAFTER_OUT_CAP;
+            // Both outputs need room: items and fluid.
+            let room = out.len() + made <= CRAFTER_OUT_CAP && r.fluid_out.map_or(true, |(_, n)| *fluid_out + n <= CRAFTER_FLUID_OUT_CAP);
             if have && room {
                 let speed = match r.fuel {
                     Some(f) => {
@@ -2123,6 +2165,12 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                             stock[it.idx()] -= n;
                             econ.used[it.idx()] += *n as u64;
                         }
+                        if let Some((_, n)) = r.fluid_in {
+                            *fluid -= n;
+                        }
+                        if let Some((_, n)) = r.fluid_out {
+                            *fluid_out += n;
+                        }
                         for (it, n) in r.outputs {
                             for _ in 0..*n {
                                 out.push_back(*it);
@@ -2131,6 +2179,9 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                         }
                     }
                 }
+            }
+            if let (Some((fl, _)), true) = (r.fluid_out, *fluid_out > 0) {
+                *fluid_out -= push_fluid(tiles, owner, pipe_pool, pools, x, y, size, dir, fl, *fluid_out);
             }
             push_front(tiles, owner, econ, x, y, size, dir, out, rr);
         }
@@ -2303,6 +2354,60 @@ fn push_front(
         }
     }
     false
+}
+
+/// How much of its input fluid a machine keeps on hand (whole units).
+fn fluid_cap(per_craft: u32) -> u32 {
+    (per_craft * 4).max(10)
+}
+
+/// Pushes up to `n` whole units of a fluid out of a building's front edge: into a pipe
+/// network with room for it (a network holds one fluid), or straight into a machine
+/// there that takes it. Returns how many units went.
+#[allow(clippy::too_many_arguments)]
+fn push_fluid(
+    tiles: &mut [Option<Building>],
+    owner: &[Option<u32>],
+    pipe_pool: &[i32],
+    pools: &mut [Pool],
+    ax: i32,
+    ay: i32,
+    s: i32,
+    dir: Dir,
+    fl: Fluid,
+    n: u32,
+) -> u32 {
+    let mut sent = 0;
+    'units: while sent < n {
+        for j in 0..s {
+            let (tx, ty) = front_tile(ax, ay, s, dir, j);
+            if !in_bounds(tx, ty) {
+                continue;
+            }
+            let p = pipe_pool[idx(tx, ty)];
+            if p >= 0 {
+                let pool = &mut pools[p as usize];
+                if pool.room_for(fl) >= 1.0 {
+                    pool.add(fl, 1.0);
+                    sent += 1;
+                    continue 'units;
+                }
+                continue;
+            }
+            let Some(a) = owner[idx(tx, ty)] else { continue };
+            if let Some(Building { kind, st: St::Crafter { recipe, fluid, .. }, .. }) = tiles[a as usize].as_mut() {
+                if let Some((f2, per)) = kind.recipes()[*recipe as usize].fluid_in {
+                    if f2 == fl && *fluid < fluid_cap(per) {
+                        *fluid += 1;
+                        sent += 1;
+                        continue 'units;
+                    }
+                }
+            }
+        }
+        break;
+    }
+    sent
 }
 
 /// Splitters send items, in turn, onto every neighbouring belt that leads away from them.
@@ -2540,31 +2645,215 @@ mod tests {
         w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap(); // reaches 5-10, 5-10
         let before = w.econ.money;
         run(&mut w, 30);
-        // The starter fuel mines exactly 8 ores, then the drill waits for coal.
+        // The starter fuel mines exactly 8 ores ($0.50 each), then the drill waits for coal.
         assert_eq!(w.econ.sold[Item::CopperOre.idx()], 8);
-        assert!((w.econ.money - before - 8.0).abs() < 1e-9);
+        assert!((w.econ.money - before - 4.0).abs() < 1e-9);
     }
 
     #[test]
-    fn drill_feeds_furnace_directly() {
+    fn copper_chain_drill_furnace_molder_press_trade_post() {
         let mut w = World::blank();
-        // Coal drill -> belt down into the furnace's top.
-        w.place(0, 5, 10, Kind::Drill, Dir::E).unwrap();
-        w.configure(0, 5, 10); // copper -> coal
-        w.place(0, 7, 10, Kind::Belt, Dir::E).unwrap();
-        for y in 10..=13 {
-            w.place(0, 8, y, Kind::Belt, Dir::S).unwrap();
-        }
-        // Copper drill pushes straight into the furnace next to it, no belt.
+        // Copper drill -> furnace -> molder -> press, each pushing straight into the next.
         w.place(0, 5, 14, Kind::Drill, Dir::E).unwrap();
         w.place(0, 7, 14, Kind::Furnace, Dir::E).unwrap(); // covers 7-8, 14-15
-        w.place(0, 9, 14, Kind::Belt, Dir::E).unwrap();
-        w.place(0, 10, 13, Kind::TradePost, Dir::E).unwrap();
-        w.place(0, 10, 10, Kind::Solar, Dir::E).unwrap();
-        w.place(0, 9, 12, Kind::Pole, Dir::E).unwrap();
-        run(&mut w, 120);
-        // Copper drill only had its starter fuel: 8 ores -> 8 plates.
+        w.place(0, 7, 13, Kind::Crate, Dir::S).unwrap(); // coal, pushed down into the furnace
+        fill_crate(&mut w, 0, 7, 13, &[Item::Coal; 12]);
+        w.place(0, 9, 14, Kind::Molder, Dir::E).unwrap();
+        w.place(0, 11, 14, Kind::Press, Dir::E).unwrap(); // makes copper plates first
+        w.place(0, 13, 14, Kind::Belt, Dir::E).unwrap();
+        w.place(0, 14, 13, Kind::TradePost, Dir::E).unwrap();
+        w.place(0, 9, 11, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 13, 12, Kind::Pole, Dir::E).unwrap();
+        run(&mut w, 100);
+        // The drill only had its starter fuel: 8 ores -> 8 molten copper -> 8 ingots -> 8 plates.
+        assert_eq!(w.econ.made[Item::CopperIngot.idx()], 8);
         assert_eq!(w.econ.sold[Item::CopperPlate.idx()], 8);
+        assert_eq!(w.econ.sold[Item::CopperIngot.idx()], 0, "the press ate them all");
+    }
+
+    #[test]
+    fn a_fresh_game_can_start_the_copper_chain_and_reach_the_press() {
+        let mut w = World::new();
+        // Drill -> furnace -> molder -> trade post, all on the starting $1000 (and no research).
+        w.place(0, 10, 10, Kind::Drill, Dir::E).unwrap();
+        w.place(0, 12, 10, Kind::Furnace, Dir::E).unwrap();
+        w.place(0, 12, 9, Kind::Crate, Dir::S).unwrap(); // coal for the furnace
+        fill_crate(&mut w, 0, 12, 9, &[Item::Coal; 12]);
+        w.place(0, 14, 10, Kind::Molder, Dir::E).unwrap();
+        w.place(0, 16, 9, Kind::TradePost, Dir::E).unwrap();
+        w.place(0, 14, 12, Kind::Solar, Dir::E).unwrap();
+        assert!(w.check_place(0, 30, 30, Kind::Press).unwrap_err().contains("locked"));
+        let before = w.econ.money;
+        run(&mut w, 100);
+        assert_eq!(w.econ.sold[Item::CopperIngot.idx()], 8);
+        assert!((w.econ.money - before - 16.0).abs() < 1e-9, "ingots sell for $2");
+        // 50 ingots open the press for free.
+        w.econ.made[Item::CopperIngot.idx()] = 50;
+        w.tick();
+        assert!(w.check_place(0, 30, 30, Kind::Press).is_ok());
+    }
+
+    /// Sets what a machine has in stock (tests only).
+    fn set_stock(w: &mut World, x: i32, y: i32, item: Item, n: u32) {
+        let a = w.floors[0].anchor_at(x, y).unwrap();
+        if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[a].as_mut() {
+            stock[item.idx()] = n;
+        }
+    }
+
+    /// (fluid taken in, fluid waiting to leave) of a machine.
+    fn crafter_fluid(w: &World, x: i32, y: i32) -> (u32, u32) {
+        match &w.tile(0, x, y).unwrap().st {
+            St::Crafter { fluid, fluid_out, .. } => (*fluid, *fluid_out),
+            _ => panic!("not a machine"),
+        }
+    }
+
+    #[test]
+    fn furnace_feeds_a_molder_directly() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap(); // covers 5-6, 5-6
+        set_stock(&mut w, 5, 5, Item::CopperOre, 6);
+        set_stock(&mut w, 5, 5, Item::Coal, 10);
+        w.place(0, 7, 5, Kind::Molder, Dir::E).unwrap(); // takes the molten copper, no pipe
+        w.place(0, 9, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 40);
+        assert_eq!(crate_items(&w, 0, 9, 5), vec![Item::CopperIngot; 6]);
+    }
+
+    #[test]
+    fn furnace_pipe_molder() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        set_stock(&mut w, 5, 5, Item::CopperOre, 4);
+        set_stock(&mut w, 5, 5, Item::Coal, 10);
+        w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+        w.place(0, 8, 5, Kind::Pipe, Dir::E).unwrap();
+        w.place(0, 9, 4, Kind::Molder, Dir::E).unwrap(); // the pipe touches its back side
+        w.place(0, 11, 4, Kind::Crate, Dir::E).unwrap();
+        // Set to iron, the molder leaves the copper in the pipe: it's carrying molten copper.
+        w.configure(0, 9, 4);
+        run(&mut w, 8);
+        assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[0].amount), (Some(Fluid::MoltenCopper), 1.0));
+        assert_eq!(crafter_fluid(&w, 9, 4).0, 0);
+        // Back to copper (iron -> steel -> copper) and with EC, it casts them all.
+        w.configure(0, 9, 4);
+        w.configure(0, 9, 4);
+        w.place(0, 9, 6, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 40);
+        assert_eq!(crate_items(&w, 0, 11, 4), vec![Item::CopperIngot; 4]);
+        assert_eq!(w.fluids.pools[0].amount, 0.0);
+        assert_eq!(w.fluids.pools[0].fluid, None, "an empty network holds nothing");
+    }
+
+    #[test]
+    fn a_pipe_network_holds_one_fluid() {
+        let mut p = Pool { fluid: None, amount: 0.0, cap: 20.0, pipes: 1 };
+        assert_eq!(p.add(Fluid::MoltenCopper, 5.0), 5.0);
+        assert_eq!(p.add(Fluid::Water, 5.0), 0.0, "no second fluid while it holds one");
+        assert_eq!(p.take(Fluid::Water, 5.0), 0.0);
+        assert_eq!(p.take(Fluid::MoltenCopper, 5.0), 5.0);
+        assert_eq!(p.add(Fluid::Water, 5.0), 5.0, "once empty it takes anything");
+        // In the world: a furnace can't push copper into a pipe full of water.
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        set_stock(&mut w, 5, 5, Item::CopperOre, 20);
+        set_stock(&mut w, 5, 5, Item::Coal, 30);
+        w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+        w.fluids.pools[0].add(Fluid::Water, 3.0);
+        run(&mut w, 80);
+        assert_eq!(w.fluids.pools[0].fluid, Some(Fluid::Water));
+        assert_eq!(w.fluids.pools[0].amount, 3.0);
+        assert_eq!(crafter_fluid(&w, 5, 5).1, CRAFTER_FLUID_OUT_CAP, "the molten copper has nowhere to go");
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"));
+    }
+
+    #[test]
+    fn a_full_fluid_output_stops_the_machine() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        set_stock(&mut w, 5, 5, Item::CopperOre, 100);
+        set_stock(&mut w, 5, 5, Item::Coal, 100);
+        w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap(); // one pipe holds 20 units, and nothing drains it
+        run(&mut w, 250);
+        assert_eq!(w.fluids.pools[0].amount, PIPE_CAP);
+        assert_eq!(crafter_fluid(&w, 5, 5), (0, CRAFTER_FLUID_OUT_CAP));
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"));
+        let made = w.econ.used[Item::CopperOre.idx()];
+        run(&mut w, 30);
+        assert_eq!(w.econ.used[Item::CopperOre.idx()], made, "it stops using ore too");
+        // Draining the pipe lets it carry on.
+        w.fluids.pools[0].take(Fluid::MoltenCopper, 20.0);
+        run(&mut w, 30);
+        assert!(w.econ.used[Item::CopperOre.idx()] > made);
+    }
+
+    #[test]
+    fn a_machine_with_two_outputs_needs_room_for_both() {
+        use Item::*;
+        static TWO_OUT: [Recipe; 1] = [Recipe {
+            name: "test",
+            inputs: &[(Coal, 1)],
+            outputs: &[(Coke, 1)],
+            fluid_in: None,
+            fluid_out: Some((Fluid::MoltenCopper, 1)),
+            ticks: 60,
+            fuel: None,
+            needs: None,
+            tag: 'T',
+        }];
+        RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Press, &TWO_OUT))));
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Press, Dir::E).unwrap(); // front is x=7, y=5 and 6
+        set_stock(&mut w, 5, 5, Coal, 30);
+        w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap(); // fluid out here...
+        w.place(0, 7, 6, Kind::Crate, Dir::E).unwrap(); // ...and items out here
+        w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 5);
+        assert_eq!(crate_items(&w, 0, 7, 6), vec![Coke; 5]);
+        assert_eq!(w.fluids.pools[0].amount, 5.0);
+        // The pipe fills up with something else: the metal can't leave, so the items stop too.
+        w.fluids.pools[0].take(Fluid::MoltenCopper, 5.0);
+        w.fluids.pools[0].add(Fluid::Water, 1.0);
+        run(&mut w, 40);
+        assert_eq!(crate_items(&w, 0, 7, 6).len(), 5 + CRAFTER_FLUID_OUT_CAP as usize);
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"));
+        RECIPE_OVERRIDE.with(|o| o.set(None));
+    }
+
+    #[test]
+    fn molders_follow_their_recipe_and_idle_without_metal() {
+        let mut w = World::blank();
+        w.place(0, 9, 5, Kind::Molder, Dir::E).unwrap();
+        w.tick();
+        assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"));
+        // A copper furnace can't pour into a molder set to iron.
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        w.place(0, 7, 5, Kind::Molder, Dir::E).unwrap();
+        assert!(w.configure(0, 7, 5).unwrap().contains("iron ingot"));
+        set_stock(&mut w, 5, 5, Item::CopperOre, 20);
+        set_stock(&mut w, 5, 5, Item::Coal, 30);
+        run(&mut w, 80);
+        assert_eq!(crafter_fluid(&w, 7, 5), (0, 0));
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"), "and the furnace waits");
+        assert!(w.configure(0, 7, 5).unwrap().contains("steel"));
+        assert!(w.configure(0, 7, 5).unwrap().contains("copper ingot"));
+    }
+
+    #[test]
+    fn presses_make_plates_from_ingots() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Press, Dir::E).unwrap();
+        set_stock(&mut w, 5, 5, Item::CopperIngot, 2);
+        w.place(0, 7, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 8);
+        assert_eq!(crate_items(&w, 0, 7, 5), vec![Item::CopperPlate; 2]);
+        assert!(w.configure(0, 5, 5).unwrap().contains("iron plate"));
+        set_stock(&mut w, 5, 5, Item::IronIngot, 1);
+        run(&mut w, 4);
+        assert_eq!(crate_items(&w, 0, 7, 5).last(), Some(&Item::IronPlate));
     }
 
     #[test]
@@ -2647,14 +2936,17 @@ mod tests {
     fn production_panel_counts_the_last_minute() {
         let mut w = World::new();
         w.build_demo().unwrap();
-        run(&mut w, 70);
+        run(&mut w, 100);
         let (rows, secs) = w.flow();
         assert_eq!(secs, 60);
         let get = |it: Item| rows.iter().find(|r| r.item == it).copied().unwrap();
+        // The furnace melts one ore per 5 s: about 12 a minute all the way down the chain.
         let plate = get(Item::CopperPlate);
-        assert!(plate.made > 10.0 && plate.sold > 10.0 && plate.research > 0.0 && plate.money > 0.0, "{plate:?}");
+        assert!(plate.made > 8.0 && plate.sold > 8.0 && plate.research > 0.0 && plate.money > 0.0, "{plate:?}");
+        let ingot = get(Item::CopperIngot);
+        assert!((ingot.made - plate.made).abs() <= 2.0 && (ingot.used - plate.made).abs() <= 2.0, "{ingot:?} {plate:?}");
         let ore = get(Item::CopperOre);
-        assert!(ore.made > 10.0 && (ore.used - plate.made).abs() <= 2.0, "furnaces use one ore per plate: {ore:?} {plate:?}");
+        assert!(ore.made > 8.0 && (ore.used - ingot.made).abs() <= 2.0, "furnaces use one ore per ingot: {ore:?} {ingot:?}");
         assert!(get(Item::Coal).used > 0.0, "fuel counts as used");
     }
 
@@ -2662,9 +2954,13 @@ mod tests {
     fn demo_factory_runs() {
         let mut w = World::new();
         w.build_demo().unwrap();
-        run(&mut w, 90);
+        run(&mut w, 200);
         assert!(w.econ.sold[Item::CopperPlate.idx()] > 20, "sold {:?}", w.econ.sold);
         assert!(w.econ.research > 0.0);
+        // Everything in the chain has full EC.
+        assert_eq!(w.grid.unpowered, 0);
+        assert_eq!(w.building_ratio(0, idx(55, 37)), 1.0, "molder");
+        assert_eq!(w.building_ratio(0, idx(57, 37)), 1.0, "press");
     }
 
     #[test]
@@ -2819,7 +3115,8 @@ mod tests {
         w.progress.opened[Company::Ashgrove.idx()] = false;
         w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
         fill_crate(&mut w, 0, 5, 5, &[Item::CopperPlate; 3]);
-        w.place(0, 6, 5, Kind::Press, Dir::E).unwrap(); // makes wire by default
+        w.place(0, 6, 5, Kind::Press, Dir::E).unwrap();
+        while !w.configure(0, 6, 5).unwrap().contains("copper wire") {}
         w.place(0, 6, 7, Kind::Solar, Dir::E).unwrap(); // reaches the press
         run(&mut w, 5);
         assert!(w.econ.made[Item::CopperWire.idx()] >= 2);
@@ -2833,54 +3130,91 @@ mod tests {
         w.progress.researched[Tech::Coking.idx()] = false;
         w.progress.researched[Tech::BlastFurnace.idx()] = false; // its concrete recipe would count too
         w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
-        assert!(w.configure(0, 5, 5).unwrap().contains("only one recipe"));
+        // Copper and iron only: it goes round without ever reaching coke.
+        assert!(w.configure(0, 5, 5).unwrap().contains("molten iron"));
+        assert!(w.configure(0, 5, 5).unwrap().contains("molten copper"));
         w.progress.researched[Tech::Coking.idx()] = true;
+        assert!(w.configure(0, 5, 5).unwrap().contains("molten iron"));
         assert!(w.configure(0, 5, 5).unwrap().contains("coke"));
-        // Coal goes in, coke comes out, no separate fuel needed.
+        // Three coal go in, coke comes out in 5 s, no separate fuel needed.
         w.place(0, 3, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 4, 5, Kind::Belt, Dir::E).unwrap();
         w.place(0, 4, 7, Kind::Solar, Dir::E).unwrap();
-        fill_crate(&mut w, 0, 3, 5, &[Item::Coal; 4]);
-        run(&mut w, 10);
+        fill_crate(&mut w, 0, 3, 5, &[Item::Coal; 6]);
+        run(&mut w, 14);
         assert_eq!(w.econ.made[Item::Coke.idx()], 2);
     }
 
     #[test]
-    fn drills_mine_what_they_are_set_to_and_only_basic_drills_cut_iron() {
+    fn drills_mine_copper_coal_iron_and_stone() {
         let mut w = World::blank();
-        // A cheap drill goes copper -> coal -> copper: no iron.
+        // A cheap drill goes copper -> coal -> iron -> stone -> copper.
         w.place(0, 10, 10, Kind::Drill, Dir::E).unwrap();
         let mines = |w: &World, x, y| match &w.tile(0, x, y).unwrap().st {
             St::Drill { mines, .. } => *mines,
             _ => None,
         };
         assert_eq!(mines(&w, 10, 10), Some(Item::CopperOre));
-        assert!(w.configure(0, 10, 10).unwrap().contains("iron needs a basic drill"));
+        w.configure(0, 10, 10);
         assert_eq!(mines(&w, 10, 10), Some(Item::Coal));
+        assert!(w.configure(0, 10, 10).unwrap().contains("half the speed"));
+        assert_eq!(mines(&w, 10, 10), Some(Item::IronOre));
+        w.configure(0, 10, 10);
+        assert_eq!(mines(&w, 10, 10), Some(Item::Stone));
         w.configure(0, 10, 10);
         assert_eq!(mines(&w, 10, 10), Some(Item::CopperOre));
         w.apply_setting(0, 10, 10, Setting::Mines(Item::IronOre));
-        assert_eq!(mines(&w, 10, 10), Some(Item::CopperOre), "a copied iron setting doesn't stick to a cheap drill");
-        // A basic drill set to iron, anywhere on the ground.
-        w.place(0, 20, 20, Kind::BasicDrill, Dir::E).unwrap();
-        w.configure(0, 20, 20);
-        w.configure(0, 20, 20);
-        assert_eq!(mines(&w, 20, 20), Some(Item::IronOre));
-        w.place(0, 22, 20, Kind::Crate, Dir::E).unwrap();
+        assert_eq!(mines(&w, 10, 10), Some(Item::IronOre), "a copied iron setting sticks to a cheap drill now");
+        // Stone, anywhere on the ground; the starter fuel mines 8.
+        w.place(0, 30, 30, Kind::Drill, Dir::E).unwrap();
+        w.apply_setting(0, 30, 30, Setting::Mines(Item::Stone));
+        w.place(0, 32, 30, Kind::Crate, Dir::E).unwrap();
         run(&mut w, 10);
-        assert!(crate_items(&w, 0, 22, 20).iter().all(|i| *i == Item::IronOre));
-        assert_eq!(crate_items(&w, 0, 22, 20).len(), 10); // its starter coal mines 10 ores
+        assert_eq!(crate_items(&w, 0, 32, 30), vec![Item::Stone; 8]);
+        assert_eq!(Item::Stone.price(), 0.3);
     }
 
     #[test]
-    fn blast_furnace_makes_iron_then_steel_with_slag() {
+    fn a_cheap_drill_cuts_iron_at_half_the_basic_drills_speed() {
+        let mut w = World::blank();
+        for (kind, y) in [(Kind::BasicDrill, 20), (Kind::Drill, 25)] {
+            w.place(0, 20, y, kind, Dir::E).unwrap();
+            w.apply_setting(0, 20, y, Setting::Mines(Item::IronOre));
+            w.place(0, 22, y, Kind::Crate, Dir::E).unwrap();
+        }
+        run(&mut w, 4);
+        let (basic, cheap) = (crate_items(&w, 0, 22, 20), crate_items(&w, 0, 22, 25));
+        assert!(basic.iter().chain(&cheap).all(|i| *i == Item::IronOre));
+        assert_eq!((basic.len(), cheap.len()), (6, 3));
+        // Copper is unchanged: a cheap drill is at 60 ticks an ore.
+        w.place(0, 40, 20, Kind::Drill, Dir::E).unwrap();
+        w.place(0, 42, 20, Kind::Crate, Dir::E).unwrap();
+        run(&mut w, 3);
+        assert_eq!(crate_items(&w, 0, 42, 20).len(), 3);
+    }
+
+    #[test]
+    fn blast_furnace_melts_iron_then_makes_steel_with_slag() {
         let mut w = World::blank();
         w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
-        fill_crate(&mut w, 0, 5, 5, &[Item::IronOre, Item::IronOre, Item::IronOre, Item::Coke]);
+        fill_crate(&mut w, 0, 5, 5, &[Item::IronOre, Item::IronOre, Item::IronOre, Item::Coke, Item::Coke]);
         w.place(0, 6, 5, Kind::BlastFurnace, Dir::E).unwrap(); // covers 6-7, 5-6
-        w.place(0, 8, 5, Kind::Crate, Dir::E).unwrap();
-        run(&mut w, 6);
-        assert_eq!(crate_items(&w, 0, 8, 5), vec![Item::IronPlate; 3]);
+        w.place(0, 8, 5, Kind::Pipe, Dir::E).unwrap();
+        run(&mut w, 20);
+        // 5 s an ore, one molten iron each, into the pipe.
+        assert_eq!(w.fluids.pools[0].fluid, Some(Fluid::MoltenIron));
+        assert_eq!(w.fluids.pools[0].amount, 3.0);
+        // The iron furnace is slower and gives 2 molten iron for 3 ore.
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        assert!(w.configure(0, 5, 5).unwrap().contains("molten iron"));
+        set_stock(&mut w, 5, 5, Item::IronOre, 3);
+        set_stock(&mut w, 5, 5, Item::Coal, 5);
+        w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+        run(&mut w, 9);
+        assert_eq!(w.fluids.pools[0].amount, 0.0, "10 s a batch");
+        run(&mut w, 3);
+        assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[0].amount), (Some(Fluid::MoltenIron), 2.0));
 
         let mut w = World::blank();
         w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
@@ -3024,10 +3358,10 @@ mod tests {
     fn milestones_unlock_for_free() {
         let mut w = World::new();
         assert!(!w.progress.has(Tech::Press));
-        w.econ.made[Item::CopperPlate.idx()] = 49;
+        w.econ.made[Item::CopperIngot.idx()] = 49;
         w.tick();
         assert!(!w.progress.has(Tech::Press));
-        w.econ.made[Item::CopperPlate.idx()] = 50;
+        w.econ.made[Item::CopperIngot.idx()] = 50;
         w.tick();
         assert!(w.progress.has(Tech::Press));
         assert_eq!(w.econ.research, 0.0, "nothing was spent");
@@ -3084,10 +3418,10 @@ mod tests {
             w.place(0, x, 5, Kind::Belt, Dir::E).unwrap();
         }
         run(&mut w, 10);
-        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("PWR"));
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("EC?"));
         w.place(0, 8, 7, Kind::Solar, Dir::E).unwrap();
         w.tick();
-        assert_ne!(w.idle_reason(0, idx(5, 5)), Some("PWR"));
+        assert_ne!(w.idle_reason(0, idx(5, 5)), Some("EC?"));
     }
 
     #[test]

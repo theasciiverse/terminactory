@@ -27,16 +27,16 @@ tfac --help    # everything tfac can do
 
 `--demo` starts next to a small working factory with its own save. Saves and key settings (`controls.json`) live in `~/.terminactory` (saves in `saves/`), so the game finds them from any folder; it saves every 2 minutes, when you quit, and on Ctrl+S. A save can only be open in one window at a time: a second `tfac` on the same save says which window has it. The old single `campaign.json` becomes `save1` the first time; if an older copy of the game writes it again later, the newer file becomes `save1` and the other is kept as `save1.older.json`.
 
-Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a split next to your agent) it switches to a **small-pane view** by itself: the map fills the pane, one line on top shows money, research, power, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
+Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a split next to your agent) it switches to a **small-pane view** by itself: the map fills the pane, one line on top shows money, research, EC, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
 
 ## What's in it
 
-Phase 1: sell for money and research, research the copper press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company.
+Phase 1: ore is melted in a furnace into molten metal, a molder casts it into ingots, and a press makes plates. Sell for money and research, research the copper press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company.
 
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
-- **Steam power** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 40 power each, only as much as their grid needs beyond solar.
-- **Blast furnace** (after coke): burns coke, smelts iron ore into iron plate, and makes steel from iron plate. Steel leaves slag, which comes out the front too and has to go somewhere.
+- **Steam engines** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 40 EC each, only as much as their grid needs beyond solar.
+- **Blast furnace** (after coke): burns coke, melts iron ore into molten iron fast (1 ore a go, 5 s), and makes steel from iron plate. Steel leaves slag, which comes out the front too and has to go somewhere.
 
 Phase 3: floors, elevators and machinery.
 - **Floors**: support beams (after steel girders) open floor +1; excavation (after slag concrete) opens floor -1. Decking or digging costs $10 a tile (more on later floors), never any waiting. Drills underground mine 1.5x faster (2x and 3x on deeper floors later).
@@ -50,15 +50,24 @@ Phase 3: floors, elevators and machinery.
   - **Warehouse**: a 2×2 crate holding four crates' worth.
   - Pipes moved next to pumps in the build menu (Create 4, press again for pipes) to make room: Transport is now belts / fast belts / tunnels, splitters / filter splitters, arms / long arms, elevators. Misc 1 is crate / warehouse.
 - **Free unlocks**: everything also unlocks free once you've made enough of its milestone item (shown in the tree); research is the shortcut.
-- **Idle machines** flash a word saying why: FULL, NEED, COAL, COKE, PWR, WATR, ORE?, STM?.
+- **Idle machines** flash a word saying why: FULL, NEED, COAL, COKE, EC?, FLUD, WATR, ORE?, STM?. (EC? is no electric charge; FLUD is a molder waiting for molten metal.)
 - **Offline earnings**: when you come back, you get what your factory earned while the game was closed, with no cap.
-- **Faster early game**: drills and copper furnaces run twice as fast, and the first research is cheaper.
+- **Faster early game**: drills run twice as fast, and the first research is cheaper.
+
+## Molten metal
+
+- **Furnace** (burns coal): copper ore → molten copper (1 → 1, 5 s); iron ore → molten iron (3 → 2, 10 s, slow); with coking, 3 coal → coke (5 s). Press `f` on it to change the recipe.
+- **Molder** (2 EC, $100, Create 2, next to the furnace): casts molten metal into ingots: copper ingot ($2), iron ingot ($1.50), steel (2.5 s each). `f` picks the recipe; it only takes the metal its recipe uses.
+- **Press**: copper plate and iron plate come from ingots now (2.5 s), then wire, pipe, coil and the rest as before. Copper ingots are the free milestone for the press (make 50).
+- **Fluids in pipes**: a machine that makes a fluid pushes it out of its **front**, into a pipe touching that edge, or straight into a machine that takes it (a furnace right behind a molder needs no pipe). A machine that needs a fluid takes it from pipes on any of its other sides. A pipe network holds one fluid at a time: water blue, steam white, molten copper orange, molten iron red, molten steel pale yellow, grey when empty. Pointing at a pipe or a machine names the fluid.
+- A machine can have two outputs (a fluid out the front and items out the front). It waits, saying FULL, until both have room.
+- **Stone** ($0.30): drills can mine it (`f` cycles copper, coal, iron, stone). A cheap drill cuts iron at half the speed of a basic drill.
 
 ## Recipe book
 
-`b` opens it on whatever is under the cursor. It has a page for every item (Items tab) and for each machine that makes or mines them (drills, furnaces, press, assembler).
+`b` opens it on whatever is under the cursor. It has a page for every item (Items tab) and for each machine that makes or mines them (drills, furnace, molder, press, blast furnace, assembler).
 
-- **Item pages:** what makes it, as a word equation with the fuel over the arrow (`copper ore ─coal─→ copper plate`), plus timing and anything still locked. Also what uses it, what it unlocks, and a chart of research per sale that marks its floor and where you are.
+- **Item pages:** what makes it, as a word equation with the fuel over the arrow (`copper ore ─coal─→ molten copper`), plus timing and anything still locked. Also what uses it, what it unlocks, and a chart of research per sale that marks its floor and where you are.
 - **Machine pages:** cost, whether you can build it (and what opens it if not), and everything it makes.
 - **Tabs:** Tab switches between the Items tab and the Machines tab.
 - **Links:** blue names are links: click one to go there, and Backspace goes back.
@@ -93,10 +102,10 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 
 - Buildings take input from **any side** and send output out of their **front** only (the arrow on their edge): onto a belt, or straight into the next building, like a drill directly into a furnace.
 - Sizes follow roles: belts, splitters, arms and crates are 1×1; drills, furnaces, solar panels and elevators are 2×2; the trade post is 3×3.
-- Drills mine anywhere on the ground (not on decking): press f on one to pick copper or coal (and iron, for basic drills). The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
-- Furnaces and presses make the recipe they're set to (`f` changes it). Furnaces burn coal for plates; with coking researched they bake coal into coke. Presses turn plates into wire and pipe, and wire into coils. Only the basic drill cuts iron.
-- Research (`t`) brings new parts, grouped like the build menu (Making, Moving, Power, Floors); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, girders, concrete, gears, a gearbox), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
-- Belts, splitters and arms need power. Solar panels (reach 2 tiles) and power poles (reach 3 tiles) power every electric part within range; ranges that overlap join into one grid, and each grid shares only its own power. Solar panels never join each other directly, even side by side: link them with poles. The Power figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little power slows a grid's parts evenly. Elevators carry power to the floor below. Unpowered belts turn red; `v` shows the powered area.
+- Drills mine anywhere on the ground (not on decking): press f on one to pick copper, coal, iron or stone. The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
+- Furnaces, molders and presses make the recipe they're set to (`f` changes it). Furnaces burn coal to melt ore; with coking researched they bake coal into coke. Molders cast ingots, presses turn ingots into plates, plates into wire and pipe, and wire into coils. A basic drill cuts iron twice as fast as a cheap one.
+- Research (`t`) brings new parts, grouped like the build menu (Making, Moving, EC, Floors); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, girders, concrete, gears, a gearbox), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
+- Power is called **EC** (electric charge). Belts, splitters, arms, molders and presses need it. Solar panels (reach 2 tiles) and EC poles (reach 3 tiles) charge every electric part within range; ranges that overlap join into one grid, and each grid shares only its own EC. Solar panels never join each other directly, even side by side: link them with poles. The EC figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little EC slows a grid's parts evenly. Elevators carry EC to the floor below. Belts without EC turn red; `v` shows the area it reaches.
 - Trade posts sell what they receive: money, a 40/40 split, or research (press `f` on one).
 - Research per item fades the more you sell of it, down to a small per-item minimum, so new items are where research comes from. Research earned while the game is closed fades the same way.
 - Nothing breaks or jams at random. Removing a part refunds it in full.
@@ -107,7 +116,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 | --- | --- |
 | Move | arrows / WASD |
 | Lay belts | Shift+arrows / Shift+WASD, or drag with the mouse |
-| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 Power, 4 Misc); inside it, 1–4 picks a part, and pressing the same number again switches kind (copper drill / basic drill, belt / fast belt / splitter, furnace / blast furnace, press / assembler); `` ` ``, `₹`, `~` or Esc goes back |
+| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 EC, 4 Misc); inside it, 1–4 picks a part, and pressing the same number again switches kind (copper drill / basic drill, belt / fast belt / splitter, furnace / molder / blast furnace, press / assembler); `` ` ``, `₹`, `~` or Esc goes back |
 | Place / remove | Space or click / x or right-click |
 | Copy a part | middle-click it: picks up its kind, facing and setting (recipe, arm filter, trade post mode), so clicks place copies; middle-click empty ground to empty your hand |
 | Rotate (belt direction / output side) | r |
@@ -116,7 +125,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 | Research | t (arrows pick, Enter researches; click a row, click again to research) |
 | Save | Ctrl+S (it also saves every 2 minutes and on quit) |
 | Production panel | o: the last minute per item (made, used, sold, money, research, what the next sale pays); the game keeps running |
-| Show power range | v |
+| Show EC range | v |
 | Elevator size | + / - |
 | Pause / speed | p / [ ] |
 | Recipe book (opens on what's under the cursor) | b |
@@ -131,8 +140,8 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 
 ## What's on screen
 
-Buildings are coloured blocks labelled with their name, and an arrow on their edge marks the output side. A grey block is idle or unpowered.
-Belts are dim arrows (`>>`, muted red when unpowered), and items ride on them. There are no ore patches or lakes: drills and pumps work anywhere on the ground. Point at anything and the side panel says what it is (and what a belt is carrying).
+Buildings are coloured blocks labelled with their name, and an arrow on their edge marks the output side. A grey block is idle or has no EC.
+Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There are no ore patches or lakes: drills and pumps work anywhere on the ground. Point at anything and the side panel says what it is (and what a belt is carrying).
 
 | Block | Part | Size | Item glyph |
 | --- | --- | --- | --- |
@@ -140,17 +149,18 @@ Belts are dim arrows (`>>`, muted red when unpowered), and items ride on them. T
 | `>>` | Basic belt | 1×1 | `*` coal |
 | `SP` | Basic splitter | 1×1 | `=` copper plate |
 | `A>` | Filtering arm | 1×1 | |
-| `FURN` | Copper furnace (letter = recipe: P plates, K coke) | 2×2 | `~` wire, `0` pipe |
-| `PRES` | Copper press (W wire, P pipe, C coil) | 2×2 | `@` coil, `#` coke |
-| `DRL2` | Basic drill (cuts iron) | 2×2 | `o` (blue) iron ore |
+| `FURN` | Furnace (letter = recipe: M molten copper, I molten iron, K coke) | 2×2 | `~` wire, `0` pipe |
+| `MOLD` | Molder (C copper ingot, I iron ingot, S steel) | 2×2 | `i` ingot (copper orange, iron blue) |
+| `PRES` | Copper press (= copper plate, - iron plate, W wire, P pipe, C coil) | 2×2 | `@` coil, `#` coke |
+| `DRL2` | Basic drill (iron twice as fast) | 2×2 | `o` (blue) iron ore, `o` (grey) stone |
 | `C>` | Crate | 1×1 | |
 | `TRADE` | Trade post (`$ $ $` money, `$ / R` split, `R R R` research) | 3×3 | |
 | `SOLR` | Cheap solar panel | 2×2 | |
-| `/\` | Power pole | 1×1 | |
+| `/\` | EC pole | 1×1 | |
 | `┌ LIFT ┐` | Elevator: a box, 2×2 to 8×8 | 2×2–8×8 | |
-| `==` `\|\|` `++` | Pipe (blue = water, white = steam, grey = empty) | 1×1 | `=` (pale) iron plate |
+| `==` `\|\|` `++` | Pipe (blue water, white steam, orange copper, red iron, pale steel, grey empty) | 1×1 | `=` (pale) iron plate |
 | `PU` | Water pump (anywhere on the ground) | 1×1 | `%` steel |
-| `BLST` | Blast furnace (I iron plate, S steel) | 2×2 | `,` slag |
+| `BLST` | Blast furnace (I molten iron, S steel) | 2×2 | `,` slag |
 | `BOIL` | Boiler | 2×2 | |
 | `ENGN` | Steam engine | 2×2 | |
 | `ASSMBL` | Assembler | 3×3 | `H` girder, `c` concrete |
