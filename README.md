@@ -92,7 +92,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 ## Rules in one breath
 
 - Buildings take input from **any side** and send output out of their **front** only (the arrow on their edge): onto a belt, or straight into the next building, like a drill directly into a furnace.
-- Sizes follow roles: belts, splitters, arms and crates are 1×1; drills, furnaces, solar panels and elevators are 2×2; the trade post is 3×3.
+- Sizes follow roles: belts, splitters, arms and crates are 1×1; drills, solar panels and elevators are 2×2; furnaces and the trade post are 3×3. Presses (2×1) and pumps (1×2) are long machines: the size given is facing east or west, and they swap width and height when turned north or south. The rotate key (`r`) shows the turned shape while placing, and turning a placed one needs the room (it keeps its top-left corner).
 - Drills mine anywhere on the ground (not on decking): press f on one to pick copper or coal (and iron, for basic drills). The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
 - Furnaces and presses make the recipe they're set to (`f` changes it). Furnaces burn coal for plates; with coking researched they bake coal into coke. Presses turn plates into wire and pipe, and wire into coils. Only the basic drill cuts iron.
 - Research (`t`) brings new parts, grouped like the build menu (Making, Moving, Power, Floors); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, girders, gears, a gearbox), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
@@ -141,8 +141,8 @@ Belts are dim arrows (`>>`, muted red when unpowered), and items ride on them. T
 | `>>` | Basic belt | 1×1 | `*` coal |
 | `SP` | Basic splitter | 1×1 | `=` copper plate |
 | `A>` | Filtering arm | 1×1 | |
-| `FURN` | Copper furnace (letter = recipe: P plates, K coke) | 2×2 | `~` wire, `0` pipe |
-| `PRES` | Copper press (W wire, P pipe, C coil) | 2×2 | `@` coil, `#` coke |
+| `FURN` | Copper furnace (letter = recipe: P plates, K coke) | 3×3 | `~` wire, `0` pipe |
+| `PRW>` | Copper press (W wire, P pipe, C coil; the letter sits before the arrow) | 2×1 | `@` coil, `#` coke |
 | `DRL2` | Basic drill (cuts iron) | 2×2 | `o` (blue) iron ore |
 | `C>` | Crate | 1×1 | |
 | `TRADE` | Trade post (`$ $ $` money, `$ / R` split, `R R R` research) | 3×3 | |
@@ -150,7 +150,7 @@ Belts are dim arrows (`>>`, muted red when unpowered), and items ride on them. T
 | `/\` | Power pole | 1×1 | |
 | `┌ LIFT ┐` | Elevator: a box, 2×2 to 8×8 | 2×2–8×8 | |
 | `==` `\|\|` `++` | Pipe (blue = water, white = steam, grey = empty) | 1×1 | `=` (pale) iron plate |
-| `PU` | Water pump (anywhere on the ground) | 1×1 | `%` steel |
+| `PU` `MP` | Water pump (anywhere on the ground) | 1×2 | `%` steel |
 | `BLST` | Blast furnace (I iron plate, S steel) | 2×2 | `,` waste |
 | `BOIL` | Boiler | 2×2 | |
 | `ENGN` | Steam engine | 2×2 | |

@@ -300,21 +300,22 @@ impl Kind {
             self.cost()
         }
     }
-    /// Default side length in tiles: logistics are small, production is big.
-    /// Elevators can be built from 2x2 up to 8x8.
-    pub fn size(self) -> i32 {
+    /// Footprint in tiles as (width, height) when facing east. Facing north or south
+    /// the two swap; facing west is the same as east. Most parts are square.
+    /// Elevators can be built from 2x2 up to 8x8 (this is their smallest).
+    pub fn base_dims(self) -> (i32, i32) {
         match self {
+            Kind::Furnace | Kind::TradePost | Kind::Assembler => (3, 3),
+            Kind::Press => (2, 1),
+            Kind::Pump => (1, 2),
             Kind::Drill
             | Kind::BasicDrill
-            | Kind::Furnace
-            | Kind::Press
             | Kind::BlastFurnace
             | Kind::Solar
             | Kind::Elevator
             | Kind::Boiler
             | Kind::SteamEngine
-            | Kind::Warehouse => 2,
-            Kind::TradePost | Kind::Assembler => 3,
+            | Kind::Warehouse => (2, 2),
             Kind::Belt
             | Kind::FastBelt
             | Kind::Tunnel
@@ -324,9 +325,13 @@ impl Kind {
             | Kind::LongArm
             | Kind::Crate
             | Kind::Pole
-            | Kind::Pipe
-            | Kind::Pump => 1,
+            | Kind::Pipe => (1, 1),
         }
+    }
+    /// Footprint (width, height) of a part facing `dir`.
+    pub fn dims(self, dir: Dir) -> (i32, i32) {
+        let (w, h) = self.base_dims();
+        if self.directional() && matches!(dir, Dir::N | Dir::S) { (h, w) } else { (w, h) }
     }
     pub fn power_draw(self) -> f64 {
         match self {
@@ -344,7 +349,7 @@ impl Kind {
     pub fn directional(self) -> bool {
         !matches!(
             self,
-            Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::Pole | Kind::Pipe | Kind::Pump | Kind::SteamEngine
+            Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::Pole | Kind::Pipe | Kind::SteamEngine
         )
     }
     pub fn is_belt(self) -> bool {
@@ -602,11 +607,12 @@ impl Building {
         Building { kind, dir, rr: 0, st, size: 0 }
     }
 
-    pub fn size(&self) -> i32 {
+    /// Footprint (width, height) in tiles, turned to face `dir`.
+    pub fn dims(&self) -> (i32, i32) {
         if self.size > 0 {
-            self.size as i32
+            (self.size as i32, self.size as i32)
         } else {
-            self.kind.size()
+            self.kind.dims(self.dir)
         }
     }
 
@@ -886,12 +892,12 @@ pub struct Fluids {
 
 /// Which grid powers a building: the first of its tiles that's in range (-1 = none).
 /// A big building counts as powered when any part of it is in range.
-fn grid_of(cover: &[i32], x: i32, y: i32, s: i32) -> i32 {
-    footprint(x, y, s).filter(|&(tx, ty)| in_bounds(tx, ty)).map(|(tx, ty)| cover[idx(tx, ty)]).find(|&id| id >= 0).unwrap_or(-1)
+fn grid_of(cover: &[i32], x: i32, y: i32, (w, h): (i32, i32)) -> i32 {
+    footprint(x, y, w, h).filter(|&(tx, ty)| in_bounds(tx, ty)).map(|(tx, ty)| cover[idx(tx, ty)]).find(|&id| id >= 0).unwrap_or(-1)
 }
 
 /// The tiles a power source reaches: (x0, y0, x1, y1), inclusive.
-pub fn coverage(kind: Kind, s: i32, ax: i32, ay: i32) -> Option<(i32, i32, i32, i32)> {
+pub fn coverage(kind: Kind, (w, h): (i32, i32), ax: i32, ay: i32) -> Option<(i32, i32, i32, i32)> {
     let r = match kind {
         Kind::Solar => SOLAR_REACH,
         Kind::Pole => POLE_REACH,
@@ -899,7 +905,7 @@ pub fn coverage(kind: Kind, s: i32, ax: i32, ay: i32) -> Option<(i32, i32, i32, 
         Kind::SteamEngine => ENGINE_REACH,
         _ => return None,
     };
-    Some((ax - r, ay - r, ax + s - 1 + r, ay + s - 1 + r))
+    Some((ax - r, ay - r, ax + w - 1 + r, ay + h - 1 + r))
 }
 
 fn overlaps(a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)) -> bool {
@@ -970,17 +976,30 @@ pub fn pos_of(i: usize) -> (i32, i32) {
     ((i as i32) % W, (i as i32) / W)
 }
 
-/// Every tile a building of side `s` covers when its top-left is at (x, y).
-pub fn footprint(x: i32, y: i32, s: i32) -> impl Iterator<Item = (i32, i32)> {
-    (0..s).flat_map(move |dy| (0..s).map(move |dx| (x + dx, y + dy)))
+/// Every tile a building `w` wide and `h` tall covers when its top-left is at (x, y).
+pub fn footprint(x: i32, y: i32, w: i32, h: i32) -> impl Iterator<Item = (i32, i32)> {
+    (0..h).flat_map(move |dy| (0..w).map(move |dx| (x + dx, y + dy)))
 }
 
-/// The j-th tile just outside a building's front edge.
-fn front_tile(ax: i32, ay: i32, s: i32, dir: Dir, j: i32) -> (i32, i32) {
+/// Footprint of a part facing `dir`; `s` is the side of an elevator (ignored for other parts).
+pub fn dims_of(kind: Kind, dir: Dir, s: i32) -> (i32, i32) {
+    if kind == Kind::Elevator { (s, s) } else { kind.dims(dir) }
+}
+
+/// How many tiles long a building's edge is on side `d`.
+pub fn edge_len((w, h): (i32, i32), d: Dir) -> i32 {
+    match d {
+        Dir::E | Dir::W => h,
+        Dir::N | Dir::S => w,
+    }
+}
+
+/// The j-th tile just outside a building's edge on side `dir`.
+fn front_tile(ax: i32, ay: i32, (w, h): (i32, i32), dir: Dir, j: i32) -> (i32, i32) {
     match dir {
-        Dir::E => (ax + s, ay + j),
+        Dir::E => (ax + w, ay + j),
         Dir::W => (ax - 1, ay + j),
-        Dir::S => (ax + j, ay + s),
+        Dir::S => (ax + j, ay + h),
         Dir::N => (ax + j, ay - 1),
     }
 }
@@ -1143,13 +1162,14 @@ impl World {
         Ok(())
     }
 
-    /// Checks a placement (top-left at x, y) and returns its full cost (part + any digging).
+    /// Checks a placement facing east (top-left at x, y) and returns its full cost (part + any digging).
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn check_place(&self, f: usize, x: i32, y: i32, kind: Kind) -> Result<f64, String> {
-        self.check_place_sized(f, x, y, kind, kind.size())
+        self.check_place_sized(f, x, y, kind, Dir::E, 0)
     }
 
-    pub fn check_place_sized(&self, f: usize, x: i32, y: i32, kind: Kind, s: i32) -> Result<f64, String> {
+    /// Like `check_place`, facing `dir`; `s` is the side of an elevator (ignored for other parts).
+    pub fn check_place_sized(&self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<f64, String> {
         if !self.progress.part_unlocked(kind) {
             return Err(format!("{} is locked: see the research tree (t)", kind.name()));
         }
@@ -1165,10 +1185,11 @@ impl World {
         if kind == Kind::Elevator && floors.len() < 2 {
             return Err("Elevators need a second floor to go to".into());
         }
-        let mut cost = kind.price(s);
+        let (w, h) = dims_of(kind, dir, s);
+        let mut cost = kind.price(w);
         for &g in &floors {
             let fl = &self.floors[g];
-            for (tx, ty) in footprint(x, y, s) {
+            for (tx, ty) in footprint(x, y, w, h) {
                 if !in_bounds(tx, ty) {
                     return Err("Doesn't fit on the map here".into());
                 }
@@ -1196,7 +1217,8 @@ impl World {
     fn put(&mut self, f: usize, x: i32, y: i32, b: Building) {
         let a = idx(x, y);
         let fl = &mut self.floors[f];
-        for (tx, ty) in footprint(x, y, b.size()) {
+        let (w, h) = b.dims();
+        for (tx, ty) in footprint(x, y, w, h) {
             let i = idx(tx, ty);
             fl.dug[i] = true;
             fl.owner[i] = Some(a as u32);
@@ -1205,12 +1227,12 @@ impl World {
     }
 
     pub fn place(&mut self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir) -> Result<(), String> {
-        self.place_sized(f, x, y, kind, dir, kind.size())
+        self.place_sized(f, x, y, kind, dir, 0)
     }
 
     pub fn place_sized(&mut self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<(), String> {
-        let s = if kind == Kind::Elevator { s.clamp(MIN_LIFT, MAX_LIFT) } else { kind.size() };
-        let cost = self.check_place_sized(f, x, y, kind, s)?;
+        let s = s.clamp(MIN_LIFT, MAX_LIFT);
+        let cost = self.check_place_sized(f, x, y, kind, dir, s)?;
         self.econ.money -= cost;
         let mut b = Building::new(kind, dir);
         if kind == Kind::Elevator {
@@ -1255,7 +1277,8 @@ impl World {
         let fl = &mut self.floors[f];
         let b = fl.tiles[a].take()?;
         let (x, y) = pos_of(a);
-        for (tx, ty) in footprint(x, y, b.size()) {
+        let (w, h) = b.dims();
+        for (tx, ty) in footprint(x, y, w, h) {
             fl.owner[idx(tx, ty)] = None;
         }
         Some(b)
@@ -1310,7 +1333,7 @@ impl World {
     fn remove_part(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {
         let a = self.floors[f].anchor_at(x, y)?;
         let b = self.take_building(f, a)?;
-        self.econ.money += b.kind.price(b.size());
+        self.econ.money += b.kind.price(b.dims().0);
         if b.kind == Kind::Elevator {
             for g in 0..self.floors.len() {
                 if matches!(self.floors[g].tiles[a], Some(Building { kind: Kind::Elevator, .. })) {
@@ -1323,15 +1346,51 @@ impl World {
         Some(b.kind)
     }
 
-    pub fn set_dir(&mut self, f: usize, x: i32, y: i32, dir: Dir) -> bool {
-        let Some(a) = self.floors[f].anchor_at(x, y) else { return false };
-        match self.floors[f].tiles[a].as_mut() {
-            Some(b) if b.kind.directional() => {
-                b.dir = dir;
-                true
+    /// Turns the part covering (x, y). A long machine keeps its top-left corner and takes
+    /// the turned rectangle, which must be free (new ground is dug, and paid for).
+    pub fn set_dir(&mut self, f: usize, x: i32, y: i32, dir: Dir) -> Result<(), String> {
+        let a = self.floors[f].anchor_at(x, y).ok_or("Nothing here to turn")?;
+        let (kind, old) = match self.floors[f].tiles[a].as_ref() {
+            Some(b) if b.kind.directional() => (b.kind, b.dims()),
+            _ => return Err("This part has no output side to rotate".into()),
+        };
+        let (ax, ay) = pos_of(a);
+        let (w, h) = if kind == Kind::Elevator { old } else { kind.dims(dir) };
+        if (w, h) != old {
+            let fl = &self.floors[f];
+            let mut cost = 0.0;
+            for (tx, ty) in footprint(ax, ay, w, h) {
+                if !in_bounds(tx, ty) {
+                    return Err("Doesn't fit on the map here".into());
+                }
+                let i = idx(tx, ty);
+                if fl.owner[i].is_some_and(|o| o as usize != a) {
+                    return Err("Something is in the way".into());
+                }
+                if !fl.dug[i] {
+                    cost += tile_cost(fl.level);
+                }
             }
-            _ => false,
+            if self.econ.money + 1e-9 < cost {
+                return Err(format!("Not enough money (need ${:.0})", cost));
+            }
+            self.econ.money -= cost;
+            let fl = &mut self.floors[f];
+            for (tx, ty) in footprint(ax, ay, old.0, old.1) {
+                fl.owner[idx(tx, ty)] = None;
+            }
+            for (tx, ty) in footprint(ax, ay, w, h) {
+                fl.dug[idx(tx, ty)] = true;
+                fl.owner[idx(tx, ty)] = Some(a as u32);
+            }
         }
+        if let Some(b) = self.floors[f].tiles[a].as_mut() {
+            b.dir = dir;
+        }
+        if (w, h) != old {
+            self.rebuild_grid();
+        }
+        Ok(())
     }
 
     /// A tunnel entrance's exit: how many tiles ahead it is.
@@ -1445,7 +1504,7 @@ impl World {
             for (i, b) in fl.tiles.iter().enumerate() {
                 if let Some(b) = b {
                     let (x, y) = pos_of(i);
-                    if let Some(r) = coverage(b.kind, b.size(), x, y) {
+                    if let Some(r) = coverage(b.kind, b.dims(), x, y) {
                         nodes.push((f, i, r, b.kind));
                     }
                 }
@@ -1513,7 +1572,7 @@ impl World {
                 let d = b.kind.power_draw();
                 if d > 0.0 {
                     let (x, y) = pos_of(i);
-                    match grid_of(&cover[f], x, y, b.size()) {
+                    match grid_of(&cover[f], x, y, b.dims()) {
                         -1 => unpowered += 1,
                         id => nets[id as usize].demand += d,
                     }
@@ -1624,7 +1683,7 @@ impl World {
     pub fn building_net(&self, f: usize, a: usize) -> Option<&Net> {
         let b = self.floors[f].tiles[a].as_ref()?;
         let (x, y) = pos_of(a);
-        let id = grid_of(&self.grid.cover[f], x, y, b.size());
+        let id = grid_of(&self.grid.cover[f], x, y, b.dims());
         (id >= 0).then(|| &self.grid.nets[id as usize])
     }
 
@@ -1662,7 +1721,7 @@ impl World {
         if let Some(s) = self.grid.sources.iter().find(|s| s.0 == f && s.1 == a) {
             return Some(s.2);
         }
-        let id = grid_of(&self.grid.cover[f], ax, ay, b.size());
+        let id = grid_of(&self.grid.cover[f], ax, ay, b.dims());
         (b.kind.power_draw() > 0.0 && id >= 0).then_some(id as usize)
     }
 
@@ -1686,7 +1745,7 @@ impl World {
             for i in 0..tiles.len() {
                 let Some(mut b) = tiles[i].take() else { continue };
                 let (x, y) = pos_of(i);
-                let ratio = match grid_of(cover, x, y, b.size()) {
+                let ratio = match grid_of(cover, x, y, b.dims()) {
                     id if id >= 0 => nets[id as usize].ratio,
                     _ => 0.0,
                 };
@@ -1954,10 +2013,10 @@ impl World {
     fn full_word(&self, f: usize, a: usize) -> &'static str {
         let Some(b) = self.floors[f].tiles[a].as_ref() else { return "FULL" };
         let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
-        let s = b.size() as i32;
+        let dims = b.dims();
         let mut belts = 0;
-        for j in 0..s {
-            let (tx, ty) = front_tile(ax, ay, s, b.dir, j);
+        for j in 0..edge_len(dims, b.dir) {
+            let (tx, ty) = front_tile(ax, ay, dims, b.dir, j);
             if !in_bounds(tx, ty) {
                 continue;
             }
@@ -2048,8 +2107,8 @@ impl World {
         let f = 0;
         // Copper drill feeds the furnace directly; plates go east to the trade post.
         self.place(f, 51, 37, Drill, Dir::E)?;
-        self.place(f, 53, 37, Furnace, Dir::E)?;
-        for x in 55..=59 {
+        self.place(f, 53, 36, Furnace, Dir::E)?;
+        for x in 56..=59 {
             self.place(f, x, 37, Belt, Dir::E)?;
         }
         self.place(f, 60, 36, TradePost, Dir::E)?;
@@ -2089,14 +2148,14 @@ struct Ctx<'a> {
 }
 
 /// The pipe networks touching a building's edges, optionally skipping one side.
-fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, s: i32, skip: Option<Dir>) -> Vec<usize> {
+fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, dims: (i32, i32), skip: Option<Dir>) -> Vec<usize> {
     let mut out = Vec::new();
     for d in Dir::ALL {
         if Some(d) == skip {
             continue;
         }
-        for j in 0..s {
-            let (tx, ty) = front_tile(ax, ay, s, d, j);
+        for j in 0..edge_len(dims, d) {
+            let (tx, ty) = front_tile(ax, ay, dims, d, j);
             if in_bounds(tx, ty) {
                 let p = pipe_pool[idx(tx, ty)];
                 if p >= 0 && !out.contains(&(p as usize)) {
@@ -2114,7 +2173,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
     let (tiles, owner, econ): (&mut [Option<Building>], &[Option<u32>], &mut Econ) = (tiles, owner, econ);
     let dir = b.dir;
     let kind = b.kind;
-    let size = b.size();
+    let dims = b.dims();
     let rr = &mut b.rr;
     match &mut b.st {
         St::Belt { items } => {
@@ -2164,7 +2223,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                     }
                 }
             }
-            push_front(tiles, owner, econ, x, y, size, dir, out, rr);
+            push_front(tiles, owner, econ, x, y, dims, dir, out, rr);
         }
         St::Crafter { recipe, stock, fuel, progress, busy, out } => {
             let r = &kind.recipes()[*recipe as usize];
@@ -2208,12 +2267,12 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                     }
                 }
             }
-            push_front(tiles, owner, econ, x, y, size, dir, out, rr);
+            push_front(tiles, owner, econ, x, y, dims, dir, out, rr);
         }
         St::Pump { busy } => {
             *busy = false;
             if ratio > 0.0 {
-                for p in pools_around(pipe_pool, x, y, size, None) {
+                for p in pools_around(pipe_pool, x, y, dims, None) {
                     if pools[p].add(Fluid::Water, PUMP_RATE * ratio / TPS as f64) > 0.0 {
                         *busy = true;
                         break;
@@ -2230,13 +2289,13 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 *fuel = Item::Coal.burn_ticks().unwrap_or(0);
             }
             // Water comes from pipes on any side but the front.
-            let source = pools_around(pipe_pool, x, y, size, Some(dir)).into_iter().find(|&p| pools[p].fluid == Some(Fluid::Water) && pools[p].amount >= step);
+            let source = pools_around(pipe_pool, x, y, dims, Some(dir)).into_iter().find(|&p| pools[p].fluid == Some(Fluid::Water) && pools[p].amount >= step);
             if *fuel > 0 {
                 if let Some(src) = source {
                     // Steam goes out the front: straight into an engine, or into a pipe network.
                     let mut delivered = false;
-                    for j in 0..size {
-                        let (tx, ty) = front_tile(x, y, size, dir, j);
+                    for j in 0..edge_len(dims, dir) {
+                        let (tx, ty) = front_tile(x, y, dims, dir, j);
                         if !in_bounds(tx, ty) {
                             continue;
                         }
@@ -2265,7 +2324,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         }
         St::Engine { steam, .. } => {
             // Tops up from steam pipes touching it; boilers can also feed it directly.
-            for p in pools_around(pipe_pool, x, y, size, None) {
+            for p in pools_around(pipe_pool, x, y, dims, None) {
                 if *steam < ENGINE_BUF {
                     *steam += pools[p].take(Fluid::Steam, ENGINE_BUF - *steam);
                 }
@@ -2318,7 +2377,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             }
         }
         St::Crate { items } => {
-            push_front(tiles, owner, econ, x, y, size, dir, items, rr);
+            push_front(tiles, owner, econ, x, y, dims, dir, items, rr);
         }
         St::Tunnel { exit: false, items } => {
             // Items travel under at belt speed, keeping their spacing, and come up out of
@@ -2339,7 +2398,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         }
         St::Tunnel { exit: true, .. } => {}
         St::Elevator { outbox, .. } => {
-            push_front(tiles, owner, econ, x, y, size, dir, outbox, rr);
+            push_front(tiles, owner, econ, x, y, dims, dir, outbox, rr);
         }
         St::Trade { stuck, .. } => *stuck = stuck.saturating_sub(1),
         St::Solar | St::Pole => {}
@@ -2364,18 +2423,19 @@ fn push_front(
     econ: &mut Econ,
     ax: i32,
     ay: i32,
-    s: i32,
+    dims: (i32, i32),
     dir: Dir,
     q: &mut VecDeque<Item>,
     rr: &mut u8,
 ) -> bool {
     let Some(&item) = q.front() else { return false };
-    for k in 0..s {
-        let j = (*rr as i32 + k) % s;
-        let (tx, ty) = front_tile(ax, ay, s, dir, j);
+    let n = edge_len(dims, dir);
+    for k in 0..n {
+        let j = (*rr as i32 + k) % n;
+        let (tx, ty) = front_tile(ax, ay, dims, dir, j);
         if try_insert(tiles, owner, econ, tx, ty, item, dir) {
             q.pop_front();
-            *rr = ((j + 1) % s) as u8;
+            *rr = ((j + 1) % n) as u8;
             return true;
         }
     }
@@ -2432,7 +2492,7 @@ fn try_insert(
         _ => None,
     };
     let Some(b) = tiles[a as usize].as_mut() else { return false };
-    let (bdir, bkind, bsize) = (b.dir, b.kind, b.size());
+    let (bdir, bkind, bside) = (b.dir, b.kind, b.dims().0);
     match &mut b.st {
         St::Belt { items } => bdir != travel.opposite() && belt_accept(items, item),
         St::Drill { coal, .. } => {
@@ -2504,7 +2564,7 @@ fn try_insert(
             true
         }
         St::Elevator { inbox, mode, .. } => {
-            if *mode == DoorMode::Load && inbox.len() < LIFT_PER_TILE * (bsize * bsize) as usize {
+            if *mode == DoorMode::Load && inbox.len() < LIFT_PER_TILE * (bside * bside) as usize {
                 inbox.push_back(item);
                 true
             } else {
@@ -2638,9 +2698,9 @@ mod tests {
         }
         // Copper drill pushes straight into the furnace next to it, no belt.
         w.place(0, 5, 14, Kind::Drill, Dir::E).unwrap();
-        w.place(0, 7, 14, Kind::Furnace, Dir::E).unwrap(); // covers 7-8, 14-15
-        w.place(0, 9, 14, Kind::Belt, Dir::E).unwrap();
-        w.place(0, 10, 13, Kind::TradePost, Dir::E).unwrap();
+        w.place(0, 7, 14, Kind::Furnace, Dir::E).unwrap(); // covers 7-9, 14-16
+        w.place(0, 10, 15, Kind::Belt, Dir::E).unwrap();
+        w.place(0, 11, 14, Kind::TradePost, Dir::E).unwrap();
         w.place(0, 10, 10, Kind::Solar, Dir::E).unwrap();
         w.place(0, 9, 12, Kind::Pole, Dir::E).unwrap();
         run(&mut w, 120);
@@ -2828,11 +2888,155 @@ mod tests {
     }
 
     #[test]
+    fn rectangles_turn_with_the_building() {
+        assert_eq!(Kind::Press.dims(Dir::E), (2, 1));
+        assert_eq!(Kind::Press.dims(Dir::W), (2, 1));
+        assert_eq!(Kind::Press.dims(Dir::N), (1, 2));
+        assert_eq!(Kind::Press.dims(Dir::S), (1, 2));
+        assert_eq!(Kind::Pump.dims(Dir::E), (1, 2));
+        assert_eq!(Kind::Pump.dims(Dir::N), (2, 1));
+        assert_eq!(Kind::Furnace.dims(Dir::N), (3, 3));
+        assert_eq!(Kind::Belt.dims(Dir::N), (1, 1));
+        assert_eq!(dims_of(Kind::Elevator, Dir::N, 5), (5, 5));
+    }
+
+    #[test]
+    fn press_blocks_two_tiles_and_turns_to_one_by_two() {
+        let mut w = World::blank();
+        let money = w.econ.money;
+        w.place(0, 10, 10, Kind::Press, Dir::E).unwrap();
+        for (x, y) in [(10, 10), (11, 10)] {
+            assert_eq!(w.anchor_of(0, x, y), Some((10, 10)));
+            assert!(w.check_place(0, x, y, Kind::Belt).is_err());
+        }
+        for (x, y) in [(12, 10), (10, 11), (11, 11), (10, 9)] {
+            assert!(w.check_place(0, x, y, Kind::Belt).is_ok(), "{x},{y} should be free");
+        }
+        // Removing it from its far tile frees both and refunds in full.
+        assert_eq!(w.remove(0, 11, 10), Some(Kind::Press));
+        assert_eq!(w.econ.money, money);
+        assert!(w.check_place(0, 10, 10, Kind::Belt).is_ok() && w.check_place(0, 11, 10, Kind::Belt).is_ok());
+
+        // Facing north it is one wide and two tall.
+        w.place(0, 10, 10, Kind::Press, Dir::N).unwrap();
+        for (x, y) in [(10, 10), (10, 11)] {
+            assert_eq!(w.anchor_of(0, x, y), Some((10, 10)));
+        }
+        for (x, y) in [(11, 10), (11, 11), (10, 12)] {
+            assert!(w.check_place(0, x, y, Kind::Belt).is_ok(), "{x},{y} should be free");
+        }
+        // The check follows the direction: a belt on (10, 11) blocks a north press, not an east one.
+        let mut w = World::blank();
+        w.place(0, 10, 11, Kind::Belt, Dir::E).unwrap();
+        assert_eq!(w.check_place_sized(0, 10, 10, Kind::Press, Dir::N, 0), Err("Something is in the way".into()));
+        assert!(w.check_place_sized(0, 10, 10, Kind::Press, Dir::E, 0).is_ok());
+    }
+
+    #[test]
+    fn placing_off_the_map_is_refused_for_long_machines() {
+        let w = World::blank();
+        let fit = |x, y, k, d| w.check_place_sized(0, x, y, k, d, 0);
+        assert!(fit(W - 2, 5, Kind::Press, Dir::E).is_ok());
+        assert_eq!(fit(W - 1, 5, Kind::Press, Dir::E), Err("Doesn't fit on the map here".into()));
+        assert!(fit(W - 1, 5, Kind::Press, Dir::N).is_ok());
+        assert_eq!(fit(5, H - 1, Kind::Press, Dir::N), Err("Doesn't fit on the map here".into()));
+        assert!(fit(5, H - 1, Kind::Press, Dir::E).is_ok());
+        assert_eq!(fit(W - 2, 5, Kind::Furnace, Dir::E), Err("Doesn't fit on the map here".into()));
+    }
+
+    #[test]
+    fn furnace_is_three_by_three() {
+        let mut w = World::blank();
+        w.place(0, 10, 10, Kind::Furnace, Dir::E).unwrap();
+        for (x, y) in footprint(10, 10, 3, 3) {
+            assert_eq!(w.anchor_of(0, x, y), Some((10, 10)));
+            assert!(w.check_place(0, x, y, Kind::Belt).is_err());
+        }
+        assert!(w.check_place(0, 13, 12, Kind::Belt).is_ok());
+        assert!(w.check_place(0, 12, 13, Kind::Belt).is_ok());
+        assert_eq!(w.remove(0, 12, 12), Some(Kind::Furnace));
+        assert!(footprint(10, 10, 3, 3).all(|(x, y)| w.check_place(0, x, y, Kind::Belt).is_ok()));
+    }
+
+    #[test]
+    fn pump_is_one_by_two() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Pump, Dir::E).unwrap();
+        assert_eq!(w.anchor_of(0, 5, 6), Some((5, 5)));
+        assert!(w.check_place(0, 6, 5, Kind::Pipe).is_ok());
+        assert!(w.check_place(0, 5, 7, Kind::Pipe).is_ok());
+        // A pipe beside its second tile is on its network too.
+        w.place(0, 6, 6, Kind::Pipe, Dir::E).unwrap();
+        w.place(0, 7, 5, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 3);
+        assert!(w.fluids.pools[0].amount > 0.0);
+        // Turned north it lies down: two wide, one tall.
+        assert_eq!(w.remove(0, 5, 6), Some(Kind::Pump));
+        w.place(0, 5, 5, Kind::Pump, Dir::N).unwrap();
+        assert_eq!(w.anchor_of(0, 6, 5), Some((5, 5)));
+        assert!(w.check_place(0, 5, 6, Kind::Pipe).is_ok());
+    }
+
+    #[test]
+    fn press_output_leaves_from_the_front_tile() {
+        // Facing east: crate -> press -> belt in front of its right-hand tile -> crate.
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
+        fill_crate(&mut w, 0, 5, 5, &[Item::CopperPlate; 3]);
+        w.place(0, 6, 5, Kind::Press, Dir::E).unwrap(); // covers 6-7, 5
+        w.place(0, 8, 5, Kind::Belt, Dir::E).unwrap();
+        w.place(0, 9, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 6, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 6);
+        assert!(!crate_items(&w, 0, 9, 5).is_empty());
+        assert!(crate_items(&w, 0, 9, 5).iter().all(|&i| i == Item::CopperWire));
+
+        // Facing north: it takes plates from the side and sends wire out of its top tile.
+        let mut w = World::blank();
+        w.place(0, 9, 11, Kind::Crate, Dir::E).unwrap(); // beside the lower tile
+        fill_crate(&mut w, 0, 9, 11, &[Item::CopperPlate; 3]);
+        w.place(0, 10, 10, Kind::Press, Dir::N).unwrap(); // covers 10, 10-11
+        w.place(0, 10, 9, Kind::Belt, Dir::N).unwrap();
+        w.place(0, 10, 8, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 12, 10, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 6);
+        assert!(!crate_items(&w, 0, 10, 8).is_empty());
+        // Nothing comes out of the sides or the back.
+        w.place(0, 11, 11, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 10, 12, Kind::Crate, Dir::E).unwrap();
+        run(&mut w, 3);
+        assert!(crate_items(&w, 0, 11, 11).is_empty() && crate_items(&w, 0, 10, 12).is_empty());
+    }
+
+    #[test]
+    fn turning_a_placed_press_needs_room() {
+        let mut w = World::blank();
+        w.place(0, 10, 10, Kind::Press, Dir::E).unwrap(); // covers 10-11, 10
+        w.place(0, 10, 11, Kind::Belt, Dir::E).unwrap();
+        // North would need (10, 11), which is taken: nothing changes.
+        assert_eq!(w.set_dir(0, 10, 10, Dir::N), Err("Something is in the way".into()));
+        assert_eq!(w.tile(0, 10, 10).unwrap().dir, Dir::E);
+        assert_eq!(w.anchor_of(0, 11, 10), Some((10, 10)));
+        w.remove(0, 10, 11);
+        w.set_dir(0, 10, 10, Dir::N).unwrap();
+        assert_eq!(w.anchor_of(0, 10, 11), Some((10, 10)));
+        assert_eq!(w.anchor_of(0, 11, 10), None, "the old tile is free again");
+        // Turning back and forth between east and west changes nothing.
+        w.set_dir(0, 10, 10, Dir::W).unwrap();
+        assert_eq!(w.anchor_of(0, 11, 10), Some((10, 10)));
+        assert_eq!(w.anchor_of(0, 10, 11), None);
+        // A belt just turns.
+        w.place(0, 20, 20, Kind::Belt, Dir::E).unwrap();
+        w.set_dir(0, 20, 20, Dir::S).unwrap();
+        assert!(w.set_dir(0, 30, 30, Dir::S).is_err());
+    }
+
+    #[test]
     fn low_power_slows_evenly() {
         let mut w = World::blank();
         w.place(0, 10, 10, Kind::Solar, Dir::E).unwrap();
         // 32 belts fill the panel's reach around it: 16 power wanted, 10 available.
-        for (x, y) in footprint(8, 8, 6) {
+        for (x, y) in footprint(8, 8, 6, 6) {
             if w.check_place(0, x, y, Kind::Belt).is_ok() {
                 w.place(0, x, y, Kind::Belt, Dir::E).unwrap();
             }
@@ -2920,7 +3124,7 @@ mod tests {
         // Coal goes in, coke comes out, no separate fuel needed.
         w.place(0, 3, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 4, 5, Kind::Belt, Dir::E).unwrap();
-        w.place(0, 4, 7, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 3, 7, Kind::Solar, Dir::E).unwrap();
         fill_crate(&mut w, 0, 3, 5, &[Item::Coal; 4]);
         run(&mut w, 10);
         assert_eq!(w.econ.made[Item::Coke.idx()], 2);
@@ -3166,7 +3370,7 @@ mod tests {
         w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap(); // runs the pump, and links to the engine's grid
         // A pole and 27 belts: far more than one solar panel can run.
         w.place(0, 14, 5, Kind::Pole, Dir::E).unwrap();
-        for (x, y) in footprint(14, 2, 4).chain(footprint(14, 6, 3)) {
+        for (x, y) in footprint(14, 2, 4, 4).chain(footprint(14, 6, 3, 3)) {
             if w.check_place(0, x, y, Kind::Belt).is_ok() {
                 w.place(0, x, y, Kind::Belt, Dir::E).unwrap();
             }

@@ -231,9 +231,9 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
         let mut spans = crumb;
         let afford = w.progress.part_unlocked(k) && w.econ.money >= k.price(app.lift_size);
         spans.push(Span::styled(format!("  {}", price_label(w, k, app.lift_size)), if afford { Style::new().fg(Color::Green) } else { dim }));
-        let size = if k == Kind::Elevator { app.lift_size } else { k.size() };
-        if size > 1 {
-            spans.push(Span::styled(format!("  {size}x{size}"), dim));
+        let (fw, fh) = dims_of(k, app.dir, app.lift_size);
+        if fw * fh > 1 {
+            spans.push(Span::styled(format!("  {fw}x{fh}"), dim));
         }
         if k.directional() {
             spans.push(Span::raw(format!("  facing {}", app.dir.arrow())));
@@ -355,21 +355,21 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
     let (cx, cy) = app.cursor;
     let yellow = Style::new().fg(INK).bg(Color::Indexed(226)).add_modifier(Modifier::BOLD);
     // What the cursor covers: a ghost of the part being placed, or the whole building under it.
-    let ghost_size = |k: Kind| if k == Kind::Elevator { app.lift_size } else { k.size() };
-    let ghost = app.selected.map(|k| (k, app.world.check_place_sized(app.floor, cx, cy, k, ghost_size(k)).is_ok()));
+    let ghost_dims = |k: Kind| dims_of(k, app.dir, app.lift_size);
+    let ghost = app.selected.map(|k| (k, app.world.check_place_sized(app.floor, cx, cy, k, app.dir, app.lift_size).is_ok()));
     let hover = match app.selected {
-        None => app.world.tile(app.floor, cx, cy).zip(app.world.anchor_of(app.floor, cx, cy)).map(|(b, a)| (a, b.size())),
+        None => app.world.tile(app.floor, cx, cy).zip(app.world.anchor_of(app.floor, cx, cy)).map(|(b, a)| (a, b.dims())),
         Some(_) => None,
     };
-    let inside = |tx: i32, ty: i32, (ax, ay): (i32, i32), s: i32| tx >= ax && tx < ax + s && ty >= ay && ty < ay + s;
+    let inside = |tx: i32, ty: i32, (ax, ay): (i32, i32), (w, h): (i32, i32)| tx >= ax && tx < ax + w && ty >= ay && ty < ay + h;
     // Power ranges show when asked (v), while placing a power source, or when hovering one.
-    let hovering_source = app.world.tile(app.floor, cx, cy).is_some_and(|b| coverage(b.kind, 1, 0, 0).is_some());
+    let hovering_source = app.world.tile(app.floor, cx, cy).is_some_and(|b| coverage(b.kind, (1, 1), 0, 0).is_some());
     let show_range = app.power_view
-        || app.selected.is_some_and(|k| coverage(k, 1, 0, 0).is_some())
+        || app.selected.is_some_and(|k| coverage(k, (1, 1), 0, 0).is_some())
         || (app.selected.is_none() && hovering_source);
     // Hovering a source shades only its own grid; v shows every grid.
     let only_grid = if !app.power_view && app.selected.is_none() && hovering_source { app.world.grid_at(app.floor, cx, cy) } else { None };
-    let new_range = app.selected.and_then(|k| coverage(k, ghost_size(k), cx, cy));
+    let new_range = app.selected.and_then(|k| coverage(k, ghost_dims(k), cx, cy));
     for sy in 0..vh {
         for sx in 0..vw {
             let (tx, ty) = (app.cam.0 + sx, app.cam.1 + sy);
@@ -388,18 +388,18 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
                 }
             }
             if let Some((kind, ok)) = ghost {
-                let s = ghost_size(kind);
-                if inside(tx, ty, (cx, cy), s) {
+                let dims = ghost_dims(kind);
+                if inside(tx, ty, (cx, cy), dims) {
                     let st = if ok { yellow } else { yellow.bg(Color::Indexed(196)) };
                     let chars = if kind == Kind::Elevator {
-                        lift_chars(s, app.dir, &[], tx - cx, ty - cy)
+                        lift_chars(dims.0, app.dir, &[], tx - cx, ty - cy)
                     } else {
                         sprite_chars(kind, app.dir, None, ' ', tx - cx, ty - cy)
                     };
                     cells = chars.map(|c| (c, st));
                 }
-            } else if let Some((a, s)) = hover {
-                if inside(tx, ty, a, s) {
+            } else if let Some((a, dims)) = hover {
+                if inside(tx, ty, a, dims) {
                     cells = cells.map(|(c, _)| (c, yellow));
                 }
             } else if (tx, ty) == app.cursor {
@@ -511,22 +511,35 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
     [(c0, st), (c1, st)]
 }
 
-/// The full picture of a part: one string per row, two characters per tile.
+/// The full picture of a part: one string per row, two characters per tile, sized to
+/// the part's footprint when it faces `dir`.
 /// Big buildings show their name and an arrow on the edge their output leaves from;
 /// machines also show a letter for their recipe (`tag`).
 fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<String> {
     let a = dir.arrow();
+    // The name on one row (the last row facing north), an arrow in the middle of the
+    // output edge, and the recipe letter on the far side of that row.
     let labelled = |name: &str| -> Vec<String> {
-        let port = match dir {
-            Dir::E => format!("{tag}  {a}"),
-            Dir::W => format!("{a}  {tag}"),
-            Dir::N | Dir::S => format!("{tag}{a}{a} "),
+        let (w, h) = kind.dims(dir);
+        let n = (w * 2) as usize;
+        let name_row = if dir == Dir::N { h - 1 } else { 0 };
+        let port_row = match dir {
+            Dir::E | Dir::W => h / 2,
+            Dir::N => 0,
+            Dir::S => h - 1,
         };
-        if dir == Dir::N {
-            vec![port, name.to_string()]
-        } else {
-            vec![name.to_string(), port]
+        let mut rows = vec![vec![' '; n]; h as usize];
+        let len = name.chars().count();
+        for (i, c) in name.chars().enumerate() {
+            rows[name_row as usize][(n - len) / 2 + i] = c;
         }
+        let row = &mut rows[port_row as usize];
+        match dir {
+            Dir::E => (row[0], row[n - 1]) = (tag, a),
+            Dir::W => (row[0], row[n - 1]) = (a, tag),
+            Dir::N | Dir::S => (row[0], row[n / 2 - 1], row[n / 2]) = (tag, a, a),
+        }
+        rows.into_iter().map(|r| r.into_iter().collect()).collect()
     };
     match kind {
         Kind::Belt => vec![format!("{a}{a}")],
@@ -536,13 +549,23 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Drill => labelled("DRIL"),
         Kind::BasicDrill => labelled("DRL2"),
         Kind::Furnace => labelled("FURN"),
-        Kind::Press => labelled("PRES"),
+        // 2x1 facing east or west; a 1-wide column facing north or south.
+        Kind::Press => match dir {
+            Dir::E => vec![format!("PR{tag}{a}")],
+            Dir::W => vec![format!("{a}{tag}PR")],
+            Dir::N => vec![format!("{a}{tag}"), "PR".into()],
+            Dir::S => vec!["PR".into(), format!("{a}{tag}")],
+        },
         Kind::Elevator => labelled("LIFT"),
         Kind::Solar => vec!["SOLR".into(), "    ".into()],
         // A small pylon, not a block.
         Kind::Pole => vec!["/\\".into()],
         Kind::Pipe => vec!["==".into()],
-        Kind::Pump => vec!["PU".into()],
+        // 1 wide and 2 tall facing east or west; lying down facing north or south.
+        Kind::Pump => match dir {
+            Dir::E | Dir::W => vec!["PU".into(), "MP".into()],
+            Dir::N | Dir::S => vec!["PUMP".into()],
+        },
         Kind::BlastFurnace => labelled("BLST"),
         Kind::Boiler => labelled("BOIL"),
         Kind::SteamEngine => vec!["ENGN".into(), "    ".into()],
@@ -754,10 +777,10 @@ fn building_cell(b: &Building, lx: i32, ly: i32, powered: bool, reason: Option<&
     };
     let mut c = sprite_chars(b.kind, b.dir, mode, tag, lx, ly);
     // The name row shows why it's idle instead (big buildings only).
-    let s = b.size();
-    let name_row = if b.dir == Dir::N && b.kind.directional() { s - 1 } else { 0 };
-    if let Some(word) = reason.filter(|_| s >= 2 && ly == name_row) {
-        let text: Vec<char> = format!("{:^w$}", word, w = (s * 2) as usize).chars().collect();
+    let (bw, bh) = b.dims();
+    let name_row = if b.dir == Dir::N && b.kind.directional() { bh - 1 } else { 0 };
+    if let Some(word) = reason.filter(|_| bw >= 2 && ly == name_row) {
+        let text: Vec<char> = format!("{:^w$}", word, w = (bw * 2) as usize).chars().collect();
         c = [text[(lx * 2) as usize], text[(lx * 2 + 1) as usize]];
     }
     // A darker left edge keeps neighbouring buildings visibly apart.
@@ -821,7 +844,7 @@ fn lift_chars(s: i32, dir: Dir, lines: &[String], lx: i32, ly: i32) -> [char; 2]
 
 /// An elevator door: its box, what this door does, and where the car is.
 fn lift_cell(w: &World, f: usize, b: &Building, anchor: usize, lx: i32, ly: i32) -> Cells {
-    let s = b.size();
+    let s = b.dims().0;
     let mode = match &b.st {
         St::Elevator { mode, .. } => *mode,
         _ => DoorMode::Pass,
@@ -917,13 +940,8 @@ fn draw_side(f: &mut Frame, area: Rect, app: &App) {
                         st = st.add_modifier(Modifier::REVERSED);
                     }
                     let name = format!("{}{}", k.name(), if k.preview() { "*" } else { "" });
-                    let size = if *k == Kind::Elevator {
-                        format!("{0}x{0}", app.lift_size)
-                    } else if k.size() > 1 {
-                        format!("{0}x{0}", k.size())
-                    } else {
-                        String::new()
-                    };
+                    let (kw, kh) = dims_of(*k, Dir::E, app.lift_size);
+                    let size = if kw * kh > 1 { format!("{kw}x{kh}") } else { String::new() };
                     let price = price_label(w, *k, app.lift_size);
                     // The slot's number goes on its first kind; the others sit under it.
                     let tag = if v == 0 { format!(" {} ", n + 1) } else { "   ".to_string() };
@@ -990,7 +1008,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             None => v.push("NO POWER: out of range (v)".into()),
         }
     }
-    if coverage(b.kind, 1, 0, 0).is_some() {
+    if coverage(b.kind, (1, 1), 0, 0).is_some() {
         if let Some((n, sources)) = w.source_net(f, idx(ax, ay)) {
             let with = if sources == 1 { "on its own".to_string() } else { format!("{sources} sources") };
             if n.demand <= 0.0 {
@@ -1083,7 +1101,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         St::Solar => v.push(format!("+{:.0} power, reaches {} tiles around it", SOLAR_OUTPUT, SOLAR_REACH)),
         St::Pole => v.push(format!("carries power {} tiles around it", POLE_REACH)),
         St::Elevator { inbox, outbox, mode } => {
-            let s = b.size();
+            let s = b.dims().0;
             v.push(format!("{s}x{s}, holds {}   door here: {}  (f changes)", LIFT_PER_TILE * (s * s) as usize, mode.name()));
             v.push(format!("waiting to load {}   waiting to leave {}", inbox.len(), outbox.len()));
             if let Some(car) = w.anchor_of(f, x, y).and_then(|(ax, ay)| w.lift(idx(ax, ay))) {
@@ -1715,10 +1733,10 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             for (c, st) in kind_cells(k, Dir::E, true) {
                 title.push(seg(c.to_string(), st));
             }
-            let size = k.size();
+            let (kw, kh) = k.base_dims();
             let from = k.company().map_or(String::new(), |c| format!(" · from {}", c.name()));
             title.push(seg(format!(" {}", k.name()), Style::new().add_modifier(Modifier::BOLD)));
-            title.push(seg(format!("   ${:.0} · {size}x{size}{from}", k.cost()), dim));
+            title.push(seg(format!("   ${:.0} · {kw}x{kh}{from}", k.cost()), dim));
             out.push(title);
             out.push(vec![]);
 
@@ -2141,7 +2159,8 @@ fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {
     let text = "\
 READING THE MAP
   Coloured blocks are buildings, labelled with their name. Production is
-  big (2x2), the trade post is 3x3, belts / splitters / arms / crates are 1x1.
+  big (2x2 or 3x3), belts / splitters / arms / crates are 1x1. Presses and
+  pumps are long (2x1, 1x2) and turn with the rotate key.
   The arrow on a building's edge is its output side; machines also show a
   letter for what they make. A grey block is idle.
   Arrows are belts; items ride on them. Point at anything to see what it is.
@@ -2536,6 +2555,52 @@ mod tests {
         std::fs::write("target/snapshot-toys.html", to_html(&buf)).unwrap();
     }
 
+    /// Long machines on the map in every facing, and the placement ghost turning with the rotate key.
+    #[test]
+    fn long_machines_snapshot() {
+        let mut w = World::blank();
+        let (x, y) = (52, 36);
+        for (i, d) in Dir::ALL.into_iter().enumerate() {
+            let i = i as i32;
+            w.place(0, x + i * 5, y, Kind::Press, d).unwrap();
+            w.place(0, x + i * 5, y + 4, Kind::Pump, d).unwrap();
+            w.place(0, x + i * 5, y + 8, Kind::Furnace, d).unwrap();
+        }
+        w.place(0, x + 14, y + 13, Kind::Solar, Dir::E).unwrap();
+        let mut app = App::new(w);
+        app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+        app.menu = Some(Category::Create);
+        app.selected = Some(Kind::Press);
+        app.dir = Dir::E;
+        app.cursor = (x, y + 13);
+        app.cam = (x - 4, y - 2);
+        app.cam_ready = true;
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("PR") && t.contains("PUMP") && t.contains("FURN"), "{t}");
+        assert!(text(&render(&mut app, 64, 16)).contains("Copper press  $150  2x1  facing"));
+        app.cam = (x - 4, y - 2);
+        let east = render(&mut app, 130, 42);
+        // Turned north the ghost is one wide and two tall, and the label says so.
+        app.dir = Dir::N;
+        app.cursor = (x + 6, y + 13);
+        app.cam = (x - 4, y - 2);
+        let north = render(&mut app, 130, 42);
+        assert!(text(&render(&mut app, 64, 16)).contains("Copper press  $150  1x2  facing"));
+        std::fs::write("target/snapshot-long-machines.html", to_html(&east)).unwrap();
+        std::fs::write("target/snapshot-long-machines-north.html", to_html(&north)).unwrap();
+        // A narrow, tall pane keeps the map readable.
+        app.cursor = (x + 1, y + 1);
+        let narrow = render(&mut app, 44, 30);
+        std::fs::write("target/snapshot-long-machines-narrow.html", to_html(&narrow)).unwrap();
+        // Hovering a placed long machine highlights the whole rectangle.
+        app.selected = None;
+        app.menu = None;
+        app.cursor = (x + 6, y);
+        app.cam = (x - 4, y - 2);
+        let hover = render(&mut app, 130, 42);
+        std::fs::write("target/snapshot-long-machines-hover.html", to_html(&hover)).unwrap();
+    }
+
     /// Middle-click copies the part under the cursor: its kind, facing and setting.
     #[test]
     fn middle_click_copies() {
@@ -2593,7 +2658,7 @@ mod tests {
         app.menu = Some(Category::Create);
         app.selected = Some(Kind::Furnace);
         let buf = render(&mut app, 64, 16);
-        assert!(text(&buf).lines().last().unwrap().contains("Create › Copper furnace  $200  2x2  facing"));
+        assert!(text(&buf).lines().last().unwrap().contains("Create › Copper furnace  $200  3x3  facing"));
         std::fs::write("target/snapshot-small-menu.html", to_html(&buf)).unwrap();
         app.menu = Some(Category::Transport);
         app.selected = Some(Kind::Splitter);
