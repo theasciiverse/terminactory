@@ -22,20 +22,11 @@ fn data_dir() -> PathBuf {
     std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".terminactory")).unwrap_or_else(|| PathBuf::from("."))
 }
 
-/// Copies files from the old place (the folder the game was run from) the first time.
+/// Copies the key settings from the old place (the folder the game was run from) the first time.
 fn move_old_files(dir: &Path) {
-    for name in ["controls.json", "saves/campaign.json", "saves/demo.json"] {
-        let (old, new) = (Path::new(name), dir.join(name));
-        // An old campaign only counts before any numbered saves exist (it becomes save1).
-        if name == "saves/campaign.json" && !saves::list(dir).is_empty() {
-            continue;
-        }
-        if old.exists() && !new.exists() {
-            if let Some(parent) = new.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            let _ = std::fs::copy(old, &new);
-        }
+    let (old, new) = (Path::new("controls.json"), dir.join("controls.json"));
+    if old.exists() && !new.exists() {
+        let _ = std::fs::copy(old, &new);
     }
 }
 
@@ -79,7 +70,6 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
     let dir = data_dir();
     let _ = std::fs::create_dir_all(saves::dir(&dir));
     move_old_files(&dir);
-    saves::migrate(&dir);
     if args.iter().any(|a| a == "--saves") {
         print!("{}", saves::describe(&dir));
         return Ok(());
@@ -113,6 +103,13 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
             return Ok(());
         }
     };
+    // Saves from an older version of the game aren't opened (and are never deleted).
+    if !demo && save_path.exists() {
+        if let Some(msg) = saves::version_problem(&save_path, &name) {
+            eprintln!("{msg}");
+            return Ok(());
+        }
+    }
     let (world, mut note) = if demo {
         let mut w = sim::World::new();
         let note = match w.build_demo() {

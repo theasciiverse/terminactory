@@ -58,9 +58,10 @@ const STEAM_PER_TICK: f64 = 10.0 / TPS as f64; // steam an engine burns per tick
 pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
+/// Bump when the save format changes: older saves are not loaded.
+pub const SAVE_VERSION: u32 = 1;
 
-/// Reads a saved list into a fixed-size array, padding with defaults: lets saves from
-/// before new items or research were added still load.
+/// Reads a saved list into a fixed-size array (serde itself stops at 32), padding with defaults.
 fn pad<'de, D, T, const N: usize>(d: D) -> Result<[T; N], D::Error>
 where
     D: Deserializer<'de>,
@@ -531,7 +532,15 @@ pub enum St {
         out: VecDeque<Item>,
     },
     Crate { items: VecDeque<Item> },
-    Trade { mode: SellMode, money: f64, research: f64, count: u64 },
+    /// `stuck`: ticks left to show that waste was just turned away.
+    Trade {
+        mode: SellMode,
+        money: f64,
+        research: f64,
+        count: u64,
+        #[serde(default)]
+        stuck: u8,
+    },
     Solar,
     Pole,
     Elevator {
@@ -581,7 +590,7 @@ impl Building {
             }
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
-            Kind::TradePost => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0 },
+            Kind::TradePost => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0, stuck: 0 },
             Kind::Solar => St::Solar,
             Kind::Pole => St::Pole,
             Kind::Elevator => St::Elevator { inbox: VecDeque::new(), outbox: VecDeque::new(), mode: DoorMode::Load },
@@ -659,16 +668,47 @@ pub struct Econ {
     pub earned_money: f64,
     #[serde(default)]
     pub earned_research: f64,
+    /// This session only: (money earned, waste fees paid) as they stood a minute ago.
+    #[serde(skip)]
+    pub minute_ago: (f64, f64),
 }
 
 impl Econ {
     pub fn next_research(&self, item: Item) -> f64 {
         item.curve().value(self.research_sales[item.idx()])
     }
+    /// (money earned, waste fees paid) over the last minute. Fees aren't counted as earnings.
+    pub fn last_minute(&self) -> (f64, f64) {
+        let earned: f64 = Item::ALL.iter().filter(|i| **i != Item::Waste).map(|i| self.money_from[i.idx()]).sum();
+        let fees = -self.money_from[Item::Waste.idx()];
+        (earned - self.minute_ago.0, fees - self.minute_ago.1)
+    }
+    /// Why a trade post set to `mode` won't take waste right now (None: it will).
+    pub fn waste_refusal(&self, mode: SellMode) -> Option<&'static str> {
+        match mode {
+            SellMode::Research => return Some("set to research"),
+            SellMode::Split => return Some("set to the 40/40 split"),
+            SellMode::Money => {}
+        }
+        if self.money < -Item::Waste.price() {
+            return Some("you can't afford the fee");
+        }
+        let (earned, fees) = self.last_minute();
+        (fees > earned).then_some("waste costs more than you're earning")
+    }
+    /// Pays the waste fee for `n` waste thrown away (the same as selling it).
+    fn pay_waste(&mut self, n: usize) {
+        let fee = n as f64 * Item::Waste.price();
+        self.money += fee;
+        self.earned_money += fee;
+        self.sold[Item::Waste.idx()] += n as u64;
+        self.money_from[Item::Waste.idx()] += fee;
+    }
+    /// Sells one item. Waste costs money and earns no research.
     fn sell(&mut self, item: Item, mode: SellMode) -> (f64, f64) {
         let (mf, rf) = mode.split();
         let m = item.price() * mf;
-        let r = if rf > 0.0 {
+        let r = if rf > 0.0 && item != Item::Waste {
             let v = self.next_research(item) * rf;
             self.research_sales[item.idx()] += 1;
             v
@@ -684,6 +724,11 @@ impl Econ {
         self.research_from[item.idx()] += r;
         (m, r)
     }
+}
+
+/// "$100" or "$0.50".
+pub fn money_text(v: f64) -> String {
+    if v.fract() == 0.0 { format!("${v:.0}") } else { format!("${v:.2}") }
 }
 
 /// Running totals, once a second, for the production panel.
@@ -863,6 +908,9 @@ fn overlaps(a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)) -> bool {
 
 #[derive(Serialize, Deserialize)]
 pub struct World {
+    /// The save format (0 when missing: those saves are from before versions).
+    #[serde(default)]
+    pub version: u32,
     pub floors: Vec<Floor>,
     pub econ: Econ,
     pub progress: Progress,
@@ -941,6 +989,7 @@ impl World {
     /// A new campaign: the starting map, $1000 and the two Copper Works companies.
     pub fn new() -> Self {
         let mut w = World {
+            version: SAVE_VERSION,
             floors: gen_floors(),
             econ: Econ { money: START_MONEY, ..Default::default() },
             progress: Progress::default(),
@@ -966,6 +1015,7 @@ impl World {
     #[cfg(test)]
     pub fn blank() -> Self {
         let mut w = World {
+            version: SAVE_VERSION,
             floors: LEVELS.iter().map(|&l| Floor::new(l, true)).collect(),
             econ: Econ { money: 1e6, ..Default::default() },
             progress: Progress {
@@ -1001,57 +1051,27 @@ impl World {
         std::fs::write(path, json)
     }
 
+    /// The format version a save file says it has (0 if it says nothing), if it's JSON at all.
+    pub fn file_version(path: &Path) -> Option<u32> {
+        #[derive(Deserialize)]
+        struct Header {
+            #[serde(default)]
+            version: u32,
+        }
+        let json = std::fs::read_to_string(path).ok()?;
+        serde_json::from_str::<Header>(&json).ok().map(|h| h.version)
+    }
+
+    /// Loads a save. Saves from another version of the format aren't loaded.
     pub fn load(path: &Path) -> std::io::Result<World> {
+        if let Some(v) = World::file_version(path).filter(|v| *v != SAVE_VERSION) {
+            let why = if v < SAVE_VERSION { "from an older version" } else { "from a newer version" };
+            return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, format!("this save is {why}")));
+        }
         let json = std::fs::read_to_string(path)?;
         let mut w: World = serde_json::from_str(&json).map_err(std::io::Error::other)?;
-        w.clear_ore();
-        w.ensure_floors();
-        w.ensure_lifts();
         w.rebuild_grid();
         Ok(w)
-    }
-
-    /// Saves from when ore came in patches and water in lakes: those go, and drills keep
-    /// mining what they mined.
-    fn clear_ore(&mut self) {
-        for fl in &mut self.floors {
-            fl.deposits.fill(Deposit::None);
-        }
-    }
-
-    /// Saves from before all floors existed get the missing ones.
-    fn ensure_floors(&mut self) {
-        if self.floors.len() < LEVELS.len() {
-            let fresh = gen_floors();
-            for f in fresh.into_iter().skip(self.floors.len()) {
-                self.floors.push(f);
-            }
-        }
-    }
-
-    /// Elevators from older saves get a car.
-    fn ensure_lifts(&mut self) {
-        let have: Vec<usize> = self.lifts.iter().map(|c| c.anchor).collect();
-        let mut add = Vec::new();
-        for (f, fl) in self.floors.iter().enumerate() {
-            for (a, t) in fl.tiles.iter().enumerate() {
-                if let Some(b) = t {
-                    if b.kind == Kind::Elevator && !have.contains(&a) && !add.iter().any(|c: &Car| c.anchor == a) {
-                        add.push(Car {
-                            anchor: a,
-                            size: b.size(),
-                            at: f,
-                            target: f,
-                            phase: LiftPhase::Loading,
-                            timer: 0,
-                            load: VecDeque::new(),
-                            carry: 0.0,
-                        });
-                    }
-                }
-            }
-        }
-        self.lifts.extend(add);
     }
 
     /// The building covering tile (x, y), if any.
@@ -1084,7 +1104,7 @@ impl World {
     pub fn floor_hint(&self, level: i32) -> &'static str {
         match level {
             1 => "Building upward needs support beams (make steel girders, then see the tree)",
-            -1 => "Digging down needs excavation (make slag concrete, then see the tree)",
+            -1 => "Digging down needs excavation (make steel girders, then see the tree)",
             _ => "That floor opens in a later phase",
         }
     }
@@ -1241,9 +1261,53 @@ impl World {
         Some(b)
     }
 
-    /// Removes the part covering (x, y) and refunds its full price. Items inside are lost.
-    /// Removing an elevator removes its doors on every floor.
+    /// How much waste the storage covering (x, y) holds: crates, warehouses, and an
+    /// elevator (its car and its doors on every floor).
+    pub fn waste_inside(&self, f: usize, x: i32, y: i32) -> usize {
+        let Some(a) = self.floors[f].anchor_at(x, y) else { return 0 };
+        let count = |it: &mut dyn Iterator<Item = &Item>| it.filter(|i| **i == Item::Waste).count();
+        match self.floors[f].tiles[a].as_ref().map(|b| (&b.st, b.kind)) {
+            Some((St::Crate { items }, _)) => count(&mut items.iter()),
+            Some((St::Elevator { .. }, Kind::Elevator)) => {
+                let mut n: usize = self.lifts.iter().filter(|c| c.anchor == a).map(|c| count(&mut c.load.iter())).sum();
+                for fl in &self.floors {
+                    if let Some(Building { st: St::Elevator { inbox, outbox, .. }, .. }) = fl.tiles[a].as_ref() {
+                        n += count(&mut inbox.iter()) + count(&mut outbox.iter());
+                    }
+                }
+                n
+            }
+            _ => 0,
+        }
+    }
+
+    /// What it costs to remove the part covering (x, y): the waste it holds, and the fee.
+    pub fn removal_fee(&self, f: usize, x: i32, y: i32) -> (usize, f64) {
+        let n = self.waste_inside(f, x, y);
+        (n, n as f64 * -Item::Waste.price())
+    }
+
+    /// Removes the part covering (x, y) and refunds its full price. Items inside are lost,
+    /// except waste: that costs the same as selling it, and the removal is refused (Err)
+    /// when it can't be paid for. Removing an elevator removes its doors on every floor.
+    pub fn try_remove(&mut self, f: usize, x: i32, y: i32) -> Result<Option<Kind>, String> {
+        let (n, fee) = self.removal_fee(f, x, y);
+        if n > 0 {
+            if self.econ.money < fee {
+                return Err(format!("Holds {n} waste: removing it costs {}", money_text(fee)));
+            }
+            self.econ.pay_waste(n);
+        }
+        Ok(self.remove_part(f, x, y))
+    }
+
+    /// Like `try_remove`, but a refused removal is just None.
+    #[allow(dead_code)]
     pub fn remove(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {
+        self.try_remove(f, x, y).ok().flatten()
+    }
+
+    fn remove_part(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {
         let a = self.floors[f].anchor_at(x, y)?;
         let b = self.take_building(f, a)?;
         self.econ.money += b.kind.price(b.size());
@@ -1656,6 +1720,10 @@ impl World {
         while self.flow_samples.len() > 61 {
             self.flow_samples.pop_front();
         }
+        if let Some(a) = self.flow_samples.front() {
+            let earned = Item::ALL.iter().filter(|i| **i != Item::Waste).map(|i| a.money[i.idx()]).sum();
+            self.econ.minute_ago = (earned, -a.money[Item::Waste.idx()]);
+        }
         self.sale_samples.push_back(self.econ.research_sales);
         while self.sale_samples.len() > 120 {
             self.sale_samples.pop_front();
@@ -1706,7 +1774,7 @@ impl World {
         if away < 60 {
             return None;
         }
-        let m = self.rate.0 * away as f64;
+        let m = (self.rate.0 * away as f64).max(0.0);
         let r = self.offline_research(away as f64);
         if m <= 0.0 && r <= 0.0 {
             return None;
@@ -1962,8 +2030,16 @@ impl World {
             St::Boiler { busy: false, fuel, coal, .. } => Some(if *fuel == 0 && *coal == 0 { "COAL" } else { "WATR" }),
             St::Engine { steam, .. } if *steam <= 0.0 => Some("STM?"),
             St::Pump { busy: false } => Some(if powered { "FULL" } else { "PWR" }),
+            St::Trade { stuck, .. } if *stuck > 0 => Some("WSTE"),
             _ => None,
         }
+    }
+
+    /// Offers one item to the building at (x, y), as a belt would. For tests.
+    #[cfg(test)]
+    pub fn offer(&mut self, f: usize, x: i32, y: i32, item: Item) -> bool {
+        let fl = &mut self.floors[f];
+        try_insert(&mut fl.tiles, &fl.owner, &mut self.econ, x, y, item, Dir::E)
     }
 
     /// A small working factory near spawn, for `--demo` and tests.
@@ -2265,7 +2341,8 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Elevator { outbox, .. } => {
             push_front(tiles, owner, econ, x, y, size, dir, outbox, rr);
         }
-        St::Trade { .. } | St::Solar | St::Pole => {}
+        St::Trade { stuck, .. } => *stuck = stuck.saturating_sub(1),
+        St::Solar | St::Pole => {}
     }
 }
 
@@ -2415,7 +2492,11 @@ fn try_insert(
                 false
             }
         }
-        St::Trade { mode, money, research, count } => {
+        St::Trade { mode, money, research, count, stuck } => {
+            if item == Item::Waste && econ.waste_refusal(*mode).is_some() {
+                *stuck = 30;
+                return false;
+            }
             let (m, r) = econ.sell(item, *mode);
             *money += m;
             *research += r;
@@ -2873,7 +2954,7 @@ mod tests {
     }
 
     #[test]
-    fn blast_furnace_makes_iron_then_steel_with_slag() {
+    fn blast_furnace_makes_iron_then_steel_with_waste() {
         let mut w = World::blank();
         w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
         fill_crate(&mut w, 0, 5, 5, &[Item::IronOre, Item::IronOre, Item::IronOre, Item::Coke]);
@@ -2889,7 +2970,168 @@ mod tests {
         assert!(w.configure(0, 6, 5).unwrap().contains("steel"));
         w.place(0, 8, 5, Kind::Crate, Dir::E).unwrap();
         run(&mut w, 6);
-        assert_eq!(crate_items(&w, 0, 8, 5), vec![Item::Steel, Item::Slag]);
+        assert_eq!(crate_items(&w, 0, 8, 5), vec![Item::Steel, Item::Waste]);
+    }
+
+    fn offer(w: &mut World, x: i32, y: i32, item: Item) -> bool {
+        w.offer(0, x, y, item)
+    }
+
+    fn set_mode(w: &mut World, x: i32, y: i32, want: SellMode) {
+        while !matches!(&w.tile(0, x, y).unwrap().st, St::Trade { mode, .. } if *mode == want) {
+            w.configure(0, x, y);
+        }
+    }
+
+    #[test]
+    fn a_money_post_takes_waste_and_charges_for_it() {
+        let mut w = World::blank();
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        let before = w.econ.money;
+        assert!(offer(&mut w, 10, 4, Item::Waste));
+        assert!((w.econ.money - (before - 0.5)).abs() < 1e-9);
+        assert_eq!(w.econ.sold[Item::Waste.idx()], 1);
+        assert!(w.econ.money_from[Item::Waste.idx()] < 0.0);
+    }
+
+    #[test]
+    fn waste_never_earns_research() {
+        let mut w = World::blank();
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        for _ in 0..20 {
+            offer(&mut w, 10, 4, Item::Waste);
+        }
+        assert_eq!(w.econ.research, 0.0);
+        assert_eq!(w.econ.research_sales[Item::Waste.idx()], 0);
+        assert_eq!(Item::Waste.curve().value(0), 0.0);
+        // Even a research post's refusal leaves research alone.
+        set_mode(&mut w, 10, 4, SellMode::Research);
+        assert!(!offer(&mut w, 10, 4, Item::Waste));
+        assert_eq!(w.econ.research, 0.0);
+    }
+
+    #[test]
+    fn research_and_split_posts_refuse_waste() {
+        let mut w = World::blank();
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        let money = w.econ.money;
+        for mode in [SellMode::Research, SellMode::Split] {
+            set_mode(&mut w, 10, 4, mode);
+            assert!(!offer(&mut w, 10, 4, Item::Waste), "{mode:?}");
+            assert!(w.econ.waste_refusal(mode).is_some());
+        }
+        assert_eq!(w.econ.money, money);
+        // It still takes other things, and says WSTE.
+        assert!(offer(&mut w, 10, 4, Item::CopperPlate));
+        assert_eq!(w.idle_reason(0, idx(10, 4)), Some("WSTE"));
+        // A refused waste item stays on the belt in front of the post.
+        let mut w = World::blank();
+        for x in 7..=9 {
+            w.place(0, x, 5, Kind::Belt, Dir::E).unwrap();
+        }
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+        set_mode(&mut w, 10, 4, SellMode::Research);
+        if let Some(Building { st: St::Belt { items }, .. }) = w.floors[0].tiles[idx(9, 5)].as_mut() {
+            items.push(BeltItem { item: Item::Waste, pos: 0.9 });
+        }
+        run(&mut w, 5);
+        let Some(Building { st: St::Belt { items }, .. }) = w.floors[0].tiles[idx(9, 5)].as_ref() else { panic!() };
+        assert_eq!(items.len(), 1, "the belt backs up");
+        assert_eq!(w.econ.sold[Item::Waste.idx()], 0);
+    }
+
+    #[test]
+    fn a_post_refuses_waste_when_money_would_go_negative() {
+        let mut w = World::blank();
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        w.econ.money = 0.75;
+        assert!(offer(&mut w, 10, 4, Item::Waste));
+        assert!((w.econ.money - 0.25).abs() < 1e-9);
+        assert!(!offer(&mut w, 10, 4, Item::Waste), "$0.25 can't pay $0.50");
+        assert!((w.econ.money - 0.25).abs() < 1e-9, "money never goes below zero");
+        assert_eq!(w.econ.waste_refusal(SellMode::Money), Some("you can't afford the fee"));
+    }
+
+    #[test]
+    fn waste_stops_selling_when_fees_pass_earnings() {
+        let mut w = World::blank();
+        w.place(0, 10, 4, Kind::TradePost, Dir::E).unwrap();
+        // Earning $10 a minute: waste sells until its fees pass that.
+        w.econ.money_from[Item::CopperPlate.idx()] = 10.0;
+        let mut taken = 0;
+        while offer(&mut w, 10, 4, Item::Waste) {
+            taken += 1;
+            assert!(taken < 100);
+        }
+        assert_eq!(taken, 21, "$10.50 of fees is more than the $10 earned");
+        assert_eq!(w.econ.waste_refusal(SellMode::Money), Some("waste costs more than you're earning"));
+        assert_eq!(w.idle_reason(0, idx(10, 4)), Some("WSTE"));
+        // A minute later the old fees and earnings have left the window, and waste sells again.
+        run(&mut w, 70);
+        assert!(w.econ.waste_refusal(SellMode::Money).is_none());
+        assert!(offer(&mut w, 10, 4, Item::Waste));
+    }
+
+    #[test]
+    fn removing_a_crate_of_waste_costs_money() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
+        fill_crate(&mut w, 0, 5, 5, &[Item::Waste; 200]);
+        fill_crate(&mut w, 0, 5, 5, &[Item::Coal; 10]);
+        assert_eq!(w.removal_fee(0, 5, 5), (200, 100.0));
+        let price = Kind::Crate.price(1);
+        w.econ.money = 99.0;
+        let err = w.try_remove(0, 5, 5).unwrap_err();
+        assert_eq!(err, "Holds 200 waste: removing it costs $100");
+        assert!(w.tile(0, 5, 5).is_some() && w.econ.money == 99.0, "refused: nothing changes");
+        w.econ.money = 150.0;
+        assert_eq!(w.try_remove(0, 5, 5), Ok(Some(Kind::Crate)));
+        assert!((w.econ.money - (50.0 + price)).abs() < 1e-9, "fee paid, refund given");
+        assert!(w.tile(0, 5, 5).is_none());
+        // An empty crate is free to remove, even with no money.
+        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
+        w.econ.money = 0.0;
+        assert_eq!(w.try_remove(0, 5, 5), Ok(Some(Kind::Crate)));
+    }
+
+    #[test]
+    fn removing_an_elevator_with_waste_costs_money() {
+        let mut w = World::blank();
+        w.place(0, 20, 20, Kind::Elevator, Dir::E).unwrap();
+        w.lifts[0].load.extend([Item::Waste, Item::Waste, Item::Coal]);
+        assert_eq!(w.removal_fee(0, 20, 20), (2, 1.0));
+        w.econ.money = 0.5;
+        assert!(w.try_remove(0, 20, 20).unwrap_err().starts_with("Holds 2 waste"));
+        w.econ.money = 5.0;
+        assert_eq!(w.try_remove(0, 20, 20), Ok(Some(Kind::Elevator)));
+    }
+
+    #[test]
+    fn old_version_saves_are_refused_and_listed() {
+        let data = std::env::temp_dir().join(format!("tfac-old-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&data);
+        std::fs::create_dir_all(crate::saves::dir(&data)).unwrap();
+        // No version at all: from before versions.
+        let old = crate::saves::path_of(&data, "save1");
+        std::fs::write(&old, r#"{"floors":[],"tick":5}"#).unwrap();
+        assert_eq!(World::file_version(&old), Some(0));
+        let err = World::load(&old).err().unwrap();
+        assert!(err.to_string().contains("older version"), "{err}");
+        let msg = crate::saves::version_problem(&old, "save1").unwrap();
+        assert!(msg.contains("older version") && msg.contains("tfac --new"), "{msg}");
+        assert!(old.exists(), "never deleted");
+        // A current save opens fine and says nothing.
+        let mut w = World::new();
+        let fresh = crate::saves::path_of(&data, "save2");
+        w.save(&fresh).unwrap();
+        assert_eq!(World::file_version(&fresh), Some(SAVE_VERSION));
+        assert!(World::load(&fresh).is_ok() && crate::saves::version_problem(&fresh, "save2").is_none());
+        let list = crate::saves::describe(&data);
+        let line = |n: &str| list.lines().find(|l| l.trim_start().starts_with(n)).unwrap().to_string();
+        assert!(line("save1").contains("(old version)"), "{list}");
+        assert!(!line("save2").contains("(old version)") && line("save2").contains("research"), "{list}");
+        let _ = std::fs::remove_dir_all(&data);
     }
 
     #[test]
@@ -2940,39 +3182,11 @@ mod tests {
     }
 
     #[test]
-    fn old_saves_pad_short_lists() {
+    fn short_lists_are_padded() {
         let e: Econ = serde_json::from_str(r#"{"money":5.0,"research":1.0,"research_sales":[1,2],"sold":[0],"made":[3]}"#).unwrap();
         assert_eq!(e.made[0], 3);
         assert_eq!(e.made.len(), ITEMS);
         assert_eq!(e.made[ITEMS - 1], 0);
-    }
-
-    #[test]
-    fn phase_one_saves_still_load() {
-        // Make a save shaped like Phase 1's: 8 items, 3 techs.
-        let mut w = World::new();
-        w.build_demo().unwrap();
-        run(&mut w, 5);
-        let mut v = serde_json::to_value(&w).unwrap();
-        for key in ["research_sales", "sold", "made"] {
-            v["econ"][key].as_array_mut().unwrap().truncate(8);
-        }
-        v["progress"]["researched"].as_array_mut().unwrap().truncate(3);
-        // Old maps had ore patches and lakes.
-        v["floors"][0]["deposits"][idx(20, 20)] = serde_json::json!("Iron");
-        v["floors"][0]["deposits"][idx(21, 20)] = serde_json::json!("Water");
-        for t in v["floors"][0]["tiles"].as_array_mut().unwrap() {
-            if let Some(stock) = t.pointer_mut("/st/Crafter/stock") {
-                stock.as_array_mut().unwrap().truncate(8);
-            }
-        }
-        let path = std::env::temp_dir().join(format!("factory-old-{}.json", std::process::id()));
-        std::fs::write(&path, v.to_string()).unwrap();
-        let l = World::load(&path).unwrap();
-        std::fs::remove_file(&path).ok();
-        assert_eq!(l.econ.sold[Item::CopperPlate.idx()], w.econ.sold[Item::CopperPlate.idx()]);
-        assert!(l.floors[0].deposits.iter().all(|d| *d == Deposit::None), "old ore patches and lakes are cleared");
-        assert_eq!(l.tile(0, 54, 38).map(|b| b.kind), Some(Kind::Furnace));
     }
 
     #[test]
@@ -3056,7 +3270,7 @@ mod tests {
         let mut w = World::blank();
         w.place(0, 4, 5, Kind::Crate, Dir::E).unwrap();
         fill_crate(&mut w, 0, 4, 5, &[Item::SteelGirder, Item::SteelGirder, Item::SteelGirder, Item::SteelGirder]);
-        fill_crate(&mut w, 0, 4, 5, &[Item::Gearbox, Item::Gearbox, Item::Concrete, Item::Concrete, Item::Concrete, Item::Concrete]);
+        fill_crate(&mut w, 0, 4, 5, &[Item::Gearbox, Item::Gearbox, Item::Steel, Item::Steel, Item::Steel, Item::Steel]);
         w.place(0, 5, 4, Kind::Assembler, Dir::E).unwrap(); // 3x3
         while !w.configure(0, 5, 4).unwrap().contains("drilling rig") {}
         w.place(0, 8, 5, Kind::Crate, Dir::E).unwrap();

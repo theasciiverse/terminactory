@@ -806,8 +806,10 @@ impl App {
 
     fn remove_here(&mut self) {
         let (x, y) = self.cursor;
-        if let Some(k) = self.world.remove(self.floor, x, y) {
-            self.say(format!("Removed {} (refunded in full)", k.name()));
+        match self.world.try_remove(self.floor, x, y) {
+            Ok(Some(k)) => self.say(format!("Removed {} (refunded in full)", k.name())),
+            Ok(None) => {}
+            Err(why) => self.say(why),
         }
     }
 

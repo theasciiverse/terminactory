@@ -427,7 +427,7 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::IronOre => ('o', 111),
         Item::IronPlate => ('=', 153),
         Item::Steel => ('%', 255),
-        Item::Slag => (',', 137),
+        Item::Waste => (',', 100),
         Item::SteelGirder => ('H', 250),
         Item::Concrete => ('c', 252),
         Item::IronGear => ('g', 153),
@@ -1062,11 +1062,19 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             v.push(format!("{}/{} items", items.len(), cap));
             v.extend(item_counts(items.iter().copied()));
         }
-        St::Trade { mode, money, research, count } => {
+        St::Trade { mode, money, research, count, .. } => {
             v.push(format!("mode: {}  (f changes)", mode.label()));
-            v.push(format!("sold {}   ${:.0}   research {:.1}", count, money, research));
+            let sign = if *money < 0.0 { "-" } else { "" };
+            v.push(format!("sold {}   {sign}${:.0}   research {:.1}", count, money.abs(), research));
+            match w.econ.waste_refusal(*mode) {
+                Some(why) => v.push(format!("Won't take waste: {why}")),
+                None => v.push(format!("takes waste: costs {} each", money_text(-Item::Waste.price()))),
+            }
             v.push("research for the next one sold:".into());
             for it in Item::ALL {
+                if it == Item::Waste {
+                    continue;
+                }
                 if w.econ.made[it.idx()] > 0 || matches!(it, Item::CopperOre | Item::Coal | Item::CopperPlate) {
                     v.push(format!("  {:<13}{:>6.2}", it.name(), w.econ.next_research(it)));
                 }
@@ -1109,6 +1117,10 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             v.push(format!("giving {:.0} of {:.0} power", output, ENGINE_POWER));
             v.push(format!("powers parts {} tiles around it", ENGINE_REACH));
         }
+    }
+    let (waste, fee) = w.removal_fee(f, x, y);
+    if waste > 0 {
+        v.push(format!("Removing costs {} ({waste} waste)", money_text(fee)));
     }
     v
 }
@@ -1154,6 +1166,11 @@ fn centered(area: Rect, w: u16, h: u16) -> Rect {
     Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h)
 }
 
+/// "$1,234" or "-$56".
+fn signed_money(v: f64) -> String {
+    if v < -0.5 { format!("-${}", grouped((-v).round())) } else { format!("${}", grouped(v.round())) }
+}
+
 /// A per-minute amount: "·" for nothing, one decimal below 10, whole above.
 fn rate(v: f64) -> String {
     if v < 0.05 {
@@ -1185,7 +1202,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
     let money: f64 = rows.iter().map(|r| r.money).sum();
     let research: f64 = rows.iter().map(|r| r.research).sum();
     let mut lines: Vec<Line> = vec![Line::from(vec![
-        Span::styled(format!("${}/min", grouped(money.round())), Style::new().fg(Color::Green).add_modifier(Modifier::BOLD)),
+        Span::styled(format!("{}/min", signed_money(money)), Style::new().fg(if money < 0.0 { Color::Red } else { Color::Green }).add_modifier(Modifier::BOLD)),
         Span::styled("  ·  ", dim),
         Span::styled(format!("{} research/min", rate(research)), Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD)),
     ])];
@@ -1215,10 +1232,18 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
                     "made" => (rate(r.made), Style::new()),
                     "used" => (rate(r.used), Style::new()),
                     "sold" => (rate(r.sold), Style::new()),
-                    "$/min" => (if r.money > 0.0 { format!("${}", rate(r.money)) } else { "·".into() }, Style::new().fg(Color::Green)),
+                    "$/min" => match r.money {
+                        m if m > 0.0 => (format!("${}", rate(m)), Style::new().fg(Color::Green)),
+                        m if m < -0.05 => (format!("-${}", rate(-m)), Style::new().fg(Color::Red)),
+                        _ => ("·".into(), Style::new()),
+                    },
                     "research" => (rate(r.research), Style::new().fg(Color::LightBlue)),
                     _ => {
                         // What the next sale for research would bring: it fades the more you sell.
+                        if r.item == Item::Waste {
+                            spans.push(Span::styled(format!("{:>cw$}", "none"), dim));
+                            continue;
+                        }
                         let next = w.econ.next_research(r.item);
                         let worth = r.item.curve().worth;
                         let st = if next >= worth * 0.5 { Style::new().fg(Color::Green) } else if next >= worth * 0.15 { Style::new().fg(Color::Yellow) } else { dim };
@@ -1231,6 +1256,9 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
         }
         lines.push(Line::raw(""));
         lines.push(Line::styled("Research per sale fades the more you sell of an item, so new items pay best.", dim));
+        if rows.iter().any(|r| r.item == Item::Waste) {
+            lines.push(Line::styled("Waste costs money to sell (shown negative) and earns no research.", dim));
+        }
     }
     let footer = format!("↑↓ scroll · {} or Esc close · the game keeps running", app.controls.key(Action::Stats));
     let body_h = inner.height.saturating_sub(1);
@@ -1568,7 +1596,14 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             out.push(vec![
                 seg(glyph.to_string(), gst),
                 seg(format!(" {}", capitalise(item.name())), Style::new().add_modifier(Modifier::BOLD)),
-                seg(format!("   sells ${} · made {}", item.price(), w.econ.made[item.idx()]), dim),
+                seg(
+                    if item.price() < 0.0 {
+                        format!("   costs ${:.2} to sell · made {}", -item.price(), w.econ.made[item.idx()])
+                    } else {
+                        format!("   sells ${} · made {}", item.price(), w.econ.made[item.idx()])
+                    },
+                    dim,
+                ),
             ]);
             out.push(vec![]);
 
@@ -1644,7 +1679,9 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 segs.push(seg(note, dim));
                 labelled(&mut out, label(&mut first, "Used in"), GUTTER, segs);
             }
-            if first {
+            if first && item == Item::Waste {
+                labelled(&mut out, "Used in", GUTTER, vec![seg("nothing: a trade post set to money takes it, for a fee", dim)]);
+            } else if first {
                 labelled(&mut out, "Used in", GUTTER, vec![seg("nothing yet: sell it at a trade post", dim)]);
             }
 
@@ -1652,7 +1689,8 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let key = Style::new().fg(KEY_ITEM);
             if let Some(i) = TREE.iter().position(|(n, _)| *n == Node::Key(item)) {
                 let next: Vec<String> = tree_children(i).iter().map(|&k| node_name(TREE[k].0)).collect();
-                let letter = Company::ALL.iter().find(|c| c.key_item() == Some(item)).map(|c| format!(" and a letter from {}", c.name()));
+                let from: Vec<&str> = Company::ALL.iter().filter(|c| c.key_item() == Some(item)).map(|c| c.name()).collect();
+                let letter = (!from.is_empty()).then(|| format!(" and a letter from {}", from.join(" and ")));
                 let done = if w.econ.made[item.idx()] > 0 { " (done)" } else { "" };
                 let text = format!("your first one brings {}{}{done}", next.join(", "), letter.unwrap_or_default());
                 labelled(&mut out, label(&mut first, "Unlocks"), GUTTER, vec![seg(text, key)]);
@@ -1663,8 +1701,13 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 labelled(&mut out, label(&mut first, "Unlocks"), GUTTER, vec![seg(text, key)]);
             }
             out.push(vec![]);
-            for l in research_chart(w, item, width as u16) {
-                out.push(l.spans.into_iter().map(|s| seg(s.content.into_owned(), s.style)).collect());
+            if item == Item::Waste {
+                out.push(vec![seg("Never earns research. Research and split trade posts won't take it,", dim)]);
+                out.push(vec![seg("and money posts stop when the fees pass what you earn.", dim)]);
+            } else {
+                for l in research_chart(w, item, width as u16) {
+                    out.push(l.spans.into_iter().map(|s| seg(s.content.into_owned(), s.style)).collect());
+                }
             }
         }
         Entry::Part(k) => {
@@ -2104,7 +2147,7 @@ READING THE MAP
   Arrows are belts; items ride on them. Point at anything to see what it is.
   Drills mine anywhere: press f on one to pick copper, coal or iron.
   Items: o copper ore  * coal  = plate  ~ wire  0 pipe  @ coil  # coke
-         o iron ore (blue)  = iron plate (blue)  % steel  , slag  H girder
+         o iron ore (blue)  = iron plate (blue)  % steel  , waste  H girder
          c concrete  g gear  G gearbox  R drilling rig
 
 HOW IT WORKS
@@ -2119,7 +2162,8 @@ HOW IT WORKS
   Pumps draw water anywhere on the ground. Pipes join into networks, each holding one fluid.
     Boilers burn coal to turn water into steam (out their front); steam
     engines turn steam into power, only as much as their grid needs.
-  Blast furnaces burn coke. Steel leaves slag: route it away or it backs up.
+  Blast furnaces burn coke. Steel leaves waste: a trade post set to money
+    takes it for $0.50 each; research posts refuse it and it backs up.
   Floors: support beams open +1, excavation opens -1 (ore there is richer).
     Elevators (2x2 to 8x8, +/- to resize) have a door on every open floor;
     f sets each door to load, unload or pass. A car leaves only when full.
@@ -2127,6 +2171,7 @@ HOW IT WORKS
   Everything unlocks free once you've made enough of its milestone item;
     research is the shortcut.
   Trade posts sell what they receive: f switches money / 40-40 / research.
+    Waste costs money and never earns research. Idle posts flash WSTE.
   Belt tunnels: place an entrance, then its exit up to 5 tiles on, same way.
     Long arms reach 2 tiles; filter splitters send their item out the front.
   Research (t) brings new parts; some need a key item made first.
@@ -2341,10 +2386,10 @@ mod tests {
         assert!(t.contains("2 coal  ──→  coke"), "{t}");
         std::fs::write("target/snapshot-book-machine.html", to_html(&buf)).unwrap();
 
-        // Steel: the slag shows, and it's locked behind the blast furnace.
+        // Steel: the waste shows, and it's locked behind the blast furnace.
         app.book_go(Entry::Item(Item::Steel));
         let t = text(&render(&mut app, 130, 42));
-        assert!(t.contains("3 iron plate  ─coke─→  steel + slag"), "{t}");
+        assert!(t.contains("3 iron plate  ─coke─→  steel + waste"), "{t}");
         assert!(t.contains("(needs the blast furnace)"), "{t}");
 
         // Search: / then letters filter the grid and jump to the first match; Esc clears it.
@@ -2416,6 +2461,52 @@ mod tests {
         // Any other key closes it and still does its job.
         app.on_key(KeyEvent::from(KeyCode::Char('t')));
         assert!(!app.stats && app.tree);
+    }
+
+    /// Waste: hovering a crate of it, the production panel, and its recipe book page.
+    #[test]
+    fn waste_shows_up() {
+        let mut w = World::new();
+        w.build_demo().unwrap();
+        w.place(0, 66, 36, Kind::Crate, Dir::E).unwrap();
+        if let Some(Building { st: St::Crate { items }, .. }) = w.floors[0].tiles[idx(66, 36)].as_mut() {
+            items.extend([Item::Waste; 200]);
+        }
+        let mut app = App::new(w);
+        app.cursor = (66, 36);
+        app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("Removing costs $100 (200 waste)"), "{t}");
+        std::fs::write("target/snapshot-waste.html", to_html(&buf)).unwrap();
+
+        // The production panel: fees show as negative money.
+        let w = &mut app.world;
+        w.place(0, 70, 36, Kind::TradePost, Dir::E).unwrap();
+        w.econ.money = 500.0;
+        for t in 0..TPS * 70 {
+            w.tick();
+            if t % 90 == 0 {
+                w.offer(0, 70, 36, Item::Waste);
+            }
+        }
+        app.stats = true;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("waste") && t.contains("-$"), "{t}");
+        assert!(t.contains("Waste costs money"), "{t}");
+        std::fs::write("target/snapshot-waste-production.html", to_html(&buf)).unwrap();
+        let t = text(&render(&mut app, 50, 30));
+        assert!(t.contains("waste"), "{t}");
+        app.stats = false;
+
+        // Its recipe book page: no research chart.
+        app.book_go(Entry::Item(Item::Waste));
+        app.book = true;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("costs $0.50 to sell") && t.contains("Never earns research") && t.contains("steel + waste"), "{t}");
+        std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
     }
 
     /// The logistics toys on the map: a tunnel under a belt, a long arm, a filter splitter, a warehouse.

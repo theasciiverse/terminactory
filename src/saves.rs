@@ -20,27 +20,18 @@ fn number(name: &str) -> Option<u32> {
     name.strip_prefix("save")?.parse().ok()
 }
 
-/// The old single campaign becomes save1 (renamed in place, nothing lost). An older copy
-/// of the game still running can write campaign.json again later: the newer of the two
-/// becomes save1, and the other is kept beside it as a backup.
-pub fn migrate(data: &Path) {
-    let (old, new) = (dir(data).join("campaign.json"), dir(data).join("save1.json"));
-    if !old.exists() {
-        return;
-    }
-    if !new.exists() {
-        let _ = std::fs::rename(old, new);
-        return;
-    }
-    let when = |p: &Path| std::fs::metadata(p).and_then(|m| m.modified()).ok();
-    let backup = |name: &str| {
-        (0..).map(|n| dir(data).join(if n == 0 { format!("{name}.json") } else { format!("{name}-{n}.json") })).find(|p| !p.exists()).unwrap()
-    };
-    if when(&old) > when(&new) {
-        let _ = std::fs::rename(&new, backup("save1.older"));
-        let _ = std::fs::rename(old, new);
+/// What to tell the player when a save is from another version of the game and can't be opened.
+pub fn version_problem(path: &Path, name: &str) -> Option<String> {
+    let v = crate::sim::World::file_version(path)?;
+    if v < crate::sim::SAVE_VERSION {
+        Some(format!(
+            "{name} is from an older version of Terminactory and can't be opened. It's still at {}.\nStart a fresh game with: tfac --new",
+            path.display()
+        ))
+    } else if v > crate::sim::SAVE_VERSION {
+        Some(format!("{name} was made by a newer version of Terminactory and can't be opened. Update the game, or start a fresh one with: tfac --new"))
     } else {
-        let _ = std::fs::rename(old, backup("campaign.older"));
+        None
     }
 }
 
@@ -149,7 +140,9 @@ pub fn describe(data: &Path) -> String {
     let last = latest(data).map(|s| s.name);
     let mut out = format!("Your saves (in {}):\n", dir(data).display());
     for s in &saves {
+        let old = crate::sim::World::file_version(&s.path).is_some_and(|v| v < crate::sim::SAVE_VERSION);
         let stats = match crate::sim::World::load(&s.path) {
+            _ if old => "(old version)".to_string(),
             Ok(w) => {
                 let secs = w.tick / crate::sim::TPS;
                 format!(
@@ -186,17 +179,8 @@ mod tests {
         let _ = std::fs::remove_dir_all(&data);
         std::fs::create_dir_all(dir(&data)).unwrap();
         assert_eq!(next_name(&data), "save1");
-        // The old campaign becomes save1.
-        std::fs::write(dir(&data).join("campaign.json"), "{}").unwrap();
-        migrate(&data);
-        assert!(path_of(&data, "save1").exists() && !dir(&data).join("campaign.json").exists());
-        // An old copy of the game writes campaign.json again: the newer one wins, the other is kept.
-        std::thread::sleep(std::time::Duration::from_millis(20));
-        std::fs::write(dir(&data).join("campaign.json"), "{\"newer\": 1}").unwrap();
-        migrate(&data);
-        assert_eq!(std::fs::read_to_string(path_of(&data, "save1")).unwrap(), "{\"newer\": 1}");
-        assert!(dir(&data).join("save1.older.json").exists());
-        std::fs::write(path_of(&data, "save3"), "{}").unwrap();
+        std::fs::write(path_of(&data, "save1"), "{}").unwrap();
+        std::fs::write(path_of(&data, "save3"), "not a save").unwrap();
         std::fs::write(dir(&data).join("demo.json"), "{}").unwrap();
         let names: Vec<String> = list(&data).into_iter().map(|s| s.name).collect();
         assert_eq!(names, ["save1", "save3"], "the demo isn't a numbered save");
@@ -206,6 +190,9 @@ mod tests {
         assert_eq!(parse_name("save12").as_deref(), Some("save12"));
         assert_eq!(parse_name("hello"), None);
         assert!(describe(&data).contains("save3") && describe(&data).contains("can't be read"));
+        // A save without a version is from before versions: listed as old, not read.
+        let line = |name: &str| describe(&data).lines().find(|l| l.contains(name)).unwrap().to_string();
+        assert!(line("save1").contains("(old version)") && !line("save1").contains("research"), "{}", line("save1"));
         // A save open in this process is locked to others; a stale lock is taken over.
         let save = path_of(&data, "save3");
         std::fs::write(save.with_extension("lock"), "999999").unwrap();

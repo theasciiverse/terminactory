@@ -1,6 +1,6 @@
 //! Game content: items, companies, research and recipes.
 //! Kept apart from the mechanics so it can move into data files later.
-//! New entries are always added at the end of each list so old saves still load.
+//! Changing these lists changes the save format: bump SAVE_VERSION in sim.rs.
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,7 @@ pub enum Item {
     IronOre,
     IronPlate,
     Steel,
-    Slag,
+    Waste,
     SteelGirder,
     Concrete,
     IronGear,
@@ -68,7 +68,7 @@ impl Item {
         Item::IronOre,
         Item::IronPlate,
         Item::Steel,
-        Item::Slag,
+        Item::Waste,
         Item::SteelGirder,
         Item::Concrete,
         Item::IronGear,
@@ -90,9 +90,9 @@ impl Item {
             Item::IronOre => "iron ore",
             Item::IronPlate => "iron plate",
             Item::Steel => "steel",
-            Item::Slag => "slag",
+            Item::Waste => "waste",
             Item::SteelGirder => "steel girder",
-            Item::Concrete => "slag concrete",
+            Item::Concrete => "concrete",
             Item::IronGear => "iron gear",
             Item::Gearbox => "gearbox",
             Item::DrillingRig => "drilling rig",
@@ -110,7 +110,8 @@ impl Item {
             Item::IronOre => 1.5,
             Item::IronPlate => 6.0,
             Item::Steel => 22.0,
-            Item::Slag => 0.5,
+            // Waste costs money to get rid of.
+            Item::Waste => -0.5,
             Item::SteelGirder => 50.0,
             Item::Concrete => 4.0,
             Item::IronGear => 14.0,
@@ -131,7 +132,8 @@ impl Item {
             Item::IronOre => c(5.0, 0.99, 0.02),
             Item::IronPlate => c(15.0, 0.995, 0.03),
             Item::Steel => c(40.0, 0.996, 0.05),
-            Item::Slag => c(1.0, 0.99, 0.02),
+            // Waste never earns research (worth 0).
+            Item::Waste => c(0.0, 0.99, 0.02),
             Item::SteelGirder => c(80.0, 0.996, 0.06),
             Item::Concrete => c(10.0, 0.995, 0.04),
             Item::IronGear => c(30.0, 0.996, 0.05),
@@ -213,7 +215,8 @@ impl Company {
             Company::Wellbourne => Some(Item::CopperPipe),
             Company::Kettering => Some(Item::CopperCoil),
             Company::Pillar => Some(Item::SteelGirder),
-            Company::Underhill => Some(Item::Concrete),
+            // for now: concrete has no recipe until the mixer arrives
+            Company::Underhill => Some(Item::SteelGirder),
             Company::Gearwright => Some(Item::Gearbox),
             Company::Swiftline => Some(Item::IronGear),
         }
@@ -224,11 +227,11 @@ impl Company {
             Company::Hollowmere => "We've dug these hills for four generations. Our drills are cheap, honest, and they don't complain. Neither should you.",
             Company::Brannock => "Furnaces, belts, panels, poles: if it works, the three of us will sell it to you. If it doesn't, one of us will fix it.",
             Company::Ashgrove => "We hear you've been drawing copper wire. Charming. Copper is pretty, but iron builds the world. Our basic drill cuts the ironstone your cheap drills can't touch.",
-            Company::Cinderhall => "Coke! Now you're cooking. Our blast furnaces turn ironstone into plate and plate into steel. They leave slag behind, mind. Everybody wants slag eventually.",
+            Company::Cinderhall => "Coke! Now you're cooking. Our blast furnaces turn ironstone into plate and plate into steel. They leave waste behind, mind. Nobody buys it, so plan where it goes.",
             Company::Wellbourne => "A good pipe is a promise. Set one of our pumps down anywhere and the water will go wherever your pipes do, quietly and at your own pace.",
             Company::Kettering => "Mr Kettering says your coil is crude. Mr Vane says it's charming. We both say: give our boilers water and coal, and our engines will out-power a field of panels.",
             Company::Pillar => "A girder! Let's see how much it holds. Hm. Enough. Pillar & Sons can raise you a floor above the ground, and when your beams get stronger, we'll raise you higher.",
-            Company::Underhill => "Concrete from slag? You're one of us. Underhill Excavation digs the floor beneath your feet, cheerfully, and the ore down there is richer than anything on top.",
+            Company::Underhill => "A girder? You're one of us. Underhill Excavation digs the floor beneath your feet, cheerfully, and the ore down there is richer than anything on top.",
             Company::Gearwright => "A gearbox with tolerances like these deserves a proper home. Gearwright's assembler will make anything you've learned to make, precisely, and twice as fast.",
             Company::Swiftline => "Gears! Lovely. You know what gears are good for? Speed. Swiftline belts move twice what Brannock's do. Tell the sisters we said hello.",
         }
@@ -321,11 +324,11 @@ impl Tech {
     pub fn about(self) -> &'static str {
         match self {
             Tech::Press => "a machine that presses plates into wire, pipe, coils and later gears and girders",
-            Tech::Coking => "lets copper furnaces bake coal into coke, and slag into concrete",
+            Tech::Coking => "lets copper furnaces bake coal into coke",
             Tech::BasicDrill => "a faster drill that can also cut iron",
             Tech::Pumps => "pumps that draw water from the ground, and pipes that carry it",
             Tech::Steam => "boilers that turn water and coal into steam, and engines that turn steam into power",
-            Tech::BlastFurnace => "smelts iron ore with coke, and makes steel (leaving slag)",
+            Tech::BlastFurnace => "smelts iron ore with coke, and makes steel (leaving waste)",
             Tech::SupportBeams => "build one floor above the ground, and elevators to reach it",
             Tech::Excavation => "dig one floor below the ground, where ore is richer, and elevators to reach it",
             Tech::Assembler => "one big machine that makes any recipe you know, twice as fast, plus the drilling rig",
@@ -392,7 +395,8 @@ impl Tech {
             Tech::Steam => (Item::CopperCoil, 20),
             Tech::BlastFurnace => (Item::Coke, 100),
             Tech::SupportBeams => (Item::SteelGirder, 25),
-            Tech::Excavation => (Item::Concrete, 50),
+            // for now: concrete has no recipe until the mixer arrives
+            Tech::Excavation => (Item::SteelGirder, 50),
             Tech::Assembler => (Item::Gearbox, 10),
             Tech::FastBelts => (Item::IronGear, 120),
             Tech::Tunnels => (Item::CopperPlate, 400),
@@ -438,13 +442,13 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::BlastFurnace), Some(9)),    // 10
     (Node::Key(Item::SteelGirder), Some(10)),     // 11
     (Node::Tech(Tech::SupportBeams), Some(11)),   // 12
-    (Node::Key(Item::Concrete), Some(10)),        // 13
-    (Node::Tech(Tech::Excavation), Some(13)),     // 14
-    (Node::Key(Item::IronGear), Some(10)),        // 15
-    (Node::Tech(Tech::FastBelts), Some(15)),      // 16
-    (Node::Key(Item::Gearbox), Some(10)),         // 17
-    (Node::Tech(Tech::Assembler), Some(17)),      // 18
-    (Node::Key(Item::DrillingRig), Some(18)),     // 19
+    // for now: Excavation hangs off the girder too (concrete returns with the mixer)
+    (Node::Tech(Tech::Excavation), Some(11)),     // 13
+    (Node::Key(Item::IronGear), Some(10)),        // 14
+    (Node::Tech(Tech::FastBelts), Some(14)),      // 15
+    (Node::Key(Item::Gearbox), Some(10)),         // 16
+    (Node::Tech(Tech::Assembler), Some(16)),      // 17
+    (Node::Key(Item::DrillingRig), Some(17)),     // 18
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -466,7 +470,6 @@ pub struct Recipe {
 pub const FURNACE_RECIPES: &[Recipe] = &[
     Recipe { name: "copper plate", inputs: &[(Item::CopperOre, 1)], outputs: &[(Item::CopperPlate, 1)], ticks: 30, fuel: Some(Item::Coal), needs: None, tag: 'P' },
     Recipe { name: "coke", inputs: &[(Item::Coal, 2)], outputs: &[(Item::Coke, 1)], ticks: 120, fuel: None, needs: Some(Tech::Coking), tag: 'K' },
-    Recipe { name: "slag concrete", inputs: &[(Item::Slag, 3)], outputs: &[(Item::Concrete, 1)], ticks: 120, fuel: Some(Item::Coal), needs: Some(Tech::BlastFurnace), tag: 'C' },
 ];
 
 pub const PRESS_RECIPES: &[Recipe] = &[
@@ -478,10 +481,10 @@ pub const PRESS_RECIPES: &[Recipe] = &[
     Recipe { name: "gearbox", inputs: &[(Item::IronGear, 3), (Item::Steel, 1)], outputs: &[(Item::Gearbox, 1)], ticks: 180, fuel: None, needs: Some(Tech::BlastFurnace), tag: 'B' },
 ];
 
-/// Steel leaves slag behind: it comes out the front with the steel and has to go somewhere.
+/// Steel leaves waste behind: it comes out the front with the steel and has to go somewhere.
 pub const BLAST_RECIPES: &[Recipe] = &[
     Recipe { name: "iron plate", inputs: &[(Item::IronOre, 1)], outputs: &[(Item::IronPlate, 1)], ticks: 90, fuel: Some(Item::Coke), needs: None, tag: 'I' },
-    Recipe { name: "steel", inputs: &[(Item::IronPlate, 3)], outputs: &[(Item::Steel, 1), (Item::Slag, 1)], ticks: 240, fuel: Some(Item::Coke), needs: None, tag: 'S' },
+    Recipe { name: "steel", inputs: &[(Item::IronPlate, 3)], outputs: &[(Item::Steel, 1), (Item::Waste, 1)], ticks: 240, fuel: Some(Item::Coke), needs: None, tag: 'S' },
 ];
 
 /// The assembler knows every press recipe (at twice the speed) plus the drilling rig.
@@ -494,7 +497,7 @@ pub const ASSEMBLER_RECIPES: &[Recipe] = &[
     Recipe { name: "gearbox", inputs: &[(Item::IronGear, 3), (Item::Steel, 1)], outputs: &[(Item::Gearbox, 1)], ticks: 90, fuel: None, needs: None, tag: 'B' },
     Recipe {
         name: "drilling rig",
-        inputs: &[(Item::SteelGirder, 4), (Item::Gearbox, 2), (Item::Concrete, 4)],
+        inputs: &[(Item::SteelGirder, 4), (Item::Gearbox, 2), (Item::Steel, 4)],
         outputs: &[(Item::DrillingRig, 1)],
         ticks: 600,
         fuel: None,
