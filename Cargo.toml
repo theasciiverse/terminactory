@@ -1,0 +1,14 @@
+[package]
+name = "terminactory"
+version = "0.1.0"
+edition = "2021"
+description = "A cozy factory game in the terminal"
+default-run = "terminactory"
+
+[dependencies]
+ratatui = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+
+[profile.release]
+opt-level = 3
