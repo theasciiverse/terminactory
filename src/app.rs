@@ -15,7 +15,7 @@ use crate::sim::{in_bounds, Category, Company, Dir, Kind, Tech, World, H, MAX_LI
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
     use Kind::*;
     match cat {
-        Category::Create => &[&[Drill, BasicDrill], &[Furnace, Molder, BlastFurnace], &[Press, Assembler], &[Pump, Pipe]],
+        Category::Create => &[&[Drill, BasicDrill], &[Furnace, Molder, BlastFurnace], &[Press, CrudeAssembler], &[Pump, Pipe]],
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator]],
         Category::Power => &[&[Solar], &[Pole], &[Boiler], &[SteamEngine]],
         Category::Misc => &[&[Crate, Warehouse], &[TradePost]],
@@ -42,7 +42,7 @@ pub enum Entry {
 
 /// Machines with their own page in the recipe book.
 pub const BOOK_PARTS: [Kind; 7] =
-    [Kind::Drill, Kind::BasicDrill, Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::Press, Kind::Assembler];
+    [Kind::Drill, Kind::BasicDrill, Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::Press, Kind::CrudeAssembler];
 
 impl Entry {
     pub fn name(self) -> &'static str {
@@ -930,7 +930,8 @@ mod tests {
 
     #[test]
     fn every_part_has_one_slot_in_its_own_category() {
-        for k in Kind::ALL {
+        // Machines that are not in the game yet have no slot.
+        for k in Kind::ALL.into_iter().filter(|k| k.in_game()) {
             let homes: Vec<Category> = Category::ALL.iter().copied().filter(|c| parts_in(*c).contains(&k)).collect();
             assert_eq!(homes, vec![k.category()], "{k:?}");
         }

@@ -466,7 +466,19 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Boiler => (PAPER, 130),
         Kind::SteamEngine => (PAPER, 61),
         Kind::FastBelt => (FAST_BELT, 234),
-        Kind::Assembler => (INK, 179),
+        Kind::CrudeAssembler => (INK, 179),
+        Kind::BasicAssembler => (INK, 186),
+        Kind::AdvancedAssembler => (INK, 150),
+        Kind::PrecisionAssembler => (INK, 117),
+        Kind::LargeBasicAssembler => (INK, 222),
+        Kind::LargeAdvancedAssembler => (INK, 123),
+        Kind::Welder => (INK, 209),
+        Kind::Kiln => (PAPER, 166),
+        Kind::Mixer => (INK, 152),
+        Kind::AdvancedDrill => (INK, 74),
+        Kind::LargeBasicDrill => (INK, 111),
+        Kind::LargeAdvancedDrill => (INK, 38),
+        Kind::AdvancedPump => (INK, 51),
         Kind::Tunnel => (BELT, 237),
         Kind::LongArm => (PAPER, 97),
         Kind::Sorter => (INK, 37),
@@ -506,7 +518,19 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Boiler => ('B', 'O'),
         Kind::SteamEngine => ('E', 'N'),
         Kind::FastBelt => (a, a),
-        Kind::Assembler => ('A', 'S'),
+        Kind::CrudeAssembler => ('A', '1'),
+        Kind::BasicAssembler => ('A', '2'),
+        Kind::AdvancedAssembler => ('A', '3'),
+        Kind::PrecisionAssembler => ('A', '4'),
+        Kind::LargeBasicAssembler => ('L', '2'),
+        Kind::LargeAdvancedAssembler => ('L', '3'),
+        Kind::Welder => ('W', 'E'),
+        Kind::Kiln => ('K', 'I'),
+        Kind::Mixer => ('M', 'X'),
+        Kind::AdvancedDrill => ('D', '3'),
+        Kind::LargeBasicDrill => ('D', '4'),
+        Kind::LargeAdvancedDrill => ('D', '5'),
+        Kind::AdvancedPump => ('P', '2'),
         Kind::Tunnel => (a, ']'),
         Kind::LongArm => ('L', a),
         Kind::Sorter => ('S', a),
@@ -580,19 +604,19 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::LongArm => vec![format!("L{a}")],
         Kind::Sorter => vec![format!("S{a}")],
         Kind::Warehouse => labelled("WARE"),
-        Kind::Assembler => {
-            let port = match dir {
-                Dir::E => format!("     {a}"),
-                Dir::W => format!("{a}     "),
-                Dir::N | Dir::S => format!("  {a}{a}  "),
-            };
-            let mid = format!("{:^6}", tag);
-            if dir == Dir::N {
-                vec![port, mid, "ASSMBL".into()]
-            } else {
-                vec!["ASSMBL".into(), mid, port]
-            }
-        }
+        Kind::CrudeAssembler => labelled("CRD ASM"),
+        Kind::BasicAssembler => labelled("BASM"),
+        Kind::AdvancedAssembler => labelled("ADVASM"),
+        Kind::PrecisionAssembler => labelled("PRCASM"),
+        Kind::LargeBasicAssembler => labelled("LRG ASM B"),
+        Kind::LargeAdvancedAssembler => labelled("LRG ASM A"),
+        Kind::Welder => labelled("WELDER"),
+        Kind::Kiln => labelled("KILN"),
+        Kind::Mixer => labelled("MIXR"),
+        Kind::AdvancedDrill => labelled("ADV DRL"),
+        Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
+        Kind::LargeAdvancedDrill => labelled("LRG ADV DRILL"),
+        Kind::AdvancedPump => labelled("APMP"),
         Kind::TradePost => {
             let m = match mode.unwrap_or(SellMode::Money) {
                 SellMode::Money => "$",
@@ -770,7 +794,8 @@ fn building_cell(b: &Building, lx: i32, ly: i32, powered: bool, reason: Option<&
             return [(c[0], st), (c[1], st)];
         }
         St::Drill { mines, fuel, out, .. } => {
-            (mines.is_some() && (*fuel > 0 || *mines == Some(Item::Coal)) && out.len() < DRILL_OUT_CAP, None)
+            let fed = if b.kind.burns_coal() { *fuel > 0 || *mines == Some(Item::Coal) } else { powered };
+            (mines.is_some() && fed && out.len() < b.kind.drill_out_cap(), None)
         }
         St::Crafter { busy, .. } => (*busy, None),
         St::Trade { mode, .. } => (true, Some(*mode)),
@@ -1015,10 +1040,17 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         v.push(format!("output goes out the {} side", b.dir.arrow()));
     }
     let (ax, ay) = w.anchor_of(f, x, y).unwrap_or((x, y));
-    if b.kind.power_draw() > 0.0 {
+    if b.kind.electric() {
         match w.building_net(f, idx(ax, ay)) {
             Some(n) => v.push(format!("EC {:.0}% (grid {:.0}/{:.0})", n.ratio * 100.0, n.supply, n.demand)),
             None => v.push("NO EC: out of range (v)".into()),
+        }
+        if b.kind.burst_draw() > 0.0 {
+            let working = matches!(b.st, St::Crafter { busy: true, .. });
+            v.push(format!("{:.0} EC only while working", b.kind.burst_draw()));
+            v.push(format!("drawing {:.0} EC now", if working { b.kind.burst_draw() } else { 0.0 }));
+        } else if b.kind.power_draw() >= 4.0 {
+            v.push(format!("draws {:.0} EC", b.kind.power_draw()));
         }
     }
     if coverage(b.kind, (1, 1), 0, 0).is_some() {
@@ -1034,10 +1066,19 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
     match &b.st {
         St::Drill { mines, fuel, coal, out, .. } => {
             v.push(format!("mining {}", mines.map_or("nothing", |it| it.name())));
-            v.push(format!("fuel {}   coal {}/{}", if *fuel > 0 { "burning" } else { "empty" }, coal, DRILL_COAL_CAP));
-            v.push(format!("output {}/{}", out.len(), DRILL_OUT_CAP));
-            if *fuel == 0 && *coal == 0 && *mines != Some(Item::Coal) {
+            let (mult, burn) = b.kind.drill_rates();
+            if mult > 1 || burn > 1 {
+                v.extend(drill_speed_lines(b.kind));
+            }
+            if b.kind.burns_coal() {
+                v.push(format!("fuel {}   coal {}/{}", if *fuel > 0 { "burning" } else { "empty" }, coal, b.kind.drill_coal_cap()));
+            }
+            v.push(format!("output {}/{}", out.len(), b.kind.drill_out_cap()));
+            if b.kind.burns_coal() && *fuel == 0 && *coal == 0 && *mines != Some(Item::Coal) {
                 v.push("needs coal: belt some into it".into());
+            }
+            if b.dims().0 >= 8 {
+                v.push("feeds anything along its front".into());
             }
         }
         St::Belt { items } => {
@@ -1074,12 +1115,19 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         St::Crafter { stock, fuel, out, busy, fluid, fluid_out, .. } => {
             if let Some(r) = b.recipe() {
                 v.push(format!("making {}  (f changes)", r.name));
+                let batch = b.kind.batch();
                 let mut needs: Vec<String> =
-                    r.inputs.iter().map(|(it, n)| format!("{} {}/{}", it.name(), stock[it.idx()], n)).collect();
+                    r.inputs.iter().map(|(it, n)| format!("{} {}/{}", it.name(), stock[it.idx()], n * batch)).collect();
                 if let Some((fl, n)) = r.fluid_in {
-                    needs.push(format!("{} {}/{}", fl.name(), fluid, n));
+                    needs.push(format!("{} {}/{}", fl.name(), fluid, n * batch));
                 }
                 v.push(format!("has {}", needs.join(", ")));
+                if batch > 1 {
+                    // How many runs the loaded inputs cover (a whole batch fires at once).
+                    let loads = r.inputs.iter().map(|(it, n)| stock[it.idx()] / n).min().unwrap_or(0).min(batch);
+                    v.push(format!("load {loads}/{batch}"));
+                    v.push(format!("fires {batch} at once when full"));
+                }
                 if r.fluid_in.is_some() {
                     v.push(format!("fluid comes from pipes (not the {} side)", b.dir.arrow()));
                 }
@@ -1094,7 +1142,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                     let lit = if *fuel > 0 { "burning" } else { "no fire" };
                     v.push(format!("{} {}   {}", fuel_item.name(), stock[fuel_item.idx()], lit));
                 }
-                v.push(format!("finished {}/{}   {}", out.len(), CRAFTER_OUT_CAP, if *busy { "working" } else { "waiting" }));
+                v.push(format!("finished {}/{}   {}", out.len(), b.kind.out_cap(), if *busy { "working" } else { "waiting" }));
             }
         }
         St::Crate { items } => {
@@ -1145,6 +1193,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             }
         }
         St::Pump { busy } => {
+            v.push(format!("{:.0} water a second", b.kind.pump_rate()));
             v.push(if *busy { "pumping water into its pipes".into() } else { "idle: needs EC and a pipe with room".into() });
         }
         St::Boiler { coal, fuel, busy } => {
@@ -1163,6 +1212,16 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         v.push(format!("Removing costs {} ({waste} waste)", money_text(fee)));
     }
     v
+}
+
+/// What a fast drill does compared with a basic (or advanced) one, in short lines.
+fn drill_speed_lines(kind: Kind) -> Vec<String> {
+    let (mult, burn) = kind.drill_rates();
+    match kind {
+        Kind::LargeAdvancedDrill => vec![format!("{}x an advanced drill's ore", mult / 2)],
+        _ if burn > 0 => vec![format!("{mult}x a basic drill's ore"), format!("burns {burn}x the coal")],
+        _ => vec![format!("{mult}x a basic drill's ore")],
+    }
 }
 
 /// One line per kind of item: its belt glyph, name and how many.
@@ -1485,7 +1544,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 5] = [Kind::Furnace, Kind::Molder, Kind::Press, Kind::BlastFurnace, Kind::Assembler];
+const CRAFTERS: [Kind; 5] = [Kind::Furnace, Kind::Molder, Kind::Press, Kind::BlastFurnace, Kind::CrudeAssembler];
 const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
@@ -1803,7 +1862,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             labelled(&mut out, "Status", GUTTER, status);
 
             match k {
-                Kind::Drill | Kind::BasicDrill => {
+                _ if k.is_drill() => {
                     let mut segs = Vec::new();
                     for (i, m) in k.ores().iter().enumerate() {
                         if i > 0 {
@@ -1812,15 +1871,30 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                         segs.push(link(Entry::Item(*m), e));
                     }
                     labelled(&mut out, "Mines", GUTTER, segs);
-                    labelled(&mut out, "Burns", GUTTER, vec![link(Entry::Item(Item::Coal), e), seg(" (a drill on coal fuels itself)", dim)]);
+                    if k.burns_coal() {
+                        labelled(&mut out, "Burns", GUTTER, vec![link(Entry::Item(Item::Coal), e), seg(" (a drill on coal fuels itself)", dim)]);
+                    } else {
+                        labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC, no coal", k.power_draw()), Style::new())]);
+                    }
                     if k == Kind::Drill {
                         labelled(&mut out, "", GUTTER, vec![seg("iron at half the basic drill's speed", dim)]);
                     }
+                    let (mult, burn) = k.drill_rates();
+                    if mult > 1 || burn > 1 {
+                        labelled(&mut out, "Speed", GUTTER, vec![seg(drill_speed_lines(k).join(", "), Style::new())]);
+                    }
+                    if k.dims(Dir::E).0 >= 8 {
+                        labelled(&mut out, "", GUTTER, vec![seg("pushes into anything along its front edge", dim)]);
+                    }
+                }
+                _ if k.is_pump() => {
+                    labelled(&mut out, "Pumps", GUTTER, vec![seg(format!("{:.0} water a second, anywhere on the ground", k.pump_rate()), Style::new())]);
+                    labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
                 }
                 _ => {
                     let mut first = true;
                     for r in k.recipes() {
-                        let made = r.outputs.first().map(|o| o.1).or(r.fluid_out.map(|f| f.1)).unwrap_or(1);
+                        let made = r.outputs.first().map(|o| o.1).or(r.fluid_out.map(|f| f.1)).unwrap_or(1) * k.batch();
                         let mut segs = equation(r, e);
                         segs.push(seg(format!("   {}", timing(r, made)), dim));
                         if let Some(l) = r.needs.filter(|t| !w.progress.has(*t)).map(|t| format!("needs {}", t.name())) {
@@ -1829,6 +1903,16 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                         labelled(&mut out, if std::mem::take(&mut first) { "Makes" } else { "" }, GUTTER, segs);
                     }
                     labelled(&mut out, "", GUTTER, vec![seg(format!("{setup_key} on a placed one picks the recipe"), dim)]);
+                    if k.batch() > 1 {
+                        let text = format!("fills up for {} runs, then makes them all at once", k.batch());
+                        labelled(&mut out, "Batch", GUTTER, vec![seg(text, Style::new())]);
+                    }
+                    if k.burst_draw() > 0.0 {
+                        let text = format!("{:.0} EC only while working, none when idle", k.burst_draw());
+                        labelled(&mut out, "Power", GUTTER, vec![seg(text, Style::new())]);
+                    } else if k.power_draw() > 0.0 {
+                        labelled(&mut out, "Power", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
+                    }
                 }
             }
         }
@@ -2081,7 +2165,7 @@ fn capitalise(s: &str) -> String {
 
 /// Where a key item comes from.
 fn recipe_hint(item: Item) -> String {
-    for (machine, list) in [("press", PRESS_RECIPES), ("furnace", FURNACE_RECIPES), ("blast furnace", BLAST_RECIPES), ("assembler", ASSEMBLER_RECIPES)] {
+    for (machine, list) in [("press", PRESS_RECIPES), ("furnace", FURNACE_RECIPES), ("blast furnace", BLAST_RECIPES), ("assembler", CRUDE_RECIPES)] {
         if let Some(r) = list.iter().find(|r| r.outputs.iter().any(|o| o.0 == item)) {
             let ins: Vec<String> = r.inputs.iter().map(|(it, n)| format!("{n} {}", it.name())).collect();
             let need = r.needs.map_or(String::new(), |t| format!(", needs {}", t.name()));
@@ -2198,7 +2282,7 @@ fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {
     let text = "\
 READING THE MAP
   Coloured blocks are buildings, labelled with their name. Production is
-  big (2x2 or 3x3), belts / splitters / arms / crates are 1x1. Presses and
+  big (2x2 up to 4x4), belts / splitters / arms / crates are 1x1. Presses and
   pumps are long (2x1, 1x2) and turn with the rotate key.
   The arrow on a building's edge is its output side; machines also show a
   letter for what they make. A grey block is idle.
@@ -2231,7 +2315,7 @@ HOW IT WORKS
   Floors: support beams open +1, excavation opens -1 (ore there is richer).
     Elevators (2x2 to 8x8, +/- to resize) have a door on every open floor;
     f sets each door to load, unload or pass. A car leaves only when full.
-  Idle machines flash a word saying why (FULL, NEED, FLUD, COAL, EC?...).
+  Idle machines flash a word saying why (FULL, NEED, FLUD, COAL, EC?, LOAD...).
   Everything unlocks free once you've made enough of its milestone item;
     research is the shortcut.
   Trade posts sell what they receive: f switches money / 40-40 / research.
@@ -2422,7 +2506,7 @@ mod tests {
         let t = text(&buf);
         assert!(t.contains("Made by") && t.contains("Used in") && !t.contains("MADE BY"), "{t}");
         assert!(t.contains("molten copper  ──→  copper ingot"), "a word equation, with the fluid in it: {t}");
-        assert!(t.contains("copper ingot  ──→  copper plate   in Press, Assembler"), "{t}");
+        assert!(t.contains("copper ingot  ──→  copper plate   in Press, Crude assembler"), "{t}");
         assert!(t.contains("6.0 now, fading to a floor of 0.18") && t.contains("0.18 ┤") && t.contains("← floor"), "{t}");
         std::fs::write("target/snapshot-book.html", to_html(&buf)).unwrap();
 
@@ -2842,6 +2926,100 @@ mod tests {
         app.cursor = (10, 5);
         let buf = render(&mut app, 64, 40);
         std::fs::write("target/snapshot-molten-small.html", to_html(&buf)).unwrap();
+    }
+
+    /// The machines for later tiers (not in the build menu yet): big drills, the assembler ladder,
+    /// the kiln in every facing, a welder, a mixer and the advanced pump.
+    #[test]
+    fn later_machines_snapshot() {
+        let mut w = World::blank();
+        let (x, y) = (52, 30);
+        // Row 1: drills, 8x8 and 4x4.
+        w.place(0, x, y, Kind::LargeBasicDrill, Dir::E).unwrap();
+        w.place(0, x + 10, y, Kind::LargeAdvancedDrill, Dir::S).unwrap();
+        w.place(0, x + 20, y, Kind::AdvancedDrill, Dir::E).unwrap();
+        w.place(0, x + 25, y, Kind::AdvancedPump, Dir::E).unwrap();
+        // Row 2: the assembler ladder, big to small.
+        let y2 = y + 10;
+        w.place(0, x, y2, Kind::LargeBasicAssembler, Dir::E).unwrap();
+        w.place(0, x + 6, y2, Kind::LargeAdvancedAssembler, Dir::N).unwrap();
+        w.place(0, x + 12, y2, Kind::CrudeAssembler, Dir::E).unwrap();
+        w.place(0, x + 17, y2, Kind::PrecisionAssembler, Dir::E).unwrap();
+        w.place(0, x + 21, y2, Kind::AdvancedAssembler, Dir::E).unwrap();
+        w.place(0, x + 25, y2, Kind::BasicAssembler, Dir::E).unwrap();
+        // Row 3: the kiln facing every way, a welder and a mixer.
+        let y3 = y + 17;
+        w.place(0, x, y3, Kind::Kiln, Dir::E).unwrap();
+        w.place(0, x + 4, y3, Kind::Kiln, Dir::N).unwrap();
+        w.place(0, x + 10, y3, Kind::Kiln, Dir::S).unwrap();
+        w.place(0, x + 16, y3, Kind::Kiln, Dir::W).unwrap();
+        w.place(0, x + 22, y3, Kind::Welder, Dir::E).unwrap();
+        w.place(0, x + 26, y3, Kind::Mixer, Dir::E).unwrap();
+        // A half-loaded kiln.
+        if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[idx(x, y3)].as_mut() {
+            stock[Item::IronIngot.idx()] = 5;
+        }
+        let mut app = App::new(w);
+        app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+        app.cam = (x - 2, y - 2);
+        app.cam_ready = true;
+        app.cursor = (x, y3);
+        let buf = render(&mut app, 130, 42);
+        std::fs::write("target/snapshot-later-machines.html", to_html(&buf)).unwrap();
+        let t = text(&buf);
+        assert!(t.contains("LRG BASIC DRILL") && t.contains("LRG ADV DRILL") && t.contains("LRG ASM B") && t.contains("CRD ASM"), "{t}");
+        assert!(t.contains("KILN") && t.contains("WELDER") && t.contains("MIXR") && t.contains("PRCASM"), "{t}");
+        assert!(t.contains("Kiln") && t.contains("load 5/8") && t.contains("iron ingot 5/8"), "{t}");
+        // A narrow, tall pane.
+        app.cam = (x - 2, y - 2);
+        app.cursor = (x + 3, y + 3);
+        let narrow = render(&mut app, 44, 34);
+        std::fs::write("target/snapshot-later-machines-narrow.html", to_html(&narrow)).unwrap();
+        // The big drill's and the welder's inspector text.
+        app.cursor = (x + 3, y + 3);
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("16x a basic drill's ore") && t.contains("burns 32x the coal"), "{t}");
+        app.cursor = (x + 23, y3 + 1);
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("30 EC only while working") && t.contains("drawing 0 EC now"), "{t}");
+        app.cursor = (x + 18, y2 + 1);
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("by Gearwright") && t.contains("making heavy gearbox"), "{t}");
+    }
+
+    /// Recipe book pages for the machines that aren't in the book's list yet.
+    #[test]
+    fn later_machines_have_book_pages() {
+        let mut app = App::new(World::blank());
+        let mut shots = Vec::new();
+        for (k, wants) in [
+            (Kind::PrecisionAssembler, vec!["Precision assembler", "3 gearbox", "3 copper coil", "$4000 · 3x3", "64 EC"]),
+            (Kind::AdvancedAssembler, vec!["copper ingot  ──→  copper plate", "10 copper wire", "3 gearbox", "16 EC"]),
+            (Kind::LargeAdvancedAssembler, vec!["5 steel girder", "3 drilling rig", "5x5"]),
+            (Kind::Welder, vec!["2 steel girder", "30 EC only while working, none when idle"]),
+            (Kind::Kiln, vec!["iron ingot  ─coal─→  iron plate", "3x5", "fills up for 8 runs, then makes them all at once"]),
+            (Kind::Mixer, vec!["2 stone + 5 water", "2 concrete"]),
+            (Kind::LargeBasicDrill, vec!["16x a basic drill's ore, burns 32x the coal", "8x8", "front edge"]),
+            (Kind::LargeAdvancedDrill, vec!["16x an advanced drill's ore", "128 EC, no coal"]),
+            (Kind::AdvancedDrill, vec!["2x a basic drill's ore", "EC, no coal", "4x4"]),
+            (Kind::AdvancedPump, vec!["80 water a second", "4 EC"]),
+        ] {
+            let page = book_page(&app.world, Entry::Part(k), 100, "f");
+            let t: String = page.iter().map(|r| r.iter().map(|s| s.text.clone()).collect::<String>()).collect::<Vec<_>>().join("\n");
+            for want in wants {
+                assert!(t.contains(want), "{k:?} page lacks {want:?}:\n{t}");
+            }
+            shots.push(k);
+        }
+        // Drawn in the book itself, wide and narrow.
+        app.book = true;
+        app.book_go(Entry::Part(Kind::PrecisionAssembler));
+        let buf = render(&mut app, 130, 42);
+        assert!(text(&buf).contains("Precision assembler"));
+        std::fs::write("target/snapshot-later-book.html", to_html(&buf)).unwrap();
+        app.book_go(Entry::Part(Kind::Kiln));
+        let buf = render(&mut app, 50, 36);
+        std::fs::write("target/snapshot-later-book-narrow.html", to_html(&buf)).unwrap();
     }
 
     /// Phase 3 screenshots: box elevators, idle words, floors above and below, the away summary.

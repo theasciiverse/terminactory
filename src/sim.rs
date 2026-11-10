@@ -8,6 +8,7 @@
 
 use std::collections::VecDeque;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -61,7 +62,7 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 1;
+pub const SAVE_VERSION: u32 = 2;
 
 /// Reads a saved list into a fixed-size array (serde itself stops at 32), padding with defaults.
 fn pad<'de, D, T, const N: usize>(d: D) -> Result<[T; N], D::Error>
@@ -190,14 +191,37 @@ pub enum Kind {
     BlastFurnace,
     Boiler,
     SteamEngine,
-    Assembler,
+    CrudeAssembler,
     FastBelt,
     Tunnel,
     LongArm,
     Sorter,
     Warehouse,
     Molder,
+    // Machines below are not in the build menu yet: see `in_game`.
+    BasicAssembler,
+    AdvancedAssembler,
+    PrecisionAssembler,
+    LargeBasicAssembler,
+    LargeAdvancedAssembler,
+    Welder,
+    Kiln,
+    Mixer,
+    AdvancedDrill,
+    LargeBasicDrill,
+    LargeAdvancedDrill,
+    AdvancedPump,
 }
+
+// What each assembler above the crude one can make: its tiers, each at a speed
+// (a tier runs at 1x on the lowest assembler that can make it, faster on the ones above).
+static BASIC_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 2), (BASIC_RECIPES, 1)]));
+static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
+    LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 4), (BASIC_RECIPES, 2), (ADVANCED_RECIPES, 1)]));
+// The precision assembler only makes the top tiers: no crude or basic recipes.
+static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
+static LARGE_ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
+    LazyLock::new(|| assembler_list(&[(LARGE_BASIC_RECIPES, 2), (LARGE_ADVANCED_RECIPES, 1)]));
 
 #[cfg(test)]
 thread_local! {
@@ -207,7 +231,7 @@ thread_local! {
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
     #[cfg_attr(not(test), allow(dead_code))]
-    pub const ALL: [Kind; 24] = [
+    pub const ALL: [Kind; 36] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Belt,
@@ -224,7 +248,7 @@ impl Kind {
         Kind::Molder,
         Kind::Press,
         Kind::BlastFurnace,
-        Kind::Assembler,
+        Kind::CrudeAssembler,
         Kind::Crate,
         Kind::Solar,
         Kind::Pole,
@@ -232,6 +256,18 @@ impl Kind {
         Kind::SteamEngine,
         Kind::TradePost,
         Kind::Elevator,
+        Kind::BasicAssembler,
+        Kind::AdvancedAssembler,
+        Kind::PrecisionAssembler,
+        Kind::LargeBasicAssembler,
+        Kind::LargeAdvancedAssembler,
+        Kind::Welder,
+        Kind::Kiln,
+        Kind::Mixer,
+        Kind::AdvancedDrill,
+        Kind::LargeBasicDrill,
+        Kind::LargeAdvancedDrill,
+        Kind::AdvancedPump,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -242,7 +278,19 @@ impl Kind {
             | Kind::Molder
             | Kind::BlastFurnace
             | Kind::Press
-            | Kind::Assembler
+            | Kind::CrudeAssembler
+            | Kind::BasicAssembler
+            | Kind::AdvancedAssembler
+            | Kind::PrecisionAssembler
+            | Kind::LargeBasicAssembler
+            | Kind::LargeAdvancedAssembler
+            | Kind::Welder
+            | Kind::Kiln
+            | Kind::Mixer
+            | Kind::AdvancedDrill
+            | Kind::LargeBasicDrill
+            | Kind::LargeAdvancedDrill
+            | Kind::AdvancedPump
             | Kind::Pump
             | Kind::Pipe => {
                 Category::Create
@@ -265,7 +313,19 @@ impl Kind {
             Kind::Furnace => "Furnace",
             Kind::Molder => "Molder",
             Kind::Press => "Press",
-            Kind::Assembler => "Assembler",
+            Kind::CrudeAssembler => "Crude assembler",
+            Kind::BasicAssembler => "Basic assembler",
+            Kind::AdvancedAssembler => "Advanced assembler",
+            Kind::PrecisionAssembler => "Precision assembler",
+            Kind::LargeBasicAssembler => "Large basic assembler",
+            Kind::LargeAdvancedAssembler => "Large advanced assembler",
+            Kind::Welder => "Welder",
+            Kind::Kiln => "Kiln",
+            Kind::Mixer => "Mixer",
+            Kind::AdvancedDrill => "Advanced drill",
+            Kind::LargeBasicDrill => "Large basic drill",
+            Kind::LargeAdvancedDrill => "Large advanced drill",
+            Kind::AdvancedPump => "Advanced pump",
             Kind::Crate => "Crate",
             Kind::TradePost => "Trade post",
             Kind::Solar => "Cheap solar panel",
@@ -294,7 +354,19 @@ impl Kind {
             Kind::Furnace => 200.0,
             Kind::Molder => 100.0,
             Kind::Press => 150.0,
-            Kind::Assembler => 500.0,
+            Kind::CrudeAssembler => 300.0,
+            Kind::BasicAssembler => 600.0,
+            Kind::AdvancedAssembler => 1500.0,
+            Kind::PrecisionAssembler => 4000.0,
+            Kind::LargeBasicAssembler => 2500.0,
+            Kind::LargeAdvancedAssembler => 6000.0,
+            Kind::Welder => 800.0,
+            Kind::Kiln => 200.0,
+            Kind::Mixer => 200.0,
+            Kind::AdvancedDrill => 240.0,
+            Kind::LargeBasicDrill => 1000.0,
+            Kind::LargeAdvancedDrill => 2000.0,
+            Kind::AdvancedPump => 240.0,
             Kind::Crate => 50.0,
             Kind::TradePost => 0.0,
             Kind::Solar => 100.0,
@@ -324,10 +396,21 @@ impl Kind {
     /// Elevators can be built from 2x2 up to 8x8 (this is their smallest).
     pub fn base_dims(self) -> (i32, i32) {
         match self {
-            Kind::Furnace | Kind::TradePost | Kind::Assembler => (3, 3),
+            Kind::Furnace
+            | Kind::TradePost
+            | Kind::AdvancedAssembler
+            | Kind::PrecisionAssembler
+            | Kind::Welder => (3, 3),
+            Kind::Kiln => (3, 5),
+            Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
+            Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
+            Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => (8, 8),
             Kind::Press => (2, 1),
             Kind::Pump => (1, 2),
-            Kind::Drill
+            Kind::BasicAssembler
+            | Kind::Mixer
+            | Kind::AdvancedPump
+            | Kind::Drill
             | Kind::BasicDrill
             | Kind::Molder
             | Kind::BlastFurnace
@@ -359,11 +442,57 @@ impl Kind {
             Kind::FastBelt | Kind::Pump => 1.0,
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
             Kind::Press => 3.0,
-            Kind::Assembler => 5.0,
+            Kind::CrudeAssembler | Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
+            Kind::BasicAssembler => 6.0,
+            Kind::LargeBasicAssembler => 12.0,
             Kind::Arm => 10.0,
             Kind::LongArm => 15.0,
+            Kind::AdvancedAssembler => 16.0,
+            Kind::LargeAdvancedAssembler => 48.0,
+            Kind::PrecisionAssembler => 64.0,
+            Kind::LargeAdvancedDrill => 128.0,
             _ => 0.0,
         }
+    }
+    /// EC drawn only while the machine is working (none when idle). The grid's demand
+    /// follows it tick by tick, so a grid sized for the average browns out while it works.
+    pub fn burst_draw(self) -> f64 {
+        match self {
+            Kind::Welder => 30.0,
+            _ => 0.0,
+        }
+    }
+    /// Runs on EC (always-on draw or bursts).
+    pub fn electric(self) -> bool {
+        self.power_draw() > 0.0 || self.burst_draw() > 0.0
+    }
+    /// Whether the player can build it yet. The machines for later tiers wait for the
+    /// content step; tests (`World::blank`) can still place them.
+    pub fn in_game(self) -> bool {
+        !matches!(
+            self,
+            Kind::BasicAssembler
+                | Kind::AdvancedAssembler
+                | Kind::PrecisionAssembler
+                | Kind::LargeBasicAssembler
+                | Kind::LargeAdvancedAssembler
+                | Kind::Welder
+                | Kind::Kiln
+                | Kind::Mixer
+                | Kind::AdvancedDrill
+                | Kind::LargeBasicDrill
+                | Kind::LargeAdvancedDrill
+                | Kind::AdvancedPump
+        )
+    }
+    /// Runs this many recipe runs at once: it loads inputs for all of them, then fires them
+    /// together (one recipe time). Only kilns do.
+    pub fn batch(self) -> u32 {
+        if self == Kind::Kiln { 8 } else { 1 }
+    }
+    /// Finished goods a machine holds before it stops.
+    pub fn out_cap(self) -> usize {
+        CRAFTER_OUT_CAP * self.batch() as usize
     }
     /// Has a front that can be rotated (belts and arms move that way; buildings output there).
     pub fn directional(self) -> bool {
@@ -379,7 +508,15 @@ impl Kind {
     pub fn uses_pipes(self) -> bool {
         matches!(
             self,
-            Kind::Pipe | Kind::Pump | Kind::Boiler | Kind::SteamEngine | Kind::Furnace | Kind::BlastFurnace | Kind::Molder
+            Kind::Pipe
+                | Kind::Pump
+                | Kind::AdvancedPump
+                | Kind::Boiler
+                | Kind::SteamEngine
+                | Kind::Furnace
+                | Kind::BlastFurnace
+                | Kind::Molder
+                | Kind::Mixer
         )
     }
     /// Not part of the current tier; nothing is a preview any more.
@@ -391,11 +528,17 @@ impl Kind {
         match self {
             Kind::Drill => Some(Company::Hollowmere),
             Kind::BasicDrill => Some(Company::Ashgrove),
-            Kind::Pipe | Kind::Pump => Some(Company::Wellbourne),
+            Kind::Pipe | Kind::Pump | Kind::AdvancedPump => Some(Company::Wellbourne),
+            Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => Some(Company::Ashgrove),
             Kind::BlastFurnace => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine => Some(Company::Kettering),
             Kind::Elevator => Some(Company::Underhill),
-            Kind::Assembler => Some(Company::Gearwright),
+            Kind::CrudeAssembler
+            | Kind::BasicAssembler
+            | Kind::AdvancedAssembler
+            | Kind::PrecisionAssembler
+            | Kind::LargeBasicAssembler
+            | Kind::LargeAdvancedAssembler => Some(Company::Gearwright),
             Kind::FastBelt => Some(Company::Swiftline),
             _ => Some(Company::Brannock),
         }
@@ -408,7 +551,7 @@ impl Kind {
             Kind::Pipe | Kind::Pump => Some(Tech::Pumps),
             Kind::BlastFurnace => Some(Tech::BlastFurnace),
             Kind::Boiler | Kind::SteamEngine => Some(Tech::Steam),
-            Kind::Assembler => Some(Tech::Assembler),
+            Kind::CrudeAssembler => Some(Tech::Assembler),
             Kind::FastBelt => Some(Tech::FastBelts),
             Kind::Tunnel => Some(Tech::Tunnels),
             Kind::LongArm => Some(Tech::LongArms),
@@ -428,28 +571,66 @@ impl Kind {
             Kind::Molder => MOLDER_RECIPES,
             Kind::Press => PRESS_RECIPES,
             Kind::BlastFurnace => BLAST_RECIPES,
-            Kind::Assembler => ASSEMBLER_RECIPES,
+            Kind::CrudeAssembler => CRUDE_RECIPES,
+            Kind::BasicAssembler => &BASIC_ASSEMBLER,
+            Kind::AdvancedAssembler => &ADVANCED_ASSEMBLER,
+            Kind::PrecisionAssembler => &PRECISION_ASSEMBLER,
+            Kind::LargeBasicAssembler => LARGE_BASIC_RECIPES,
+            Kind::LargeAdvancedAssembler => &LARGE_ADVANCED_ASSEMBLER,
+            Kind::Welder => WELDER_RECIPES,
+            Kind::Kiln => KILN_RECIPES,
+            Kind::Mixer => MIXER_RECIPES,
             _ => &[],
         }
     }
-    fn is_drill(self) -> bool {
-        matches!(self, Kind::Drill | Kind::BasicDrill)
+    pub fn is_drill(self) -> bool {
+        matches!(
+            self,
+            Kind::Drill | Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill
+        )
     }
-    /// Ticks per item mined (on the surface), and items mined per coal burned.
-    /// A cheap drill cuts iron at half the speed of a basic one.
+    pub fn is_pump(self) -> bool {
+        matches!(self, Kind::Pump | Kind::AdvancedPump)
+    }
+    /// Ticks per item mined by a drill doing one unit of work a tick (on the surface), and
+    /// items mined per coal burned. A cheap drill cuts iron at half the speed of a basic one.
     fn drill_speed(self, ore: Item) -> (u32, u32) {
         match (self, ore) {
-            (Kind::BasicDrill, _) => (40, 10),
+            (Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill, _) => (40, 10),
             (_, Item::IronOre) => (80, 8),
             _ => (60, 8),
         }
     }
+    /// (work per tick, fuel burned per tick) of a drill, in units of a basic drill's.
+    /// An advanced drill is 2x a basic one and runs on EC. A large basic drill mines 16x
+    /// and burns 32x the coal; a large advanced drill is 16x an advanced one.
+    pub fn drill_rates(self) -> (u32, u32) {
+        match self {
+            Kind::AdvancedDrill => (2, 0),
+            Kind::LargeBasicDrill => (16, 32),
+            Kind::LargeAdvancedDrill => (32, 0),
+            _ => (1, 1),
+        }
+    }
+    /// Burns coal (the others run on EC).
+    pub fn burns_coal(self) -> bool {
+        self.drill_rates().1 > 0
+    }
+    /// How many items a drill holds waiting to leave (the fast ones hold more).
+    pub fn drill_out_cap(self) -> usize {
+        DRILL_OUT_CAP.max(self.drill_rates().0 as usize)
+    }
+    /// How much coal a drill keeps on hand (the thirsty ones keep more).
+    pub fn drill_coal_cap(self) -> u32 {
+        DRILL_COAL_CAP * self.drill_rates().1.max(1)
+    }
     /// What a drill can be set to mine (f cycles through these).
     pub fn ores(self) -> &'static [Item] {
-        match self {
-            Kind::Drill | Kind::BasicDrill => &[Item::CopperOre, Item::Coal, Item::IronOre, Item::Stone],
-            _ => &[],
-        }
+        if self.is_drill() { &[Item::CopperOre, Item::Coal, Item::IronOre, Item::Stone] } else { &[] }
+    }
+    /// How much water a pump adds per second.
+    pub fn pump_rate(self) -> f64 {
+        if self == Kind::AdvancedPump { 4.0 * PUMP_RATE } else { PUMP_RATE }
     }
 }
 
@@ -542,7 +723,7 @@ pub struct BeltItem {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum St {
-    Drill { mines: Option<Item>, fuel: u32, coal: u32, progress: u32, out: VecDeque<Item> },
+    Drill { mines: Option<Item>, fuel: u32, coal: u32, progress: f64, out: VecDeque<Item> },
     /// Items sorted front first (highest pos first).
     Belt { items: Vec<BeltItem> },
     Splitter {
@@ -616,16 +797,29 @@ impl Building {
     pub fn new(kind: Kind, dir: Dir) -> Self {
         let st = match kind {
             // A new drill comes with one coal's worth of fuel so it can start.
-            Kind::Drill | Kind::BasicDrill => {
+            Kind::Drill | Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => {
                 let (t, per_coal) = kind.drill_speed(Item::CopperOre);
-                St::Drill { mines: None, fuel: t * per_coal, coal: 0, progress: 0, out: VecDeque::new() }
+                let fuel = if kind.burns_coal() { t * per_coal } else { 0 };
+                St::Drill { mines: None, fuel, coal: 0, progress: 0.0, out: VecDeque::new() }
             }
             Kind::Belt | Kind::FastBelt => St::Belt { items: Vec::new() },
             Kind::Splitter | Kind::Sorter => {
                 St::Splitter { buf: VecDeque::new(), cooldown: 0.0, last_in: None, tried: 0, tried_prev: 0, filter: None }
             }
             Kind::Arm | Kind::LongArm => St::Arm { filter: None, hold: None, progress: 0.0 },
-            Kind::Furnace | Kind::Molder | Kind::Press | Kind::BlastFurnace | Kind::Assembler => {
+            Kind::Furnace
+            | Kind::Molder
+            | Kind::Press
+            | Kind::BlastFurnace
+            | Kind::CrudeAssembler
+            | Kind::BasicAssembler
+            | Kind::AdvancedAssembler
+            | Kind::PrecisionAssembler
+            | Kind::LargeBasicAssembler
+            | Kind::LargeAdvancedAssembler
+            | Kind::Welder
+            | Kind::Kiln
+            | Kind::Mixer => {
                 St::Crafter { recipe: 0, stock: [0; ITEMS], fuel: 0, progress: 0.0, busy: false, out: VecDeque::new(), fluid: 0, fluid_out: 0 }
             }
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
@@ -635,7 +829,7 @@ impl Building {
             Kind::Pole => St::Pole,
             Kind::Elevator => St::Elevator { inbox: VecDeque::new(), outbox: VecDeque::new(), mode: DoorMode::Load },
             Kind::Pipe => St::Pipe,
-            Kind::Pump => St::Pump { busy: false },
+            Kind::Pump | Kind::AdvancedPump => St::Pump { busy: false },
             Kind::Boiler => St::Boiler { fuel: 0, coal: 0, busy: false },
             Kind::SteamEngine => St::Engine { steam: 0.0, output: 0.0 },
         };
@@ -806,6 +1000,9 @@ pub struct Progress {
     /// Short messages for the player (free unlocks).
     #[serde(skip)]
     pub notes: VecDeque<String>,
+    /// Tests only: lets machines that are not in the game yet be placed (see `Kind::in_game`).
+    #[serde(skip)]
+    pub all_parts: bool,
 }
 
 impl Default for Progress {
@@ -814,7 +1011,7 @@ impl Default for Progress {
         for c in Company::ALL {
             opened[c.idx()] = c.key_item().is_none();
         }
-        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new() }
+        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new(), all_parts: false }
     }
 }
 
@@ -831,7 +1028,7 @@ impl Progress {
             // Either way into a second floor brings elevators.
             return self.has(Tech::SupportBeams) || self.has(Tech::Excavation);
         }
-        k.company().map_or(true, |c| self.is_open(c)) && k.tech().map_or(true, |t| self.has(t))
+        (k.in_game() || self.all_parts) && k.company().map_or(true, |c| self.is_open(c)) && k.tech().map_or(true, |t| self.has(t))
     }
 }
 
@@ -843,7 +1040,10 @@ pub struct Net {
     /// What this grid's steam engines could give right now.
     pub engine: f64,
     pub supply: f64,
+    /// Everything the grid's parts want right now: `steady` plus the bursts of busy machines.
     pub demand: f64,
+    /// What always-on parts want.
+    pub steady: f64,
     /// 0..1: how much of the demand is met. Electric parts on this grid run at this speed.
     pub ratio: f64,
 }
@@ -862,6 +1062,8 @@ pub struct Grid {
     /// Every power source: (floor, anchor, grid). A source's tile can sit in a
     /// neighbour's range, so this, not the painted reach, says which grid it's on.
     pub sources: Vec<(usize, usize, usize)>,
+    /// Machines that draw only while working: (floor, anchor, grid).
+    pub bursts: Vec<(usize, usize, usize)>,
 }
 
 /// Everything in one connected run of pipes. A pipe network holds one fluid at a time.
@@ -1062,6 +1264,7 @@ impl World {
                 researched: [true; TECHS],
                 events: VecDeque::new(),
                 notes: VecDeque::new(),
+                all_parts: true,
             },
             tick: 0,
             lifts: Vec::new(),
@@ -1222,7 +1425,7 @@ impl World {
                 }
             }
         }
-        if (kind.is_drill() || kind == Kind::Pump) && self.floors[f].level > 0 {
+        if (kind.is_drill() || kind.is_pump()) && self.floors[f].level > 0 {
             return Err(format!("{}s need ground under them: build them on the surface or below", kind.name()));
         }
         if kind == Kind::Solar && self.floors[f].level < 0 {
@@ -1443,7 +1646,7 @@ impl World {
             (St::Trade { mode, .. }, Setting::Sell(v)) => *mode = v,
             (St::Drill { mines, progress, .. }, Setting::Mines(m)) if kind.ores().contains(&m) => {
                 *mines = Some(m);
-                *progress = 0;
+                *progress = 0.0;
             }
             (St::Crafter { recipe, fluid, fluid_out, .. }, Setting::Recipe(v)) => {
                 if kind.recipes().get(v as usize).is_some_and(|r| r.needs.map_or(true, |t| progress.has(t))) {
@@ -1485,7 +1688,7 @@ impl World {
                 let at = mines.and_then(|m| ores.iter().position(|&o| o == m));
                 let next = ores[at.map_or(0, |n| (n + 1) % ores.len())];
                 *mines = Some(next);
-                *progress = 0;
+                *progress = 0.0;
                 let note = if kind == Kind::Drill && next == Item::IronOre { " · half the speed of a basic drill" } else { "" };
                 Some(format!("{} now mines {}{note}", kind.name(), next.name()))
             }
@@ -1591,21 +1794,26 @@ impl World {
             .map(|(k, n)| (n.0, n.1, node_net[k]))
             .collect();
         let mut unpowered = 0;
+        let mut bursts = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
             for (i, b) in fl.tiles.iter().enumerate() {
                 let Some(b) = b else { continue };
-                let d = b.kind.power_draw();
-                if d > 0.0 {
+                if b.kind.electric() {
                     let (x, y) = pos_of(i);
                     match grid_of(&cover[f], x, y, b.dims()) {
                         -1 => unpowered += 1,
-                        id => nets[id as usize].demand += d,
+                        id => {
+                            nets[id as usize].steady += b.kind.power_draw();
+                            if b.kind.burst_draw() > 0.0 {
+                                bursts.push((f, i, id as usize));
+                            }
+                        }
                     }
                 }
             }
         }
         let sources = nodes.iter().enumerate().map(|(k, n)| (n.0, n.1, node_net[k])).collect();
-        self.grid = Grid { cover, nets, unpowered, engines, sources };
+        self.grid = Grid { cover, nets, unpowered, engines, sources, bursts };
         self.update_power(false);
         self.rebuild_fluids();
     }
@@ -1613,9 +1821,16 @@ impl World {
     /// Works out each grid's supply this tick. Engines give as much as their grid needs
     /// beyond solar, up to what their steam allows, and burn steam only for what they give.
     fn update_power(&mut self, burn: bool) {
-        let Grid { nets, engines, .. } = &mut self.grid;
+        let Grid { nets, engines, bursts, .. } = &mut self.grid;
         for n in nets.iter_mut() {
             n.engine = 0.0;
+            n.demand = n.steady;
+        }
+        // Machines that draw only while working add their draw while they are.
+        for &(f, a, id) in bursts.iter() {
+            if let Some(Building { kind, st: St::Crafter { busy: true, .. }, .. }) = &self.floors[f].tiles[a] {
+                nets[id].demand += kind.burst_draw();
+            }
         }
         let mut avail = Vec::with_capacity(engines.len());
         let ep = ENGINE_POWER;
@@ -1629,7 +1844,14 @@ impl World {
         }
         for n in nets.iter_mut() {
             n.supply = n.solar + n.engine;
-            n.ratio = if n.demand <= 0.0 { 1.0 } else { (n.supply / n.demand).min(1.0) };
+            n.ratio = if n.demand > 0.0 {
+                (n.supply / n.demand).min(1.0)
+            } else if n.supply > 0.0 {
+                1.0
+            } else {
+                // Nothing to give: a machine that draws only while working can't start.
+                0.0
+            };
         }
         for (k, &(f, a, id)) in engines.iter().enumerate() {
             let n = nets[id];
@@ -1747,7 +1969,7 @@ impl World {
             return Some(s.2);
         }
         let id = grid_of(&self.grid.cover[f], ax, ay, b.dims());
-        (b.kind.power_draw() > 0.0 && id >= 0).then_some(id as usize)
+        (b.kind.electric() && id >= 0).then_some(id as usize)
     }
 
     /// The grid a power source is on, and how many sources that grid has.
@@ -2088,27 +2310,31 @@ impl World {
             St::Drill { mines, fuel, coal, out, .. } => {
                 if mines.is_none() {
                     Some("ORE?")
-                } else if out.len() >= DRILL_OUT_CAP {
+                } else if out.len() >= b.kind.drill_out_cap() {
                     Some(self.full_word(f, a))
-                } else if *fuel == 0 && *coal == 0 && *mines != Some(Item::Coal) {
+                } else if b.kind.burns_coal() && *fuel == 0 && *coal == 0 && *mines != Some(Item::Coal) {
                     Some("COAL")
+                } else if !b.kind.burns_coal() && !powered {
+                    Some("EC?")
                 } else {
                     None
                 }
             }
             St::Crafter { busy: false, stock, fuel, out, fluid, fluid_out, .. } => {
                 let r = b.recipe()?;
-                let made: usize = r.outputs.iter().map(|o| o.1 as usize).sum();
-                let fluid_full = r.fluid_out.is_some_and(|(_, n)| *fluid_out + n > CRAFTER_FLUID_OUT_CAP);
-                if out.len() + made > CRAFTER_OUT_CAP || fluid_full {
+                let batch = b.kind.batch();
+                let made: usize = r.outputs.iter().map(|o| (o.1 * batch) as usize).sum();
+                let fluid_full = r.fluid_out.is_some_and(|(_, n)| *fluid_out + n * batch > fluid_out_cap(n * batch));
+                if out.len() + made > b.kind.out_cap() || fluid_full {
                     Some(self.full_word(f, a))
-                } else if !r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n) {
-                    Some("NEED")
-                } else if r.fluid_in.is_some_and(|(_, n)| *fluid < n) {
+                } else if !r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) {
+                    // A kiln is still loading its batch.
+                    Some(if batch > 1 { "LOAD" } else { "NEED" })
+                } else if r.fluid_in.is_some_and(|(_, n)| *fluid < n * batch) {
                     Some("FLUD")
                 } else if let Some(fl) = r.fuel.filter(|fl| *fuel == 0 && stock[fl.idx()] == 0) {
                     Some(if fl == Item::Coke { "COKE" } else { "COAL" })
-                } else if b.kind.power_draw() > 0.0 && !powered {
+                } else if b.kind.electric() && !powered {
                     Some("EC?")
                 } else {
                     None
@@ -2230,48 +2456,62 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Drill { mines, fuel, coal, progress, out } => {
             let Some(item) = *mines else { return };
             let (base, per_coal) = kind.drill_speed(item);
-            let ticks = ((base as f64) / richness(level)).round().max(1.0) as u32;
-            let per_fuel = ticks * per_coal;
-            if *fuel == 0 && *coal > 0 {
+            // Work done per tick, and fuel burned per tick (see `drill_rates`).
+            let (mult, burn) = kind.drill_rates();
+            let ticks = ((base as f64) / richness(level)).round().max(1.0);
+            let per_fuel = ticks as u32 * per_coal;
+            let cap = kind.drill_out_cap();
+            // Refuel before the fire runs short (any leftover carries over, so big drills burn evenly).
+            if *fuel < burn && *coal > 0 {
                 *coal -= 1;
                 econ.used[Item::Coal.idx()] += 1;
-                *fuel = per_fuel;
+                *fuel += per_fuel;
             }
             // A drill on coal with nothing to burn fuels itself from what it mines.
-            let self_fuel = *fuel == 0 && item == Item::Coal;
-            if (*fuel > 0 || self_fuel) && out.len() < DRILL_OUT_CAP {
-                if *fuel > 0 {
-                    *fuel -= 1;
-                }
-                *progress += 1;
-                if *progress >= ticks {
-                    *progress = 0;
+            let mut self_fuel = burn > 0 && *fuel == 0 && item == Item::Coal;
+            // Electric drills slow down with the grid.
+            let speed = if burn == 0 { ratio } else if *fuel > 0 || self_fuel { 1.0 } else { 0.0 };
+            if speed > 0.0 && out.len() < cap {
+                *fuel = fuel.saturating_sub(burn);
+                *progress += mult as f64 * speed;
+                // A fast drill can finish several items in one tick.
+                while *progress >= ticks && out.len() < cap {
+                    *progress -= ticks;
                     if self_fuel {
                         *fuel = per_fuel;
+                        self_fuel = false;
                     } else {
                         out.push_back(item);
                         econ.made[item.idx()] += 1;
                     }
                 }
             }
-            push_front(tiles, owner, econ, x, y, dims, dir, out, rr);
+            // Big drills push several items a tick, round-robin along their front edge.
+            for _ in 0..(mult / 4).max(1) {
+                if !push_front(tiles, owner, econ, x, y, dims, dir, out, rr) {
+                    break;
+                }
+            }
         }
         St::Crafter { recipe, stock, fuel, progress, busy, out, fluid, fluid_out } => {
             let r = &kind.recipes()[*recipe as usize];
+            let batch = kind.batch();
             *busy = false;
             // A fluid input comes from pipes on any side but the front.
             if let Some((fl, n)) = r.fluid_in {
                 for p in pools_around(pipe_pool, x, y, dims, Some(dir)) {
-                    while *fluid < fluid_cap(n) && pools[p].fluid == Some(fl) && pools[p].amount >= 1.0 {
+                    while *fluid < fluid_cap(n * batch) && pools[p].fluid == Some(fl) && pools[p].amount >= 1.0 {
                         pools[p].take(fl, 1.0);
                         *fluid += 1;
                     }
                 }
             }
-            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n) && r.fluid_in.map_or(true, |(_, n)| *fluid >= n);
-            let made: usize = r.outputs.iter().map(|o| o.1 as usize).sum();
+            // A batch machine (the kiln) waits until it holds the inputs for every run, then fires them all.
+            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) && r.fluid_in.map_or(true, |(_, n)| *fluid >= n * batch);
+            let made: usize = r.outputs.iter().map(|o| (o.1 * batch) as usize).sum();
             // Both outputs need room: items and fluid.
-            let room = out.len() + made <= CRAFTER_OUT_CAP && r.fluid_out.map_or(true, |(_, n)| *fluid_out + n <= CRAFTER_FLUID_OUT_CAP);
+            let room = out.len() + made <= kind.out_cap()
+                && r.fluid_out.map_or(true, |(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
             if have && room {
                 let speed = match r.fuel {
                     Some(f) => {
@@ -2287,7 +2527,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                             0.0
                         }
                     }
-                    None if kind.power_draw() > 0.0 => ratio,
+                    None if kind.electric() => ratio,
                     None => 1.0,
                 };
                 if speed > 0.0 {
@@ -2296,17 +2536,17 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                     if *progress >= r.ticks as f64 {
                         *progress -= r.ticks as f64;
                         for (it, n) in r.inputs {
-                            stock[it.idx()] -= n;
-                            econ.used[it.idx()] += *n as u64;
+                            stock[it.idx()] -= n * batch;
+                            econ.used[it.idx()] += (*n * batch) as u64;
                         }
                         if let Some((_, n)) = r.fluid_in {
-                            *fluid -= n;
+                            *fluid -= n * batch;
                         }
                         if let Some((_, n)) = r.fluid_out {
-                            *fluid_out += n;
+                            *fluid_out += n * batch;
                         }
                         for (it, n) in r.outputs {
-                            for _ in 0..*n {
+                            for _ in 0..*n * batch {
                                 out.push_back(*it);
                                 econ.made[it.idx()] += 1;
                             }
@@ -2323,7 +2563,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             *busy = false;
             if ratio > 0.0 {
                 for p in pools_around(pipe_pool, x, y, dims, None) {
-                    if pools[p].add(Fluid::Water, PUMP_RATE * ratio / TPS as f64) > 0.0 {
+                    if pools[p].add(Fluid::Water, kind.pump_rate() * ratio / TPS as f64) > 0.0 {
                         *busy = true;
                         break;
                     }
@@ -2497,6 +2737,16 @@ fn fluid_cap(per_craft: u32) -> u32 {
     (per_craft * 4).max(10)
 }
 
+/// How much output fluid a machine holds waiting to leave: at least one firing's worth.
+fn fluid_out_cap(per_fire: u32) -> u32 {
+    CRAFTER_FLUID_OUT_CAP.max(per_fire)
+}
+
+/// How much of one input a machine takes in: a few runs' worth, or a whole batch.
+fn input_cap(per_run: u32, batch: u32) -> u32 {
+    if batch > 1 { per_run * batch } else { (per_run * 4).max(10) }
+}
+
 /// Pushes up to `n` whole units of a fluid out of a building's front edge: into a pipe
 /// network with room for it (a network holds one fluid), or straight into a machine
 /// there that takes it. Returns how many units went.
@@ -2533,7 +2783,7 @@ fn push_fluid(
             let Some(a) = owner[idx(tx, ty)] else { continue };
             if let Some(Building { kind, st: St::Crafter { recipe, fluid, .. }, .. }) = tiles[a as usize].as_mut() {
                 if let Some((f2, per)) = kind.recipes()[*recipe as usize].fluid_in {
-                    if f2 == fl && *fluid < fluid_cap(per) {
+                    if f2 == fl && *fluid < fluid_cap(per * kind.batch()) {
                         *fluid += 1;
                         sent += 1;
                         continue 'units;
@@ -2600,7 +2850,7 @@ fn try_insert(
     match &mut b.st {
         St::Belt { items } => bdir != travel.opposite() && belt_accept(items, item),
         St::Drill { coal, .. } => {
-            if item == Item::Coal && *coal < DRILL_COAL_CAP {
+            if item == Item::Coal && bkind.burns_coal() && *coal < bkind.drill_coal_cap() {
                 *coal += 1;
                 true
             } else {
@@ -2611,7 +2861,7 @@ fn try_insert(
             // Takes what its current recipe uses, plus coal if it burns fuel.
             let r = &bkind.recipes()[*recipe as usize];
             let cap = match r.inputs.iter().find(|(it, _)| *it == item) {
-                Some((_, n)) => (n * 4).max(10),
+                Some((_, n)) => input_cap(*n, bkind.batch()),
                 None if r.fuel == Some(item) => 10,
                 None => return false,
             };
@@ -3808,12 +4058,470 @@ mod tests {
         w.place(0, 4, 5, Kind::Crate, Dir::E).unwrap();
         fill_crate(&mut w, 0, 4, 5, &[Item::SteelGirder, Item::SteelGirder, Item::SteelGirder, Item::SteelGirder]);
         fill_crate(&mut w, 0, 4, 5, &[Item::Gearbox, Item::Gearbox, Item::Steel, Item::Steel, Item::Steel, Item::Steel]);
-        w.place(0, 5, 4, Kind::Assembler, Dir::E).unwrap(); // 3x3
+        w.place(0, 5, 4, Kind::CrudeAssembler, Dir::E).unwrap(); // 4x4
         while !w.configure(0, 5, 4).unwrap().contains("drilling rig") {}
-        w.place(0, 8, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 9, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 5, 8, Kind::Solar, Dir::E).unwrap(); // reaches the assembler's bottom row only
         run(&mut w, 15);
-        assert_eq!(crate_items(&w, 0, 8, 5), vec![Item::DrillingRig]);
+        assert_eq!(crate_items(&w, 0, 9, 5), vec![Item::DrillingRig]);
+    }
+
+    // ---------- the later machines ----------
+
+    fn recipe_names(kind: Kind) -> Vec<&'static str> {
+        kind.recipes().iter().map(|r| r.name).collect()
+    }
+
+    /// Points a machine at a recipe by name.
+    fn pick_recipe(w: &mut World, x: i32, y: i32, name: &str) {
+        let a = w.floors[0].anchor_at(x, y).unwrap();
+        let b = w.floors[0].tiles[a].as_mut().unwrap();
+        let n = b.kind.recipes().iter().position(|r| r.name == name).unwrap();
+        if let St::Crafter { recipe, .. } = &mut b.st {
+            *recipe = n as u8;
+        }
+    }
+
+    /// Ticks a recipe takes in a machine, from its list.
+    fn recipe_ticks(kind: Kind, name: &str) -> u32 {
+        kind.recipes().iter().find(|r| r.name == name).unwrap().ticks
+    }
+
+    fn scaled(t: u32, by: u32) -> u32 {
+        ((t as f64 / by as f64).round() as u32).max(1)
+    }
+
+    #[test]
+    fn the_assembler_ladder_lists_what_each_can_make() {
+        let tier = |t: &[Recipe]| t.iter().map(|r| r.name).collect::<Vec<_>>();
+        let (crude, basic, adv, prec) = (tier(CRUDE_RECIPES), tier(BASIC_RECIPES), tier(ADVANCED_RECIPES), tier(PRECISION_RECIPES));
+        let (large_basic, large_adv) = (tier(LARGE_BASIC_RECIPES), tier(LARGE_ADVANCED_RECIPES));
+        let joined = |parts: &[&Vec<&'static str>]| parts.iter().flat_map(|p| p.iter().copied()).collect::<Vec<_>>();
+        assert_eq!(recipe_names(Kind::CrudeAssembler), crude);
+        assert_eq!(recipe_names(Kind::BasicAssembler), joined(&[&crude, &basic]));
+        assert_eq!(recipe_names(Kind::AdvancedAssembler), joined(&[&crude, &basic, &adv]));
+        assert_eq!(recipe_names(Kind::PrecisionAssembler), joined(&[&adv, &prec]), "precision makes only the top tiers");
+        assert_eq!(recipe_names(Kind::LargeBasicAssembler), large_basic);
+        assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
+        // Large and small assemblers share nothing.
+        for small in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::AdvancedAssembler, Kind::PrecisionAssembler] {
+            for big in [Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler] {
+                assert!(recipe_names(small).iter().all(|n| !recipe_names(big).contains(n)), "{small:?} and {big:?}");
+            }
+        }
+        // Each tier's time is the lowest assembler's; the ones above run it faster.
+        let t = recipe_ticks;
+        assert_eq!(t(Kind::CrudeAssembler, "steel girder"), 60);
+        assert_eq!(t(Kind::BasicAssembler, "steel girder"), 30);
+        assert_eq!(t(Kind::AdvancedAssembler, "steel girder"), 15);
+        assert_eq!(t(Kind::BasicAssembler, "bulk copper wire"), BASIC_RECIPES[0].ticks);
+        assert_eq!(t(Kind::AdvancedAssembler, "bulk copper wire"), BASIC_RECIPES[0].ticks / 2);
+        assert_eq!(t(Kind::AdvancedAssembler, "heavy gearbox"), ADVANCED_RECIPES[0].ticks);
+        assert_eq!(t(Kind::PrecisionAssembler, "heavy gearbox"), ADVANCED_RECIPES[0].ticks / 2);
+        assert_eq!(t(Kind::PrecisionAssembler, "fine copper coil"), PRECISION_RECIPES[0].ticks);
+        assert_eq!(t(Kind::LargeBasicAssembler, "bulk girders"), LARGE_BASIC_RECIPES[0].ticks);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "bulk girders"), LARGE_BASIC_RECIPES[0].ticks / 2);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "bulk drilling rigs"), LARGE_ADVANCED_RECIPES[0].ticks);
+        // Odd times round to a whole tick.
+        assert_eq!(t(Kind::BasicAssembler, "copper plate"), scaled(75, 2));
+        assert_eq!(t(Kind::AdvancedAssembler, "copper plate"), scaled(75, 4));
+        // Sizes, power and prices.
+        let specs = [
+            (Kind::CrudeAssembler, (4, 4), 4.0, 300.0),
+            (Kind::BasicAssembler, (2, 2), 6.0, 600.0),
+            (Kind::AdvancedAssembler, (3, 3), 16.0, 1500.0),
+            (Kind::PrecisionAssembler, (3, 3), 64.0, 4000.0),
+            (Kind::LargeBasicAssembler, (5, 5), 12.0, 2500.0),
+            (Kind::LargeAdvancedAssembler, (5, 5), 48.0, 6000.0),
+        ];
+        for (k, dims, ec, cost) in specs {
+            assert_eq!((k.base_dims(), k.power_draw(), k.cost()), (dims, ec, cost), "{k:?}");
+        }
+    }
+
+    /// Three machines, each pushing into its own crate; stock is topped up every tick.
+    #[test]
+    fn higher_assemblers_run_crude_recipes_faster() {
+        let mut w = World::blank();
+        let rows = [(Kind::CrudeAssembler, 4), (Kind::BasicAssembler, 14), (Kind::AdvancedAssembler, 24)];
+        for (k, y) in rows {
+            w.place(0, 10, y, k, Dir::E).unwrap();
+            w.place(0, 10 + k.base_dims().0, y, Kind::Crate, Dir::E).unwrap();
+            // Two panels joined by a pole, so even the advanced one (16 EC) has enough.
+            w.place(0, 8, y - 2, Kind::Solar, Dir::E).unwrap();
+            w.place(0, 12, y - 2, Kind::Solar, Dir::E).unwrap();
+            w.place(0, 10, y - 3, Kind::Pole, Dir::E).unwrap();
+            pick_recipe(&mut w, 10, y, "steel girder");
+        }
+        for _ in 0..240 {
+            for (_, y) in rows {
+                set_stock(&mut w, 10, y, Item::Steel, 10);
+            }
+            w.tick();
+        }
+        let girders = |w: &World, k: Kind, y: i32| crate_items(w, 0, 10 + k.base_dims().0, y).len();
+        assert_eq!(girders(&w, Kind::CrudeAssembler, 4), 4, "60 ticks each");
+        assert_eq!(girders(&w, Kind::BasicAssembler, 14), 8, "twice as fast");
+        assert_eq!(girders(&w, Kind::AdvancedAssembler, 24), 16, "four times as fast");
+    }
+
+    #[test]
+    fn a_precision_assembler_refuses_crude_and_basic_recipes() {
+        let mut w = World::blank();
+        w.place(0, 10, 10, Kind::PrecisionAssembler, Dir::E).unwrap();
+        w.place(0, 10, 8, Kind::Solar, Dir::E).unwrap();
+        let names = recipe_names(Kind::PrecisionAssembler);
+        for crude in CRUDE_RECIPES.iter().chain(BASIC_RECIPES) {
+            assert!(!names.contains(&crude.name), "{}", crude.name);
+        }
+        // Cycling with f only visits the advanced and precision recipes.
+        let first = w.configure(0, 10, 10).unwrap();
+        assert!(first.contains("fine copper coil"), "{first}");
+        assert!(w.configure(0, 10, 10).unwrap().contains("heavy gearbox"));
+        // It takes what an advanced recipe uses, and turns away what only a crude one uses.
+        assert!(w.offer(0, 10, 10, Item::IronGear));
+        assert!(!w.offer(0, 10, 10, Item::CopperIngot), "a crude recipe's input");
+        assert!(!w.offer(0, 10, 10, Item::CopperPlate), "a basic recipe's input");
+        // A copied recipe number past its list is ignored.
+        w.apply_setting(0, 10, 10, Setting::Recipe(40));
+        assert!(w.tile(0, 10, 10).unwrap().recipe().is_some());
+    }
+
+    #[test]
+    fn the_welder_draws_ec_only_while_it_works() {
+        let mut w = World::blank();
+        // Two panels (20 EC) joined by a pole, reaching a welder and a belt.
+        w.place(0, 12, 10, Kind::Welder, Dir::E).unwrap(); // covers 12-14, 10-12
+        w.place(0, 8, 9, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 8, 13, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 9, 12, Kind::Pole, Dir::E).unwrap();
+        w.place(0, 15, 11, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 12, Kind::Belt, Dir::E).unwrap();
+        assert_eq!(Kind::Welder.burst_draw(), 30.0);
+        assert_eq!(Kind::Welder.power_draw(), 0.0, "nothing while idle");
+        assert_eq!(w.grid.nets.len(), 1);
+        let demand = |w: &World| w.net_at(0, 12, 10).unwrap().demand;
+        // Idle: only the belt (0.5) is on the grid.
+        w.tick();
+        assert_eq!(demand(&w), 0.5);
+        assert_eq!(w.ratio_at(0, 12, 10), 1.0);
+        // Weld: it draws 30, and the 20 EC grid browns out, slowing the belt too.
+        set_stock(&mut w, 12, 10, Item::Steel, 6);
+        set_stock(&mut w, 12, 10, Item::IronPlate, 4);
+        pick_recipe(&mut w, 12, 10, "weld girder");
+        w.tick(); // it starts working
+        w.tick(); // and the grid feels it
+        assert_eq!(demand(&w), 30.5);
+        let ratio = 20.0 / 30.5;
+        assert!((w.ratio_at(0, 12, 10) - ratio).abs() < 1e-9);
+        assert!((w.ratio_at(0, 7, 12) - ratio).abs() < 1e-9, "everything on the grid slows evenly");
+        // At that speed a 180 tick weld takes 275 ticks; two welds use up the stock.
+        let made = |w: &World| w.econ.made[Item::SteelGirder.idx()];
+        for _ in 0..250 {
+            w.tick();
+        }
+        assert_eq!(made(&w), 0, "slowed by the shortfall");
+        run(&mut w, 1);
+        assert_eq!(made(&w), 2);
+        run(&mut w, 5);
+        assert_eq!(made(&w), 4, "the second weld");
+        // Out of material: the draw switches off and the grid recovers.
+        assert_eq!(demand(&w), 0.5);
+        assert_eq!(w.ratio_at(0, 7, 12), 1.0);
+        assert_eq!(w.idle_reason(0, idx(12, 10)), Some("NEED"));
+    }
+
+    #[test]
+    fn a_welder_with_no_power_waits() {
+        let mut w = World::blank();
+        w.place(0, 12, 10, Kind::Welder, Dir::E).unwrap();
+        set_stock(&mut w, 12, 10, Item::Steel, 3);
+        set_stock(&mut w, 12, 10, Item::IronPlate, 2);
+        run(&mut w, 10);
+        assert_eq!(w.econ.made[Item::SteelGirder.idx()], 0);
+        assert_eq!(w.idle_reason(0, idx(12, 10)), Some("EC?"));
+        // A grid with nothing to give can't start it for free either.
+        w.place(0, 12, 13, Kind::Pole, Dir::E).unwrap();
+        run(&mut w, 10);
+        assert_eq!(w.econ.made[Item::SteelGirder.idx()], 0);
+    }
+
+    #[test]
+    fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
+        let mut w = World::blank();
+        // 3 wide, 5 tall facing east; 5 wide, 3 tall facing north.
+        assert_eq!(Kind::Kiln.dims(Dir::E), (3, 5));
+        assert_eq!(Kind::Kiln.dims(Dir::N), (5, 3));
+        w.place(0, 5, 5, Kind::Kiln, Dir::E).unwrap(); // covers 5-7, 5-9: front is x=8
+        assert!(w.place(0, 6, 9, Kind::Crate, Dir::E).is_err(), "5 tall");
+        w.place(0, 8, 9, Kind::Crate, Dir::E).unwrap(); // beside its bottom row
+        set_stock(&mut w, 5, 5, Item::Coal, 5);
+        let ingots = |w: &mut World, n: u32| (0..n).for_each(|_| assert!(w.offer(0, 5, 5, Item::IronIngot)));
+        let made = |w: &World| w.econ.made[Item::IronPlate.idx()];
+        ingots(&mut w, 7);
+        run(&mut w, 20);
+        assert_eq!(made(&w), 0, "7 of 8 is not enough");
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
+        match &w.tile(0, 5, 5).unwrap().st {
+            St::Crafter { busy, .. } => assert!(!busy),
+            _ => unreachable!(),
+        }
+        // The eighth starts the fire. All 8 come out together after one recipe time.
+        ingots(&mut w, 1);
+        assert!(!w.offer(0, 5, 5, Item::IronIngot), "it holds exactly one batch");
+        let mut fired_at = None;
+        for t in 0..400 {
+            w.tick();
+            if made(&w) > 0 {
+                assert_eq!(made(&w), 8, "all at once");
+                fired_at = Some(t);
+                break;
+            }
+        }
+        let t = fired_at.expect("it fired");
+        assert!((239..=241).contains(&t), "one recipe time (240 ticks): {t}");
+        run(&mut w, 5);
+        assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::IronPlate; 8]);
+        assert_eq!(w.econ.used[Item::IronIngot.idx()], 8);
+        // And it is empty again: the next batch needs 8 more.
+        assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
+    }
+
+    #[test]
+    fn a_pump_pipe_mixer_chain_makes_concrete() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Pump, Dir::E).unwrap(); // covers 5, 5-6
+        for x in 6..=8 {
+            w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+        }
+        w.place(0, 9, 5, Kind::Mixer, Dir::E).unwrap(); // covers 9-10, 5-6; front is x=11
+        w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap(); // reaches the pump and the mixer
+        set_stock(&mut w, 9, 5, Item::Stone, 10);
+        w.tick();
+        assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"), "no water yet");
+        run(&mut w, 14);
+        // 120 ticks a run, 2 stone + 5 water -> 2 concrete: 10 stone is 5 runs.
+        assert_eq!(crate_items(&w, 0, 11, 5), vec![Item::Concrete; 10]);
+        assert_eq!(w.econ.used[Item::Stone.idx()], 10);
+    }
+
+    #[test]
+    fn a_mixer_without_water_waits() {
+        let mut w = World::blank();
+        w.place(0, 9, 5, Kind::Mixer, Dir::E).unwrap();
+        w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+        set_stock(&mut w, 9, 5, Item::Stone, 10);
+        run(&mut w, 10);
+        assert!(crate_items(&w, 0, 11, 5).is_empty());
+        assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"));
+    }
+
+    /// `n` panels (10 EC each) in a column at x - 2, joined by poles at x, from row y down.
+    fn big_grid(w: &mut World, x: i32, y: i32, n: i32) {
+        for i in 0..n {
+            w.place(0, x - 2, y + i * 2, Kind::Solar, Dir::E).unwrap();
+        }
+        for i in 0..=(n * 2) / 6 {
+            w.place(0, x, y + i * 6 + 1, Kind::Pole, Dir::E).unwrap();
+        }
+    }
+
+    fn drill_crates(w: &mut World, x: i32, y: i32, n: i32) {
+        for i in 0..n {
+            w.place(0, x, y + i, Kind::Crate, Dir::E).unwrap();
+        }
+    }
+
+    fn crates_total(w: &World, x: i32, y: i32, n: i32) -> usize {
+        (0..n).map(|i| crate_items(w, 0, x, y + i).len()).sum()
+    }
+
+    #[test]
+    fn an_advanced_drill_is_electric_and_twice_as_fast_as_a_basic_drill() {
+        let mut w = World::blank();
+        assert_eq!((Kind::AdvancedDrill.base_dims(), Kind::AdvancedDrill.cost(), Kind::AdvancedDrill.power_draw()), ((4, 4), 240.0, 4.0));
+        // A basic drill with coal on hand and an advanced one with none, both on iron.
+        w.place(0, 5, 5, Kind::BasicDrill, Dir::E).unwrap();
+        w.apply_setting(0, 5, 5, Setting::Mines(Item::IronOre));
+        w.place(0, 7, 5, Kind::Crate, Dir::E).unwrap();
+        if let Some(Building { st: St::Drill { coal, .. }, .. }) = w.floors[0].tiles[idx(5, 5)].as_mut() {
+            *coal = 10;
+        }
+        w.place(0, 20, 5, Kind::AdvancedDrill, Dir::E).unwrap(); // covers 20-23, 5-8; front is x=24
+        w.apply_setting(0, 20, 5, Setting::Mines(Item::IronOre));
+        w.place(0, 24, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 20, 9, Kind::Solar, Dir::E).unwrap(); // reaches its bottom rows
+        w.tick();
+        assert_eq!(w.idle_reason(0, idx(20, 5)), None, "no coal needed");
+        run(&mut w, 10);
+        let (basic, adv) = (crate_items(&w, 0, 7, 5), crate_items(&w, 0, 24, 5));
+        assert!(adv.iter().all(|i| *i == Item::IronOre));
+        assert_eq!((basic.len(), adv.len()), (15, 30), "iron at 40 ticks an ore, and at 20");
+        assert!(w.econ.used[Item::Coal.idx()] <= 2, "only the basic drill burned coal");
+    }
+
+    #[test]
+    fn an_advanced_drill_without_power_waits_and_slows_with_the_grid() {
+        let mut w = World::blank();
+        w.place(0, 20, 5, Kind::AdvancedDrill, Dir::E).unwrap();
+        w.place(0, 24, 5, Kind::Crate, Dir::E).unwrap();
+        run(&mut w, 5);
+        assert!(crate_items(&w, 0, 24, 5).is_empty());
+        assert_eq!(w.idle_reason(0, idx(20, 5)), Some("EC?"));
+        // On a grid that's too small, it slows with everything else.
+        w.place(0, 20, 9, Kind::Solar, Dir::E).unwrap();
+        for (x, y) in footprint(18, 9, 6, 6) {
+            if w.check_place(0, x, y, Kind::Belt).is_ok() {
+                w.place(0, x, y, Kind::Belt, Dir::E).unwrap();
+            }
+        }
+        let ratio = w.ratio_at(0, 20, 7);
+        assert!(ratio < 1.0 && ratio > 0.0, "{ratio}");
+        run(&mut w, 10);
+        let n = crate_items(&w, 0, 24, 5).len() as f64;
+        assert!((n - 30.0 * ratio).abs() <= 1.5, "{n} items at {ratio}");
+    }
+
+    #[test]
+    fn a_large_basic_drill_mines_16x_and_burns_32x_the_coal() {
+        let mut w = World::blank();
+        assert_eq!((Kind::LargeBasicDrill.base_dims(), Kind::LargeBasicDrill.cost()), ((8, 8), 1000.0));
+        // A basic drill and a large one, each fed all the coal they can hold.
+        w.place(0, 5, 5, Kind::BasicDrill, Dir::E).unwrap();
+        w.place(0, 7, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 5, 20, Kind::LargeBasicDrill, Dir::E).unwrap(); // covers 5-12, 20-27; front is x=13
+        drill_crates(&mut w, 13, 20, 8);
+        for b in w.floors[0].tiles.iter_mut().flatten() {
+            if let St::Drill { coal, .. } = &mut b.st {
+                *coal = b.kind.drill_coal_cap();
+            }
+        }
+        assert_eq!(Kind::LargeBasicDrill.drill_coal_cap(), 320);
+        run(&mut w, 20);
+        let basic = crate_items(&w, 0, 7, 5).len();
+        let large = crates_total(&w, 13, 20, 8);
+        assert_eq!(basic, 30, "1200 ticks at 40");
+        assert_eq!(large, 16 * basic, "16 times the ore");
+        // 32 times the coal: the basic drill burns 1 unit a tick (3 coal in 1200 ticks, one of
+        // them the starter), the big one 32 a tick (96).
+        let used = w.econ.used[Item::Coal.idx()] as f64;
+        assert!((used - 98.0).abs() <= 2.0, "coal used {used}");
+        // It pushes into everything along its front edge, in turn.
+        for i in 0..8 {
+            assert!(crate_items(&w, 0, 13, 20 + i).len() >= 50, "crate {i}");
+        }
+    }
+
+    #[test]
+    fn a_large_basic_drill_runs_dry_without_coal() {
+        let mut w = World::blank();
+        w.place(0, 5, 20, Kind::LargeBasicDrill, Dir::E).unwrap();
+        drill_crates(&mut w, 13, 20, 8);
+        run(&mut w, 2);
+        // Only the starter fuel: 400 units is a bit over 12 ticks of work.
+        let n = crates_total(&w, 13, 20, 8);
+        assert!(n > 0 && n <= 6, "{n}");
+        assert_eq!(w.idle_reason(0, idx(5, 20)), Some("COAL"));
+    }
+
+    #[test]
+    fn a_large_advanced_drill_mines_16x_an_advanced_drill() {
+        let mut w = World::blank();
+        assert_eq!(
+            (Kind::LargeAdvancedDrill.base_dims(), Kind::LargeAdvancedDrill.cost(), Kind::LargeAdvancedDrill.power_draw()),
+            ((8, 8), 2000.0, 128.0)
+        );
+        // 130 EC of panels for the big one, 10 for the advanced one.
+        big_grid(&mut w, 32, 0, 13);
+        w.place(0, 34, 6, Kind::LargeAdvancedDrill, Dir::E).unwrap(); // covers 34-41, 6-13; front is x=42
+        drill_crates(&mut w, 42, 6, 8);
+        w.place(0, 5, 40, Kind::AdvancedDrill, Dir::E).unwrap();
+        w.place(0, 9, 40, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 5, 44, Kind::Solar, Dir::E).unwrap();
+        assert_eq!(w.ratio_at(0, 34, 6), 1.0);
+        run(&mut w, 10);
+        let adv = crate_items(&w, 0, 9, 40).len();
+        let large = crates_total(&w, 42, 6, 8);
+        assert_eq!(adv, 30);
+        assert_eq!(large, 16 * adv, "16 times an advanced drill");
+        assert_eq!(w.econ.used[Item::Coal.idx()], 0, "no coal anywhere");
+    }
+
+    #[test]
+    fn an_advanced_pump_gives_four_times_the_water() {
+        let mut w = World::blank();
+        assert_eq!((Kind::AdvancedPump.base_dims(), Kind::AdvancedPump.cost(), Kind::AdvancedPump.power_draw()), ((2, 2), 240.0, 4.0));
+        w.place(0, 5, 5, Kind::Pump, Dir::E).unwrap();
+        w.place(0, 5, 20, Kind::AdvancedPump, Dir::E).unwrap();
+        // Long pipes so neither network fills up.
+        for x in 6..=45 {
+            w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+        }
+        for x in 7..=46 {
+            w.place(0, x, 20, Kind::Pipe, Dir::E).unwrap();
+        }
+        w.place(0, 5, 8, Kind::Solar, Dir::E).unwrap();
+        w.place(0, 5, 23, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 5);
+        let water = |w: &World, x: i32, y: i32| {
+            let p = w.fluids.pipe_pool[0][idx(x, y)];
+            w.fluids.pools[p as usize].amount
+        };
+        let (small, big) = (water(&w, 6, 5), water(&w, 7, 20));
+        assert!((small - 100.0).abs() < 1e-6, "{small}");
+        assert!((big - 400.0).abs() < 1e-6, "{big}");
+    }
+
+    #[test]
+    fn machines_for_later_tiers_are_not_in_the_game_yet() {
+        let later = [
+            Kind::BasicAssembler,
+            Kind::AdvancedAssembler,
+            Kind::PrecisionAssembler,
+            Kind::LargeBasicAssembler,
+            Kind::LargeAdvancedAssembler,
+            Kind::Welder,
+            Kind::Kiln,
+            Kind::Mixer,
+            Kind::AdvancedDrill,
+            Kind::LargeBasicDrill,
+            Kind::LargeAdvancedDrill,
+            Kind::AdvancedPump,
+        ];
+        let mut fresh = World::new();
+        let blank = World::blank();
+        // Even with every company open and every tech researched, a normal game can't build them.
+        fresh.econ.money = 1e6;
+        fresh.progress.opened = [true; COMPANIES];
+        fresh.progress.researched = [true; TECHS];
+        for k in later {
+            assert!(!k.in_game(), "{k:?}");
+            assert!(!fresh.progress.part_unlocked(k), "{k:?}");
+            assert!(fresh.check_place(0, 30, 30, k).unwrap_err().contains("locked"), "{k:?}");
+            assert!(blank.check_place(0, 30, 30, k).is_ok(), "tests can place {k:?}");
+        }
+        // The crude assembler is the old assembler: in the game, behind its research.
+        assert!(Kind::CrudeAssembler.in_game());
+        assert_eq!(Kind::CrudeAssembler.tech(), Some(Tech::Assembler));
+        assert!(fresh.check_place(0, 30, 30, Kind::CrudeAssembler).is_ok());
+    }
+
+    #[test]
+    fn new_machines_say_whether_they_run_on_ec() {
+        for (k, electric) in [
+            (Kind::Welder, true),
+            (Kind::Kiln, false),
+            (Kind::Mixer, true),
+            (Kind::LargeBasicDrill, false),
+            (Kind::LargeAdvancedDrill, true),
+        ] {
+            assert_eq!(k.electric(), electric, "{k:?}");
+        }
+        assert_eq!(Kind::Kiln.cost(), 200.0);
+        assert_eq!((Kind::Mixer.cost(), Kind::Mixer.power_draw(), Kind::Mixer.base_dims()), (200.0, 4.0, (2, 2)));
+        assert_eq!((Kind::Welder.cost(), Kind::Welder.base_dims()), (800.0, (3, 3)));
     }
 
     #[test]
