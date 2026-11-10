@@ -15,11 +15,13 @@ use crate::sim::{in_bounds, Category, Company, Dir, Kind, Tech, World, H, MAX_LI
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
     use Kind::*;
     match cat {
+        // Create is crowded: five slots (drills, heat, shaping, assembling, water).
         Category::Create => &[
-            &[Drill, BasicDrill, Crusher],
-            &[Furnace, Molder, BlastFurnace, CokeOven],
-            &[Press, WireDrawer, Winder, RollingMill, Lathe, CrudeAssembler],
-            &[Pump, Pipe],
+            &[Drill, BasicDrill, AdvancedDrill, LargeBasicDrill, LargeAdvancedDrill],
+            &[Furnace, Molder, BlastFurnace, CokeOven, Kiln],
+            &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
+            &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
+            &[Pump, AdvancedPump, Pipe, Mixer],
         ],
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator]],
         Category::Power => &[&[Solar], &[Pole], &[Boiler], &[SteamEngine]],
@@ -46,7 +48,7 @@ pub enum Entry {
 }
 
 /// Machines with their own page in the recipe book.
-pub const BOOK_PARTS: [Kind; 13] = [
+pub const BOOK_PARTS: [Kind; 25] = [
     Kind::Drill,
     Kind::BasicDrill,
     Kind::Crusher,
@@ -59,7 +61,19 @@ pub const BOOK_PARTS: [Kind; 13] = [
     Kind::Winder,
     Kind::RollingMill,
     Kind::Lathe,
+    Kind::Kiln,
+    Kind::Mixer,
+    Kind::Welder,
     Kind::CrudeAssembler,
+    Kind::BasicAssembler,
+    Kind::AdvancedAssembler,
+    Kind::PrecisionAssembler,
+    Kind::LargeBasicAssembler,
+    Kind::LargeAdvancedAssembler,
+    Kind::AdvancedDrill,
+    Kind::LargeBasicDrill,
+    Kind::LargeAdvancedDrill,
+    Kind::AdvancedPump,
 ];
 
 impl Entry {
@@ -948,13 +962,13 @@ mod tests {
 
     #[test]
     fn every_part_has_one_slot_in_its_own_category() {
-        // Machines that are not in the game yet have no slot.
-        for k in Kind::ALL.into_iter().filter(|k| k.in_game()) {
+        for k in Kind::ALL {
             let homes: Vec<Category> = Category::ALL.iter().copied().filter(|c| parts_in(*c).contains(&k)).collect();
             assert_eq!(homes, vec![k.category()], "{k:?}");
         }
         for c in Category::ALL {
-            assert!(slots(c).len() <= 4, "{c:?} has more than 4 slots");
+            let most = if c == Category::Create { 5 } else { 4 };
+            assert!(slots(c).len() <= most, "{c:?} has more than {most} slots");
         }
     }
 

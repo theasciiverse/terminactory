@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::LazyLock;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub use crate::content::*;
 
@@ -62,7 +62,21 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 2;
+pub const SAVE_VERSION: u32 = 3;
+
+/// Writes a fixed-size array as a list (serde itself stops at 32 elements).
+fn ser_arr<S, T, const N: usize>(a: &[T; N], s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize,
+{
+    s.collect_seq(a.iter())
+}
+
+/// An array of defaults (the std Default stops at 32 elements).
+fn zeros<T: Default + Copy, const N: usize>() -> [T; N] {
+    [T::default(); N]
+}
 
 /// Reads a saved list into a fixed-size array (serde itself stops at 32), padding with defaults.
 fn pad<'de, D, T, const N: usize>(d: D) -> Result<[T; N], D::Error>
@@ -204,7 +218,6 @@ pub enum Kind {
     RollingMill,
     Lathe,
     Winder,
-    // Machines below are not in the build menu yet: see `in_game`.
     BasicAssembler,
     AdvancedAssembler,
     PrecisionAssembler,
@@ -504,25 +517,6 @@ impl Kind {
     pub fn electric(self) -> bool {
         self.power_draw() > 0.0 || self.burst_draw() > 0.0
     }
-    /// Whether the player can build it yet. The machines for later tiers wait for the
-    /// content step; tests (`World::blank`) can still place them.
-    pub fn in_game(self) -> bool {
-        !matches!(
-            self,
-            Kind::BasicAssembler
-                | Kind::AdvancedAssembler
-                | Kind::PrecisionAssembler
-                | Kind::LargeBasicAssembler
-                | Kind::LargeAdvancedAssembler
-                | Kind::Welder
-                | Kind::Kiln
-                | Kind::Mixer
-                | Kind::AdvancedDrill
-                | Kind::LargeBasicDrill
-                | Kind::LargeAdvancedDrill
-                | Kind::AdvancedPump
-        )
-    }
     /// Runs this many recipe runs at once: it loads inputs for all of them, then fires them
     /// together (one recipe time). Only kilns do.
     pub fn batch(self) -> u32 {
@@ -566,20 +560,16 @@ impl Kind {
         match self {
             Kind::Drill => Some(Company::Hollowmere),
             Kind::BasicDrill => Some(Company::Ashgrove),
-            Kind::Pipe | Kind::Pump | Kind::AdvancedPump => Some(Company::Wellbourne),
+            Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder => Some(Company::Kettering),
-            Kind::Crusher | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => Some(Company::Ashgrove),
-            Kind::Lathe => Some(Company::Gearwright),
-            Kind::RollingMill => Some(Company::Pillar),
-            Kind::Elevator => Some(Company::Underhill),
-            Kind::CrudeAssembler
-            | Kind::BasicAssembler
-            | Kind::AdvancedAssembler
-            | Kind::PrecisionAssembler
-            | Kind::LargeBasicAssembler
-            | Kind::LargeAdvancedAssembler => Some(Company::Gearwright),
-            Kind::FastBelt => Some(Company::Swiftline),
+            Kind::Crusher => Some(Company::Ashgrove),
+            Kind::Lathe | Kind::CrudeAssembler => Some(Company::Gearwright),
+            Kind::RollingMill | Kind::Welder => Some(Company::Pillar),
+            Kind::Elevator | Kind::Kiln => Some(Company::Underhill),
+            Kind::FastBelt | Kind::BasicAssembler => Some(Company::Swiftline),
+            Kind::AdvancedDrill | Kind::AdvancedAssembler | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
+            Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => Some(Company::LatticeFinch),
             _ => Some(Company::Brannock),
         }
     }
@@ -589,6 +579,18 @@ impl Kind {
             Kind::Press => Some(Tech::Press),
             Kind::BasicDrill => Some(Tech::BasicDrill),
             Kind::Pipe | Kind::Pump => Some(Tech::Pumps),
+            Kind::AdvancedPump => Some(Tech::AdvancedPump),
+            Kind::Mixer => Some(Tech::Mixer),
+            Kind::Welder => Some(Tech::Welder),
+            Kind::Kiln => Some(Tech::Kiln),
+            Kind::BasicAssembler => Some(Tech::BasicAssembler),
+            Kind::AdvancedAssembler => Some(Tech::AdvancedAssembler),
+            Kind::PrecisionAssembler => Some(Tech::PrecisionAssembler),
+            Kind::LargeBasicAssembler => Some(Tech::LargeBasicAssembler),
+            Kind::LargeAdvancedAssembler => Some(Tech::LargeAdvancedAssembler),
+            Kind::AdvancedDrill => Some(Tech::AdvancedDrill),
+            Kind::LargeBasicDrill => Some(Tech::LargeBasicDrill),
+            Kind::LargeAdvancedDrill => Some(Tech::LargeAdvancedDrill),
             Kind::BlastFurnace => Some(Tech::BlastFurnace),
             Kind::Boiler | Kind::SteamEngine => Some(Tech::Steam),
             Kind::CrudeAssembler => Some(Tech::Assembler),
@@ -792,7 +794,7 @@ pub enum St {
     /// Furnaces, molders, presses and blast furnaces: a chosen recipe, a stock of inputs, and finished goods.
     Crafter {
         recipe: u8,
-        #[serde(deserialize_with = "pad")]
+        #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
         stock: [u32; ITEMS],
         fuel: u32,
         progress: f64,
@@ -936,25 +938,25 @@ impl Floor {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Econ {
     pub money: f64,
     pub research: f64,
     /// Units sold that earned research, per item (drives the fading curve).
-    #[serde(deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub research_sales: [u64; ITEMS],
-    #[serde(deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub sold: [u64; ITEMS],
     /// Units ever produced by a machine, per item (drives discoveries).
-    #[serde(deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub made: [u64; ITEMS],
     /// This session only: units used up by machines (inputs and fuel), and what each
     /// item's sales brought in. They drive the production panel.
-    #[serde(skip)]
+    #[serde(skip, default = "zeros")]
     pub used: [u64; ITEMS],
-    #[serde(skip)]
+    #[serde(skip, default = "zeros")]
     pub money_from: [f64; ITEMS],
-    #[serde(skip)]
+    #[serde(skip, default = "zeros")]
     pub research_from: [f64; ITEMS],
     /// Everything ever earned (spending doesn't lower these): drives offline earnings.
     #[serde(default)]
@@ -964,6 +966,24 @@ pub struct Econ {
     /// This session only: (money earned, waste fees paid) as they stood a minute ago.
     #[serde(skip)]
     pub minute_ago: (f64, f64),
+}
+
+impl Default for Econ {
+    fn default() -> Self {
+        Econ {
+            money: 0.0,
+            research: 0.0,
+            research_sales: [0; ITEMS],
+            sold: [0; ITEMS],
+            made: [0; ITEMS],
+            used: [0; ITEMS],
+            money_from: [0.0; ITEMS],
+            research_from: [0.0; ITEMS],
+            earned_money: 0.0,
+            earned_research: 0.0,
+            minute_ago: (0.0, 0.0),
+        }
+    }
 }
 
 impl Econ {
@@ -1048,9 +1068,9 @@ pub struct Flow {
 /// Which companies are open and what has been researched.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Progress {
-    #[serde(deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub opened: [bool; COMPANIES],
-    #[serde(deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub researched: [bool; TECHS],
     /// Companies that opened since the player last looked (shown as letters).
     #[serde(skip)]
@@ -1058,9 +1078,6 @@ pub struct Progress {
     /// Short messages for the player (free unlocks).
     #[serde(skip)]
     pub notes: VecDeque<String>,
-    /// Tests only: lets machines that are not in the game yet be placed (see `Kind::in_game`).
-    #[serde(skip)]
-    pub all_parts: bool,
 }
 
 impl Default for Progress {
@@ -1069,7 +1086,7 @@ impl Default for Progress {
         for c in Company::ALL {
             opened[c.idx()] = c.key_item().is_none();
         }
-        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new(), all_parts: false }
+        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new() }
     }
 }
 
@@ -1086,7 +1103,7 @@ impl Progress {
             // Either way into a second floor brings elevators.
             return self.has(Tech::SupportBeams) || self.has(Tech::Excavation);
         }
-        (k.in_game() || self.all_parts) && k.company().map_or(true, |c| self.is_open(c)) && k.tech().map_or(true, |t| self.has(t))
+        k.company().map_or(true, |c| self.is_open(c)) && k.tech().map_or(true, |t| self.has(t))
     }
 }
 
@@ -1322,7 +1339,6 @@ impl World {
                 researched: [true; TECHS],
                 events: VecDeque::new(),
                 notes: VecDeque::new(),
-                all_parts: true,
             },
             tick: 0,
             lifts: Vec::new(),
@@ -1404,7 +1420,7 @@ impl World {
     pub fn floor_hint(&self, level: i32) -> &'static str {
         match level {
             1 => "Building upward needs support beams (make steel girders, then see the tree)",
-            -1 => "Digging down needs excavation (make steel girders, then see the tree)",
+            -1 => "Digging down needs excavation (make concrete, then see the tree)",
             _ => "That floor opens in a later phase",
         }
     }
@@ -3807,15 +3823,6 @@ mod tests {
         assert_eq!(w.fluids.pools[0].amount, 0.0, "10 s a batch");
         run(&mut w, 3);
         assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[0].amount), (Some(Fluid::MoltenIron), 2.0));
-
-        let mut w = World::blank();
-        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
-        fill_crate(&mut w, 0, 5, 5, &[Item::IronPlate, Item::IronPlate, Item::IronPlate, Item::Coke]);
-        w.place(0, 6, 5, Kind::BlastFurnace, Dir::E).unwrap();
-        assert!(w.configure(0, 6, 5).unwrap().contains("steel"));
-        w.place(0, 8, 5, Kind::Crate, Dir::E).unwrap();
-        run(&mut w, 6);
-        assert_eq!(crate_items(&w, 0, 8, 5), vec![Item::Steel, Item::Waste]);
     }
 
     fn offer(w: &mut World, x: i32, y: i32, item: Item) -> bool {
@@ -4110,20 +4117,6 @@ mod tests {
         assert!(fast as f64 > slow as f64 * 1.8, "slow {slow}, fast {fast}");
     }
 
-    #[test]
-    fn assembler_makes_the_drilling_rig() {
-        let mut w = World::blank();
-        w.place(0, 4, 5, Kind::Crate, Dir::E).unwrap();
-        fill_crate(&mut w, 0, 4, 5, &[Item::SteelGirder, Item::SteelGirder, Item::SteelGirder, Item::SteelGirder]);
-        fill_crate(&mut w, 0, 4, 5, &[Item::Gearbox, Item::Gearbox, Item::Steel, Item::Steel, Item::Steel, Item::Steel]);
-        w.place(0, 5, 4, Kind::CrudeAssembler, Dir::E).unwrap(); // 4x4
-        while !w.configure(0, 5, 4).unwrap().contains("drilling rig") {}
-        w.place(0, 9, 5, Kind::Crate, Dir::E).unwrap();
-        w.place(0, 5, 8, Kind::Solar, Dir::E).unwrap(); // reaches the assembler's bottom row only
-        run(&mut w, 15);
-        assert_eq!(crate_items(&w, 0, 9, 5), vec![Item::DrillingRig]);
-    }
-
     // ---------- the later machines ----------
 
     fn recipe_names(kind: Kind) -> Vec<&'static str> {
@@ -4161,6 +4154,12 @@ mod tests {
         assert_eq!(recipe_names(Kind::PrecisionAssembler), joined(&[&adv, &prec]), "precision makes only the top tiers");
         assert_eq!(recipe_names(Kind::LargeBasicAssembler), large_basic);
         assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
+        assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox"]);
+        assert_eq!(basic, ["electric motor", "piston"]);
+        assert_eq!(adv, ["control board"]);
+        assert!(prec.is_empty(), "later processors go here");
+        assert_eq!(large_basic, ["pump unit", "engine block"]);
+        assert_eq!(large_adv, ["generator", "control panel", "drilling rig", "steam tractor"]);
         // Large and small assemblers share nothing.
         for small in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::AdvancedAssembler, Kind::PrecisionAssembler] {
             for big in [Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler] {
@@ -4169,20 +4168,20 @@ mod tests {
         }
         // Each tier's time is the lowest assembler's; the ones above run it faster.
         let t = recipe_ticks;
-        assert_eq!(t(Kind::CrudeAssembler, "steel girder"), 60);
-        assert_eq!(t(Kind::BasicAssembler, "steel girder"), 30);
-        assert_eq!(t(Kind::AdvancedAssembler, "steel girder"), 15);
-        assert_eq!(t(Kind::BasicAssembler, "bulk copper wire"), BASIC_RECIPES[0].ticks);
-        assert_eq!(t(Kind::AdvancedAssembler, "bulk copper wire"), BASIC_RECIPES[0].ticks / 2);
-        assert_eq!(t(Kind::AdvancedAssembler, "heavy gearbox"), ADVANCED_RECIPES[0].ticks);
-        assert_eq!(t(Kind::PrecisionAssembler, "heavy gearbox"), ADVANCED_RECIPES[0].ticks / 2);
-        assert_eq!(t(Kind::PrecisionAssembler, "fine copper coil"), PRECISION_RECIPES[0].ticks);
-        assert_eq!(t(Kind::LargeBasicAssembler, "bulk girders"), LARGE_BASIC_RECIPES[0].ticks);
-        assert_eq!(t(Kind::LargeAdvancedAssembler, "bulk girders"), LARGE_BASIC_RECIPES[0].ticks / 2);
-        assert_eq!(t(Kind::LargeAdvancedAssembler, "bulk drilling rigs"), LARGE_ADVANCED_RECIPES[0].ticks);
+        assert_eq!(t(Kind::CrudeAssembler, "gearbox"), 600);
+        assert_eq!(t(Kind::BasicAssembler, "gearbox"), 300);
+        assert_eq!(t(Kind::AdvancedAssembler, "gearbox"), 150);
+        assert_eq!(t(Kind::BasicAssembler, "electric motor"), 600);
+        assert_eq!(t(Kind::AdvancedAssembler, "electric motor"), 300);
+        assert_eq!(t(Kind::AdvancedAssembler, "control board"), 600);
+        assert_eq!(t(Kind::PrecisionAssembler, "control board"), 300);
+        assert_eq!(t(Kind::LargeBasicAssembler, "pump unit"), 1200);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "pump unit"), 600);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "generator"), 1200);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "drilling rig"), 2400);
+        assert_eq!(t(Kind::LargeAdvancedAssembler, "steam tractor"), 3600);
         // Odd times round to a whole tick.
-        assert_eq!(t(Kind::BasicAssembler, "copper plate"), scaled(75, 2));
-        assert_eq!(t(Kind::AdvancedAssembler, "copper plate"), scaled(75, 4));
+        assert_eq!(scaled(75, 2), 38);
         // Sizes, power and prices.
         let specs = [
             (Kind::CrudeAssembler, (4, 4), 4.0, 300.0),
@@ -4197,7 +4196,6 @@ mod tests {
         }
     }
 
-    /// Three machines, each pushing into its own crate; stock is topped up every tick.
     #[test]
     fn higher_assemblers_run_crude_recipes_faster() {
         let mut w = World::blank();
@@ -4209,18 +4207,19 @@ mod tests {
             w.place(0, 8, y - 2, Kind::Solar, Dir::E).unwrap();
             w.place(0, 12, y - 2, Kind::Solar, Dir::E).unwrap();
             w.place(0, 10, y - 3, Kind::Pole, Dir::E).unwrap();
-            pick_recipe(&mut w, 10, y, "steel girder");
+            pick_recipe(&mut w, 10, y, "gearbox");
         }
-        for _ in 0..240 {
+        for _ in 0..1200 {
             for (_, y) in rows {
                 set_stock(&mut w, 10, y, Item::Steel, 10);
+                set_stock(&mut w, 10, y, Item::IronGear, 30);
             }
             w.tick();
         }
-        let girders = |w: &World, k: Kind, y: i32| crate_items(w, 0, 10 + k.base_dims().0, y).len();
-        assert_eq!(girders(&w, Kind::CrudeAssembler, 4), 4, "60 ticks each");
-        assert_eq!(girders(&w, Kind::BasicAssembler, 14), 8, "twice as fast");
-        assert_eq!(girders(&w, Kind::AdvancedAssembler, 24), 16, "four times as fast");
+        let boxes = |w: &World, k: Kind, y: i32| crate_items(w, 0, 10 + k.base_dims().0, y).len();
+        assert_eq!(boxes(&w, Kind::CrudeAssembler, 4), 2, "10 s each");
+        assert_eq!(boxes(&w, Kind::BasicAssembler, 14), 4, "twice as fast");
+        assert_eq!(boxes(&w, Kind::AdvancedAssembler, 24), 8, "four times as fast");
     }
 
     #[test]
@@ -4232,17 +4231,28 @@ mod tests {
         for crude in CRUDE_RECIPES.iter().chain(BASIC_RECIPES) {
             assert!(!names.contains(&crude.name), "{}", crude.name);
         }
-        // Cycling with f only visits the advanced and precision recipes.
-        let first = w.configure(0, 10, 10).unwrap();
-        assert!(first.contains("fine copper coil"), "{first}");
-        assert!(w.configure(0, 10, 10).unwrap().contains("heavy gearbox"));
-        // It takes what an advanced recipe uses, and turns away what only a crude one uses.
-        assert!(w.offer(0, 10, 10, Item::IronGear));
-        assert!(!w.offer(0, 10, 10, Item::CopperIngot), "a crude recipe's input");
-        assert!(!w.offer(0, 10, 10, Item::CopperPlate), "a basic recipe's input");
+        assert_eq!(names, ["control board"]);
+        // Nothing to cycle to: the later processors are not here yet.
+        assert!(w.configure(0, 10, 10).unwrap().contains("only one recipe"));
+        // It takes what a control board uses, and turns away what only a crude or basic recipe uses.
+        assert!(w.offer(0, 10, 10, Item::Relay));
+        assert!(!w.offer(0, 10, 10, Item::IronGear), "a crude recipe's input");
+        assert!(!w.offer(0, 10, 10, Item::CopperCoil), "a basic recipe's input");
+        assert!(!w.offer(0, 10, 10, Item::SteelRod), "a basic recipe's input");
         // A copied recipe number past its list is ignored.
         w.apply_setting(0, 10, 10, Setting::Recipe(40));
         assert!(w.tile(0, 10, 10).unwrap().recipe().is_some());
+    }
+
+    #[test]
+    fn control_boards_take_10_s_in_an_advanced_assembler_and_5_s_in_a_precision_one() {
+        let stock = [(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)];
+        let adv = |secs| run_powered(Kind::AdvancedAssembler, "control board", &stock, secs);
+        let prec = |secs| run_powered(Kind::PrecisionAssembler, "control board", &stock, secs);
+        assert!(adv(9).is_empty() && adv(11) == vec![Item::ControlBoard]);
+        assert!(prec(4).is_empty() && prec(6) == vec![Item::ControlBoard]);
+        // The other tiers fit the same recipe at their own pace.
+        assert_eq!(recipe_ticks(Kind::PrecisionAssembler, "control board") * 2, recipe_ticks(Kind::AdvancedAssembler, "control board"));
     }
 
     #[test]
@@ -4264,25 +4274,25 @@ mod tests {
         assert_eq!(demand(&w), 0.5);
         assert_eq!(w.ratio_at(0, 12, 10), 1.0);
         // Weld: it draws 30, and the 20 EC grid browns out, slowing the belt too.
-        set_stock(&mut w, 12, 10, Item::Steel, 6);
-        set_stock(&mut w, 12, 10, Item::IronPlate, 4);
-        pick_recipe(&mut w, 12, 10, "weld girder");
+        set_stock(&mut w, 12, 10, Item::SteelGirder, 4);
+        set_stock(&mut w, 12, 10, Item::Screw, 16);
+        pick_recipe(&mut w, 12, 10, "frame");
         w.tick(); // it starts working
         w.tick(); // and the grid feels it
         assert_eq!(demand(&w), 30.5);
         let ratio = 20.0 / 30.5;
         assert!((w.ratio_at(0, 12, 10) - ratio).abs() < 1e-9);
         assert!((w.ratio_at(0, 7, 12) - ratio).abs() < 1e-9, "everything on the grid slows evenly");
-        // At that speed a 180 tick weld takes 275 ticks; two welds use up the stock.
-        let made = |w: &World| w.econ.made[Item::SteelGirder.idx()];
-        for _ in 0..250 {
+        // At that speed a 600 tick weld takes 915 ticks; two welds use up the stock.
+        let made = |w: &World| w.econ.made[Item::Frame.idx()];
+        for _ in 0..900 {
             w.tick();
         }
         assert_eq!(made(&w), 0, "slowed by the shortfall");
         run(&mut w, 1);
-        assert_eq!(made(&w), 2);
-        run(&mut w, 5);
-        assert_eq!(made(&w), 4, "the second weld");
+        assert_eq!(made(&w), 1);
+        run(&mut w, 15);
+        assert_eq!(made(&w), 2, "the second weld");
         // Out of material: the draw switches off and the grid recovers.
         assert_eq!(demand(&w), 0.5);
         assert_eq!(w.ratio_at(0, 7, 12), 1.0);
@@ -4293,15 +4303,16 @@ mod tests {
     fn a_welder_with_no_power_waits() {
         let mut w = World::blank();
         w.place(0, 12, 10, Kind::Welder, Dir::E).unwrap();
-        set_stock(&mut w, 12, 10, Item::Steel, 3);
-        set_stock(&mut w, 12, 10, Item::IronPlate, 2);
-        run(&mut w, 10);
-        assert_eq!(w.econ.made[Item::SteelGirder.idx()], 0);
+        pick_recipe(&mut w, 12, 10, "frame");
+        set_stock(&mut w, 12, 10, Item::SteelGirder, 2);
+        set_stock(&mut w, 12, 10, Item::Screw, 8);
+        run(&mut w, 15);
+        assert_eq!(w.econ.made[Item::Frame.idx()], 0);
         assert_eq!(w.idle_reason(0, idx(12, 10)), Some("EC?"));
         // A grid with nothing to give can't start it for free either.
         w.place(0, 12, 13, Kind::Pole, Dir::E).unwrap();
-        run(&mut w, 10);
-        assert_eq!(w.econ.made[Item::SteelGirder.idx()], 0);
+        run(&mut w, 15);
+        assert_eq!(w.econ.made[Item::Frame.idx()], 0);
     }
 
     #[test]
@@ -4314,19 +4325,19 @@ mod tests {
         assert!(w.place(0, 6, 9, Kind::Crate, Dir::E).is_err(), "5 tall");
         w.place(0, 8, 9, Kind::Crate, Dir::E).unwrap(); // beside its bottom row
         set_stock(&mut w, 5, 5, Item::Coal, 5);
-        let ingots = |w: &mut World, n: u32| (0..n).for_each(|_| assert!(w.offer(0, 5, 5, Item::IronIngot)));
-        let made = |w: &World| w.econ.made[Item::IronPlate.idx()];
-        ingots(&mut w, 7);
+        let stones = |w: &mut World, n: u32| (0..n).for_each(|_| assert!(w.offer(0, 5, 5, Item::Stone)));
+        let made = |w: &World| w.econ.made[Item::Brick.idx()];
+        stones(&mut w, 15);
         run(&mut w, 20);
-        assert_eq!(made(&w), 0, "7 of 8 is not enough");
+        assert_eq!(made(&w), 0, "7 runs of 8 is not enough");
         assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
         match &w.tile(0, 5, 5).unwrap().st {
             St::Crafter { busy, .. } => assert!(!busy),
             _ => unreachable!(),
         }
-        // The eighth starts the fire. All 8 come out together after one recipe time.
-        ingots(&mut w, 1);
-        assert!(!w.offer(0, 5, 5, Item::IronIngot), "it holds exactly one batch");
+        // The last stone starts the fire. All 8 come out together after one recipe time.
+        stones(&mut w, 1);
+        assert!(!w.offer(0, 5, 5, Item::Stone), "it holds exactly one batch");
         let mut fired_at = None;
         for t in 0..400 {
             w.tick();
@@ -4337,12 +4348,24 @@ mod tests {
             }
         }
         let t = fired_at.expect("it fired");
-        assert!((239..=241).contains(&t), "one recipe time (240 ticks): {t}");
+        assert!((299..=301).contains(&t), "one recipe time (300 ticks): {t}");
         run(&mut w, 5);
-        assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::IronPlate; 8]);
-        assert_eq!(w.econ.used[Item::IronIngot.idx()], 8);
-        // And it is empty again: the next batch needs 8 more.
+        assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::Brick; 8]);
+        assert_eq!(w.econ.used[Item::Stone.idx()], 16);
+        // And it is empty again: the next batch needs 16 more.
         assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
+    }
+
+    #[test]
+    fn the_kiln_makes_bricks_and_glass_in_batches_of_eight() {
+        let out = run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16), (Item::Coal, 5)], 8);
+        assert_eq!(out, vec![Item::Brick; 8]);
+        let out = run_machine(Kind::Kiln, "glass", &[(Item::Sand, 24), (Item::Coal, 5)], 8);
+        assert_eq!(out, vec![Item::Glass; 8]);
+        // Not a full batch: nothing fires.
+        assert!(run_machine(Kind::Kiln, "glass", &[(Item::Sand, 21), (Item::Coal, 5)], 12).is_empty());
+        // No coal, no fire.
+        assert!(run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16)], 12).is_empty());
     }
 
     #[test]
@@ -4355,13 +4378,35 @@ mod tests {
         w.place(0, 9, 5, Kind::Mixer, Dir::E).unwrap(); // covers 9-10, 5-6; front is x=11
         w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap(); // reaches the pump and the mixer
-        set_stock(&mut w, 9, 5, Item::Stone, 10);
+        set_stock(&mut w, 9, 5, Item::Sand, 10);
+        set_stock(&mut w, 9, 5, Item::Stone, 5);
         w.tick();
         assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"), "no water yet");
-        run(&mut w, 14);
-        // 120 ticks a run, 2 stone + 5 water -> 2 concrete: 10 stone is 5 runs.
-        assert_eq!(crate_items(&w, 0, 11, 5), vec![Item::Concrete; 10]);
-        assert_eq!(w.econ.used[Item::Stone.idx()], 10);
+        run(&mut w, 30);
+        // 300 ticks a run, 2 sand + 1 stone + 1 water -> 1 concrete: 5 runs.
+        assert_eq!(crate_items(&w, 0, 11, 5), vec![Item::Concrete; 5]);
+        assert_eq!(w.econ.used[Item::Sand.idx()], 10);
+        assert_eq!(w.econ.used[Item::Stone.idx()], 5);
+    }
+
+    #[test]
+    fn a_mixer_makes_reinforced_concrete_from_concrete_rod_and_water() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Pump, Dir::E).unwrap();
+        for x in 6..=8 {
+            w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+        }
+        w.place(0, 9, 5, Kind::Mixer, Dir::E).unwrap();
+        w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+        pick_recipe(&mut w, 9, 5, "reinforced concrete");
+        set_stock(&mut w, 9, 5, Item::Concrete, 5);
+        set_stock(&mut w, 9, 5, Item::IronRod, 3);
+        run(&mut w, 15);
+        // 2 concrete + 1 rod + 1 water each: two made, and one concrete is left over.
+        assert_eq!(crate_items(&w, 0, 11, 5), vec![Item::ReinforcedConcrete; 2]);
+        assert_eq!(w.econ.used[Item::Concrete.idx()], 4);
+        assert_eq!(w.econ.used[Item::IronRod.idx()], 2);
     }
 
     #[test]
@@ -4370,7 +4415,8 @@ mod tests {
         w.place(0, 9, 5, Kind::Mixer, Dir::E).unwrap();
         w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
-        set_stock(&mut w, 9, 5, Item::Stone, 10);
+        set_stock(&mut w, 9, 5, Item::Sand, 10);
+        set_stock(&mut w, 9, 5, Item::Stone, 5);
         run(&mut w, 10);
         assert!(crate_items(&w, 0, 11, 5).is_empty());
         assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"));
@@ -4533,40 +4579,6 @@ mod tests {
     }
 
     #[test]
-    fn machines_for_later_tiers_are_not_in_the_game_yet() {
-        let later = [
-            Kind::BasicAssembler,
-            Kind::AdvancedAssembler,
-            Kind::PrecisionAssembler,
-            Kind::LargeBasicAssembler,
-            Kind::LargeAdvancedAssembler,
-            Kind::Welder,
-            Kind::Kiln,
-            Kind::Mixer,
-            Kind::AdvancedDrill,
-            Kind::LargeBasicDrill,
-            Kind::LargeAdvancedDrill,
-            Kind::AdvancedPump,
-        ];
-        let mut fresh = World::new();
-        let blank = World::blank();
-        // Even with every company open and every tech researched, a normal game can't build them.
-        fresh.econ.money = 1e6;
-        fresh.progress.opened = [true; COMPANIES];
-        fresh.progress.researched = [true; TECHS];
-        for k in later {
-            assert!(!k.in_game(), "{k:?}");
-            assert!(!fresh.progress.part_unlocked(k), "{k:?}");
-            assert!(fresh.check_place(0, 30, 30, k).unwrap_err().contains("locked"), "{k:?}");
-            assert!(blank.check_place(0, 30, 30, k).is_ok(), "tests can place {k:?}");
-        }
-        // The crude assembler is the old assembler: in the game, behind its research.
-        assert!(Kind::CrudeAssembler.in_game());
-        assert_eq!(Kind::CrudeAssembler.tech(), Some(Tech::Assembler));
-        assert!(fresh.check_place(0, 30, 30, Kind::CrudeAssembler).is_ok());
-    }
-
-    #[test]
     fn new_machines_say_whether_they_run_on_ec() {
         for (k, electric) in [
             (Kind::Welder, true),
@@ -4657,6 +4669,41 @@ mod tests {
         run(&mut w, 10);
         run(&mut l, 10);
         assert_eq!(l.econ.sold, w.econ.sold);
+    }
+
+    #[test]
+    fn saves_round_trip_with_the_full_item_list() {
+        let mut w = World::blank();
+        let last = Item::ALL[ITEMS - 1];
+        assert_eq!(last, Item::SteamTractor);
+        assert!(ITEMS > 32, "longer than serde's own array limit");
+        w.econ.made[last.idx()] = 7;
+        w.econ.sold[last.idx()] = 5;
+        w.econ.research_sales[last.idx()] = 3;
+        w.econ.made[Item::Gauge.idx()] = 11;
+        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 8, 5, Kind::LargeAdvancedAssembler, Dir::E).unwrap();
+        set_stock(&mut w, 8, 5, last, 4);
+        set_stock(&mut w, 8, 5, Item::ControlPanel, 2);
+        fill_crate(&mut w, 0, 5, 5, &[last, Item::PumpUnit]);
+        w.progress.researched[Tech::ALL[TECHS - 1].idx()] = true;
+        w.progress.opened[Company::ALL[COMPANIES - 1].idx()] = true;
+        let path = std::env::temp_dir().join(format!("factory-test-items-{}.json", std::process::id()));
+        w.save(&path).unwrap();
+        // The file holds a whole list per item array.
+        let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(json["econ"]["made"].as_array().unwrap().len(), ITEMS);
+        assert_eq!(json["version"], SAVE_VERSION);
+        let l = World::load(&path).unwrap();
+        std::fs::remove_file(&path).ok();
+        assert_eq!((l.econ.made[last.idx()], l.econ.sold[last.idx()], l.econ.research_sales[last.idx()]), (7, 5, 3));
+        assert_eq!(l.econ.made[Item::Gauge.idx()], 11);
+        match &l.tile(0, 8, 5).unwrap().st {
+            St::Crafter { stock, .. } => assert_eq!((stock[last.idx()], stock[Item::ControlPanel.idx()]), (4, 2)),
+            _ => panic!("not a machine"),
+        }
+        assert_eq!(crate_items(&l, 0, 5, 5), vec![last, Item::PumpUnit]);
+        assert!(l.progress.has(Tech::ALL[TECHS - 1]) && l.progress.is_open(Company::ALL[COMPANIES - 1]));
     }
 
     // ---------- the iron and coal step ----------
@@ -4859,18 +4906,23 @@ mod tests {
     }
 
     #[test]
-    fn the_assembler_copies_the_press_at_half_the_time() {
-        for p in PRESS_RECIPES.iter().filter(|p| p.name != "copper plate" && p.name != "iron plate") {
-            let a = CRUDE_RECIPES.iter().find(|a| a.name == p.name).unwrap_or_else(|| panic!("{} missing", p.name));
-            assert_eq!((a.inputs, a.outputs), (p.inputs, p.outputs), "{}", p.name);
-            assert_eq!(a.ticks * 2, p.ticks, "{}", p.name);
-        }
-    }
-
-    #[test]
     fn rolling_mill_rolls_sheets() {
         assert_eq!(run_machine(Kind::RollingMill, "copper sheet", &[(Item::CopperPlate, 4)], 11), vec![Item::CopperSheet; 2]);
         assert_eq!(run_machine(Kind::RollingMill, "iron sheet", &[(Item::IronPlate, 4)], 6), vec![Item::IronSheet; 2]);
+        // Steel: a sheet in 5 s, and 3 steel into 2 girders in 4 s.
+        assert_eq!(run_machine(Kind::RollingMill, "steel sheet", &[(Item::Steel, 2)], 11), vec![Item::SteelSheet; 2]);
+        assert!(run_machine(Kind::RollingMill, "steel sheet", &[(Item::Steel, 1)], 4).is_empty());
+        assert_eq!(run_machine(Kind::RollingMill, "steel girder", &[(Item::Steel, 3)], 5), vec![Item::SteelGirder; 2]);
+        assert!(run_machine(Kind::RollingMill, "steel girder", &[(Item::Steel, 3)], 3).is_empty());
+    }
+
+    #[test]
+    fn the_press_makes_girders_and_hardened_gears_and_no_longer_gearboxes() {
+        assert_eq!(run_machine(Kind::Press, "steel girder", &[(Item::Steel, 4)], 11), vec![Item::SteelGirder; 2]);
+        assert!(run_machine(Kind::Press, "steel girder", &[(Item::Steel, 2)], 4).is_empty(), "5 s a girder");
+        assert_eq!(run_machine(Kind::Press, "hardened gear", &[(Item::HardenedIronPlate, 2)], 6), vec![Item::HardenedGear]);
+        assert!(!recipe_names(Kind::Press).contains(&"gearbox"), "the gearbox moved to the crude assembler");
+        assert!(recipe_names(Kind::CrudeAssembler).contains(&"gearbox"));
     }
 
     #[test]
@@ -4879,6 +4931,15 @@ mod tests {
         assert_eq!(rods, vec![Item::IronRod; 4]);
         let screws = run_machine(Kind::Lathe, "screw", &[(Item::IronRod, 2)], 11);
         assert_eq!(screws, vec![Item::Screw; 8]);
+    }
+
+    #[test]
+    fn lathe_turns_steel_into_rods_then_bearings() {
+        // 5 s for two steel rods; 2.5 s for two bearings from one rod.
+        assert_eq!(run_machine(Kind::Lathe, "steel rod", &[(Item::Steel, 1)], 6), vec![Item::SteelRod; 2]);
+        assert!(run_machine(Kind::Lathe, "steel rod", &[(Item::Steel, 1)], 4).is_empty());
+        assert_eq!(run_machine(Kind::Lathe, "bearing", &[(Item::SteelRod, 2)], 6), vec![Item::Bearing; 4]);
+        assert_eq!(run_machine(Kind::Lathe, "bearing", &[(Item::SteelRod, 1)], 3), vec![Item::Bearing; 2]);
     }
 
     #[test]
@@ -4896,6 +4957,18 @@ mod tests {
             (Kind::Winder, Company::Kettering, Tech::Winder, Item::CopperCoil),
             (Kind::Lathe, Company::Gearwright, Tech::Lathe, Item::IronGear),
             (Kind::RollingMill, Company::Pillar, Tech::RollingMill, Item::SteelGirder),
+            (Kind::Welder, Company::Pillar, Tech::Welder, Item::SteelGirder),
+            (Kind::Mixer, Company::Wellbourne, Tech::Mixer, Item::CopperPipe),
+            (Kind::AdvancedPump, Company::Wellbourne, Tech::AdvancedPump, Item::CopperPipe),
+            (Kind::Kiln, Company::Underhill, Tech::Kiln, Item::Concrete),
+            (Kind::BasicAssembler, Company::Swiftline, Tech::BasicAssembler, Item::Gearbox),
+            (Kind::AdvancedDrill, Company::Ampleworth, Tech::AdvancedDrill, Item::ElectricMotor),
+            (Kind::AdvancedAssembler, Company::Ampleworth, Tech::AdvancedAssembler, Item::ElectricMotor),
+            (Kind::LargeBasicAssembler, Company::Ampleworth, Tech::LargeBasicAssembler, Item::ElectricMotor),
+            (Kind::LargeBasicDrill, Company::Ampleworth, Tech::LargeBasicDrill, Item::ElectricMotor),
+            (Kind::PrecisionAssembler, Company::LatticeFinch, Tech::PrecisionAssembler, Item::ControlBoard),
+            (Kind::LargeAdvancedAssembler, Company::LatticeFinch, Tech::LargeAdvancedAssembler, Item::ControlBoard),
+            (Kind::LargeAdvancedDrill, Company::LatticeFinch, Tech::LargeAdvancedDrill, Item::ControlBoard),
         ];
         for (kind, company, tech, key) in table {
             assert_eq!((kind.company(), kind.tech(), tech.company(), company.key_item()), (Some(company), Some(tech), company, Some(key)));
@@ -4911,6 +4984,7 @@ mod tests {
             w.econ.research = tech.cost();
             w.research(tech).unwrap();
             assert!(w.progress.part_unlocked(kind));
+            w.econ.money = 1e6;
             assert!(w.check_place(0, 30, 30, kind).is_ok(), "{kind:?}");
         }
         // Or the milestone does it for free.
@@ -4925,6 +4999,39 @@ mod tests {
     }
 
     #[test]
+    fn every_machine_can_be_built_once_unlocked() {
+        // Nothing is hidden: every machine is owned by a company and a tech (or is a starter).
+        let mut w = World::new();
+        w.econ.money = 1e6;
+        w.progress.opened = [true; COMPANIES];
+        w.progress.researched = [true; TECHS];
+        for k in Kind::ALL {
+            assert!(w.progress.part_unlocked(k), "{k:?}");
+            assert!(w.check_place(0, 30, 30, k).is_ok(), "{k:?}");
+        }
+        // A new game can build none of the twelve late machines.
+        let fresh = World::new();
+        for k in [
+            Kind::BasicAssembler,
+            Kind::AdvancedAssembler,
+            Kind::PrecisionAssembler,
+            Kind::LargeBasicAssembler,
+            Kind::LargeAdvancedAssembler,
+            Kind::Welder,
+            Kind::Kiln,
+            Kind::Mixer,
+            Kind::AdvancedDrill,
+            Kind::LargeBasicDrill,
+            Kind::LargeAdvancedDrill,
+            Kind::AdvancedPump,
+        ] {
+            assert!(!fresh.progress.part_unlocked(k), "{k:?}");
+            assert!(k.tech().is_some() && k.company().is_some());
+        }
+        assert_eq!(Kind::CrudeAssembler.tech(), Some(Tech::Assembler));
+    }
+
+    #[test]
     fn new_techs_are_priced_by_depth() {
         let copper = [(Tech::Crusher, 150.0), (Tech::Winder, 200.0), (Tech::WireDrawer, 250.0)];
         for (t, cost) in copper {
@@ -4934,18 +5041,40 @@ mod tests {
         for t in [Tech::CokeOven, Tech::Lathe, Tech::RollingMill] {
             assert!((300.0..=1500.0).contains(&t.cost()), "{t:?}");
         }
-        // Every tech sits in the research list and in the tree once.
+        // Steel and stone machines, then motor machines, then processor machines.
+        for t in [Tech::Mixer, Tech::Kiln, Tech::AdvancedPump, Tech::Welder, Tech::BasicAssembler] {
+            assert!((1500.0..=6000.0).contains(&t.cost()), "{t:?}");
+        }
+        for t in [Tech::AdvancedDrill, Tech::AdvancedAssembler, Tech::LargeBasicDrill, Tech::LargeBasicAssembler] {
+            assert!((6000.0..=25_000.0).contains(&t.cost()), "{t:?}");
+            assert_eq!(t.company(), Company::Ampleworth);
+        }
+        for t in [Tech::PrecisionAssembler, Tech::LargeAdvancedDrill, Tech::LargeAdvancedAssembler] {
+            assert!((25_000.0..=100_000.0).contains(&t.cost()), "{t:?}");
+            assert_eq!(t.company(), Company::LatticeFinch);
+        }
+        // Every tech sits in the research list and in the tree once, and has a free milestone.
         for t in Tech::ALL {
             let n: usize = UNLOCK_GROUPS.iter().map(|g| g.1.iter().filter(|x| **x == t).count()).sum();
             assert_eq!(n, 1, "{t:?}");
+            assert!(t.milestone().1 > 0 && !t.about().is_empty());
         }
-        for t in [Tech::Crusher, Tech::Winder, Tech::WireDrawer, Tech::CokeOven, Tech::Lathe, Tech::RollingMill] {
+        for t in Tech::ALL.into_iter().filter(|t| !matches!(t, Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses)) {
             assert!(TREE.iter().any(|(node, _)| *node == Node::Tech(t)), "{t:?} is missing from the tree");
+        }
+        // The tree's links point backwards, and every company's key item is a node.
+        for (i, (_, parent)) in TREE.iter().enumerate() {
+            assert!(parent.map_or(i == 0, |p| p < i), "node {i}");
+        }
+        for c in Company::ALL {
+            if let Some(key) = c.key_item() {
+                assert!(TREE.iter().any(|(n, _)| *n == Node::Key(key)), "{c:?}'s {key:?} is not in the tree");
+            }
         }
     }
 
     /// Which items can be made once these companies are open, taking every tech of an open
-    /// company as researchable (techs can always be bought or earned).
+    /// company as researchable (techs can always be bought or earned). Pumps give water.
     fn makeable(open: &[bool; COMPANIES]) -> ([bool; ITEMS], Vec<Fluid>) {
         let tech_ok = |t: Tech| open[t.company().idx()];
         let kind_ok = |k: Kind| k.company().map_or(true, |c| open[c.idx()]) && k.tech().map_or(true, tech_ok);
@@ -4956,6 +5085,9 @@ mod tests {
             for k in Kind::ALL.into_iter().filter(|k| kind_ok(*k)) {
                 for ore in k.ores() {
                     have[ore.idx()] = true;
+                }
+                if k.is_pump() && !fluids.contains(&Fluid::Water) {
+                    fluids.push(Fluid::Water);
                 }
                 for r in k.recipes().iter().filter(|r| r.needs.map_or(true, tech_ok)) {
                     let ok = r.inputs.iter().all(|(i, _)| have[i.idx()])
@@ -4998,6 +5130,7 @@ mod tests {
                 order.push(c);
             }
         }
+        println!("companies open in this order: {order:?}");
         let stuck: Vec<Company> = Company::ALL.into_iter().filter(|c| !open[c.idx()]).collect();
         assert!(stuck.is_empty(), "these companies can never open: {stuck:?} (opened in order {order:?})");
         let at = |c: Company| order.iter().position(|x| *x == c).unwrap();
@@ -5005,19 +5138,30 @@ mod tests {
         for c in [Company::Ashgrove, Company::Wellbourne, Company::Kettering, Company::Cinderhall] {
             assert!(at(c) < at(Company::Gearwright), "{c:?} before Gearwright");
         }
-        // Gears, girders and gearboxes all need the blast furnace's tech, so Cinderhall first.
-        for c in [Company::Gearwright, Company::Pillar, Company::Underhill, Company::Swiftline] {
+        // Gears, girders and steel all need the blast furnace's tech, so Cinderhall first.
+        for c in [Company::Gearwright, Company::Pillar, Company::Swiftline] {
             assert!(at(Company::Cinderhall) < at(c), "Cinderhall before {c:?}");
         }
+        // Concrete needs the mixer (Wellbourne) and sand from the crusher (Ashgrove).
+        assert!(at(Company::Wellbourne) < at(Company::Underhill) && at(Company::Ashgrove) < at(Company::Underhill));
+        // A gearbox is built in the crude assembler (Gearwright), a motor in the basic one
+        // (Swiftline), a control board in the advanced one (Ampleworth).
+        assert!(at(Company::Gearwright) < at(Company::Swiftline));
+        assert!(at(Company::Swiftline) < at(Company::Ampleworth));
+        assert!(at(Company::Ampleworth) < at(Company::LatticeFinch));
         assert_eq!(Company::Gearwright.key_item(), Some(Item::IronGear));
         assert_eq!(Company::Swiftline.key_item(), Some(Item::Gearbox));
-        // With everything open, every item has a way to be made (concrete waits for the mixer).
+        assert_eq!(Company::Underhill.key_item(), Some(Item::Concrete));
+        assert_eq!(Company::Ampleworth.key_item(), Some(Item::ElectricMotor));
+        assert_eq!(Company::LatticeFinch.key_item(), Some(Item::ControlBoard));
+        // With everything open, every item has a way to be made.
         let (have, fluids) = makeable(&open);
-        for it in Item::ALL.into_iter().filter(|i| *i != Item::Concrete) {
+        for it in Item::ALL {
             assert!(have[it.idx()], "{it:?} can't be made");
         }
-        assert!(fluids.contains(&Fluid::MoltenIron));
+        assert!(fluids.contains(&Fluid::MoltenIron) && fluids.contains(&Fluid::MoltenSteel) && fluids.contains(&Fluid::Water));
     }
+
 
     #[test]
     fn a_company_never_gates_its_own_key_item() {
@@ -5029,5 +5173,450 @@ mod tests {
             let (have, _) = makeable(&open);
             assert!(have[key.idx()], "{key:?} needs {c:?}'s machines");
         }
+    }
+
+    // ---------- the content step: steel, stone, parts and big goods ----------
+
+    /// Like `run_machine`, on a big grid (90 EC) so even the thirsty machines run at full speed.
+    fn run_powered(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Vec<Item> {
+        let mut w = World::blank();
+        big_grid(&mut w, 10, 0, 9);
+        let (x, y) = (12, 12);
+        w.place(0, x, y, kind, Dir::E).unwrap();
+        pick_recipe(&mut w, x, y, recipe);
+        for (item, n) in stock {
+            set_stock(&mut w, x, y, *item, *n);
+        }
+        w.place(0, x + kind.dims(Dir::E).0, y, Kind::Crate, Dir::E).unwrap();
+        assert_eq!(w.ratio_at(0, x, y), 1.0, "{kind:?} is on the grid");
+        run(&mut w, secs);
+        crate_items(&w, 0, x + kind.dims(Dir::E).0, y)
+    }
+
+    /// A blast furnace set to `recipe`, with its stock; molten steel runs into a molder
+    /// (waste into a crate beside it). Returns (steel, waste) after `secs`.
+    fn steel_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize) {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::BlastFurnace, Dir::E).unwrap(); // covers 5-6, 5-6: front is x=7
+        pick_recipe(&mut w, 5, 5, recipe);
+        for (item, n) in stock {
+            set_stock(&mut w, 5, 5, *item, *n);
+        }
+        w.place(0, 7, 5, Kind::Crate, Dir::E).unwrap(); // the waste
+        w.place(0, 7, 6, Kind::Molder, Dir::E).unwrap(); // covers 7-8, 6-7, on the furnace's other front tile
+        pick_recipe(&mut w, 7, 6, "steel");
+        w.place(0, 9, 6, Kind::Crate, Dir::E).unwrap(); // the steel
+        w.place(0, 7, 8, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, secs);
+        (crate_items(&w, 0, 9, 6).iter().filter(|i| **i == Item::Steel).count(), crate_items(&w, 0, 7, 5).iter().filter(|i| **i == Item::Waste).count())
+    }
+
+    #[test]
+    fn the_blast_furnace_makes_steel_four_ways_each_with_its_waste() {
+        let plates = (Item::IronPlate, 2);
+        // 2 iron plate + 1 coke: 10 s of melting, 2.5 s of casting, 1 waste.
+        let route = [
+            ("molten steel", vec![plates, (Item::Coke, 1)], 10, 1),
+            ("molten steel (coal)", vec![plates, (Item::Coal, 2)], 10, 2),
+            ("molten steel (fast)", vec![plates, (Item::Coke, 2)], 5, 2),
+            ("molten steel (fast, coal)", vec![plates, (Item::Coal, 4)], 5, 4),
+        ];
+        for (name, stock, melt, waste) in route {
+            let r = Kind::BlastFurnace.recipes().iter().find(|r| r.name == name).unwrap();
+            assert_eq!(r.ticks as u64, melt * TPS, "{name}");
+            assert_eq!(r.fluid_out, Some((Fluid::MoltenSteel, 1)), "{name}");
+            assert_eq!(r.outputs, &[(Item::Waste, waste as u32)], "{name}");
+            // Still melting just before the time is up, all done (cast, with its waste) a bit after.
+            assert_eq!(steel_route(name, &stock, melt - 1), (0, 0), "{name} early");
+            assert_eq!(steel_route(name, &stock, melt + 1), (0, waste), "{name} waste first, steel still casting");
+            assert_eq!(steel_route(name, &stock, melt + 4), (1, waste), "{name}");
+            // Two batches' worth of stock makes two.
+            let double: Vec<(Item, u32)> = stock.iter().map(|(i, n)| (*i, n * 2)).collect();
+            assert_eq!(steel_route(name, &double, 2 * melt + 4), (2, waste * 2), "{name} twice");
+        }
+        // Without the coke or coal, it waits.
+        assert_eq!(steel_route("molten steel", &[plates], 30), (0, 0));
+        assert_eq!(steel_route("molten steel (fast)", &[plates, (Item::Coke, 1)], 30), (0, 0), "the fast way needs 2 coke");
+        // The old steel recipe is gone.
+        assert!(!recipe_names(Kind::BlastFurnace).contains(&"steel"));
+        // A molder casts 1 molten steel into 1 steel in 2.5 s.
+        assert_eq!(recipe_ticks(Kind::Molder, "steel"), 150);
+        assert_eq!(Item::Steel.price(), 24.0);
+    }
+
+    #[test]
+    fn the_blast_furnace_hardens_plate_with_coke_or_coal() {
+        let out = run_machine(Kind::BlastFurnace, "hardened iron plate", &[(Item::IronPlate, 2), (Item::Coke, 2)], 11);
+        assert_eq!(out, vec![Item::HardenedIronPlate; 2], "5 s each, no waste");
+        assert!(run_machine(Kind::BlastFurnace, "hardened iron plate", &[(Item::IronPlate, 1), (Item::Coke, 1)], 4).is_empty());
+        let out = run_machine(Kind::BlastFurnace, "hardened iron plate (coal)", &[(Item::IronPlate, 2), (Item::Coal, 4)], 11);
+        assert_eq!((count(&out, Item::HardenedIronPlate), count(&out, Item::Waste)), (2, 2));
+        let out = run_machine(Kind::BlastFurnace, "hardened iron plate (coal)", &[(Item::IronPlate, 1), (Item::Coal, 1)], 11);
+        assert!(out.is_empty(), "2 coal each");
+        assert_eq!(Item::HardenedIronPlate.price(), 20.0);
+    }
+
+    /// Every recipe that takes no fluid runs in its machine: a batch of inputs in, its outputs
+    /// out in the recipe's time (assemblers at every tier's speed), with the inputs used up.
+    /// Recipes that give fluid hold it at the front.
+    #[test]
+    fn every_item_recipe_runs_in_its_machine() {
+        let mut checked = 0;
+        for kind in Kind::ALL {
+            for r in kind.recipes().iter().filter(|r| r.fluid_in.is_none()) {
+                let batch = kind.batch();
+                let mut w = World::blank();
+                big_grid(&mut w, 10, 0, 9);
+                let (x, y) = (12, 12);
+                w.place(0, x, y, kind, Dir::E).unwrap();
+                pick_recipe(&mut w, x, y, r.name);
+                for (it, n) in r.inputs {
+                    set_stock(&mut w, x, y, *it, n * batch);
+                }
+                if let Some(f) = r.fuel {
+                    set_stock(&mut w, x, y, f, 10);
+                }
+                let front = x + kind.dims(Dir::E).0;
+                w.place(0, front, y, Kind::Crate, Dir::E).unwrap();
+                // Just short of the recipe's time nothing has come out; shortly after, it all has.
+                for _ in 0..r.ticks - 3 {
+                    w.tick();
+                }
+                assert!(crate_items(&w, 0, front, y).is_empty(), "{kind:?} {} early", r.name);
+                for _ in 0..13 {
+                    w.tick();
+                }
+                let out = crate_items(&w, 0, front, y);
+                for (it, n) in r.outputs {
+                    assert_eq!(count(&out, *it) as u32, n * batch, "{kind:?} {}: {out:?}", r.name);
+                }
+                if let Some((_, n)) = r.fluid_out {
+                    assert_eq!(crafter_fluid(&w, x, y).1, n * batch, "{kind:?} {} holds its fluid", r.name);
+                }
+                for (it, n) in r.inputs {
+                    assert_eq!(w.econ.used[it.idx()] as u32, n * batch, "{kind:?} {} used {it:?}", r.name);
+                }
+                checked += 1;
+            }
+        }
+        assert!(checked > 60, "{checked} recipes checked");
+    }
+
+    #[test]
+    fn welder_parts() {
+        let recipes: [(&str, &[(Item, u32)], Item); 3] = [
+            ("boiler shell", &[(Item::SteelSheet, 1), (Item::Brick, 4)], Item::BoilerShell),
+            ("silo shell", &[(Item::SteelSheet, 3), (Item::Valve, 1)], Item::SiloShell),
+            ("frame", &[(Item::SteelGirder, 2), (Item::Screw, 8)], Item::Frame),
+        ];
+        for (name, stock, out) in recipes {
+            assert_eq!(run_powered(Kind::Welder, name, stock, 11), vec![out], "{name}");
+            assert!(run_powered(Kind::Welder, name, stock, 9).is_empty(), "{name} takes 10 s");
+        }
+    }
+
+    #[test]
+    fn assemblers_build_their_parts_and_the_big_goods() {
+        let t = |k: Kind, name: &str, stock: &[(Item, u32)], out: Item, secs: u64| {
+            assert_eq!(run_powered(k, name, stock, secs), vec![out], "{k:?} {name}");
+        };
+        // Crude: 10 s each.
+        t(Kind::CrudeAssembler, "valve", &[(Item::CopperPipe, 1), (Item::IronGear, 1)], Item::Valve, 11);
+        t(Kind::CrudeAssembler, "gauge", &[(Item::Glass, 1), (Item::Spring, 1), (Item::CopperSheet, 1)], Item::Gauge, 11);
+        t(Kind::CrudeAssembler, "lamp", &[(Item::Glass, 1), (Item::FineWire, 2)], Item::Lamp, 11);
+        t(Kind::CrudeAssembler, "relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], Item::Relay, 11);
+        t(Kind::CrudeAssembler, "gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], Item::Gearbox, 11);
+        // Basic: motors and pistons, 10 s; the crude parts at 5 s.
+        t(Kind::BasicAssembler, "electric motor", &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)], Item::ElectricMotor, 11);
+        t(Kind::BasicAssembler, "piston", &[(Item::SteelRod, 1), (Item::HardenedIronPlate, 1), (Item::Screw, 2)], Item::Piston, 11);
+        t(Kind::BasicAssembler, "valve", &[(Item::CopperPipe, 1), (Item::IronGear, 1)], Item::Valve, 6);
+        // Advanced: control boards, 10 s; motors at 5 s, crude parts at 2.5 s.
+        t(Kind::AdvancedAssembler, "control board", &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)], Item::ControlBoard, 11);
+        t(Kind::AdvancedAssembler, "electric motor", &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)], Item::ElectricMotor, 6);
+        t(Kind::AdvancedAssembler, "gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], Item::Gearbox, 3);
+        // Large basic: 20 s.
+        t(
+            Kind::LargeBasicAssembler,
+            "pump unit",
+            &[(Item::ElectricMotor, 1), (Item::Valve, 2), (Item::SiloShell, 1), (Item::Gauge, 1)],
+            Item::PumpUnit,
+            21,
+        );
+        t(
+            Kind::LargeBasicAssembler,
+            "engine block",
+            &[(Item::Frame, 1), (Item::Piston, 4), (Item::Gearbox, 1), (Item::BoilerShell, 1)],
+            Item::EngineBlock,
+            21,
+        );
+        // Large advanced: the same two at 10 s, then its own: 20 s, 20 s, 40 s and 60 s.
+        t(
+            Kind::LargeAdvancedAssembler,
+            "engine block",
+            &[(Item::Frame, 1), (Item::Piston, 4), (Item::Gearbox, 1), (Item::BoilerShell, 1)],
+            Item::EngineBlock,
+            11,
+        );
+        t(
+            Kind::LargeAdvancedAssembler,
+            "generator",
+            &[(Item::Frame, 1), (Item::ElectricMotor, 2), (Item::Gauge, 1), (Item::ControlBoard, 1)],
+            Item::Generator,
+            21,
+        );
+        t(
+            Kind::LargeAdvancedAssembler,
+            "control panel",
+            &[(Item::ControlBoard, 2), (Item::Lamp, 4), (Item::Gauge, 2), (Item::SteelSheet, 1)],
+            Item::ControlPanel,
+            21,
+        );
+        t(
+            Kind::LargeAdvancedAssembler,
+            "drilling rig",
+            &[(Item::SteelGirder, 4), (Item::Gearbox, 2), (Item::ReinforcedConcrete, 4), (Item::ElectricMotor, 1), (Item::PumpUnit, 1)],
+            Item::DrillingRig,
+            41,
+        );
+        t(
+            Kind::LargeAdvancedAssembler,
+            "steam tractor",
+            &[(Item::EngineBlock, 1), (Item::Frame, 1), (Item::HardenedGear, 4), (Item::ControlPanel, 1), (Item::Generator, 1)],
+            Item::SteamTractor,
+            61,
+        );
+        // Not before their time.
+        assert!(run_powered(Kind::LargeAdvancedAssembler, "steam tractor", &[(Item::EngineBlock, 1), (Item::Frame, 1), (Item::HardenedGear, 4), (Item::ControlPanel, 1), (Item::Generator, 1)], 59).is_empty());
+    }
+
+    #[test]
+    fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
+        let crown = [Item::DrillingRig, Item::SteamTractor];
+        let mut used = [false; ITEMS];
+        for k in Kind::ALL {
+            for r in k.recipes() {
+                for (i, _) in r.inputs {
+                    used[i.idx()] = true;
+                }
+            }
+        }
+        for it in Item::ALL {
+            if it == Item::Waste || crown.contains(&it) {
+                continue;
+            }
+            assert!(used[it.idx()], "{it:?} is an input to nothing");
+        }
+        for c in crown {
+            assert!(!used[c.idx()], "{c:?} is a crown item: only for selling and research");
+        }
+        assert!(!used[Item::Waste.idx()]);
+    }
+
+    #[test]
+    fn recipes_have_at_most_five_kinds_of_input_and_small_ones_three() {
+        for k in Kind::ALL {
+            for r in k.recipes() {
+                let kinds = r.inputs.len() + r.fluid_in.is_some() as usize;
+                assert!(kinds <= 5, "{k:?} {} has {kinds} kinds of input", r.name);
+            }
+        }
+        for r in CRUDE_RECIPES.iter().chain(BASIC_RECIPES) {
+            assert!(r.inputs.len() <= 3, "{} has {} kinds of input", r.name, r.inputs.len());
+        }
+    }
+
+    /// Prints each made item's price against its inputs, and checks that every recipe's
+    /// outputs sell for more than what goes in (waste counts against them).
+    #[test]
+    fn each_step_sells_for_more_than_its_inputs() {
+        let total = |list: &[(Item, u32)]| -> f64 { list.iter().map(|(i, n)| i.price() * *n as f64).sum() };
+        for k in Kind::ALL {
+            for r in k.recipes() {
+                // Molten metal has no price; grit is about yield, not price.
+                if r.outputs.iter().all(|o| o.0 == Item::Waste) || k == Kind::Crusher {
+                    continue;
+                }
+                let (put, got) = (total(r.inputs), total(r.outputs));
+                println!("{:<18} {:<26} in ${put:>8.2}  out ${got:>8.2}", k.name(), r.name);
+                assert!(got > put, "{k:?} {}: ${put} in, ${got} out", r.name);
+            }
+        }
+        // The steel routes: the steel is worth more than the plate, coke and coal behind it.
+        for r in BLAST_RECIPES.iter().filter(|r| r.fluid_out.is_some_and(|f| f.0 == Fluid::MoltenSteel)) {
+            assert!(Item::Steel.price() > total(r.inputs), "{}", r.name);
+        }
+    }
+
+    #[test]
+    fn crown_items_keep_a_high_research_floor() {
+        let crown = [Item::DrillingRig, Item::SteamTractor];
+        let top = Item::ALL.iter().filter(|i| !crown.contains(i)).map(|i| i.curve().floor).fold(0.0, f64::max);
+        for c in crown {
+            let curve = c.curve();
+            assert!(curve.floor > 2.0 * top, "{c:?} floor {} vs the rest's {top}", curve.floor);
+            // However many are sold, each still pays a good share of its worth.
+            assert!(curve.value(1_000_000) >= curve.worth * curve.floor);
+            assert!(curve.value(1_000_000) > 1000.0, "{c:?}");
+            assert!(curve.worth >= 2.0 * c.price(), "{c:?} worth about 2x the price");
+        }
+        assert_eq!((Item::DrillingRig.price(), Item::SteamTractor.price()), (3500.0, 7500.0));
+        // Every new item is worth at least 10 research, and about twice its price.
+        for it in &Item::ALL[28..] {
+            let worth = it.curve().worth;
+            assert!(worth >= 10.0 && (worth == 10.0 || worth == 2.0 * it.price()), "{it:?} worth {worth}");
+        }
+    }
+
+    #[test]
+    fn new_items_have_prices_and_research_curves() {
+        let prices = [
+            (Item::Brick, 1.5),
+            (Item::Glass, 2.0),
+            (Item::SteelRod, 16.0),
+            (Item::Bearing, 12.0),
+            (Item::SteelSheet, 36.0),
+            (Item::HardenedIronPlate, 20.0),
+            (Item::HardenedGear, 65.0),
+            (Item::ReinforcedConcrete, 16.0),
+            (Item::Valve, 50.0),
+            (Item::Gauge, 35.0),
+            (Item::Lamp, 15.0),
+            (Item::Relay, 80.0),
+            (Item::ElectricMotor, 160.0),
+            (Item::Piston, 60.0),
+            (Item::ControlBoard, 170.0),
+            (Item::BoilerShell, 80.0),
+            (Item::SiloShell, 260.0),
+            (Item::Frame, 280.0),
+            (Item::PumpUnit, 900.0),
+            (Item::Generator, 1100.0),
+            (Item::EngineBlock, 1150.0),
+            (Item::ControlPanel, 900.0),
+            (Item::SteamTractor, 7500.0),
+            (Item::DrillingRig, 3500.0),
+            (Item::Steel, 24.0),
+            (Item::SteelGirder, 75.0),
+            (Item::Gearbox, 120.0),
+            (Item::Concrete, 2.0),
+        ];
+        for (item, price) in prices {
+            assert_eq!(item.price(), price, "{item:?}");
+        }
+        assert_eq!(ITEMS, Item::ALL.len());
+        assert_eq!(Item::ALL[28], Item::Brick, "new items go on the end");
+    }
+
+    /// Ore in, motors out: copper (furnace -> molder -> press -> wire drawer -> winder), iron
+    /// (furnace -> molder -> press) into steel (blast furnace -> molder), steel rods and bearings
+    /// (two lathes), and a basic assembler putting it together.
+    #[test]
+    fn a_small_factory_makes_electric_motors_from_ore() {
+        let mut w = World::blank();
+        let crate_with = |w: &mut World, x: i32, y: i32, d: Dir, items: &[Item]| {
+            w.place(0, x, y, Kind::Crate, d).unwrap();
+            fill_crate(w, 0, x, y, items);
+        };
+        let mix = |ore: Item, n: usize, coal: usize| -> Vec<Item> {
+            let mut v = Vec::new();
+            for i in 0..n.max(coal) {
+                if i < coal {
+                    v.push(Item::Coal);
+                }
+                if i < n {
+                    v.push(ore);
+                }
+            }
+            v
+        };
+        // Lays belts along the points (straight runs); the last tile points the way of its run.
+        let lay = |w: &mut World, pts: &[(i32, i32)]| {
+            let last = pts.len() - 2;
+            for (n, pair) in pts.windows(2).enumerate() {
+                let ((x0, y0), (x1, y1)) = (pair[0], pair[1]);
+                let d = if x1 > x0 { Dir::E } else if x1 < x0 { Dir::W } else if y1 > y0 { Dir::S } else { Dir::N };
+                let (dx, dy) = d.delta();
+                let steps = (x1 - x0).abs() + (y1 - y0).abs() + (n == last) as i32;
+                for k in 0..steps {
+                    w.place(0, x0 + dx * k, y0 + dy * k, Kind::Belt, d).unwrap();
+                }
+            }
+        };
+        // Copper line along y = 10.
+        crate_with(&mut w, 5, 10, Dir::E, &mix(Item::CopperOre, 6, 8));
+        w.place(0, 6, 9, Kind::Furnace, Dir::E).unwrap(); // molten copper
+        w.place(0, 9, 10, Kind::Molder, Dir::E).unwrap(); // copper ingots
+        w.place(0, 11, 10, Kind::Press, Dir::E).unwrap(); // copper plate
+        w.place(0, 13, 10, Kind::WireDrawer, Dir::E).unwrap(); // 3 wire a plate
+        w.place(0, 15, 10, Kind::Winder, Dir::E).unwrap(); // coils
+        // Iron line along y = 20.
+        crate_with(&mut w, 5, 20, Dir::E, &mix(Item::IronOre, 9, 8));
+        w.place(0, 6, 19, Kind::Furnace, Dir::E).unwrap();
+        pick_recipe(&mut w, 6, 19, "molten iron");
+        w.place(0, 9, 20, Kind::Molder, Dir::E).unwrap();
+        pick_recipe(&mut w, 9, 20, "iron ingot");
+        w.place(0, 11, 20, Kind::Press, Dir::E).unwrap();
+        pick_recipe(&mut w, 11, 20, "iron plate");
+        w.place(0, 13, 20, Kind::BlastFurnace, Dir::E).unwrap(); // covers 13-14, 20-21
+        pick_recipe(&mut w, 13, 20, "molten steel (coal)");
+        crate_with(&mut w, 13, 19, Dir::S, &[Item::Coal; 6]);
+        crate_with(&mut w, 15, 20, Dir::E, &[]); // the waste
+        w.place(0, 15, 21, Kind::Molder, Dir::E).unwrap(); // covers 15-16, 21-22
+        pick_recipe(&mut w, 15, 21, "steel");
+        w.place(0, 17, 21, Kind::Lathe, Dir::E).unwrap(); // steel rods; covers 17-19, 21-23
+        pick_recipe(&mut w, 17, 21, "steel rod");
+        w.place(0, 20, 22, Kind::Lathe, Dir::E).unwrap(); // bearings; covers 20-22, 22-24
+        pick_recipe(&mut w, 20, 22, "bearing");
+        // The assembler at 30,12 and its three feeds: coils from the north, rods from the
+        // west, bearings from the south. Rods leave the first lathe in turn onto the belt
+        // (20,21) and into the bearing lathe.
+        w.place(0, 30, 12, Kind::BasicAssembler, Dir::E).unwrap();
+        pick_recipe(&mut w, 30, 12, "electric motor");
+        w.place(0, 32, 12, Kind::Crate, Dir::E).unwrap();
+        lay(&mut w, &[(17, 10), (30, 10), (30, 11)]);
+        lay(&mut w, &[(20, 21), (27, 21), (27, 12), (29, 12)]);
+        lay(&mut w, &[(23, 23), (30, 23), (30, 14)]);
+        // Power: poles in a loose grid over everything, and panels beside some of them.
+        let mut poles = Vec::new();
+        for y in (6..=27).step_by(3) {
+            for x in (6..=36).step_by(3) {
+                if w.check_place(0, x, y, Kind::Pole).is_ok() {
+                    w.place(0, x, y, Kind::Pole, Dir::E).unwrap();
+                    poles.push((x, y));
+                }
+            }
+        }
+        let mut panels = 0;
+        'panels: for (px, py) in poles {
+            for (dx, dy) in [(1, 1), (-2, 1), (1, -2), (-2, -2)] {
+                if panels < 10 && w.check_place(0, px + dx, py + dy, Kind::Solar).is_ok() {
+                    w.place(0, px + dx, py + dy, Kind::Solar, Dir::E).unwrap();
+                    panels += 1;
+                    continue 'panels;
+                }
+            }
+        }
+        assert!(panels >= 8, "{panels} panels");
+        // Up to five minutes, but stop as soon as two motors are out.
+        for _ in 0..300 {
+            run(&mut w, 1);
+            if crate_items(&w, 0, 32, 12).len() >= 2 {
+                break;
+            }
+        }
+        let motors = crate_items(&w, 0, 32, 12);
+        let at_asm = match &w.tile(0, 30, 12).unwrap().st {
+            St::Crafter { stock, .. } => [Item::CopperCoil, Item::SteelRod, Item::Bearing].map(|i| stock[i.idx()]),
+            _ => unreachable!(),
+        };
+        let made = [Item::CopperCoil, Item::Steel, Item::SteelRod, Item::Bearing].map(|i| w.econ.made[i.idx()]);
+        assert!(
+            motors.len() >= 2,
+            "motors out: {} (made coil/steel/rod/bearing {made:?}; assembler holds {at_asm:?}, {:?}, EC {})",
+            motors.len(),
+            w.idle_reason(0, idx(30, 12)),
+            w.ratio_at(0, 30, 12)
+        );
+        assert!(motors.iter().all(|i| *i == Item::ElectricMotor));
+        assert!(w.econ.made[Item::Waste.idx()] > 0, "steel left waste behind");
     }
 }

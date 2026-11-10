@@ -245,16 +245,41 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
         // A category is open: its parts by number.
         let mut spans = crumb;
         spans.push(Span::styled(" ›", dim));
-        for (n, slot) in slots(cat).iter().enumerate() {
-            // Each slot shows the kind picked in it (or its first kind).
-            let k = app.selected.filter(|k| slot.contains(k)).unwrap_or(slot[0]);
-            let unlocked = w.progress.part_unlocked(k);
-            let mut st = if unlocked && w.econ.money >= k.cost() { Style::new() } else { dim };
-            if app.selected == Some(k) {
-                st = st.add_modifier(Modifier::REVERSED);
-            }
-            let more = if slot.len() > 1 { "+" } else { "" };
-            spans.push(Span::styled(format!(" {} {}{more} {} ", n + 1, k.name(), price_label(w, k, app.lift_size)), st));
+        // Each slot shows the kind picked in it (or its first kind). If the line is too wide,
+        // the prices go, then the names are cut to share what's left (the numbers always show).
+        let used: usize = spans.iter().map(|s| s.content.chars().count()).sum();
+        let room = (area.width as usize).saturating_sub(used);
+        let entries: Vec<(String, String, Style)> = slots(cat)
+            .iter()
+            .enumerate()
+            .map(|(n, slot)| {
+                let k = app.selected.filter(|k| slot.contains(k)).unwrap_or(slot[0]);
+                let unlocked = w.progress.part_unlocked(k);
+                let mut st = if unlocked && w.econ.money >= k.cost() { Style::new() } else { dim };
+                if app.selected == Some(k) {
+                    st = st.add_modifier(Modifier::REVERSED);
+                }
+                let more = if slot.len() > 1 { "+" } else { "" };
+                (format!("{} {}{more}", n + 1, k.name()), price_label(w, k, app.lift_size), st)
+            })
+            .collect();
+        let width_with = |prices: bool| -> usize { entries.iter().map(|(l, p, _)| 2 + l.chars().count() + if prices { 1 + p.chars().count() } else { 0 }).sum() };
+        let (prices, cut) = if width_with(true) <= room {
+            (true, usize::MAX)
+        } else if width_with(false) <= room {
+            (false, usize::MAX)
+        } else {
+            (false, (room / entries.len().max(1)).saturating_sub(2).max(3))
+        };
+        for (label, price, st) in entries {
+            // A cut name keeps its "+" (more kinds in the slot).
+            let label: String = if label.chars().count() > cut && label.ends_with('+') {
+                label.chars().take(cut.saturating_sub(1)).chain(std::iter::once('+')).collect()
+            } else {
+                label.chars().take(cut).collect()
+            };
+            let text = if prices { format!(" {label} {price} ") } else { format!(" {label} ") };
+            spans.push(Span::styled(text, st));
         }
         Line::from(spans)
     } else {
@@ -446,6 +471,31 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::IronRod => ('!', 153),
         Item::Screw => ('x', 153),
         Item::Spring => ('z', 153),
+        // Steel things are white or pale steel; stone things are red (brick) or glassy blue.
+        Item::Brick => ('b', 167),
+        Item::Glass => ('u', 159),
+        Item::SteelRod => ('!', 255),
+        Item::Bearing => ('O', 255),
+        Item::SteelSheet => ('-', 255),
+        Item::HardenedIronPlate => ('=', 67),
+        Item::HardenedGear => ('g', 67),
+        Item::ReinforcedConcrete => ('C', 246),
+        // Parts, then the big goods (capitals, one colour each).
+        Item::Valve => ('V', 180),
+        Item::Gauge => ('Q', 229),
+        Item::Lamp => ('L', 227),
+        Item::Relay => ('r', 208),
+        Item::ElectricMotor => ('M', 208),
+        Item::Piston => ('P', 252),
+        Item::ControlBoard => ('B', 40),
+        Item::BoilerShell => ('D', 173),
+        Item::SiloShell => ('S', 110),
+        Item::Frame => ('F', 250),
+        Item::PumpUnit => ('U', 45),
+        Item::Generator => ('E', 226),
+        Item::EngineBlock => ('N', 202),
+        Item::ControlPanel => ('T', 77),
+        Item::SteamTractor => ('Y', 220),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -999,24 +1049,45 @@ fn draw_side(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled(format!("  {} back", app.controls.key(Action::Back)), dim),
             ]));
             let mut many = false;
+            // A crowded menu (Create) would push "HERE" off a short sidebar: then only the slot
+            // being used lists all its kinds, and the others show one kind with a "+".
+            let all_kinds: usize = slots(cat).iter().map(|s| s.len()).sum();
+            let collapse = all_kinds + 9 > area.height.saturating_sub(2) as usize;
             for (n, slot) in slots(cat).iter().enumerate() {
                 many |= slot.len() > 1;
-                for (v, k) in slot.iter().enumerate() {
+                let open = !collapse || app.selected.is_some_and(|s| slot.contains(&s));
+                let shown: Vec<Kind> = if open {
+                    slot.to_vec()
+                } else {
+                    let usable = |k: &&Kind| w.progress.part_unlocked(**k);
+                    let pick = app.slot_pick.iter().find(|k| slot.contains(k)).or_else(|| slot.iter().find(usable)).unwrap_or(&slot[0]);
+                    vec![*pick]
+                };
+                for (v, k) in shown.iter().enumerate() {
                     let unlocked = w.progress.part_unlocked(*k);
                     let afford = w.econ.money >= k.cost();
                     let mut st = if unlocked && afford { Style::new() } else { dim };
                     if app.selected == Some(*k) {
                         st = st.add_modifier(Modifier::REVERSED);
                     }
-                    let name = format!("{}{}", k.name(), if k.preview() { "*" } else { "" });
                     let (kw, kh) = dims_of(*k, Dir::E, app.lift_size);
-                    let size = if kw * kh > 1 { format!("{kw}x{kh}") } else { String::new() };
+                    let mut size = if kw * kh > 1 { format!("{kw}x{kh}") } else { String::new() };
                     let price = price_label(w, *k, app.lift_size);
+                    // The name gets 17 columns beside the size, or 21 without it (long names
+                    // say "adv." and lose the size, which the status line and book still give).
+                    let more = if !open && slot.len() > 1 { "+" } else { "" };
+                    let mut name = format!("{}{more}", k.name());
+                    if name.chars().count() > 17 {
+                        name = name.replace("advanced", "adv.");
+                        size.clear();
+                    }
+                    let room = if size.is_empty() { 21 } else { 17 };
+                    let name: String = name.chars().take(room).collect();
                     // The slot's number goes on its first kind; the others sit under it.
                     let tag = if v == 0 { format!(" {} ", n + 1) } else { "   ".to_string() };
                     let mut spans = vec![Span::styled(tag, st.add_modifier(Modifier::BOLD))];
                     spans.extend(swatch(kind_cells(*k, Dir::E, unlocked)));
-                    spans.push(Span::styled(format!(" {:<17}{:>4}{:>7}", name, size, price), st));
+                    spans.push(Span::styled(format!(" {:<room$}{:>w$}{:>7}", name, size, price, w = if size.is_empty() { 0 } else { 4 }), st));
                     lines.push(Line::from(spans));
                 }
             }
@@ -1198,7 +1269,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                     continue;
                 }
                 if w.econ.made[it.idx()] > 0 || matches!(it, Item::CopperOre | Item::Coal | Item::CopperPlate) {
-                    v.push(format!("  {:<13}{:>6.2}", it.name(), w.econ.next_research(it)));
+                    v.push(format!("  {:<19}{:>6.2}", it.name(), w.econ.next_research(it)));
                 }
             }
         }
@@ -1418,7 +1489,7 @@ fn grouped(v: f64) -> String {
 }
 
 /// One row on the research screen: a mark, the name, and what it costs or needs.
-fn tree_row_spans(w: &World, t: Tech, name_w: usize) -> Vec<Span<'static>> {
+fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool) -> Vec<Span<'static>> {
     let rp = w.econ.research;
     let dim = Style::new().fg(Color::DarkGray);
     let ready = Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD);
@@ -1427,7 +1498,8 @@ fn tree_row_spans(w: &World, t: Tech, name_w: usize) -> Vec<Span<'static>> {
     let (mark, ns, status) = if w.progress.has(t) {
         ("✓", done, Span::styled("done", dim))
     } else if !w.progress.is_open(t.company()) {
-        ("·", dim, Span::styled(format!("make {} first", t.requires().map_or("its key item", |i| i.name())), dim))
+        let key = t.requires().map_or("its key item", |i| i.name());
+        ("·", dim, Span::styled(if short { format!("needs {key}") } else { format!("make {key} first") }, dim))
     } else if rp + 1e-9 >= t.cost() {
         ("●", Style::new().add_modifier(Modifier::BOLD), Span::styled(format!("{} RP", grouped(t.cost())), ready))
     } else {
@@ -1522,7 +1594,10 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     let view = (list_bottom - y) as usize;
     let at = lines.iter().position(|l| l.1 == Some(pick)).unwrap_or(0);
     let top = if lines.len() <= view { 0 } else { (at + 2).saturating_sub(view).min(lines.len() - view) };
-    let name_w = if width >= 50 { 18 } else { 15 };
+    // Names are never cut (some are long); narrow rows say "needs X" instead of "make X first".
+    let room = (width - gutter) as usize;
+    let name_w = room.saturating_sub(22).clamp(14, 22);
+    let short = room < 52;
     app.tree_rows.clear();
     for (n, (label, row)) in lines.iter().enumerate().skip(top).take(view) {
         let ly = y + (n - top) as u16;
@@ -1533,7 +1608,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
             spans.push(Span::styled(label.unwrap_or("").to_string(), dim));
         }
         if let Some(i) = row {
-            let mut rs = tree_row_spans(&app.world, rows[*i], name_w);
+            let mut rs = tree_row_spans(&app.world, rows[*i], name_w, short);
             if *i == pick {
                 // The picked row: one even band across the row, colours kept.
                 let used: usize = rs.iter().map(|s| s.content.chars().count()).sum();
@@ -1578,18 +1653,26 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 11] = [
+const CRAFTERS: [Kind; 19] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
     Kind::BlastFurnace,
     Kind::CokeOven,
+    Kind::Kiln,
+    Kind::Mixer,
     Kind::Press,
     Kind::WireDrawer,
     Kind::Winder,
     Kind::RollingMill,
     Kind::Lathe,
+    Kind::Welder,
     Kind::CrudeAssembler,
+    Kind::BasicAssembler,
+    Kind::AdvancedAssembler,
+    Kind::PrecisionAssembler,
+    Kind::LargeBasicAssembler,
+    Kind::LargeAdvancedAssembler,
 ];
 
 /// One plain line on what a machine is for (the inspector and its book page show it).
@@ -1598,14 +1681,26 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Crusher => "grinds ore into grit, which melts further, and stone into sand",
         Kind::Furnace => "melts ore or grit into molten metal, and bakes coal into coke",
         Kind::Molder => "casts molten metal into ingots",
-        Kind::BlastFurnace => "melts iron fast and makes steel; it burns coke and leaves waste",
+        Kind::BlastFurnace => "melts iron fast, makes molten steel and hardened plate from plate and coke or coal; most leave waste",
         Kind::CokeOven => "cooks its own coal into coke: no EC, no fuel, but it leaves waste",
-        Kind::Press => "presses ingots into plates, and plates into wire, pipe, gears and more",
+        Kind::Press => "presses ingots into plates, and plates and steel into wire, pipe, gears and girders",
         Kind::WireDrawer => "draws plate into wire, and wire into fine wire",
         Kind::Winder => "winds wire into coils, and iron rods into springs",
-        Kind::RollingMill => "rolls plate flat into sheets, copper or iron",
-        Kind::Lathe => "turns iron plate into rods, and rods into screws",
-        Kind::CrudeAssembler => "makes any recipe you know, twice as fast",
+        Kind::RollingMill => "rolls plate flat into sheets, and steel into steel sheets and girders",
+        Kind::Lathe => "turns plate into rods and screws, and steel into steel rods and bearings",
+        Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass",
+        Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
+        Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
+        Kind::CrudeAssembler => "builds valves, gauges, lamps, relays and gearboxes",
+        Kind::BasicAssembler => "builds electric motors and pistons, and the crude parts twice as fast",
+        Kind::AdvancedAssembler => "builds control boards (the x1x1, the weakest microprocessor), and everything below faster",
+        Kind::PrecisionAssembler => "builds control boards twice as fast as an advanced one, and takes later chips; nothing below",
+        Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
+        Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",
+        Kind::AdvancedDrill => "a drill on EC: twice a basic drill's ore, no coal",
+        Kind::LargeBasicDrill => "an 8x8 drill: 16x a basic drill's ore, burns 32x the coal",
+        Kind::LargeAdvancedDrill => "an 8x8 drill on EC: 16x an advanced drill's ore",
+        Kind::AdvancedPump => "a pump that gives four times the water",
         _ => return None,
     })
 }
@@ -1735,8 +1830,12 @@ fn equation(r: &Recipe, here: Entry) -> Vec<Seg> {
     let mut out = side(r.inputs);
     out.extend(fluid(r.fluid_in, !r.inputs.is_empty()));
     out.push(seg(arrow, Style::new().fg(Color::Indexed(244))));
+    // A fluid product comes first, then the items (molten steel + waste).
+    out.extend(fluid(r.fluid_out, false));
+    if r.fluid_out.is_some() && !r.outputs.is_empty() {
+        out.push(seg(" + ", Style::new().fg(Color::DarkGray)));
+    }
     out.extend(side(r.outputs));
-    out.extend(fluid(r.fluid_out, !r.outputs.is_empty()));
     out
 }
 
@@ -1747,6 +1846,11 @@ fn recipe_lock(w: &World, k: Kind, r: &Recipe) -> Option<String> {
     } else {
         r.needs.filter(|t| !w.progress.has(*t)).map(|t| format!("needs {}", t.name()))
     }
+}
+
+/// The same recipe (what goes in and out), whatever machine runs it or how fast.
+fn same_recipe(a: &Recipe, b: &Recipe) -> bool {
+    a.name == b.name && a.inputs == b.inputs && a.outputs == b.outputs && a.fluid_in == b.fluid_in && a.fluid_out == b.fluid_out
 }
 
 fn timing(r: &Recipe, made: u32) -> String {
@@ -1804,16 +1908,29 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 segs.push(seg(format!(" {how}"), Style::new()));
                 labelled(&mut out, label(&mut first, "Made by"), GUTTER, segs);
             }
+            // Machines that share a recipe (the assembler ladder) are listed together, with its times.
+            let mut makers: Vec<Vec<(Kind, &'static Recipe)>> = Vec::new();
             for k in CRAFTERS {
                 for r in k.recipes().iter().filter(|r| r.outputs.iter().any(|o| o.0 == item)) {
+                    match makers.iter_mut().find(|g| same_recipe(g[0].1, r)) {
+                        Some(g) => g.push((k, r)),
+                        None => makers.push(vec![(k, r)]),
+                    }
+                }
+            }
+            for group in &makers {
+                for (i, (k, r)) in group.iter().enumerate() {
                     let made = r.outputs.iter().find(|o| o.0 == item).map_or(1, |o| o.1);
-                    let mut segs = vec![link(Entry::Part(k), e), seg(format!("  {}", timing(r, made)), dim)];
-                    if let Some(l) = recipe_lock(w, k, r) {
+                    let mut segs = vec![link(Entry::Part(*k), e), seg(format!("  {}", timing(r, made)), dim)];
+                    if let Some(l) = recipe_lock(w, *k, r) {
                         segs.push(seg(format!("  ({l})"), warn));
                     }
+                    if i + 1 < group.len() {
+                        segs.push(seg(",", dim));
+                    }
                     labelled(&mut out, label(&mut first, "Made by"), GUTTER, segs);
-                    labelled(&mut out, "", EQ, equation(r, e));
                 }
+                labelled(&mut out, "", EQ, equation(group[0].1, e));
             }
             if first {
                 labelled(&mut out, "Made by", GUTTER, vec![seg("nothing yet", dim)]);
@@ -1842,7 +1959,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 labelled(&mut out, label(&mut first, "Used in"), GUTTER, segs);
             }
             let fuel: Option<(Vec<Kind>, &str)> = match item {
-                Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler], "")),
+                Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln], "")),
                 Item::Coke => Some((vec![Kind::BlastFurnace], " (burns twice as long as coal)")),
                 _ => None,
             };
@@ -2088,7 +2205,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     if body.height < 3 || body.width < 10 {
         return;
     }
-    const CELL: usize = 19;
+    const CELL: usize = 22;
     let parts = app.book_entry.is_part();
     let list = Entry::list(&app.book_query, parts);
     let n = list.len().max(1);
@@ -2146,7 +2263,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
                 st = Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD);
             }
             buf.set_string(x, y, glyph.to_string(), gst);
-            buf.set_string(x + 1, y, format!(" {:<w$}", e.name(), w = CELL - 3), st);
+            buf.set_stringn(x + 1, y, format!(" {:<w$}", e.name(), w = CELL - 3), CELL - 2, st);
             app.book_cells.push((Rect::new(x, y, CELL as u16 - 1, 1), e));
             x += CELL as u16;
         }
@@ -2238,6 +2355,9 @@ fn recipe_hint(item: Item) -> String {
         ("blast furnace", BLAST_RECIPES),
         ("coke oven", COKE_OVEN_RECIPES),
         ("crude assembler", CRUDE_RECIPES),
+        ("mixer", MIXER_RECIPES),
+        ("basic assembler", BASIC_RECIPES),
+        ("advanced assembler", ADVANCED_RECIPES),
     ] {
         if let Some(r) = list.iter().find(|r| r.outputs.iter().any(|o| o.0 == item)) {
             let ins: Vec<String> = r.inputs.iter().map(|(it, n)| format!("{n} {}", it.name())).collect();
@@ -2366,6 +2486,11 @@ READING THE MAP
          c concrete  g gear  G gearbox  R drilling rig  i ingot  o stone
          : grit (copper, blue iron) and sand (tan)  ~ fine wire (pale)
          - sheet  ! iron rod  x screw  z spring (iron ones are blue)
+         b brick  u glass  O bearing  C reinforced concrete
+         ! - steel rod and sheet (white)  = g hardened plate, gear (steel blue)
+         V valve  Q gauge  L lamp  r relay  M motor  P piston  B control board
+         D boiler shell  S silo shell  F frame  U pump unit  E generator
+         N engine block  T control panel  Y steam tractor
   Pipes show what they hold: blue water, white steam, orange copper,
          red iron, pale steel (molten) and grey when empty.
 
@@ -2388,8 +2513,13 @@ HOW IT WORKS
   Pumps draw water anywhere on the ground. Pipes join into networks, each holding one fluid.
     Boilers burn coal to turn water into steam (out their front); steam
     engines turn steam into EC, only as much as their grid needs.
-  Blast furnaces burn coke. Steel leaves waste: a trade post set to money
-    takes it for $0.50 each; research posts refuse it and it backs up.
+  Blast furnaces make molten steel (a molder casts it) and hardened plate
+    from plate and coke or coal. Most recipes leave waste: a trade post set
+    to money takes it for $0.50 each; research posts refuse it and it backs up.
+  Assemblers build parts and big goods (crude, basic, advanced, precision,
+    then the large ones). A higher one runs the lower recipes faster. Welders
+    join steel parts and draw EC only while working. Kilns fire 8 at once and
+    burn coal. Mixers take water from a pipe.
   Floors: support beams open +1, excavation opens -1 (ore there is richer).
     Elevators (2x2 to 8x8, +/- to resize) have a door on every open floor;
     f sets each door to load, unload or pass. A car leaves only when full.
@@ -2406,8 +2536,8 @@ HOW IT WORKS
 CONTROLS
   Move ......... arrows / WASD       Lay belts .... Shift+arrows / Shift+WASD
   Build menu ... 1-4 opens a category (1 Create, 2 Transport, 3 EC,
-                 4 Misc); then 1-4 picks a part. Press it again to switch
-                 kind (belt / fast belt / splitter...). ` ~ Esc back.
+                 4 Misc); then a number picks a part (Create has 1-5). Press
+                 it again to switch kind (belt / fast belt...). ` ~ Esc back.
   Place ........ Space / Enter
   Rotate ....... r (output side)     Remove ....... x (full refund)
   Set up ....... f                   Research ..... t
@@ -2542,10 +2672,20 @@ mod tests {
         let t = text(&buf);
         assert!(t.contains("17,687 research") && !t.contains("Upgrades"), "{t}");
         assert!(t.contains("Making        ● Press"), "{t}");
-        assert!(t.contains("make copper wire first") && t.contains("Floors") && t.contains("Belt tunnels"), "{t}");
+        assert!(t.contains("make copper wire first") && t.contains("Belt tunnels") && t.contains("Large adv. drill"), "{t}");
         assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
-        assert!(!t.contains("more "), "{t}");
+        // 32 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
+        assert!(t.contains("more ▼") && !t.contains("Excavation"), "{t}");
+        let tall = text(&render(&mut app, 130, 60));
+        assert!(!tall.contains("more ") && tall.contains("Floors") && tall.contains("Excavation"), "{tall}");
         std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
+        // Going to the last row scrolls it into view, and the top-of-list marker shows.
+        app.tree_pick = tree_rows().len() - 1;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("more ▲") && t.contains("Excavation") && t.contains("Excavation · Transport"), "{t}");
+        std::fs::write("target/snapshot-tree-scrolled.html", to_html(&buf)).unwrap();
+        app.tree_pick = 0;
         // Narrow: group names on their own lines; small: it scrolls, with markers.
         let t = text(&render(&mut app, 60, 50));
         assert!(t.lines().any(|l| l.trim_matches(|c| c == '│' || c == ' ') == "Making"), "{t}");
@@ -2584,7 +2724,7 @@ mod tests {
         let t = text(&buf);
         assert!(t.contains("Made by") && t.contains("Used in") && !t.contains("MADE BY"), "{t}");
         assert!(t.contains("molten copper  ──→  copper ingot"), "a word equation, with the fluid in it: {t}");
-        assert!(t.contains("copper ingot  ──→  copper plate   in Press, Crude assembler"), "{t}");
+        assert!(t.contains("copper ingot  ──→  copper plate   in Press"), "{t}");
         assert!(t.contains("6.0 now, fading to a floor of 0.18") && t.contains("0.18 ┤") && t.contains("← floor"), "{t}");
         std::fs::write("target/snapshot-book.html", to_html(&buf)).unwrap();
 
@@ -2623,11 +2763,16 @@ mod tests {
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("iron ore") && t.contains("stone") && t.contains("half the basic drill's speed"), "{t}");
 
-        // Steel: the waste shows, and it's locked behind the blast furnace.
+        // Steel is cast from molten steel; the blast furnace's page shows the four ways to melt it, with their waste.
         app.book_go(Entry::Item(Item::Steel));
         let t = text(&render(&mut app, 130, 42));
-        assert!(t.contains("3 iron plate  ─coke─→  steel + waste"), "{t}");
-        assert!(t.contains("(needs the blast furnace)"), "{t}");
+        assert!(t.contains("molten steel  ──→  steel") && t.contains("Used in"), "{t}");
+        app.book_go(Entry::Part(Kind::BlastFurnace));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("2 iron plate + coke  ──→  molten steel + waste"), "{t}");
+        assert!(t.contains("2 iron plate + 4 coal  ──→  molten steel + 4 waste"), "{t}");
+        assert!(t.contains("iron plate + coke  ──→  hardened iron plate"), "{t}");
+        std::fs::write("target/snapshot-book-blast.html", to_html(&render(&mut app, 130, 42))).unwrap();
 
         // Search: / then letters filter the grid and jump to the first match; Esc clears it.
         key(&mut app, KeyCode::Char('/'));
@@ -2635,7 +2780,7 @@ mod tests {
             key(&mut app, KeyCode::Char(c));
         }
         assert_eq!(app.book_entry, Entry::Item(Item::IronGear));
-        assert_eq!(Entry::list(&app.book_query, false).len(), 2);
+        assert_eq!(Entry::list(&app.book_query, false).len(), 3, "iron gear, gearbox, hardened gear");
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("search: gear_"), "{t}");
         key(&mut app, KeyCode::Enter);
@@ -2742,7 +2887,7 @@ mod tests {
         app.book = true;
         let buf = render(&mut app, 130, 42);
         let t = text(&buf);
-        assert!(t.contains("costs $0.50 to sell") && t.contains("Never earns research") && t.contains("steel + waste"), "{t}");
+        assert!(t.contains("costs $0.50 to sell") && t.contains("Never earns research") && t.contains("Made by"), "{t}");
         std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
     }
 
@@ -2870,7 +3015,8 @@ mod tests {
 
         app.menu = Some(Category::Create);
         let t = text(&render(&mut app, 64, 16));
-        assert!(t.lines().last().unwrap().contains(" Create › 1 Cheap drill+ $50"), "{t}");
+        let last = t.lines().last().unwrap().to_string();
+        assert!(last.contains(" Create › 1 Cheap") && last.contains("5 Wat") && !last.contains("$50"), "five slots all show their numbers: {last}");
 
         // A picked part: the path to it, its price and facing.
         app.menu = Some(Category::Create);
@@ -3035,7 +3181,7 @@ mod tests {
         w.place(0, x + 26, y3, Kind::Mixer, Dir::E).unwrap();
         // A half-loaded kiln.
         if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[idx(x, y3)].as_mut() {
-            stock[Item::IronIngot.idx()] = 5;
+            stock[Item::Stone.idx()] = 10;
         }
         let mut app = App::new(w);
         app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
@@ -3047,7 +3193,7 @@ mod tests {
         let t = text(&buf);
         assert!(t.contains("LRG BASIC DRILL") && t.contains("LRG ADV DRILL") && t.contains("LRG ASM B") && t.contains("CRD ASM"), "{t}");
         assert!(t.contains("KILN") && t.contains("WELDER") && t.contains("MIXR") && t.contains("PRCASM"), "{t}");
-        assert!(t.contains("Kiln") && t.contains("load 5/8") && t.contains("iron ingot 5/8"), "{t}");
+        assert!(t.contains("Kiln") && t.contains("load 5/8") && t.contains("stone 10/16"), "{t}");
         // A narrow, tall pane.
         app.cam = (x - 2, y - 2);
         app.cursor = (x + 3, y + 3);
@@ -3062,7 +3208,7 @@ mod tests {
         assert!(t.contains("30 EC only while working") && t.contains("drawing 0 EC now"), "{t}");
         app.cursor = (x + 18, y2 + 1);
         let t = text(&render(&mut app, 130, 42));
-        assert!(t.contains("by Gearwright") && t.contains("making heavy gearbox"), "{t}");
+        assert!(t.contains("by Lattice & Finch") && t.contains("making control board"), "{t}");
     }
 
     /// Recipe book pages for the machines that aren't in the book's list yet.
@@ -3071,12 +3217,12 @@ mod tests {
         let mut app = App::new(World::blank());
         let mut shots = Vec::new();
         for (k, wants) in [
-            (Kind::PrecisionAssembler, vec!["Precision assembler", "3 gearbox", "3 copper coil", "$4000 · 3x3", "64 EC"]),
-            (Kind::AdvancedAssembler, vec!["copper ingot  ──→  copper plate", "10 copper wire", "3 gearbox", "16 EC"]),
-            (Kind::LargeAdvancedAssembler, vec!["5 steel girder", "3 drilling rig", "5x5"]),
-            (Kind::Welder, vec!["2 steel girder", "30 EC only while working, none when idle"]),
-            (Kind::Kiln, vec!["iron ingot  ─coal─→  iron plate", "3x5", "fills up for 8 runs, then makes them all at once"]),
-            (Kind::Mixer, vec!["2 stone + 5 water", "2 concrete"]),
+            (Kind::PrecisionAssembler, vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4000 · 3x3", "64 EC"]),
+            (Kind::AdvancedAssembler, vec!["3 iron gear + steel  ──→  gearbox", "2 copper coil + steel rod + 2 bearing  ──→  electric motor", "weakest microprocessor", "16 EC"]),
+            (Kind::LargeAdvancedAssembler, vec!["frame + 2 electric motor + gauge + control board  ──→  generator", "4 steel girder", "steam tractor", "5x5"]),
+            (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
+            (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
+            (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
             (Kind::LargeBasicDrill, vec!["16x a basic drill's ore, burns 32x the coal", "8x8", "front edge"]),
             (Kind::LargeAdvancedDrill, vec!["16x an advanced drill's ore", "128 EC, no coal"]),
             (Kind::AdvancedDrill, vec!["2x a basic drill's ore", "EC, no coal", "4x4"]),
@@ -3329,7 +3475,7 @@ mod tests {
         assert!(t.lines().last().unwrap().contains("Create › Lathe  $200  3x3  facing"), "{t}");
         app.selected = None;
         let buf = render(&mut app, 60, 20);
-        assert!(text(&buf).lines().last().unwrap().contains("Create › 1 Cheap drill+"), "{}", text(&buf));
+        assert!(text(&buf).lines().last().unwrap().contains("Create › 1 Cheap"), "{}", text(&buf));
         std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
     }
 
@@ -3376,5 +3522,96 @@ mod tests {
             assert!(cell.0 != ' ' && !seen.contains(&cell), "{it:?} looks blank or like another item");
             seen.push(cell);
         }
+    }
+
+    /// The content step's screens at every size: the crowded Create menu, the long research
+    /// list, the recipe book and the production panel.
+    #[test]
+    fn content_step_screens_fit_every_size() {
+        let mut w = World::new();
+        w.econ.money = 1e6;
+        w.progress.opened = [true; COMPANIES];
+        w.progress.researched = [true; TECHS];
+        for it in Item::ALL {
+            w.econ.made[it.idx()] = 3;
+        }
+        let mut app = App::new(w);
+        app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+        app.menu = Some(Category::Create);
+        // A tall sidebar lists every machine, five numbered groups.
+        let buf = render(&mut app, 130, 46);
+        let t = text(&buf);
+        for name in ["Large basic drill", "Mixer", "Kiln", "Welder", "Large adv. assembler", "Advanced pump", "Precision assembler"] {
+            assert!(t.contains(name), "{name}: {t}");
+        }
+        assert!(t.contains(" 5 ") && t.contains("HERE"), "{t}");
+        assert!(t.lines().all(|l| !l.contains("│ ") || l.chars().count() <= 130));
+        std::fs::write("target/snapshot-create-menu.html", to_html(&buf)).unwrap();
+        // A short one folds the groups to one kind each, so HERE stays on screen.
+        let buf = render(&mut app, 130, 32);
+        let t = text(&buf);
+        assert!(t.contains("Cheap drill+") && t.contains("Water pump+") && t.contains("HERE"), "{t}");
+        assert!(!t.contains("Large basic drill"), "folded: {t}");
+        std::fs::write("target/snapshot-create-menu-short.html", to_html(&buf)).unwrap();
+        // Holding a part opens its own group.
+        app.selected = Some(Kind::Welder);
+        let t = text(&render(&mut app, 130, 32));
+        assert!(t.contains("Precision assembler") && t.contains("Welder") && t.contains("HERE"), "{t}");
+        app.selected = None;
+        // Small panes: the bottom line keeps all five numbers.
+        for width in [50, 64, 90] {
+            let buf = render(&mut app, width, 20);
+            let t = text(&buf);
+            let last = t.lines().last().unwrap();
+            assert!(last.contains("5 W"), "{width}: {last}");
+            std::fs::write(format!("target/snapshot-create-menu-{width}.html"), to_html(&buf)).unwrap();
+        }
+        app.menu = None;
+
+        // The research list at ~50 columns: names whole, status short, scrolls to the end.
+        app.world.progress = Progress::default();
+        app.tree = true;
+        app.tree_pick = tree_rows().len() - 1;
+        let buf = render(&mut app, 50, 40);
+        let t = text(&buf);
+        assert!(t.contains("Excavation") && t.contains("Floors"), "{t}");
+        app.tree_pick = tree_rows().iter().position(|x| *x == Tech::LargeAdvancedAssembler).unwrap();
+        let buf = render(&mut app, 50, 40);
+        let t = text(&buf);
+        assert!(t.contains("Large adv. assembler") && t.contains("needs control board"), "{t}");
+        std::fs::write("target/snapshot-tree-50.html", to_html(&buf)).unwrap();
+        let buf = render(&mut app, 130, 42);
+        std::fs::write("target/snapshot-tree-130.html", to_html(&buf)).unwrap();
+        app.tree = false;
+
+        // The recipe book: every item and machine listed, narrow too.
+        app.book = true;
+        app.book_go(Entry::Item(Item::ControlBoard));
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        assert!(t.contains("Advanced assembler") && t.contains("Precision assembler") && t.contains("Made by"), "{t}");
+        assert!(t.contains("reinforced concrete") && t.contains("hardened iron plate"), "long names show whole: {t}");
+        std::fs::write("target/snapshot-book-items.html", to_html(&buf)).unwrap();
+        let buf = render(&mut app, 50, 40);
+        std::fs::write("target/snapshot-book-items-50.html", to_html(&buf)).unwrap();
+        app.book_go(Entry::Item(Item::Gearbox));
+        let buf = render(&mut app, 130, 42);
+        assert!(text(&buf).contains("Crude assembler  10.0s"), "{}", text(&buf));
+        std::fs::write("target/snapshot-book-gearbox.html", to_html(&buf)).unwrap();
+        app.book_go(Entry::Part(Kind::LargeAdvancedAssembler));
+        let buf = render(&mut app, 50, 40);
+        std::fs::write("target/snapshot-book-machine-50.html", to_html(&buf)).unwrap();
+        // Every machine has a page.
+        for k in BOOK_PARTS {
+            assert!(Entry::list("", true).contains(&Entry::Part(k)));
+        }
+        assert_eq!(Entry::list("", true).len(), BOOK_PARTS.len());
+        app.book = false;
+
+        // The production panel with every item made.
+        app.stats = true;
+        let buf = render(&mut app, 130, 42);
+        assert!(text(&buf).contains("Production"));
+        std::fs::write("target/snapshot-production-all.html", to_html(&buf)).unwrap();
     }
 }

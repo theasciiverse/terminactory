@@ -217,6 +217,8 @@ pub fn gift_note(c: Company) -> &'static str {
         Company::Underhill => "Underhill dug up a tin of coins and sent it with a cheerful note.",
         Company::Gearwright => "Gearwright sent a payment accurate to the penny.",
         Company::Swiftline => "Swiftline couriered a bonus. It arrived before they posted it.",
+        Company::Ampleworth => "Ampleworth sent a payment in a small crate. The crate hums faintly.",
+        Company::LatticeFinch => "Lattice & Finch sent a cheque, and a note on the correct way to fold it.",
     }
 }
 
