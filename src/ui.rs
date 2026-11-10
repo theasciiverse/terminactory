@@ -436,6 +436,16 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::CopperIngot => ('i', 209),
         Item::IronIngot => ('i', 153),
         Item::Stone => ('o', 245),
+        // Powders are ':' in their ore's colour (sand is tan); sheets '-', rods '!', screws 'x', springs 'z'.
+        Item::CopperGrit => (':', 209),
+        Item::IronGrit => (':', 111),
+        Item::Sand => (':', 187),
+        Item::FineWire => ('~', 223),
+        Item::CopperSheet => ('-', 220),
+        Item::IronSheet => ('-', 153),
+        Item::IronRod => ('!', 153),
+        Item::Screw => ('x', 153),
+        Item::Spring => ('z', 153),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -471,6 +481,12 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::LongArm => (PAPER, 97),
         Kind::Sorter => (INK, 37),
         Kind::Warehouse => (INK, 136),
+        Kind::CokeOven => (PAPER, 95),
+        Kind::Crusher => (PAPER, 65),
+        Kind::WireDrawer => (INK, 174),
+        Kind::Winder => (INK, 152),
+        Kind::RollingMill => (INK, 187),
+        Kind::Lathe => (PAPER, 30),
     }
 }
 
@@ -511,6 +527,12 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::LongArm => ('L', a),
         Kind::Sorter => ('S', a),
         Kind::Warehouse => ('W', 'H'),
+        Kind::CokeOven => ('C', 'K'),
+        Kind::Crusher => ('C', 'R'),
+        Kind::WireDrawer => ('W', 'D'),
+        Kind::Winder => ('W', 'N'),
+        Kind::RollingMill => ('R', 'M'),
+        Kind::Lathe => ('L', 'T'),
     };
     let st = part_style(kind, on, None);
     [(c0, st), (c1, st)]
@@ -546,6 +568,15 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         }
         rows.into_iter().map(|r| r.into_iter().collect()).collect()
     };
+    // Long machines (2x1) facing east or west; a 1-wide column facing north or south.
+    let strip = |name: &str| -> Vec<String> {
+        match dir {
+            Dir::E => vec![format!("{name}{tag}{a}")],
+            Dir::W => vec![format!("{a}{tag}{name}")],
+            Dir::N => vec![format!("{a}{tag}"), name.into()],
+            Dir::S => vec![name.into(), format!("{a}{tag}")],
+        }
+    };
     match kind {
         Kind::Belt => vec![format!("{a}{a}")],
         Kind::Splitter => vec!["SP".into()],
@@ -555,13 +586,13 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::BasicDrill => labelled("DRL2"),
         Kind::Furnace => labelled("FURN"),
         Kind::Molder => labelled("MOLD"),
-        // 2x1 facing east or west; a 1-wide column facing north or south.
-        Kind::Press => match dir {
-            Dir::E => vec![format!("PR{tag}{a}")],
-            Dir::W => vec![format!("{a}{tag}PR")],
-            Dir::N => vec![format!("{a}{tag}"), "PR".into()],
-            Dir::S => vec!["PR".into(), format!("{a}{tag}")],
-        },
+        Kind::Press => strip("PR"),
+        Kind::WireDrawer => strip("WD"),
+        Kind::Winder => strip("WN"),
+        Kind::CokeOven => labelled("COKE"),
+        Kind::Crusher => labelled("CRSH"),
+        Kind::RollingMill => labelled("ROLL"),
+        Kind::Lathe => labelled("LATHE"),
         Kind::Elevator => labelled("LIFT"),
         Kind::Solar => vec!["SOLR".into(), "    ".into()],
         // A small pylon, not a block.
@@ -1031,6 +1062,9 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             }
         }
     }
+    if let Some(t) = blurb(b.kind) {
+        v.push(t.to_string());
+    }
     match &b.st {
         St::Drill { mines, fuel, coal, out, .. } => {
             v.push(format!("mining {}", mines.map_or("nothing", |it| it.name())));
@@ -1485,7 +1519,37 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 5] = [Kind::Furnace, Kind::Molder, Kind::Press, Kind::BlastFurnace, Kind::Assembler];
+const CRAFTERS: [Kind; 11] = [
+    Kind::Crusher,
+    Kind::Furnace,
+    Kind::Molder,
+    Kind::BlastFurnace,
+    Kind::CokeOven,
+    Kind::Press,
+    Kind::WireDrawer,
+    Kind::Winder,
+    Kind::RollingMill,
+    Kind::Lathe,
+    Kind::Assembler,
+];
+
+/// One plain line on what a machine is for (the inspector and its book page show it).
+fn blurb(kind: Kind) -> Option<&'static str> {
+    Some(match kind {
+        Kind::Crusher => "grinds ore into grit, which melts further, and stone into sand",
+        Kind::Furnace => "melts ore or grit into molten metal, and bakes coal into coke",
+        Kind::Molder => "casts molten metal into ingots",
+        Kind::BlastFurnace => "melts iron fast and makes steel; it burns coke and leaves waste",
+        Kind::CokeOven => "cooks its own coal into coke: no EC, no fuel, but it leaves waste",
+        Kind::Press => "presses ingots into plates, and plates into wire, pipe, gears and more",
+        Kind::WireDrawer => "draws plate into wire, and wire into fine wire",
+        Kind::Winder => "winds wire into coils, and iron rods into springs",
+        Kind::RollingMill => "rolls plate flat into sheets, copper or iron",
+        Kind::Lathe => "turns iron plate into rods, and rods into screws",
+        Kind::Assembler => "makes any recipe you know, twice as fast",
+        _ => return None,
+    })
+}
 const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
@@ -1700,7 +1764,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let mut uses: Vec<(&'static Recipe, Vec<Kind>)> = Vec::new();
             for k in CRAFTERS {
                 for r in k.recipes().iter().filter(|r| r.inputs.iter().any(|i| i.0 == item)) {
-                    match uses.iter_mut().find(|u| u.0.name == r.name) {
+                    match uses.iter_mut().find(|u| u.0.name == r.name && u.0.inputs == r.inputs && u.0.outputs == r.outputs && u.0.fluid_out == r.fluid_out) {
                         Some(u) => u.1.push(k),
                         None => uses.push((r, vec![k])),
                     }
@@ -1801,6 +1865,9 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 segs
             };
             labelled(&mut out, "Status", GUTTER, status);
+            if let Some(t) = blurb(k) {
+                labelled(&mut out, "About", GUTTER, vec![seg(t, Style::new())]);
+            }
 
             match k {
                 Kind::Drill | Kind::BasicDrill => {
@@ -2081,7 +2148,13 @@ fn capitalise(s: &str) -> String {
 
 /// Where a key item comes from.
 fn recipe_hint(item: Item) -> String {
-    for (machine, list) in [("press", PRESS_RECIPES), ("furnace", FURNACE_RECIPES), ("blast furnace", BLAST_RECIPES), ("assembler", ASSEMBLER_RECIPES)] {
+    for (machine, list) in [
+        ("press", PRESS_RECIPES),
+        ("furnace", FURNACE_RECIPES),
+        ("blast furnace", BLAST_RECIPES),
+        ("coke oven", COKE_OVEN_RECIPES),
+        ("assembler", ASSEMBLER_RECIPES),
+    ] {
         if let Some(r) = list.iter().find(|r| r.outputs.iter().any(|o| o.0 == item)) {
             let ins: Vec<String> = r.inputs.iter().map(|(it, n)| format!("{n} {}", it.name())).collect();
             let need = r.needs.map_or(String::new(), |t| format!(", needs {}", t.name()));
@@ -2198,8 +2271,8 @@ fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {
     let text = "\
 READING THE MAP
   Coloured blocks are buildings, labelled with their name. Production is
-  big (2x2 or 3x3), belts / splitters / arms / crates are 1x1. Presses and
-  pumps are long (2x1, 1x2) and turn with the rotate key.
+  big (2x2 or 3x3), belts / splitters / arms / crates are 1x1. Presses, wire
+  drawers, winders and pumps are long (2x1, 1x2) and turn with rotate (r).
   The arrow on a building's edge is its output side; machines also show a
   letter for what they make. A grey block is idle.
   Arrows are belts; items ride on them. Point at anything to see what it is.
@@ -2207,6 +2280,8 @@ READING THE MAP
   Items: o copper ore  * coal  = plate  ~ wire  0 pipe  @ coil  # coke
          o iron ore (blue)  = iron plate (blue)  % steel  , waste  H girder
          c concrete  g gear  G gearbox  R drilling rig  i ingot  o stone
+         : grit (copper, blue iron) and sand (tan)  ~ fine wire (pale)
+         - sheet  ! iron rod  x screw  z spring (iron ones are blue)
   Pipes show what they hold: blue water, white steam, orange copper,
          red iron, pale steel (molten) and grey when empty.
 
@@ -2216,7 +2291,10 @@ HOW IT WORKS
   Drills burn coal; a drill on coal fuels itself. Cheap ones cut iron slower.
   Furnaces melt ore into molten metal and push it out the front, into a pipe
     or straight into a molder. Molders cast it into ingots (EC); presses
-    make plates from ingots. Machines make whatever recipe they're set to
+    make plates from ingots. Crushers grind ore into grit that melts further;
+    a coke oven bakes its own coal (no EC) and leaves waste. Wire drawers,
+    winders, rolling mills and lathes shape plates into wire, coils, sheets,
+    rods, screws and springs. Machines make whatever recipe they're set to
     (f changes it). A pipe network holds one fluid. A machine with two
     outputs waits (FULL) until both have room.
   Belts, splitters, arms, molders and presses need EC (electric charge).
@@ -2993,5 +3071,132 @@ mod tests {
         s.push_str("</pre></body></html>");
         s
     }
-}
 
+    /// The iron and coal machines on the map: facing east, and the long ones facing north,
+    /// each running, with the build menu and a narrow view.
+    #[test]
+    fn new_machines_snapshot() {
+        let mut w = World::blank();
+        let stock = |w: &mut World, x: i32, y: i32, items: &[(Item, u32)]| {
+            let a = idx(x, y);
+            if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[a].as_mut() {
+                for (item, n) in items {
+                    stock[item.idx()] = *n;
+                }
+            }
+        };
+        let (x, y) = (52, 36);
+        // Facing east: crusher, coke oven, rolling mill, lathe, then the two long ones.
+        w.place(0, x, y, Kind::Crusher, Dir::E).unwrap();
+        stock(&mut w, x, y, &[(Item::CopperOre, 5)]);
+        w.place(0, x + 4, y, Kind::CokeOven, Dir::E).unwrap();
+        stock(&mut w, x + 4, y, &[(Item::Coal, 8)]);
+        w.place(0, x + 8, y, Kind::RollingMill, Dir::E).unwrap();
+        w.configure(0, x + 8, y);
+        stock(&mut w, x + 8, y, &[(Item::IronPlate, 8)]);
+        w.place(0, x + 12, y, Kind::Lathe, Dir::E).unwrap();
+        stock(&mut w, x + 12, y, &[(Item::IronPlate, 8)]);
+        w.place(0, x + 17, y, Kind::WireDrawer, Dir::E).unwrap();
+        stock(&mut w, x + 17, y, &[(Item::CopperPlate, 4)]);
+        w.place(0, x + 17, y + 2, Kind::Winder, Dir::E).unwrap();
+        stock(&mut w, x + 17, y + 2, &[(Item::CopperWire, 9)]);
+        // Facing north, south and west.
+        w.place(0, x, y + 7, Kind::WireDrawer, Dir::N).unwrap();
+        w.place(0, x + 2, y + 7, Kind::Winder, Dir::N).unwrap();
+        w.place(0, x + 4, y + 7, Kind::Crusher, Dir::N).unwrap();
+        w.place(0, x + 7, y + 7, Kind::CokeOven, Dir::N).unwrap();
+        w.place(0, x + 10, y + 7, Kind::RollingMill, Dir::N).unwrap();
+        w.place(0, x + 13, y + 7, Kind::Lathe, Dir::N).unwrap();
+        w.place(0, x + 18, y + 7, Kind::WireDrawer, Dir::W).unwrap();
+        w.place(0, x + 18, y + 9, Kind::Winder, Dir::S).unwrap();
+        for sx in [x + 5, x + 8, x + 16] {
+            w.place(0, sx, y + 3, Kind::Solar, Dir::E).unwrap();
+        }
+        w.place(0, x + 3, y + 4, Kind::Pole, Dir::E).unwrap();
+        w.place(0, x + 12, y + 4, Kind::Pole, Dir::E).unwrap();
+        w.place(0, x + 14, y + 4, Kind::Pole, Dir::E).unwrap();
+        for _ in 0..TPS * 4 {
+            w.tick();
+        }
+        let mut app = App::new(w);
+        app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+        app.cursor = (x + 1, y + 1);
+        app.cam = (x - 4, y - 3);
+        app.cam_ready = true;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        for name in ["CRSH", "COKE", "ROLL", "LATHE", "WD", "WN"] {
+            assert!(t.contains(name), "{name}: {t}");
+        }
+        // The inspector says what the crusher is for and what it's making.
+        assert!(t.contains("Crusher") && t.contains("grinds ore into grit") && t.contains("making copper grit"), "{t}");
+        std::fs::write("target/snapshot-new-machines.html", to_html(&buf)).unwrap();
+
+        // The build menu: every new machine sits under its group's number.
+        app.menu = Some(Category::Create);
+        app.selected = Some(Kind::Lathe);
+        app.dir = Dir::E;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        for name in ["Crusher", "Coke oven", "Wire drawer", "Winder", "Rolling mill", "Lathe", "Assembler"] {
+            assert!(t.contains(name), "{name}: {t}");
+        }
+        std::fs::write("target/snapshot-new-machines-menu.html", to_html(&buf)).unwrap();
+        // Narrow and tall: the map still reads, and the menu is one line.
+        app.cursor = (x + 13, y + 1);
+        app.cam = (x + 6, y - 3);
+        let buf = render(&mut app, 44, 40);
+        std::fs::write("target/snapshot-new-machines-narrow.html", to_html(&buf)).unwrap();
+        let t = text(&render(&mut app, 60, 20));
+        assert!(t.lines().last().unwrap().contains("Create › Lathe  $200  3x3  facing"), "{t}");
+        app.selected = None;
+        let buf = render(&mut app, 60, 20);
+        assert!(text(&buf).lines().last().unwrap().contains("Create › 1 Cheap drill+"), "{}", text(&buf));
+        std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
+    }
+
+    /// The new machines and items have book pages that link to each other.
+    #[test]
+    fn book_pages_for_the_new_machines_and_items() {
+        let mut app = App::new(World::blank());
+        app.book = true;
+        app.book_go(Entry::Part(Kind::Lathe));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("About") && t.contains("iron plate  ──→  2 iron rod") && t.contains("iron rod  ──→  4 screw"), "{t}");
+        assert!(t.contains("5.0s · 24/min") && t.contains("$200 · 3x3 · from Gearwright"), "{t}");
+        std::fs::write("target/snapshot-book-lathe.html", to_html(&render(&mut app, 130, 42))).unwrap();
+        std::fs::write("target/snapshot-book-lathe-narrow.html", to_html(&render(&mut app, 60, 40))).unwrap();
+        app.book_go(Entry::Part(Kind::CokeOven));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("2 coal  ──→  coke + waste") && t.contains("no EC, no fuel"), "{t}");
+        // An item page: where the screw comes from, and what a spring needs.
+        app.book_go(Entry::Item(Item::Screw));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $4"), "{t}");
+        app.book_go(Entry::Item(Item::Coal));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("7 coal  ──→  2 coke + 3 waste") && t.contains("2 coal  ──→  coke + waste"), "{t}");
+        // Furnace and blast furnace melt iron differently: both show on the iron ore page.
+        app.book_go(Entry::Item(Item::IronOre));
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("3 iron ore  ─coal─→  2 molten iron") && t.contains("iron ore  ─coke─→  molten iron"), "{t}");
+        app.book_go(Entry::Item(Item::Spring));
+        std::fs::write("target/snapshot-book-spring.html", to_html(&render(&mut app, 130, 42))).unwrap();
+        // The research list has the new machines, locked behind their key items.
+        app.book = false;
+        app.world = World::new();
+        app.tree = true;
+        app.tree_pick = tree_rows().iter().position(|t| *t == Tech::Crusher).unwrap();
+        let t = text(&render(&mut app, 130, 42));
+        assert!(t.contains("Crusher · Create") && t.contains("Make copper wire once"), "{t}");
+        std::fs::write("target/snapshot-tree-new.html", to_html(&render(&mut app, 130, 42))).unwrap();
+        std::fs::write("target/snapshot-tree-new-narrow.html", to_html(&render(&mut app, 50, 34))).unwrap();
+        // Every item has its own glyph and colour.
+        let mut seen: Vec<(char, Style)> = Vec::new();
+        for it in Item::ALL {
+            let cell = item_cell(it, GROUND);
+            assert!(cell.0 != ' ' && !seen.contains(&cell), "{it:?} looks blank or like another item");
+            seen.push(cell);
+        }
+    }
+}

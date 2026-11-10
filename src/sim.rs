@@ -197,6 +197,12 @@ pub enum Kind {
     Sorter,
     Warehouse,
     Molder,
+    CokeOven,
+    Crusher,
+    WireDrawer,
+    RollingMill,
+    Lathe,
+    Winder,
 }
 
 #[cfg(test)]
@@ -207,9 +213,10 @@ thread_local! {
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
     #[cfg_attr(not(test), allow(dead_code))]
-    pub const ALL: [Kind; 24] = [
+    pub const ALL: [Kind; 30] = [
         Kind::Drill,
         Kind::BasicDrill,
+        Kind::Crusher,
         Kind::Belt,
         Kind::FastBelt,
         Kind::Tunnel,
@@ -224,6 +231,11 @@ impl Kind {
         Kind::Molder,
         Kind::Press,
         Kind::BlastFurnace,
+        Kind::CokeOven,
+        Kind::WireDrawer,
+        Kind::Winder,
+        Kind::RollingMill,
+        Kind::Lathe,
         Kind::Assembler,
         Kind::Crate,
         Kind::Solar,
@@ -241,6 +253,12 @@ impl Kind {
             | Kind::Furnace
             | Kind::Molder
             | Kind::BlastFurnace
+            | Kind::CokeOven
+            | Kind::Crusher
+            | Kind::WireDrawer
+            | Kind::RollingMill
+            | Kind::Lathe
+            | Kind::Winder
             | Kind::Press
             | Kind::Assembler
             | Kind::Pump
@@ -280,6 +298,12 @@ impl Kind {
             Kind::LongArm => "Long arm",
             Kind::Sorter => "Filter splitter",
             Kind::Warehouse => "Warehouse",
+            Kind::CokeOven => "Coke oven",
+            Kind::Crusher => "Crusher",
+            Kind::WireDrawer => "Wire drawer",
+            Kind::RollingMill => "Rolling mill",
+            Kind::Lathe => "Lathe",
+            Kind::Winder => "Winder",
         }
     }
     /// Price at the default size (elevators cost more the bigger they are: see `price`).
@@ -309,6 +333,12 @@ impl Kind {
             Kind::LongArm => 250.0,
             Kind::Sorter => 60.0,
             Kind::Warehouse => 300.0,
+            Kind::CokeOven => 150.0,
+            Kind::Crusher => 250.0,
+            Kind::WireDrawer => 250.0,
+            Kind::RollingMill => 400.0,
+            Kind::Lathe => 200.0,
+            Kind::Winder => 200.0,
         }
     }
     /// Price at a given size: elevators cost $75 per tile they cover.
@@ -324,13 +354,16 @@ impl Kind {
     /// Elevators can be built from 2x2 up to 8x8 (this is their smallest).
     pub fn base_dims(self) -> (i32, i32) {
         match self {
-            Kind::Furnace | Kind::TradePost | Kind::Assembler => (3, 3),
-            Kind::Press => (2, 1),
+            Kind::Furnace | Kind::TradePost | Kind::Assembler | Kind::Lathe => (3, 3),
+            Kind::Press | Kind::WireDrawer | Kind::Winder => (2, 1),
             Kind::Pump => (1, 2),
             Kind::Drill
             | Kind::BasicDrill
             | Kind::Molder
             | Kind::BlastFurnace
+            | Kind::CokeOven
+            | Kind::Crusher
+            | Kind::RollingMill
             | Kind::Solar
             | Kind::Elevator
             | Kind::Boiler
@@ -360,6 +393,10 @@ impl Kind {
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
             Kind::Press => 3.0,
             Kind::Assembler => 5.0,
+            Kind::Crusher => 6.0,
+            Kind::WireDrawer | Kind::Lathe => 4.0,
+            Kind::RollingMill => 8.0,
+            Kind::Winder => 2.0,
             Kind::Arm => 10.0,
             Kind::LongArm => 15.0,
             _ => 0.0,
@@ -392,8 +429,11 @@ impl Kind {
             Kind::Drill => Some(Company::Hollowmere),
             Kind::BasicDrill => Some(Company::Ashgrove),
             Kind::Pipe | Kind::Pump => Some(Company::Wellbourne),
-            Kind::BlastFurnace => Some(Company::Cinderhall),
-            Kind::Boiler | Kind::SteamEngine => Some(Company::Kettering),
+            Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
+            Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder => Some(Company::Kettering),
+            Kind::Crusher => Some(Company::Ashgrove),
+            Kind::Lathe => Some(Company::Gearwright),
+            Kind::RollingMill => Some(Company::Pillar),
             Kind::Elevator => Some(Company::Underhill),
             Kind::Assembler => Some(Company::Gearwright),
             Kind::FastBelt => Some(Company::Swiftline),
@@ -409,6 +449,12 @@ impl Kind {
             Kind::BlastFurnace => Some(Tech::BlastFurnace),
             Kind::Boiler | Kind::SteamEngine => Some(Tech::Steam),
             Kind::Assembler => Some(Tech::Assembler),
+            Kind::Crusher => Some(Tech::Crusher),
+            Kind::WireDrawer => Some(Tech::WireDrawer),
+            Kind::Winder => Some(Tech::Winder),
+            Kind::CokeOven => Some(Tech::CokeOven),
+            Kind::Lathe => Some(Tech::Lathe),
+            Kind::RollingMill => Some(Tech::RollingMill),
             Kind::FastBelt => Some(Tech::FastBelts),
             Kind::Tunnel => Some(Tech::Tunnels),
             Kind::LongArm => Some(Tech::LongArms),
@@ -429,6 +475,12 @@ impl Kind {
             Kind::Press => PRESS_RECIPES,
             Kind::BlastFurnace => BLAST_RECIPES,
             Kind::Assembler => ASSEMBLER_RECIPES,
+            Kind::CokeOven => COKE_OVEN_RECIPES,
+            Kind::Crusher => CRUSHER_RECIPES,
+            Kind::WireDrawer => WIRE_DRAWER_RECIPES,
+            Kind::RollingMill => ROLLING_MILL_RECIPES,
+            Kind::Lathe => LATHE_RECIPES,
+            Kind::Winder => WINDER_RECIPES,
             _ => &[],
         }
     }
@@ -625,7 +677,17 @@ impl Building {
                 St::Splitter { buf: VecDeque::new(), cooldown: 0.0, last_in: None, tried: 0, tried_prev: 0, filter: None }
             }
             Kind::Arm | Kind::LongArm => St::Arm { filter: None, hold: None, progress: 0.0 },
-            Kind::Furnace | Kind::Molder | Kind::Press | Kind::BlastFurnace | Kind::Assembler => {
+            Kind::Furnace
+            | Kind::Molder
+            | Kind::Press
+            | Kind::BlastFurnace
+            | Kind::Assembler
+            | Kind::CokeOven
+            | Kind::Crusher
+            | Kind::WireDrawer
+            | Kind::RollingMill
+            | Kind::Lathe
+            | Kind::Winder => {
                 St::Crafter { recipe: 0, stock: [0; ITEMS], fuel: 0, progress: 0.0, busy: false, out: VecDeque::new(), fluid: 0, fluid_out: 0 }
             }
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
@@ -3414,12 +3476,12 @@ mod tests {
         w.progress.researched[Tech::Coking.idx()] = false;
         w.progress.researched[Tech::BlastFurnace.idx()] = false; // its concrete recipe would count too
         w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
-        // Copper and iron only: it goes round without ever reaching coke.
-        assert!(w.configure(0, 5, 5).unwrap().contains("molten iron"));
-        assert!(w.configure(0, 5, 5).unwrap().contains("molten copper"));
+        // Metals only: it goes round without ever reaching coke.
+        for _ in 0..8 {
+            assert!(w.configure(0, 5, 5).unwrap().contains("molten"));
+        }
         w.progress.researched[Tech::Coking.idx()] = true;
-        assert!(w.configure(0, 5, 5).unwrap().contains("molten iron"));
-        assert!(w.configure(0, 5, 5).unwrap().contains("coke"));
+        while !w.configure(0, 5, 5).unwrap().ends_with("makes coke") {}
         // Three coal go in, coke comes out in 5 s, no separate fuel needed.
         w.place(0, 3, 5, Kind::Crate, Dir::E).unwrap();
         w.place(0, 4, 5, Kind::Belt, Dir::E).unwrap();
@@ -3892,5 +3954,376 @@ mod tests {
         run(&mut l, 10);
         assert_eq!(l.econ.sold, w.econ.sold);
     }
-}
 
+    // ---------- the iron and coal step ----------
+
+    /// Picks a machine's recipe by name (cycling with f).
+    fn pick_recipe(w: &mut World, x: i32, y: i32, name: &str) {
+        for _ in 0..12 {
+            if w.tile(0, x, y).and_then(|b| b.recipe()).is_some_and(|r| r.name == name) {
+                return;
+            }
+            w.configure(0, x, y);
+        }
+        panic!("no recipe called {name}");
+    }
+
+    /// A machine facing east with a recipe, its inputs in stock, a panel beside it and a
+    /// crate at its front. Runs it and returns what landed in the crate.
+    fn run_machine(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Vec<Item> {
+        let mut w = World::blank();
+        let (x, y) = (10, 10);
+        w.place(0, x, y, kind, Dir::E).unwrap();
+        let (mw, mh) = kind.dims(Dir::E);
+        pick_recipe(&mut w, x, y, recipe);
+        for (item, n) in stock {
+            set_stock(&mut w, x, y, *item, *n);
+        }
+        w.place(0, x + mw, y, Kind::Crate, Dir::E).unwrap();
+        w.place(0, x, y + mh, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, secs);
+        crate_items(&w, 0, x + mw, y)
+    }
+
+    fn count(items: &[Item], it: Item) -> usize {
+        items.iter().filter(|i| **i == it).count()
+    }
+
+    #[test]
+    fn new_items_have_the_asked_prices_and_curves() {
+        let prices = [
+            (Item::CopperGrit, 0.8),
+            (Item::IronGrit, 1.2),
+            (Item::Sand, 0.25),
+            (Item::FineWire, 2.5),
+            (Item::CopperSheet, 12.0),
+            (Item::IronRod, 5.0),
+            (Item::Screw, 4.0),
+            (Item::Spring, 15.0),
+            (Item::IronSheet, 18.0),
+            (Item::CopperWire, 3.0),
+            (Item::CopperPipe, 12.0),
+            (Item::CopperCoil, 18.0),
+            (Item::IronGear, 18.0),
+            (Item::Coke, 2.5),
+        ];
+        for (item, price) in prices {
+            assert_eq!(item.price(), price, "{item:?}");
+        }
+        for item in &Item::ALL[19..] {
+            let worth = item.curve().worth;
+            assert!(worth >= 10.0 && worth >= 2.0 * item.price(), "{item:?} worth {worth}");
+            assert!(worth <= 2.0 * item.price().max(5.0), "{item:?} worth {worth} is too generous");
+        }
+    }
+
+    #[test]
+    fn new_machines_have_the_asked_size_power_and_cost() {
+        let table = [
+            (Kind::CokeOven, (2, 2), 0.0, 150.0),
+            (Kind::Crusher, (2, 2), 6.0, 250.0),
+            (Kind::WireDrawer, (2, 1), 4.0, 250.0),
+            (Kind::RollingMill, (2, 2), 8.0, 400.0),
+            (Kind::Lathe, (3, 3), 4.0, 200.0),
+            (Kind::Winder, (2, 1), 2.0, 200.0),
+        ];
+        for (k, dims, power, cost) in table {
+            assert_eq!((k.base_dims(), k.power_draw(), k.cost()), (dims, power, cost), "{k:?}");
+            assert_eq!(k.category(), Category::Create);
+        }
+        // A long one turns with its facing.
+        assert_eq!(Kind::WireDrawer.dims(Dir::N), (1, 2));
+        assert_eq!(Kind::Lathe.dims(Dir::N), (3, 3));
+    }
+
+    #[test]
+    fn crusher_grinds_ore_and_stone() {
+        let out = run_machine(Kind::Crusher, "copper grit", &[(Item::CopperOre, 3)], 13);
+        assert_eq!(out, vec![Item::CopperGrit; 6]);
+        let out = run_machine(Kind::Crusher, "iron grit", &[(Item::IronOre, 2)], 9);
+        assert_eq!(out, vec![Item::IronGrit; 4]);
+        let out = run_machine(Kind::Crusher, "sand", &[(Item::Stone, 3)], 8);
+        assert_eq!(out, vec![Item::Sand; 6]);
+        // No EC, no grit.
+        let mut w = World::blank();
+        w.place(0, 10, 10, Kind::Crusher, Dir::E).unwrap();
+        set_stock(&mut w, 10, 10, Item::CopperOre, 3);
+        w.place(0, 12, 10, Kind::Crate, Dir::E).unwrap();
+        run(&mut w, 10);
+        assert!(crate_items(&w, 0, 12, 10).is_empty());
+    }
+
+    /// Ore in, ingots out: (crusher ->) furnace -> molder -> crate, with coal and a panel.
+    fn ingots_from(ore: u32, crush: bool) -> usize {
+        let mut w = World::blank();
+        let mut x = 10;
+        if crush {
+            w.place(0, x, 10, Kind::Crusher, Dir::E).unwrap(); // covers 10-11, 10-11
+            pick_recipe(&mut w, x, 10, "copper grit");
+            set_stock(&mut w, x, 10, Item::CopperOre, ore);
+            x += 2;
+        }
+        w.place(0, x, 10, Kind::Furnace, Dir::E).unwrap(); // covers x..x+2, 10-12
+        pick_recipe(&mut w, x, 10, if crush { "molten copper (grit)" } else { "molten copper" });
+        if !crush {
+            set_stock(&mut w, x, 10, Item::CopperOre, ore);
+        }
+        set_stock(&mut w, x, 10, Item::Coal, 20);
+        w.place(0, x + 3, 10, Kind::Molder, Dir::E).unwrap();
+        w.place(0, x + 5, 10, Kind::Crate, Dir::E).unwrap();
+        w.place(0, x, 13, Kind::Solar, Dir::E).unwrap(); // reaches the crusher and the molder
+        run(&mut w, 90);
+        count(&crate_items(&w, 0, x + 5, 10), Item::CopperIngot)
+    }
+
+    #[test]
+    fn crushed_copper_gives_a_third_more_ingots() {
+        assert_eq!(ingots_from(6, false), 6);
+        assert_eq!(ingots_from(6, true), 8);
+    }
+
+    #[test]
+    fn furnace_and_blast_furnace_melt_grit() {
+        // 2 iron grit make 1 molten iron in the furnace.
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
+        pick_recipe(&mut w, 5, 5, "molten iron (grit)");
+        set_stock(&mut w, 5, 5, Item::IronGrit, 6);
+        set_stock(&mut w, 5, 5, Item::Coal, 10);
+        w.place(0, 8, 5, Kind::Molder, Dir::E).unwrap();
+        pick_recipe(&mut w, 8, 5, "iron ingot");
+        w.place(0, 10, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 8, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 40);
+        assert_eq!(crate_items(&w, 0, 10, 5), vec![Item::IronIngot; 3]);
+        // The blast furnace gets 2 molten iron from 3 grit.
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::BlastFurnace, Dir::E).unwrap(); // covers 5-6, 5-6
+        pick_recipe(&mut w, 5, 5, "molten iron (grit)");
+        set_stock(&mut w, 5, 5, Item::IronGrit, 6);
+        set_stock(&mut w, 5, 5, Item::Coke, 4);
+        w.place(0, 7, 5, Kind::Molder, Dir::E).unwrap();
+        pick_recipe(&mut w, 7, 5, "iron ingot");
+        w.place(0, 9, 5, Kind::Crate, Dir::E).unwrap();
+        w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+        run(&mut w, 30);
+        assert_eq!(crate_items(&w, 0, 9, 5), vec![Item::IronIngot; 4]);
+    }
+
+    #[test]
+    fn coke_oven_makes_coke_and_waste_with_no_fuel_or_ec() {
+        let mut w = World::blank();
+        w.place(0, 10, 10, Kind::CokeOven, Dir::E).unwrap();
+        set_stock(&mut w, 10, 10, Item::Coal, 6);
+        w.place(0, 12, 10, Kind::Crate, Dir::E).unwrap();
+        run(&mut w, 7); // 2 s a batch
+        let out = crate_items(&w, 0, 12, 10);
+        assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (3, 3));
+        assert_eq!(w.econ.used[Item::Coal.idx()], 6);
+        assert_eq!(Kind::CokeOven.recipes().len(), 1);
+    }
+
+    #[test]
+    fn furnace_can_cook_fast_and_dirty_coke() {
+        let out = run_machine(Kind::Furnace, "coke (fast)", &[(Item::Coal, 14)], 6);
+        assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (4, 6));
+        // The slow recipe stays: 3 coal, 1 coke, no waste.
+        let out = run_machine(Kind::Furnace, "coke", &[(Item::Coal, 6)], 11);
+        assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (2, 0));
+    }
+
+    #[test]
+    fn wire_drawer_draws_three_wire_per_plate_and_fine_wire() {
+        let out = run_machine(Kind::WireDrawer, "copper wire", &[(Item::CopperPlate, 2)], 9);
+        assert_eq!(out, vec![Item::CopperWire; 6]);
+        let out = run_machine(Kind::WireDrawer, "fine wire", &[(Item::CopperWire, 2)], 9);
+        assert_eq!(out, vec![Item::FineWire; 4]);
+    }
+
+    #[test]
+    fn press_wire_pipe_coil_and_gear_times() {
+        let out = run_machine(Kind::Press, "copper wire", &[(Item::CopperPlate, 1)], 6);
+        assert_eq!(out, vec![Item::CopperWire; 2]);
+        assert!(run_machine(Kind::Press, "copper wire", &[(Item::CopperPlate, 1)], 4).is_empty(), "5 s a batch");
+        assert_eq!(run_machine(Kind::Press, "copper pipe", &[(Item::CopperPlate, 4)], 6), vec![Item::CopperPipe; 2]);
+        assert_eq!(run_machine(Kind::Press, "iron gear", &[(Item::IronPlate, 4)], 6), vec![Item::IronGear; 2]);
+        assert_eq!(run_machine(Kind::Press, "copper coil", &[(Item::CopperWire, 4)], 6), vec![Item::CopperCoil]);
+        // Five fine wire wind into a coil in half the time.
+        let fine = "copper coil (fine wire)";
+        assert_eq!(run_machine(Kind::Press, fine, &[(Item::FineWire, 5)], 3), vec![Item::CopperCoil]);
+        assert!(run_machine(Kind::Press, fine, &[(Item::FineWire, 5)], 2).is_empty());
+    }
+
+    #[test]
+    fn the_assembler_copies_the_press_at_half_the_time() {
+        for p in PRESS_RECIPES.iter().filter(|p| p.name != "copper plate" && p.name != "iron plate") {
+            let a = ASSEMBLER_RECIPES.iter().find(|a| a.name == p.name).unwrap_or_else(|| panic!("{} missing", p.name));
+            assert_eq!((a.inputs, a.outputs), (p.inputs, p.outputs), "{}", p.name);
+            assert_eq!(a.ticks * 2, p.ticks, "{}", p.name);
+        }
+    }
+
+    #[test]
+    fn rolling_mill_rolls_sheets() {
+        assert_eq!(run_machine(Kind::RollingMill, "copper sheet", &[(Item::CopperPlate, 4)], 11), vec![Item::CopperSheet; 2]);
+        assert_eq!(run_machine(Kind::RollingMill, "iron sheet", &[(Item::IronPlate, 4)], 6), vec![Item::IronSheet; 2]);
+    }
+
+    #[test]
+    fn lathe_turns_rods_then_screws() {
+        let rods = run_machine(Kind::Lathe, "iron rod", &[(Item::IronPlate, 2)], 11);
+        assert_eq!(rods, vec![Item::IronRod; 4]);
+        let screws = run_machine(Kind::Lathe, "screw", &[(Item::IronRod, 2)], 11);
+        assert_eq!(screws, vec![Item::Screw; 8]);
+    }
+
+    #[test]
+    fn winder_winds_coils_and_springs() {
+        assert_eq!(run_machine(Kind::Winder, "copper coil", &[(Item::CopperWire, 6)], 9), vec![Item::CopperCoil; 2]);
+        assert_eq!(run_machine(Kind::Winder, "spring", &[(Item::IronRod, 4)], 11), vec![Item::Spring; 2]);
+    }
+
+    #[test]
+    fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
+        let table = [
+            (Kind::Crusher, Company::Ashgrove, Tech::Crusher, Item::CopperWire),
+            (Kind::CokeOven, Company::Cinderhall, Tech::CokeOven, Item::Coke),
+            (Kind::WireDrawer, Company::Kettering, Tech::WireDrawer, Item::CopperCoil),
+            (Kind::Winder, Company::Kettering, Tech::Winder, Item::CopperCoil),
+            (Kind::Lathe, Company::Gearwright, Tech::Lathe, Item::IronGear),
+            (Kind::RollingMill, Company::Pillar, Tech::RollingMill, Item::SteelGirder),
+        ];
+        for (kind, company, tech, key) in table {
+            assert_eq!((kind.company(), kind.tech(), tech.company(), company.key_item()), (Some(company), Some(tech), company, Some(key)));
+            let mut w = World::new();
+            assert!(!w.progress.part_unlocked(kind), "{kind:?} locked at the start");
+            assert!(w.research(tech).unwrap_err().contains(key.name()), "{tech:?} needs {key:?} first");
+            // Making the key item opens the company; the part still needs its tech.
+            w.econ.made[key.idx()] = 1;
+            w.tick();
+            assert!(w.progress.is_open(company));
+            assert!(!w.progress.part_unlocked(kind), "{kind:?} still needs research");
+            assert!(w.check_place(0, 30, 30, kind).unwrap_err().contains("locked"));
+            w.econ.research = tech.cost();
+            w.research(tech).unwrap();
+            assert!(w.progress.part_unlocked(kind));
+            assert!(w.check_place(0, 30, 30, kind).is_ok(), "{kind:?}");
+        }
+        // Or the milestone does it for free.
+        let mut w = World::new();
+        let (item, n) = Tech::Crusher.milestone();
+        w.econ.made[Item::CopperWire.idx()] = 1;
+        w.tick();
+        assert!(!w.progress.has(Tech::Crusher));
+        w.econ.made[item.idx()] = n;
+        w.tick();
+        assert!(w.progress.has(Tech::Crusher));
+    }
+
+    #[test]
+    fn new_techs_are_priced_by_depth() {
+        let copper = [(Tech::Crusher, 150.0), (Tech::Winder, 200.0), (Tech::WireDrawer, 250.0)];
+        for (t, cost) in copper {
+            assert_eq!(t.cost(), cost);
+            assert!((50.0..=300.0).contains(&t.cost()), "{t:?}");
+        }
+        for t in [Tech::CokeOven, Tech::Lathe, Tech::RollingMill] {
+            assert!((300.0..=1500.0).contains(&t.cost()), "{t:?}");
+        }
+        // Every tech sits in the research list and in the tree once.
+        for t in Tech::ALL {
+            let n: usize = UNLOCK_GROUPS.iter().map(|g| g.1.iter().filter(|x| **x == t).count()).sum();
+            assert_eq!(n, 1, "{t:?}");
+        }
+        for t in [Tech::Crusher, Tech::Winder, Tech::WireDrawer, Tech::CokeOven, Tech::Lathe, Tech::RollingMill] {
+            assert!(TREE.iter().any(|(node, _)| *node == Node::Tech(t)), "{t:?} is missing from the tree");
+        }
+    }
+
+    /// Which items can be made once these companies are open, taking every tech of an open
+    /// company as researchable (techs can always be bought or earned).
+    fn makeable(open: &[bool; COMPANIES]) -> ([bool; ITEMS], Vec<Fluid>) {
+        let tech_ok = |t: Tech| open[t.company().idx()];
+        let kind_ok = |k: Kind| k.company().map_or(true, |c| open[c.idx()]) && k.tech().map_or(true, tech_ok);
+        let mut have = [false; ITEMS];
+        let mut fluids: Vec<Fluid> = Vec::new();
+        loop {
+            let before = (have, fluids.len());
+            for k in Kind::ALL.into_iter().filter(|k| kind_ok(*k)) {
+                for ore in k.ores() {
+                    have[ore.idx()] = true;
+                }
+                for r in k.recipes().iter().filter(|r| r.needs.map_or(true, tech_ok)) {
+                    let ok = r.inputs.iter().all(|(i, _)| have[i.idx()])
+                        && r.fuel.map_or(true, |f| have[f.idx()])
+                        && r.fluid_in.map_or(true, |(f, _)| fluids.contains(&f));
+                    if ok {
+                        for (i, _) in r.outputs {
+                            have[i.idx()] = true;
+                        }
+                        if let Some((f, _)) = r.fluid_out.filter(|(f, _)| !fluids.contains(f)) {
+                            fluids.push(f);
+                        }
+                    }
+                }
+            }
+            if (have, fluids.len()) == before {
+                return (have, fluids);
+            }
+        }
+    }
+
+    /// Walks the key items: each company opens once its key item can be made with what the
+    /// companies opened so far offer. No chain may lock, and the order must make sense.
+    #[test]
+    fn every_key_item_can_be_made_before_its_company_opens() {
+        let mut open = [false; COMPANIES];
+        for c in Company::ALL {
+            open[c.idx()] = c.key_item().is_none();
+        }
+        let mut order: Vec<Company> = Vec::new();
+        loop {
+            let (have, _) = makeable(&open);
+            let next: Vec<Company> =
+                Company::ALL.into_iter().filter(|c| !open[c.idx()] && c.key_item().is_some_and(|k| have[k.idx()])).collect();
+            if next.is_empty() {
+                break;
+            }
+            for c in next {
+                open[c.idx()] = true;
+                order.push(c);
+            }
+        }
+        let stuck: Vec<Company> = Company::ALL.into_iter().filter(|c| !open[c.idx()]).collect();
+        assert!(stuck.is_empty(), "these companies can never open: {stuck:?} (opened in order {order:?})");
+        let at = |c: Company| order.iter().position(|x| *x == c).unwrap();
+        // Copper first: the press makes wire, pipe and coil, the furnace makes coke.
+        for c in [Company::Ashgrove, Company::Wellbourne, Company::Kettering, Company::Cinderhall] {
+            assert!(at(c) < at(Company::Gearwright), "{c:?} before Gearwright");
+        }
+        // Gears, girders and gearboxes all need the blast furnace's tech, so Cinderhall first.
+        for c in [Company::Gearwright, Company::Pillar, Company::Underhill, Company::Swiftline] {
+            assert!(at(Company::Cinderhall) < at(c), "Cinderhall before {c:?}");
+        }
+        assert_eq!(Company::Gearwright.key_item(), Some(Item::IronGear));
+        assert_eq!(Company::Swiftline.key_item(), Some(Item::Gearbox));
+        // With everything open, every item has a way to be made (concrete waits for the mixer).
+        let (have, fluids) = makeable(&open);
+        for it in Item::ALL.into_iter().filter(|i| *i != Item::Concrete) {
+            assert!(have[it.idx()], "{it:?} can't be made");
+        }
+        assert!(fluids.contains(&Fluid::MoltenIron));
+    }
+
+    #[test]
+    fn a_company_never_gates_its_own_key_item() {
+        // With every other company open, a key item is still makeable without its own company.
+        for c in Company::ALL {
+            let Some(key) = c.key_item() else { continue };
+            let mut open = [true; COMPANIES];
+            open[c.idx()] = false;
+            let (have, _) = makeable(&open);
+            assert!(have[key.idx()], "{key:?} needs {c:?}'s machines");
+        }
+    }
+}
