@@ -10,8 +10,8 @@ use crate::controls::{Action, Controls};
 use crate::history::Range;
 use crate::settings::{Settings, ROWS};
 use crate::sim::{
-    in_bounds, money_text, rect_of, rect_size, Blueprint, Category, Dir, Kind, PasteReport, Removed, Tech, TileRect, World, H, MAX_LIFT,
-    MIN_LIFT, SPAWN, UNLOCK_GROUPS, W,
+    in_bounds, money_text, rect_of, rect_size, Blueprint, Category, Dir, Kind, PasteReport, Removed, Tech, TileRect, UpState,
+    UpgradeReport, Upgraded, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W,
 };
 
 /// Where the area tool is. It marks a rectangle on one floor; the verb comes after.
@@ -40,22 +40,25 @@ impl Area {
     }
 }
 
-/// What can be done with a chosen rectangle. Upgrade will be added here: each one is a key
-/// (`action`), a word for the hints (`label`) and an arm in `App::area_verb`.
+/// What can be done with a chosen rectangle: each one is a key (`action`), a word for the hints
+/// (`label`) and an arm in `App::area_verb`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AreaVerb {
     /// Copy it to the hand as a blueprint (Space and Enter do it too).
     Copy,
     Remove,
+    /// Swap its parts for their next versions (needs the Upgrade planner tech).
+    Upgrade,
 }
 
 impl AreaVerb {
-    pub const ALL: [AreaVerb; 2] = [AreaVerb::Copy, AreaVerb::Remove];
+    pub const ALL: [AreaVerb; 3] = [AreaVerb::Copy, AreaVerb::Remove, AreaVerb::Upgrade];
 
     pub fn action(self) -> Action {
         match self {
             AreaVerb::Copy => Action::Area,
             AreaVerb::Remove => Action::Remove,
+            AreaVerb::Upgrade => Action::Upgrade,
         }
     }
 
@@ -63,8 +66,20 @@ impl AreaVerb {
         match self {
             AreaVerb::Copy => "copy",
             AreaVerb::Remove => "remove",
+            AreaVerb::Upgrade => "upgrade",
         }
     }
+}
+
+/// An upgrade the player was shown and has not yet confirmed: the floor, the rectangle and what
+/// the preview said (how many parts, for how much). Pressing the key again does it, as long as
+/// the plan still says the same.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UpgradeQuote {
+    pub floor: usize,
+    pub rect: TileRect,
+    pub parts: usize,
+    pub cost: f64,
 }
 
 /// The blueprint library (`l`): the files in the library folder, and where the player is in them.
@@ -188,6 +203,15 @@ pub struct App {
     pub confirm_area: Option<(usize, TileRect, f64)>,
     /// What the last area deconstruct took, so `z` can put it back (not saved).
     pub last_removed: Option<Removed>,
+    /// The upgrade shown by the preview line, waiting for a second press of the key.
+    pub confirm_upgrade: Option<UpgradeQuote>,
+    /// What the last upgrade swapped, so `z` can swap it back (not saved), and whether it is
+    /// newer than `last_removed` (`z` undoes the most recent of the two first).
+    pub last_upgrade: Option<Upgraded>,
+    pub upgrade_is_latest: bool,
+    /// A line from the area tool that the small pane's crumb shows in place of the verb keys
+    /// (the preview, or why the verb did nothing): the long form and a short one.
+    pub area_note: Option<(String, String)>,
     /// A blueprint in the hand (it and `selected` exclude each other): its ghost follows the cursor.
     pub held: Option<Blueprint>,
     /// The last area copied, kept in memory so the library can save it after the hand is emptied.
@@ -298,6 +322,10 @@ impl App {
             area: None,
             confirm_area: None,
             last_removed: None,
+            confirm_upgrade: None,
+            last_upgrade: None,
+            upgrade_is_latest: false,
+            area_note: None,
             held: None,
             last_copy: None,
             middle_from: None,
@@ -625,6 +653,7 @@ impl App {
             Action::Book => self.open_book(),
             Action::Settings => self.settings_open = true,
             Action::Area => self.start_area(),
+            Action::Upgrade => self.start_upgrade(),
             Action::Restore => self.restore_removed(),
             Action::Library => self.open_library(),
             Action::MailLog => {
@@ -1261,18 +1290,25 @@ impl App {
         self.held = None;
         self.menu = None;
         self.paste = None;
-        self.confirm_area = None;
+        self.forget_area_notes();
         self.area = Some(Area { floor: self.floor, stage: AreaStage::Picking { corner: None } });
         let (place, back) = (self.controls.key(Action::Place), self.controls.key(Action::Back));
         self.say(format!("Area: {place} marks a corner (or drag), then the opposite one · {back} cancels"));
     }
 
-    /// Closes the area tool and forgets any waste warning.
+    /// Closes the area tool and forgets any waste warning and upgrade preview.
     fn cancel_area(&mut self) {
         if self.area.take().is_some() {
-            self.confirm_area = None;
+            self.forget_area_notes();
         }
         self.quick_area = false;
+    }
+
+    /// Forgets what a verb asked the player to confirm, and what it said about the rectangle.
+    fn forget_area_notes(&mut self) {
+        self.confirm_area = None;
+        self.confirm_upgrade = None;
+        self.area_note = None;
     }
 
     /// The area's rectangle right now (the cursor is the second corner while picking).
@@ -1289,7 +1325,7 @@ impl App {
             AreaStage::Picking { corner: Some(c) } => {
                 let rect = rect_of(c, at);
                 area.stage = AreaStage::Chosen { rect };
-                self.confirm_area = None;
+                self.forget_area_notes();
                 let (w, h) = rect_size(rect);
                 let info = self.world.area_info(self.area.map_or(self.floor, |a| a.floor), rect);
                 if info.parts == 0 {
@@ -1312,7 +1348,7 @@ impl App {
     fn area_click(&mut self, t: (i32, i32)) {
         match self.area.map(|a| a.stage) {
             Some(AreaStage::Chosen { .. }) => {
-                self.confirm_area = None;
+                self.forget_area_notes();
                 if let Some(a) = self.area.as_mut() {
                     a.stage = AreaStage::Picking { corner: Some(t) };
                 }
@@ -1370,7 +1406,20 @@ impl App {
         match verb {
             AreaVerb::Copy => self.area_copy(rect),
             AreaVerb::Remove => self.area_remove(rect),
+            AreaVerb::Upgrade => self.area_upgrade(rect),
         }
+    }
+
+    /// `u` outside the area tool: starts it (the verb comes after the rectangle), or says what
+    /// unlocks upgrading.
+    fn start_upgrade(&mut self) {
+        if !self.world.progress.has(Tech::UpgradePlanner) {
+            self.say_upgrades_locked();
+            return;
+        }
+        self.start_area();
+        let (place, key) = (self.controls.key(Action::Place), self.controls.key(Action::Upgrade));
+        self.say(format!("Upgrade: {place} marks a corner, then the opposite one · {key} swaps the parts in it for their next versions"));
     }
 
     /// `l`: opens the library over the map. It reads the folder each time, so files dropped in by
@@ -1676,15 +1725,150 @@ impl App {
         if let Some(undo) = undo {
             msg += &format!(" · {} puts them back", self.controls.key(Action::Restore));
             self.last_removed = Some(undo);
+            self.upgrade_is_latest = false;
         }
         self.say(msg);
     }
 
-    /// `z`: puts back what the last area deconstruct took, as far as it fits and the money goes.
+    /// Says what unlocks the upgrade planner.
+    fn say_upgrades_locked(&mut self) {
+        let t = Tech::UpgradePlanner;
+        let (item, n) = t.milestone();
+        let name = item.name().to_lowercase();
+        let name = format!("{name}{}", if name.ends_with('x') { "es" } else { "s" });
+        self.say(format!(
+            "Upgrades are locked: research the {} ({}, from {}) · {:.0} RP, or make {} {name}",
+            t.name(),
+            self.controls.key(Action::Tree),
+            t.company().name(),
+            t.cost(),
+            thousands(n)
+        ));
+    }
+
+    /// The area tool's line for a verb that did nothing: shown in the sidebar's place and the
+    /// small pane's crumb, as well as in the message line.
+    fn say_area_note(&mut self, long: String, short: &str) {
+        self.say(long.clone());
+        self.area_note = Some((long, short.to_string()));
+    }
+
+    /// What is left out of an upgrade, as the tail of a message: money, locked parts, recipes.
+    fn upgrade_tail(&self, short: usize, short_by: f64, locked: usize, locked_kind: Option<Kind>, no_recipe: usize) -> String {
+        let mut tail = String::new();
+        if short > 0 {
+            tail += &format!(" · {short} short of money: {} more", money_text(short_by));
+        }
+        if locked > 0 {
+            let what = locked_kind.map_or(String::new(), |k| format!(" ({} not researched)", k.name()));
+            tail += &format!(" · {locked} locked{what}");
+        }
+        if no_recipe > 0 {
+            tail += &format!(" · {no_recipe} kept: the new version can't make its recipe");
+        }
+        tail
+    }
+
+    /// `u` with a rectangle chosen. The first press shows what would happen ("u again to upgrade 12
+    /// parts for $360"); the second does it: each part with a next version that is unlocked is
+    /// swapped in place for the price difference, in reading order, until the money runs out.
+    fn area_upgrade(&mut self, rect: TileRect) {
+        let Some(floor) = self.area.map(|a| a.floor) else { return };
+        if !self.world.progress.has(Tech::UpgradePlanner) {
+            let t = Tech::UpgradePlanner;
+            self.say_upgrades_locked();
+            let short = format!("{} locked: {} research", t.name(), self.controls.key(Action::Tree));
+            self.area_note = Some((self.msg.clone(), short));
+            return;
+        }
+        let plan = self.world.plan_upgrade(floor, rect);
+        let key = self.controls.key(Action::Upgrade);
+        if plan.parts.is_empty() {
+            self.confirm_upgrade = None;
+            self.say_area_note(
+                "Nothing in the area has a next version: belts, cheap drills and panels, big drills, assemblers do".into(),
+                "nothing to upgrade",
+            );
+            return;
+        }
+        let (fits, short, locked, no_recipe) =
+            (plan.count(UpState::Fits), plan.count(UpState::Short), plan.count(UpState::Locked), plan.count(UpState::NoRecipe));
+        let cost = plan.cost(UpState::Fits);
+        let tail = self.upgrade_tail(short, plan.short_by(self.world.econ.money), locked, plan.locked_kind(), no_recipe);
+        if fits == 0 {
+            self.confirm_upgrade = None;
+            let long = format!("Nothing to upgrade right now{tail}");
+            self.say_area_note(long, &format!("0 to upgrade{}", if locked > 0 { " · locked" } else { "" }));
+            return;
+        }
+        let quote = UpgradeQuote { floor, rect, parts: fits, cost };
+        let confirmed =
+            self.confirm_upgrade.is_some_and(|q| q.floor == floor && q.rect == rect && q.parts == fits && (q.cost - cost).abs() < 0.005);
+        if !confirmed {
+            self.confirm_upgrade = Some(quote);
+            let long = format!("{key} again to upgrade {fits} part{} for {}{tail}", plural(fits), money_text(cost));
+            let short_form = format!("{key} again: {fits} for {}", money_text(cost));
+            self.say_area_note(long, &short_form);
+            return;
+        }
+        let (rep, undo) = self.world.upgrade_area(floor, rect);
+        self.confirm_upgrade = None;
+        self.area_note = None;
+        let mut msg = self.upgrade_summary(&rep);
+        if let Some(undo) = undo {
+            msg += &format!(" · {} swaps them back", self.controls.key(Action::Restore));
+            self.last_upgrade = Some(undo);
+            self.upgrade_is_latest = true;
+        }
+        if rep.short > 0 {
+            // The rectangle stays marked, so pressing again (after earning more) finishes the job.
+            msg += &format!(" · {key} twice for the rest, once you can afford it");
+        } else {
+            self.cancel_area();
+        }
+        self.say(msg);
+    }
+
+    /// "Upgraded 42 fast belts, 3 basic drills for $714 · 2 short of money: $40 more".
+    fn upgrade_summary(&self, rep: &UpgradeReport) -> String {
+        let made: Vec<String> =
+            rep.made.iter().map(|(k, n)| format!("{n} {}{}", k.name().to_lowercase(), if *n == 1 { "" } else { "s" })).collect();
+        let mut msg = format!("Upgraded {} for {}", made.join(", "), money_text(rep.cost));
+        msg += &self.upgrade_tail(rep.short, rep.short_by, rep.locked, rep.locked_kind, rep.no_recipe);
+        msg
+    }
+
+    /// `z` after an upgrade: swaps the parts back and pays the difference back.
+    fn undo_last_upgrade(&mut self) {
+        let key = self.controls.key(Action::Restore);
+        let Some(undo) = self.last_upgrade.take() else { return };
+        self.upgrade_is_latest = false;
+        if undo.floor != self.floor {
+            let level = self.world.floors[undo.floor].level;
+            self.last_upgrade = Some(undo);
+            self.upgrade_is_latest = true;
+            self.say(format!("Those were upgraded on floor {level:+}: go there and press {key}"));
+            return;
+        }
+        let total = undo.len();
+        let rep = self.world.undo_upgrade(&undo);
+        let mut msg = format!("Swapped {} of {total} part{} back, {} back", rep.reverted, plural(total), money_text(rep.refund));
+        if rep.kept > 0 {
+            msg += &format!(" · {} left as they are now (removed, replaced or set to a new recipe)", rep.kept);
+        }
+        self.say(msg);
+    }
+
+    /// `z`: puts back what the last area deconstruct took, as far as it fits and the money goes;
+    /// or, when an upgrade came after it, swaps the upgraded parts back.
     fn restore_removed(&mut self) {
         let key = self.controls.key(Action::Restore);
+        if self.last_upgrade.is_some() && (self.upgrade_is_latest || self.last_removed.is_none()) {
+            self.undo_last_upgrade();
+            return;
+        }
         let Some(mut undo) = self.last_removed.take() else {
-            self.say("Nothing to put back: it keeps what the last area remove took");
+            self.say("Nothing to put back: it keeps what the last area remove took, or the last upgrade");
             return;
         };
         if undo.floor != self.floor {

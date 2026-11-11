@@ -36,10 +36,11 @@ pub enum Action {
     Area,
     Restore,
     Library,
+    Upgrade,
 }
 
 impl Action {
-    pub const ALL: [Action; 28] = [
+    pub const ALL: [Action; 29] = [
         Action::MoveUp,
         Action::MoveDown,
         Action::MoveLeft,
@@ -68,6 +69,7 @@ impl Action {
         Action::Area,
         Action::Restore,
         Action::Library,
+        Action::Upgrade,
     ];
     /// The name used in controls.json.
     pub fn id(self) -> &'static str {
@@ -100,6 +102,7 @@ impl Action {
             Action::Area => "area_select",
             Action::Restore => "restore_removed",
             Action::Library => "blueprints",
+            Action::Upgrade => "upgrade",
         }
     }
     pub fn defaults(self) -> &'static [&'static str] {
@@ -136,6 +139,8 @@ impl Action {
             Action::Restore => &["z"],
             // The blueprint library: saved blueprints, shared by every save.
             Action::Library => &["l"],
+            // The upgrade planner: with an area marked, swaps its parts for their next versions.
+            Action::Upgrade => &["u"],
         }
     }
 }
@@ -325,6 +330,7 @@ mod tests {
         assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
         assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
         assert_eq!(c.action(KeyCode::Char('l')), Some(Action::Library));
+        assert_eq!(c.action(KeyCode::Char('u')), Some(Action::Upgrade));
         assert_eq!(c.action(KeyCode::Char('g')), Some(Action::Settings));
         for a in Action::ALL {
             assert!(!a.defaults().is_empty(), "{} has a default", a.id());
@@ -341,6 +347,18 @@ mod tests {
         assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
         assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
         assert_eq!(c.action(KeyCode::Char('l')), Some(Action::Library));
+        assert_eq!(c.action(KeyCode::Char('u')), Some(Action::Upgrade));
+    }
+
+    #[test]
+    fn a_file_that_binds_u_elsewhere_gets_a_note() {
+        let path = std::env::temp_dir().join(format!("factory-controls-clash-u-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{ "settings": ["u"] }"#).unwrap();
+        let (c, note) = Controls::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        let note = note.expect("a clash is reported");
+        assert!(note.contains("key u is on both settings and upgrade"), "{note}");
+        assert_eq!(c.action(KeyCode::Char('u')), Some(Action::Settings));
     }
 
     #[test]

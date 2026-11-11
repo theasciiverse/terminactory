@@ -518,7 +518,10 @@ fn area_snapshots() {
     let buf = render(&mut app, 64, 16);
     let t = text(&buf);
     assert!(lines(&t).last().unwrap().starts_with(" Area › "), "{t}");
-    assert!(lines(&t).last().unwrap().contains("x remove") && lines(&t).last().unwrap().contains("Esc cancel"), "{t}");
+    // Three verbs no longer fit as words next to the fee at 64 columns: the keys stay.
+    assert!(lines(&t).last().unwrap().contains("c/x/u") && lines(&t).last().unwrap().contains("Esc"), "{t}");
+    let wide = text(&render(&mut app, 90, 16));
+    assert!(lines(&wide).last().unwrap().contains("x remove") && lines(&wide).last().unwrap().contains("u upgrade"), "{wide}");
     std::fs::write("target/snapshot-area-small.html", to_html(&buf)).unwrap();
 
     // Narrow and tall: every line within the width.

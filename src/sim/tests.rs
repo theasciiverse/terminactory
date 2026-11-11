@@ -15,6 +15,7 @@ mod ports;
 mod saving;
 mod solar;
 mod tunnels;
+mod upgrade;
 mod waste;
 
 fn run(w: &mut World, secs: u64) {
