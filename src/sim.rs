@@ -235,8 +235,12 @@ pub enum Kind {
 // What each assembler above the crude one can make: its tiers, each at a speed
 // (a tier runs at 1x on the lowest assembler that can make it, faster on the ones above).
 static BASIC_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 2), (BASIC_RECIPES, 1)]));
-static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
-    LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 4), (BASIC_RECIPES, 2), (ADVANCED_RECIPES, 1)]));
+static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
+    let mut list = assembler_list(&[(CRUDE_RECIPES, 4), (BASIC_RECIPES, 2), (ADVANCED_RECIPES, 1)]);
+    // It has the proper control board recipe: no need for the hand-wired one.
+    list.retain(|r| r.name != HAND_WIRED);
+    list
+});
 // The precision assembler only makes the top tiers: no crude or basic recipes.
 static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
 static LARGE_ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
@@ -566,8 +570,10 @@ impl Kind {
             Kind::RollingMill | Kind::Welder => Some(Company::Pillar),
             Kind::Elevator | Kind::Kiln => Some(Company::Underhill),
             Kind::FastBelt | Kind::BasicAssembler => Some(Company::Swiftline),
-            Kind::AdvancedDrill | Kind::AdvancedAssembler | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
-            Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => Some(Company::LatticeFinch),
+            Kind::AdvancedDrill | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
+            Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => {
+                Some(Company::LatticeFinch)
+            }
             _ => Some(Company::Brannock),
         }
     }

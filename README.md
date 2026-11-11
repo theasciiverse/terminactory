@@ -68,12 +68,12 @@ Six new machines (all in Create), each from a company that opens when you first 
 
 - **Crusher**: 1 copper ore → 2 copper grit (4 s); 1 iron ore → 2 iron grit (4 s); 1 stone → 2 sand (2.5 s). Grit melts further than ore: 3 copper grit → 2 molten copper in a furnace, so crushed copper gives a third more ingots per ore. 2 iron grit → 1 molten iron in a furnace (5 s); 3 iron grit → 2 molten iron in a blast furnace (2.5 s).
 - **Coke oven**: 2 coal → 1 coke + 1 waste (2 s). It cooks its own coal: no EC, no separate fuel. The furnace also gets a fast and dirty coke recipe: 7 coal → 2 coke + 3 waste (2.5 s); the slow 3 coal → 1 coke (5 s) stays.
-- **Press** (retimed): copper wire 1 plate → 2 wire (5 s); copper pipe 2 plates → 1 pipe (2.5 s); copper coil 4 wire → 1 coil (5 s), or 5 fine wire → 1 coil (2.5 s); iron gear 2 plates → 1 gear (2.5 s); steel girder 2 steel → 1 girder (5 s); hardened gear 2 hardened plate → 1 gear (5 s). The gearbox moved to the crude assembler.
+- **Press** (retimed): copper wire 1 plate → 2 wire (5 s); copper pipe 2 plates → 1 pipe (2.5 s); copper coil 4 wire → 1 coil (5 s), or 5 fine wire → 1 coil (2.5 s); iron gear 2 plates → 1 gear (2.5 s); steel girder 2 steel → 1 girder (5 s); hardened gear 2 hardened plate → 1 gear (5 s); crude sheets 3 copper plate → 1 copper sheet or 3 iron plate → 1 iron sheet (5 s; the rolling mill needs only 2 plates). The gearbox moved to the crude assembler.
 - **Wire drawer**: 1 copper plate → 3 copper wire (4 s); 1 copper wire → 2 fine wire (4 s).
 - **Winder**: 3 copper wire → 1 copper coil (4 s); 2 iron rod → 1 spring (5 s).
 - **Rolling mill**: 2 copper plate → 1 copper sheet (5 s); 2 iron plate → 1 iron sheet (2.5 s); 1 steel → 1 steel sheet (5 s); 3 steel → 2 steel girder (4 s).
 - **Lathe**: 1 iron plate → 2 iron rod (5 s); 1 iron rod → 4 screw (5 s); 1 steel → 2 steel rod (5 s); 1 steel rod → 2 bearing (2.5 s).
-- New items and prices: copper grit $0.60, iron grit $0.60, sand $0.25, fine wire $2.50, copper sheet $12, iron rod $5, screw $2, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
+- New items and prices: copper grit $0.60, iron grit $0.60, sand $0.25, fine wire $2.50, copper sheet $14, iron rod $5, screw $2, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
 - **Companies now** (key item → what they offer): copper wire → Ashgrove (basic drill, crusher); coke → Cinderhall (blast furnace, coke oven); copper pipe → Wellbourne (pump, pipes); copper coil → Kettering (boiler, steam engine, wire drawer, winder); iron gear → Gearwright (assembler, lathe); steel girder → Pillar (floor +1, rolling mill). Swiftline's fast belts now open on a gearbox instead of an iron gear.
 
 ## Steel, stone, parts and big goods
@@ -94,9 +94,9 @@ The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 cok
 **Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), 5 s. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
-- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel).
+- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
 - Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw).
-- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet). The control board is the "x1x1", the weakest microprocessor. The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
+- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor. The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
 - Welder (10 s, 30 EC only while working): boiler shell $80 (steel sheet + 4 brick), silo shell $260 (3 steel sheet + valve), frame $280 (2 steel girder + 8 screw).
 
 **Big goods.** Large basic assembler (20 s): pump unit $900 (motor + 2 valve + silo shell + gauge), engine block $1,150 (frame + 4 piston + gearbox + boiler shell). Large advanced assembler (also does those, twice as fast): generator $1,100 (frame + 2 motor + gauge + control board, 20 s), control panel $900 (2 control board + 4 lamp + 2 gauge + steel sheet, 20 s), **drilling rig** $3,500 (4 girder + 2 gearbox + 4 reinforced concrete + motor + pump unit, 40 s) and **steam tractor** $7,500 (engine block + frame + 4 hardened gear + control panel + generator, 60 s). The drilling rig and steam tractor are **crown items**: they go into nothing, only sell, and keep a high research floor so they keep paying research however many you sell.
@@ -114,14 +114,14 @@ Every other item except waste goes into at least one recipe.
 | Pillar (steel girder) | Welder | 4,000 | 150 steel girder |
 | Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 100 gearbox |
 | **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 8,000 | 40 motor |
-| | Advanced assembler (3×3) | 14,000 | 80 motor |
 | | Large basic drill (8×8, coal) | 20,000 | 150 motor |
 | | Large basic assembler (5×5) | 25,000 | 300 motor |
-| **Lattice & Finch** (control board) | Precision assembler (3×3) | 30,000 | 120 control board |
+| **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
+| | Precision assembler (3×3) | 30,000 | 120 control board |
 | | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
 | | Large advanced assembler (5×5) | 100,000 | 800 control board |
 
-Every key item can be made with machines from companies that open before it, so nothing locks: copper first, then Cinderhall's steel, then Pillar, Gearwright, Underhill, Swiftline, Ampleworth and last Lattice & Finch.
+Every key item can be made with machines from companies that open before it, so nothing locks: copper first, then Cinderhall's steel, then Pillar, Gearwright, Underhill, Swiftline and Ampleworth. Lattice & Finch is a second road: a control board can be wired by hand in the crude assembler as soon as you have relays and fine wire, no steel or motors needed.
 
 **Build menu.** Create has five groups now: 1 drills (cheap, basic, advanced, large basic, large advanced), 2 furnace / molder / blast furnace / coke oven / kiln, 3 press / wire drawer / winder / rolling mill / lathe / crusher, 4 assemblers (crude to large advanced) and the welder, 5 pump / advanced pump / pipe / mixer. On a short screen the menu folds each group to one kind (marked `+`) until you pick one; in a small pane the bottom line drops prices and shortens names so all five numbers show.
 

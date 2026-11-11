@@ -1129,11 +1129,13 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     let joined = |parts: &[&Vec<&'static str>]| parts.iter().flat_map(|p| p.iter().copied()).collect::<Vec<_>>();
     assert_eq!(recipe_names(Kind::CrudeAssembler), crude);
     assert_eq!(recipe_names(Kind::BasicAssembler), joined(&[&crude, &basic]));
-    assert_eq!(recipe_names(Kind::AdvancedAssembler), joined(&[&crude, &basic, &adv]));
+    // The advanced assembler hides the hand-wired board: it has the proper recipe.
+    let crude_without_hand_wiring: Vec<_> = crude.iter().copied().filter(|n| *n != HAND_WIRED).collect();
+    assert_eq!(recipe_names(Kind::AdvancedAssembler), joined(&[&crude_without_hand_wiring, &basic, &adv]));
     assert_eq!(recipe_names(Kind::PrecisionAssembler), joined(&[&adv, &prec]), "precision makes only the top tiers");
     assert_eq!(recipe_names(Kind::LargeBasicAssembler), large_basic);
     assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
-    assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox"]);
+    assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "control board (hand-wired)"]);
     assert_eq!(basic, ["electric motor", "piston"]);
     assert_eq!(adv, ["control board"]);
     assert!(prec.is_empty(), "later processors go here");
@@ -1150,6 +1152,8 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(t(Kind::CrudeAssembler, "gearbox"), 600);
     assert_eq!(t(Kind::BasicAssembler, "gearbox"), 300);
     assert_eq!(t(Kind::AdvancedAssembler, "gearbox"), 150);
+    assert_eq!(t(Kind::CrudeAssembler, HAND_WIRED), 2400);
+    assert_eq!(t(Kind::BasicAssembler, HAND_WIRED), 1200);
     assert_eq!(t(Kind::BasicAssembler, "electric motor"), 600);
     assert_eq!(t(Kind::AdvancedAssembler, "electric motor"), 300);
     assert_eq!(t(Kind::AdvancedAssembler, "control board"), 600);
@@ -1221,6 +1225,38 @@ fn a_precision_assembler_refuses_crude_and_basic_recipes() {
     // A copied recipe number past its list is ignored.
     w.apply_setting(0, 10, 10, Setting::Recipe(40));
     assert!(w.tile(0, 10, 10).unwrap().recipe().is_some());
+}
+
+#[test]
+fn a_control_board_can_be_wired_by_hand_before_steel() {
+    let stock = [(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)];
+    // 40 s in a crude assembler, 20 s in a basic one.
+    let crude = |secs| run_powered(Kind::CrudeAssembler, HAND_WIRED, &stock, secs);
+    let basic = |secs| run_powered(Kind::BasicAssembler, HAND_WIRED, &stock, secs);
+    assert!(crude(39).is_empty() && crude(41) == vec![Item::ControlBoard]);
+    assert!(basic(19).is_empty() && basic(21) == vec![Item::ControlBoard]);
+    // The advanced assembler and up have the proper recipe and hide this one.
+    for k in [Kind::AdvancedAssembler, Kind::PrecisionAssembler] {
+        assert!(!recipe_names(k).contains(&HAND_WIRED), "{k:?}");
+        assert!(recipe_names(k).contains(&"control board"), "{k:?}");
+    }
+    // Nothing in it needs steel, a gearbox or a motor: only relay, fine wire and iron sheet.
+    let made_from_steel =
+        [Item::Steel, Item::SteelRod, Item::SteelSheet, Item::SteelGirder, Item::Gearbox, Item::ElectricMotor, Item::Bearing];
+    let hand = CRUDE_RECIPES.iter().find(|r| r.name == HAND_WIRED).unwrap();
+    assert!(hand.inputs.iter().all(|(i, _)| !made_from_steel.contains(i)));
+}
+
+#[test]
+fn the_press_makes_crude_sheets_at_three_plates_each() {
+    let out = run_machine(Kind::Press, "iron sheet (pressed)", &[(Item::IronPlate, 3)], 6);
+    assert_eq!(out, vec![Item::IronSheet]);
+    assert!(run_machine(Kind::Press, "iron sheet (pressed)", &[(Item::IronPlate, 2)], 12).is_empty());
+    let out = run_machine(Kind::Press, "copper sheet (pressed)", &[(Item::CopperPlate, 3)], 6);
+    assert_eq!(out, vec![Item::CopperSheet]);
+    // The rolling mill stays the better road: two plates a sheet.
+    let mill = ROLLING_MILL_RECIPES.iter().find(|r| r.name == "iron sheet").unwrap();
+    assert_eq!(mill.inputs, &[(Item::IronPlate, 2)]);
 }
 
 #[test]
@@ -1827,7 +1863,7 @@ fn new_items_have_the_asked_prices_and_curves() {
         (Item::IronGrit, 0.6),
         (Item::Sand, 0.25),
         (Item::FineWire, 2.5),
-        (Item::CopperSheet, 12.0),
+        (Item::CopperSheet, 14.0),
         (Item::IronRod, 5.0),
         (Item::Screw, 2.0),
         (Item::Spring, 15.0),
@@ -2043,7 +2079,7 @@ fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
         (Kind::Kiln, Company::Underhill, Tech::Kiln, Item::Concrete),
         (Kind::BasicAssembler, Company::Swiftline, Tech::BasicAssembler, Item::Gearbox),
         (Kind::AdvancedDrill, Company::Ampleworth, Tech::AdvancedDrill, Item::ElectricMotor),
-        (Kind::AdvancedAssembler, Company::Ampleworth, Tech::AdvancedAssembler, Item::ElectricMotor),
+        (Kind::AdvancedAssembler, Company::LatticeFinch, Tech::AdvancedAssembler, Item::ControlBoard),
         (Kind::LargeBasicAssembler, Company::Ampleworth, Tech::LargeBasicAssembler, Item::ElectricMotor),
         (Kind::LargeBasicDrill, Company::Ampleworth, Tech::LargeBasicDrill, Item::ElectricMotor),
         (Kind::PrecisionAssembler, Company::LatticeFinch, Tech::PrecisionAssembler, Item::ControlBoard),
@@ -2125,10 +2161,13 @@ fn new_techs_are_priced_by_depth() {
     for t in [Tech::Mixer, Tech::Kiln, Tech::AdvancedPump, Tech::Welder, Tech::BasicAssembler] {
         assert!((1500.0..=6000.0).contains(&t.cost()), "{t:?}");
     }
-    for t in [Tech::AdvancedDrill, Tech::AdvancedAssembler, Tech::LargeBasicDrill, Tech::LargeBasicAssembler] {
+    for t in [Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeBasicAssembler] {
         assert!((6000.0..=25_000.0).contains(&t.cost()), "{t:?}");
         assert_eq!(t.company(), Company::Ampleworth);
     }
+    // The advanced assembler is the first thing Lattice & Finch sells: boards, not motors, open it.
+    assert!((6000.0..=25_000.0).contains(&Tech::AdvancedAssembler.cost()));
+    assert_eq!((Tech::AdvancedAssembler.company(), Tech::AdvancedAssembler.milestone().0), (Company::LatticeFinch, Item::ControlBoard));
     for t in [Tech::PrecisionAssembler, Tech::LargeAdvancedDrill, Tech::LargeAdvancedAssembler] {
         assert!((25_000.0..=100_000.0).contains(&t.cost()), "{t:?}");
         assert_eq!(t.company(), Company::LatticeFinch);
@@ -2225,10 +2264,11 @@ fn every_key_item_can_be_made_before_its_company_opens() {
     // Concrete needs the mixer (Wellbourne) and sand from the crusher (Ashgrove).
     assert!(at(Company::Wellbourne) < at(Company::Underhill) && at(Company::Ashgrove) < at(Company::Underhill));
     // A gearbox is built in the crude assembler (Gearwright), a motor in the basic one
-    // (Swiftline), a control board in the advanced one (Ampleworth).
+    // (Swiftline). A control board is wired by hand in the crude assembler too, so Lattice & Finch
+    // opens off the same road as Swiftline, not after the motors.
     assert!(at(Company::Gearwright) < at(Company::Swiftline));
     assert!(at(Company::Swiftline) < at(Company::Ampleworth));
-    assert!(at(Company::Ampleworth) < at(Company::LatticeFinch));
+    assert!(at(Company::Gearwright) < at(Company::LatticeFinch) && at(Company::Kettering) < at(Company::LatticeFinch));
     assert_eq!(Company::Gearwright.key_item(), Some(Item::IronGear));
     assert_eq!(Company::Swiftline.key_item(), Some(Item::Gearbox));
     assert_eq!(Company::Underhill.key_item(), Some(Item::Concrete));

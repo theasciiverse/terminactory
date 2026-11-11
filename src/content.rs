@@ -229,7 +229,7 @@ impl Item {
             Item::IronGrit => 0.6,
             Item::Sand => 0.25,
             Item::FineWire => 2.5,
-            Item::CopperSheet => 12.0,
+            Item::CopperSheet => 14.0,
             Item::IronRod => 5.0,
             Item::Screw => 2.0,
             Item::Spring => 15.0,
@@ -288,7 +288,7 @@ impl Item {
             Item::IronGrit => c(10.0, 0.98, 0.02),
             Item::Sand => c(10.0, 0.98, 0.02),
             Item::FineWire => c(10.0, 0.995, 0.03),
-            Item::CopperSheet => c(24.0, 0.995, 0.04),
+            Item::CopperSheet => c(28.0, 0.995, 0.04),
             Item::IronRod => c(10.0, 0.995, 0.03),
             Item::Screw => c(10.0, 0.995, 0.03),
             Item::Spring => c(30.0, 0.996, 0.05),
@@ -420,8 +420,8 @@ impl Company {
             Company::Underhill => "Concrete? You're one of us. Underhill Excavation digs the floor beneath your feet, cheerfully, and the ore down there is richer than anything on top. Our kiln bakes stone into brick and sand into glass, eight at a time.",
             Company::Gearwright => "A gear with teeth like that deserves a proper home. Gearwright's crude assembler builds valves, gauges, lamps, relays and gearboxes, patiently. Our lathe turns plate into rods and screws, and steel into steel rods and bearings.",
             Company::Swiftline => "A gearbox! Now that's something that turns. Swiftline belts move twice what Brannock's do, and our basic assembler builds electric motors and pistons. Tell the sisters we said hello.",
-            Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, an advanced assembler that builds control boards, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
-            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
+            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
         }
     }
 }
@@ -617,8 +617,10 @@ impl Tech {
             Tech::WireDrawer | Tech::Winder => Company::Kettering,
             Tech::CokeOven => Company::Cinderhall,
             Tech::Lathe => Company::Gearwright,
-            Tech::AdvancedDrill | Tech::AdvancedAssembler | Tech::LargeBasicAssembler | Tech::LargeBasicDrill => Company::Ampleworth,
-            Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill => Company::LatticeFinch,
+            Tech::AdvancedDrill | Tech::LargeBasicAssembler | Tech::LargeBasicDrill => Company::Ampleworth,
+            Tech::AdvancedAssembler | Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill => {
+                Company::LatticeFinch
+            }
         }
     }
     pub fn category(self) -> Category {
@@ -729,7 +731,7 @@ impl Tech {
             Tech::Welder => (Item::SteelGirder, 150),
             Tech::BasicAssembler => (Item::Gearbox, 100),
             Tech::AdvancedDrill => (Item::ElectricMotor, 40),
-            Tech::AdvancedAssembler => (Item::ElectricMotor, 80),
+            Tech::AdvancedAssembler => (Item::ControlBoard, 40),
             Tech::LargeBasicDrill => (Item::ElectricMotor, 150),
             Tech::LargeBasicAssembler => (Item::ElectricMotor, 300),
             Tech::PrecisionAssembler => (Item::ControlBoard, 120),
@@ -821,13 +823,13 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::BasicAssembler), Some(27)),         // 29
     (Node::Key(Item::ElectricMotor), Some(29)),           // 30
     (Node::Tech(Tech::AdvancedDrill), Some(30)),          // 31
-    (Node::Tech(Tech::AdvancedAssembler), Some(30)),      // 32
-    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 33
-    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 34
-    (Node::Key(Item::ControlBoard), Some(32)),            // 35
-    (Node::Tech(Tech::PrecisionAssembler), Some(35)),     // 36
-    (Node::Tech(Tech::LargeAdvancedDrill), Some(35)),     // 37
-    (Node::Tech(Tech::LargeAdvancedAssembler), Some(35)), // 38
+    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 32
+    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 33
+    (Node::Key(Item::ControlBoard), Some(26)),            // 34: hand-wired in the crude assembler
+    (Node::Tech(Tech::AdvancedAssembler), Some(34)),      // 35
+    (Node::Tech(Tech::PrecisionAssembler), Some(34)),     // 36
+    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),     // 37
+    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)), // 38
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -985,6 +987,9 @@ pub const PRESS_RECIPES: &[Recipe] = &[
     item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 300, None, Some(Tech::BlastFurnace), 'R'),
     item_recipe("hardened gear", &[(Item::HardenedIronPlate, 2)], &[(Item::HardenedGear, 1)], 300, None, Some(Tech::BlastFurnace), 'H'),
     item_recipe("copper coil (fine wire)", &[(Item::FineWire, 5)], &[(Item::CopperCoil, 1)], 150, None, None, 'C'),
+    // Crude sheets: a third more plate than the rolling mill takes, but no company to wait for.
+    item_recipe("copper sheet (pressed)", &[(Item::CopperPlate, 3)], &[(Item::CopperSheet, 1)], 300, None, None, 'S'),
+    item_recipe("iron sheet (pressed)", &[(Item::IronPlate, 3)], &[(Item::IronSheet, 1)], 300, None, None, 'I'),
 ];
 
 /// Molten steel: the steel stays molten and leaves the front as fluid (into a pipe or a molder
@@ -1056,7 +1061,21 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("lamp", &[(Item::Glass, 1), (Item::FineWire, 2)], &[(Item::Lamp, 1)], 600, None, None, 'L'),
     item_recipe("relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], &[(Item::Relay, 1)], 600, None, None, 'R'),
     item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 600, None, None, 'B'),
+    // The slow way round: boards by hand, before steel and motors. Advanced assemblers and up
+    // hide it (they have the 10 s recipe below).
+    item_recipe(
+        HAND_WIRED,
+        &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)],
+        &[(Item::ControlBoard, 1)],
+        2400,
+        None,
+        None,
+        'C',
+    ),
 ];
+
+/// The crude tier's control board, hidden on advanced assemblers and above.
+pub const HAND_WIRED: &str = "control board (hand-wired)";
 
 /// Coke ovens cook their own coal (no fire to feed, no EC): half the coal per coke the
 /// furnace needs, and some waste out the front.
