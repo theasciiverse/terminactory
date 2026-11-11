@@ -89,6 +89,36 @@ fn render_snapshots() {
     app.mail_open = false;
 }
 
+/// The telegram log lists everything newest first with unread ones marked, in wide and narrow panes.
+#[test]
+fn telegram_log_lists_newest_first() {
+    let mut w = World::new();
+    w.receive(crate::mail::parse("from: api-server\nevent: finished\n# Auth retry fixed\n\nAll tests pass.", 0), 1_000);
+    w.deliver(crate::mail::letter(Company::Ashgrove, crate::sim::now_secs()));
+    w.mark_read(1);
+    let mut app = App::new(w);
+    app.log_open = true;
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("Telegram log · 1 unread"), "{t}");
+    let rows: Vec<&str> = t.lines().filter(|l| l.contains("Ashgrove") || l.contains("api-server")).collect();
+    assert_eq!(rows.len(), 2, "{t}");
+    assert!(
+        rows[0].contains("● ") && rows[0].contains("Ashgrove") && rows[0].contains("· letter"),
+        "newest first, unread marked: {}",
+        rows[0]
+    );
+    assert!(rows[1].contains("Auth retry fixed") && !rows[1].contains('●'), "{}", rows[1]);
+    assert!(t.contains("Enter read"), "{t}");
+    // A narrow, short pane still shows the rows and the hint.
+    let t = text(&render(&mut app, 40, 12));
+    assert!(t.contains("● Ashgrove") && t.contains("Enter read"), "{t}");
+    std::fs::write("target/snapshot-log.html", to_html(&render(&mut app, 64, 16))).unwrap();
+    // Empty log.
+    let mut app = App::new(World::new());
+    app.log_open = true;
+    assert!(text(&render(&mut app, 64, 16)).contains("Nothing yet"));
+}
+
 /// The research tree turns top-down in a tall, narrow window, and scrolls in a small one.
 #[test]
 fn research_tree_fits_the_window() {

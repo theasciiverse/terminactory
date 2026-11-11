@@ -145,6 +145,9 @@ pub struct App {
     pub mail_scroll: u16,
     /// The telegram is open over the map (small pane); in the full view it sits in the sidebar.
     pub mail_open: bool,
+    /// The telegram log is open over the map (the game keeps running), and the row picked (0 = newest).
+    pub log_open: bool,
+    pub log_pick: usize,
     /// Where the sidebar telegram was drawn, so the mouse wheel can scroll it.
     pub mail_area: Rect,
     /// The production panel is open (over the map; the game keeps running), and its scroll.
@@ -209,6 +212,8 @@ impl App {
             mail: None,
             mail_scroll: 0,
             mail_open: false,
+            log_open: false,
+            log_pick: 0,
             mail_area: Rect::default(),
             help_scroll: 0,
             slot_pick: Vec::new(),
@@ -246,6 +251,41 @@ impl App {
         }
     }
 
+    /// Keys in the telegram log: pick a row, Enter reads it again, l or Esc closes.
+    fn log_key(&mut self, code: KeyCode) {
+        let n = self.world.log.len();
+        let last = n.saturating_sub(1);
+        match code {
+            KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('w') => self.log_pick = self.log_pick.saturating_sub(1),
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('s') => self.log_pick = (self.log_pick + 1).min(last),
+            KeyCode::PageUp => self.log_pick = self.log_pick.saturating_sub(8),
+            KeyCode::PageDown => self.log_pick = (self.log_pick + 8).min(last),
+            KeyCode::Home => self.log_pick = 0,
+            KeyCode::End => self.log_pick = last,
+            KeyCode::Enter => self.reopen_from_log(self.log_pick),
+            KeyCode::Esc => self.log_open = false,
+            c if self.controls.action(c) == Some(Action::MailLog) => self.log_open = false,
+            _ => {}
+        }
+    }
+
+    /// Shows the logged message `pick` rows from the newest as the current telegram. The one
+    /// being read, if unread, goes back to the front of the queue; the log itself is unchanged.
+    pub fn reopen_from_log(&mut self, pick: usize) {
+        let Some(entry) = self.world.log.iter().rev().nth(pick) else { return };
+        let msg = entry.msg.clone();
+        self.log_open = false;
+        if let Some(cur) = self.mail.take() {
+            if self.world.log.iter().any(|e| e.msg.id == cur.id && !e.read) {
+                self.world.mail.push_front(cur);
+            }
+        }
+        self.world.mail.retain(|m| m.id != msg.id);
+        self.mail = Some(msg);
+        self.mail_scroll = 0;
+        self.mail_open = self.compact_now;
+    }
+
     pub fn on_key(&mut self, k: KeyEvent) {
         if k.kind != KeyEventKind::Press {
             return;
@@ -277,6 +317,10 @@ impl App {
                 _ if is_mail => self.dismiss_mail(),
                 _ => {}
             }
+            return;
+        }
+        if self.log_open {
+            self.log_key(k.code);
             return;
         }
         if self.help {
@@ -366,9 +410,19 @@ impl App {
                 self.stats_scroll = 0;
             }
             Action::Book => self.open_book(),
+            Action::MailLog => {
+                self.log_open = true;
+                self.log_pick = 0;
+            }
             Action::Mail => {
                 if self.mail.is_none() {
-                    self.say("No telegrams waiting");
+                    let key = self.controls.key(Action::MailLog);
+                    let unread = self.world.unread();
+                    self.say(if unread > 0 {
+                        format!("No telegrams waiting. {key} opens the log ({unread} unread)")
+                    } else {
+                        format!("No telegrams waiting. {key} opens the log")
+                    });
                 } else if shift {
                     self.dismiss_all_mail();
                     self.say("All telegrams dismissed (the log keeps them)");
@@ -671,6 +725,14 @@ impl App {
     pub fn on_mouse(&mut self, m: MouseEvent) {
         let over_mail =
             self.mail.is_some() && !self.compact_now && self.mail_area.contains(ratatui::layout::Position::new(m.column, m.row));
+        if self.log_open {
+            match m.kind {
+                MouseEventKind::ScrollUp => self.log_pick = self.log_pick.saturating_sub(1),
+                MouseEventKind::ScrollDown => self.log_pick = (self.log_pick + 1).min(self.world.log.len().saturating_sub(1)),
+                _ => {}
+            }
+            return;
+        }
         if (self.mail_open || over_mail) && self.away.is_none() {
             match m.kind {
                 MouseEventKind::ScrollUp => self.mail_scroll = self.mail_scroll.saturating_sub(2),
@@ -1054,6 +1116,53 @@ mod tests {
         key(&mut app, KeyCode::Char('N'));
         assert!(app.mail.is_none() && app.world.mail.is_empty());
         assert_eq!((app.world.log.len(), app.world.unread()), (4, 0));
+    }
+
+    #[test]
+    fn the_log_reopens_a_telegram_you_closed() {
+        let mut app = with_telegrams(3);
+        app.compact_now = false;
+        key(&mut app, KeyCode::Char('N')); // dismiss all by accident
+        assert!(app.mail.is_none());
+        key(&mut app, KeyCode::Char('l'));
+        assert!(app.log_open);
+        key(&mut app, KeyCode::Down); // 0 is the newest; this picks the one before
+        key(&mut app, KeyCode::Char('x')); // stray keys do nothing
+        assert!(app.log_open && app.log_pick == 1);
+        key(&mut app, KeyCode::Enter);
+        assert!(!app.log_open);
+        let m = app.mail.as_ref().expect("reopened");
+        assert_eq!(m.md, "msg 1");
+        assert!(app.world.mail.is_empty());
+        key(&mut app, KeyCode::Char('n'));
+        assert!(app.mail.is_none());
+        // Esc and l both close the log.
+        key(&mut app, KeyCode::Char('l'));
+        key(&mut app, KeyCode::Esc);
+        assert!(!app.log_open);
+        key(&mut app, KeyCode::Char('l'));
+        key(&mut app, KeyCode::Char('l'));
+        assert!(!app.log_open);
+    }
+
+    #[test]
+    fn reopening_from_the_log_keeps_an_unread_telegram_waiting() {
+        let mut app = with_telegrams(3);
+        app.compact_now = false;
+        // Reading #1 (unread) when #3 is picked from the log: #1 goes back to the queue.
+        app.reopen_from_log(0);
+        assert_eq!(app.mail.as_ref().unwrap().md, "msg 2");
+        assert_eq!(app.world.mail.iter().map(|m| m.id).collect::<Vec<_>>(), [1, 2]);
+    }
+
+    #[test]
+    fn the_log_does_not_pause_or_hide_the_world() {
+        let mut app = with_telegrams(1);
+        let before = app.world.tick;
+        key(&mut app, KeyCode::Char('l'));
+        app.world.tick();
+        assert_eq!(app.world.tick, before + 1);
+        assert!(!app.paused);
     }
 
     #[test]

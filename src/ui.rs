@@ -76,6 +76,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.stats {
         draw_stats(f, app.map_area, app);
     }
+    if app.log_open {
+        maillog::draw_log(f, app.map_area, app);
+    }
     if app.tree {
         draw_tree(f, f.area(), app);
     }
@@ -2600,7 +2603,8 @@ CONTROLS
   Production ... o (the last minute, per item; the game keeps running)
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
-  Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll
+  Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,
+                 l log of past telegrams (Enter reads one again)
   Mouse ........ click places, drag lays belts, right-click removes,
                  middle-click copies a part (facing and settings too)
   Quit ......... Ctrl+C (saves first)
@@ -2619,5 +2623,6 @@ CONTROLS
     );
 }
 
+mod maillog;
 #[cfg(test)]
 mod tests;

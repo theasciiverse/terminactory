@@ -29,12 +29,13 @@ pub enum Action {
     Smaller,
     Compact,
     Mail,
+    MailLog,
     Book,
     Stats,
 }
 
 impl Action {
-    pub const ALL: [Action; 23] = [
+    pub const ALL: [Action; 24] = [
         Action::MoveUp,
         Action::MoveDown,
         Action::MoveLeft,
@@ -56,6 +57,7 @@ impl Action {
         Action::Smaller,
         Action::Compact,
         Action::Mail,
+        Action::MailLog,
         Action::Book,
         Action::Stats,
     ];
@@ -83,6 +85,7 @@ impl Action {
             Action::Smaller => "elevator_smaller",
             Action::Compact => "small_pane",
             Action::Mail => "telegram",
+            Action::MailLog => "telegram_log",
             Action::Book => "recipe_book",
             Action::Stats => "production",
         }
@@ -110,6 +113,7 @@ impl Action {
             Action::Smaller => &["-", "_"],
             Action::Compact => &["m"],
             Action::Mail => &["n"],
+            Action::MailLog => &["l"],
             Action::Book => &["b"],
             Action::Stats => &["o"],
         }
