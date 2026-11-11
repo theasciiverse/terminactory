@@ -815,7 +815,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::SupportBeams), Some(20)),           // 21
     (Node::Tech(Tech::RollingMill), Some(20)),            // 22
     (Node::Tech(Tech::Welder), Some(20)),                 // 23
-    (Node::Key(Item::IronGear), Some(18)),                // 24
+    (Node::Key(Item::IronGear), Some(1)),                 // 24: iron plate has a job from the start
     (Node::Tech(Tech::Lathe), Some(24)),                  // 25
     (Node::Tech(Tech::Assembler), Some(24)),              // 26
     (Node::Key(Item::Gearbox), Some(26)),                 // 27
@@ -983,7 +983,7 @@ pub const PRESS_RECIPES: &[Recipe] = &[
     item_recipe("copper wire", &[(Item::CopperPlate, 1)], &[(Item::CopperWire, 2)], 300, None, None, 'W'),
     item_recipe("copper pipe", &[(Item::CopperPlate, 2)], &[(Item::CopperPipe, 1)], 150, None, None, 'P'),
     item_recipe("copper coil", &[(Item::CopperWire, 4)], &[(Item::CopperCoil, 1)], 300, None, None, 'C'),
-    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 150, None, Some(Tech::BlastFurnace), 'G'),
+    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 150, None, None, 'G'),
     item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 300, None, Some(Tech::BlastFurnace), 'R'),
     item_recipe("hardened gear", &[(Item::HardenedIronPlate, 2)], &[(Item::HardenedGear, 1)], 300, None, Some(Tech::BlastFurnace), 'H'),
     item_recipe("copper coil (fine wire)", &[(Item::FineWire, 5)], &[(Item::CopperCoil, 1)], 150, None, None, 'C'),

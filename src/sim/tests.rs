@@ -2253,12 +2253,18 @@ fn every_key_item_can_be_made_before_its_company_opens() {
     let stuck: Vec<Company> = Company::ALL.into_iter().filter(|c| !open[c.idx()]).collect();
     assert!(stuck.is_empty(), "these companies can never open: {stuck:?} (opened in order {order:?})");
     let at = |c: Company| order.iter().position(|x| *x == c).unwrap();
-    // Copper first: the press makes wire, pipe and coil, the furnace makes coke.
-    for c in [Company::Ashgrove, Company::Wellbourne, Company::Kettering, Company::Cinderhall] {
-        assert!(at(c) < at(Company::Gearwright), "{c:?} before Gearwright");
+    // The press makes wire, pipe, coil and now the iron gear, and the furnace makes coke: all of
+    // them with the two starter companies, no blast furnace.
+    let mut starters = [false; COMPANIES];
+    for c in Company::ALL {
+        starters[c.idx()] = c.key_item().is_none();
     }
-    // Gears, girders and steel all need the blast furnace's tech, so Cinderhall first.
-    for c in [Company::Gearwright, Company::Pillar, Company::Swiftline] {
+    let (early, _) = makeable(&starters);
+    for item in [Item::CopperWire, Item::CopperPipe, Item::CopperCoil, Item::Coke, Item::IronGear] {
+        assert!(early[item.idx()], "{item:?} with only the starter companies");
+    }
+    // Girders and steel need the blast furnace's tech, so Cinderhall first.
+    for c in [Company::Pillar, Company::Swiftline] {
         assert!(at(Company::Cinderhall) < at(c), "Cinderhall before {c:?}");
     }
     // Concrete needs the mixer (Wellbourne) and sand from the crusher (Ashgrove).

@@ -121,7 +121,7 @@ Every other item except waste goes into at least one recipe.
 | | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
 | | Large advanced assembler (5×5) | 100,000 | 800 control board |
 
-Every key item can be made with machines from companies that open before it, so nothing locks: copper first, then Cinderhall's steel, then Pillar, Gearwright, Underhill, Swiftline and Ampleworth. Lattice & Finch is a second road: a control board can be wired by hand in the crude assembler as soon as you have relays and fine wire, no steel or motors needed.
+Every key item can be made with machines from companies that open before it, so nothing locks: copper and the iron gear first (a press makes both, no blast furnace needed, so Gearwright opens early), then Cinderhall's steel, then Pillar, Underhill, Swiftline and Ampleworth. Lattice & Finch is a second road: a control board can be wired by hand in the crude assembler as soon as you have relays and fine wire, no steel or motors needed.
 
 **Build menu.** Create has five groups now: 1 drills (cheap, basic, advanced, large basic, large advanced), 2 furnace / molder / blast furnace / coke oven / kiln, 3 press / wire drawer / winder / rolling mill / lathe / crusher, 4 assemblers (crude to large advanced) and the welder, 5 pump / advanced pump / pipe / mixer. On a short screen the menu folds each group to one kind (marked `+`) until you pick one; in a small pane the bottom line drops prices and shortens names so all five numbers show.
 
