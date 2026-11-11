@@ -1250,6 +1250,8 @@ pub struct World {
     pub grid: Grid,
     #[serde(skip)]
     pub fluids: Fluids,
+    #[serde(skip)]
+    pub active: Vec<Vec<u32>>,
 }
 
 /// Seconds between company deliveries that come with agent messages.
@@ -1322,6 +1324,7 @@ impl World {
             gifts: 0,
             grid: Grid::default(),
             fluids: Fluids::default(),
+            active: Vec::new(),
         };
         w.rebuild_grid();
         w
@@ -1353,6 +1356,7 @@ impl World {
             gifts: 0,
             grid: Grid::default(),
             fluids: Fluids::default(),
+            active: Vec::new(),
         };
         w.rebuild_grid();
         w
@@ -1386,8 +1390,23 @@ impl World {
         }
         let json = std::fs::read_to_string(path)?;
         let mut w: World = serde_json::from_str(&json).map_err(std::io::Error::other)?;
+        w.clamp_recipes();
         w.rebuild_grid();
         Ok(w)
+    }
+
+    /// A saved recipe index can point past the end if a recipe list shrank; fall back to the first recipe.
+    fn clamp_recipes(&mut self) {
+        for fl in &mut self.floors {
+            for b in fl.tiles.iter_mut().flatten() {
+                let n = b.kind.recipes().len();
+                if let St::Crafter { recipe, .. } = &mut b.st {
+                    if *recipe as usize >= n {
+                        *recipe = 0;
+                    }
+                }
+            }
+        }
     }
 
     /// The building covering tile (x, y), if any.
@@ -1888,6 +1907,7 @@ impl World {
         }
         let sources = nodes.iter().enumerate().map(|(k, n)| (n.0, n.1, node_net[k])).collect();
         self.grid = Grid { cover, nets, unpowered, engines, sources, bursts };
+        self.active = self.floors.iter().map(|fl| fl.tiles.iter().enumerate().filter(|(_, b)| b.is_some()).map(|(i, _)| i as u32).collect()).collect();
         self.update_power(false);
         self.rebuild_fluids();
     }
@@ -2063,7 +2083,8 @@ impl World {
             let pipe_pool = &self.fluids.pipe_pool[f];
             let pools = &mut self.fluids.pools;
             let level = level_of;
-            for i in 0..tiles.len() {
+            for &i in &self.active[f] {
+                let i = i as usize;
                 let Some(mut b) = tiles[i].take() else { continue };
                 let (x, y) = pos_of(i);
                 let ratio = match grid_of(cover, x, y, b.dims()) {
