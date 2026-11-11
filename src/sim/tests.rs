@@ -2372,6 +2372,21 @@ fn the_blast_furnace_makes_steel_four_ways_each_with_its_waste() {
     assert_eq!(Item::Steel.price(), 24.0);
 }
 
+/// Molten metal a minute from a recipe.
+fn molten_per_min(list: &[Recipe], name: &str) -> f64 {
+    let r = list.iter().find(|r| r.name == name).unwrap();
+    r.fluid_out.unwrap().1 as f64 * 60.0 * TPS as f64 / r.ticks as f64
+}
+
+#[test]
+fn the_blast_furnace_melts_iron_twice_as_fast_as_a_furnace() {
+    let (furnace, blast) = (molten_per_min(FURNACE_RECIPES, "molten iron"), molten_per_min(BLAST_RECIPES, "molten iron"));
+    assert_eq!((furnace, blast), (12.0, 24.0));
+    // Grit still melts at 48 a minute in the blast furnace, and better than ore in the furnace.
+    assert_eq!(molten_per_min(BLAST_RECIPES, "molten iron (grit)"), 48.0);
+    assert!(molten_per_min(FURNACE_RECIPES, "molten iron (grit)") < 48.0);
+}
+
 #[test]
 fn the_blast_furnace_hardens_plate_with_coke_or_coal() {
     let out = run_machine(Kind::BlastFurnace, "hardened iron plate", &[(Item::IronPlate, 2), (Item::Coke, 2)], 11);

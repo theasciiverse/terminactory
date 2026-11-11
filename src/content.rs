@@ -1018,7 +1018,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 1)),
-        ticks: 300,
+        ticks: 150,
         fuel: Some(Item::Coke),
         needs: None,
         tag: 'I',

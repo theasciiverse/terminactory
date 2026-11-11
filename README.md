@@ -36,7 +36,7 @@ Phase 1: ore is melted in a furnace into molten metal, a molder casts it into in
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
 - **Steam engines** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 40 EC each, only as much as their grid needs beyond solar.
-- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 5 s), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which comes out the front too and has to go somewhere (see Waste below).
+- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 2.5 s: 24 molten iron a minute, twice a furnace's 12), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which comes out the front too and has to go somewhere (see Waste below).
 
 Phase 3: floors, elevators and machinery.
 - **Floors**: support beams (after steel girders) open floor +1; excavation (after concrete) opens floor -1. Decking or digging costs $10 a tile (more on later floors), never any waiting. Drills underground mine 1.5x faster (2x and 3x on deeper floors later).
