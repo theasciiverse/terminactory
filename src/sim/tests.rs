@@ -1895,6 +1895,13 @@ fn new_items_have_the_asked_prices_and_curves() {
 }
 
 #[test]
+fn arms_are_cheap_to_power_toys() {
+    // An arm used to draw a whole solar panel (10 EC). Layout toys are cheap to play with.
+    assert_eq!((Kind::Arm.power_draw(), Kind::LongArm.power_draw()), (2.0, 4.0));
+    assert!(Kind::Arm.power_draw() < Kind::Press.power_draw() + 1.0);
+}
+
+#[test]
 fn new_machines_have_the_asked_size_power_and_cost() {
     let table = [
         (Kind::CokeOven, (2, 2), 0.0, 150.0),
