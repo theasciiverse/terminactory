@@ -60,14 +60,13 @@ fn one_line(s: &str) -> String {
 
 /// Takes every message waiting in the inbox, oldest first, and removes the files.
 pub fn collect(data_dir: &Path, now: u64) -> Vec<Message> {
-    let Ok(entries) = std::fs::read_dir(inbox(data_dir)) else { return Vec::new() };
+    let Ok(entries) = std::fs::read_dir(inbox(data_dir)) else {
+        return Vec::new();
+    };
     let mut files: Vec<PathBuf> = entries
         .flatten()
         .map(|e| e.path())
-        .filter(|p| {
-            p.extension().is_some_and(|x| x == "md")
-                && !p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with('.'))
-        })
+        .filter(|p| p.extension().is_some_and(|x| x == "md") && !p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with('.')))
         .collect();
     files.sort();
     let mut out = Vec::new();
@@ -131,7 +130,9 @@ fn last_reply(path: &str) -> Option<String> {
     }
     let text = std::fs::read_to_string(path).ok()?;
     for line in text.lines().rev() {
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
         if v.get("type").and_then(|t| t.as_str()) != Some("assistant") {
             continue;
         }
@@ -265,7 +266,8 @@ fn lines(md: &str) -> Vec<Line<'static>> {
             if out.last().is_some_and(|l| l.width() > 0) {
                 out.push(Line::raw(""));
             }
-            let style = if level == 1 { Style::new().fg(HEAD).add_modifier(Modifier::BOLD) } else { Style::new().add_modifier(Modifier::BOLD) };
+            let style =
+                if level == 1 { Style::new().fg(HEAD).add_modifier(Modifier::BOLD) } else { Style::new().add_modifier(Modifier::BOLD) };
             let mut spans = vec![Span::raw(" ")];
             spans.extend(inline(text, style));
             out.push(Line::from(spans));
@@ -373,9 +375,7 @@ fn inline(s: &str, base: Style) -> Vec<Span<'static>> {
             }
         };
     }
-    let closes = |from: usize, pat: &[char]| -> bool {
-        (from..chars.len()).any(|j| chars[j..].starts_with(pat))
-    };
+    let closes = |from: usize, pat: &[char]| -> bool { (from..chars.len()).any(|j| chars[j..].starts_with(pat)) };
     while i < chars.len() {
         let c = chars[i];
         let next = chars.get(i + 1).copied();
@@ -393,13 +393,11 @@ fn inline(s: &str, base: Style) -> Vec<Span<'static>> {
                 continue;
             }
         }
-        if (c == '*' && next == Some('*')) || (c == '_' && next == Some('_')) {
-            if bold || closes(i + 2, &[c, c]) {
-                flush!();
-                bold = !bold;
-                i += 2;
-                continue;
-            }
+        if ((c == '*' && next == Some('*')) || (c == '_' && next == Some('_'))) && (bold || closes(i + 2, &[c, c])) {
+            flush!();
+            bold = !bold;
+            i += 2;
+            continue;
         }
         if c == '~' && next == Some('~') && (strike || closes(i + 2, &['~', '~'])) {
             flush!();
@@ -587,9 +585,12 @@ mod tests {
         std::fs::write(
             &path,
             concat!(
-                r#"{"type":"user","message":{"content":"hi"}}"#, "\n",
-                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"All done."},{"type":"tool_use"}]}}"#, "\n",
-                r#"{"type":"assistant","message":{"content":[{"type":"tool_use"}]}}"#, "\n",
+                r#"{"type":"user","message":{"content":"hi"}}"#,
+                "\n",
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"All done."},{"type":"tool_use"}]}}"#,
+                "\n",
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use"}]}}"#,
+                "\n",
             ),
         )
         .unwrap();

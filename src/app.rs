@@ -2,9 +2,7 @@
 
 use std::time::Instant;
 
-use ratatui::crossterm::event::{
-    KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
-};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
 use crate::controls::{Action, Controls};
@@ -406,14 +404,18 @@ impl App {
     pub fn number(&mut self, n: usize) {
         match self.menu {
             None => {
-                let Some(&cat) = Category::ALL.get(n - 1) else { return };
+                let Some(&cat) = Category::ALL.get(n - 1) else {
+                    return;
+                };
                 self.menu = Some(cat);
                 let count = slots(cat).len();
                 let back = self.controls.label(Action::Back);
                 self.say(format!("{}: press 1-{count} to pick, again to switch kind, {back} to go back", cat.name()));
             }
             Some(cat) => {
-                let Some(&slot) = slots(cat).get(n - 1) else { return };
+                let Some(&slot) = slots(cat).get(n - 1) else {
+                    return;
+                };
                 let open = |k: &Kind| self.world.progress.part_unlocked(*k);
                 let kind = match self.selected.and_then(|s| slot.iter().position(|k| *k == s)) {
                     // Already holding something from this slot: move on to its next unlocked kind.
@@ -467,7 +469,11 @@ impl App {
         let (x, y) = self.cursor;
         let here = self.world.tile(self.floor, x, y).and_then(|b| match &b.st {
             crate::sim::St::Drill { mines: Some(m), .. } => Some(Entry::Item(*m)),
-            _ => b.recipe().and_then(|r| r.outputs.first()).map(|o| Entry::Item(o.0)).or(BOOK_PARTS.contains(&b.kind).then_some(Entry::Part(b.kind))),
+            _ => b
+                .recipe()
+                .and_then(|r| r.outputs.first())
+                .map(|o| Entry::Item(o.0))
+                .or(BOOK_PARTS.contains(&b.kind).then_some(Entry::Part(b.kind))),
         });
         if let Some(e) = here {
             self.book_query.clear();
@@ -649,9 +655,8 @@ impl App {
     }
 
     pub fn on_mouse(&mut self, m: MouseEvent) {
-        let over_mail = self.mail.is_some()
-            && !self.compact_now
-            && self.mail_area.contains(ratatui::layout::Position::new(m.column, m.row));
+        let over_mail =
+            self.mail.is_some() && !self.compact_now && self.mail_area.contains(ratatui::layout::Position::new(m.column, m.row));
         if (self.mail_open || over_mail) && self.letter.is_none() && self.away.is_none() {
             match m.kind {
                 MouseEventKind::ScrollUp => self.mail_scroll = self.mail_scroll.saturating_sub(2),
@@ -758,7 +763,11 @@ impl App {
         let (mut x, mut y) = from;
         while (x, y) != to {
             let d = if x != to.0 {
-                if to.0 > x { Dir::E } else { Dir::W }
+                if to.0 > x {
+                    Dir::E
+                } else {
+                    Dir::W
+                }
             } else if to.1 > y {
                 Dir::S
             } else {
@@ -895,7 +904,11 @@ impl App {
                 self.floor = f;
                 let what = match level {
                     0 => "Ground level".to_string(),
-                    l if l < 0 => format!("Floor {l}: digging costs ${:.0} a tile, drills here mine {}x faster", crate::sim::tile_cost(l), crate::sim::richness(l)),
+                    l if l < 0 => format!(
+                        "Floor {l}: digging costs ${:.0} a tile, drills here mine {}x faster",
+                        crate::sim::tile_cost(l),
+                        crate::sim::richness(l)
+                    ),
                     l => format!("Floor +{l}: decking costs ${:.0} a tile", crate::sim::tile_cost(l)),
                 };
                 self.say(what);

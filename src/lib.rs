@@ -99,7 +99,9 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
         Ok(l) => l,
         Err(pid) => {
             let what = if demo { "The demo".to_string() } else { name.clone() };
-            eprintln!("{what} is already open in another window (process {pid}). Switch to that window, or open another save: tfac --saves");
+            eprintln!(
+                "{what} is already open in another window (process {pid}). Switch to that window, or open another save: tfac --saves"
+            );
             return Ok(());
         }
     };
@@ -146,9 +148,7 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
     if !demo {
         if let Some((away, m, r)) = app.world.apply_offline(sim::now_secs()) {
             let (h, min) = (away / 3600, (away % 3600) / 60);
-            app.away = Some(format!(
-                "You were away for {h}h {min}m. Your factory kept going:\n\n  +${m:.0}\n  +{r:.1} research"
-            ));
+            app.away = Some(format!("You were away for {h}h {min}m. Your factory kept going:\n\n  +${m:.0}\n  +{r:.1} research"));
         }
     }
     // Key bindings live in controls.json; it's created with the defaults if missing.

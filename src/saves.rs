@@ -37,7 +37,9 @@ pub fn version_problem(path: &Path, name: &str) -> Option<String> {
 
 /// Every numbered save, lowest number first.
 pub fn list(data: &Path) -> Vec<SaveInfo> {
-    let Ok(entries) = std::fs::read_dir(dir(data)) else { return Vec::new() };
+    let Ok(entries) = std::fs::read_dir(dir(data)) else {
+        return Vec::new();
+    };
     let mut v: Vec<SaveInfo> = entries
         .flatten()
         .filter_map(|e| {
@@ -123,7 +125,7 @@ fn grouped(v: f64) -> String {
     let s = (v.max(0.0).floor() as u64).to_string();
     let mut out = String::new();
     for (k, ch) in s.chars().enumerate() {
-        if k > 0 && (s.len() - k) % 3 == 0 {
+        if k > 0 && (s.len() - k).is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);
@@ -155,7 +157,8 @@ pub fn describe(data: &Path) -> String {
             }
             Err(_) => "(can't be read)".into(),
         };
-        let open = std::fs::read_to_string(s.path.with_extension("lock")).ok().and_then(|t| t.trim().parse::<u32>().ok()).is_some_and(alive);
+        let open =
+            std::fs::read_to_string(s.path.with_extension("lock")).ok().and_then(|t| t.trim().parse::<u32>().ok()).is_some_and(alive);
         let mark = if open {
             "   (open now)"
         } else if last.as_deref() == Some(s.name.as_str()) {

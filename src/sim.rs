@@ -323,9 +323,7 @@ impl Kind {
             | Kind::LargeAdvancedDrill
             | Kind::AdvancedPump
             | Kind::Pump
-            | Kind::Pipe => {
-                Category::Create
-            }
+            | Kind::Pipe => Category::Create,
             Kind::Belt | Kind::FastBelt | Kind::Tunnel | Kind::Splitter | Kind::Sorter | Kind::Arm | Kind::LongArm | Kind::Elevator => {
                 Category::Transport
             }
@@ -439,12 +437,7 @@ impl Kind {
     /// Elevators can be built from 2x2 up to 8x8 (this is their smallest).
     pub fn base_dims(self) -> (i32, i32) {
         match self {
-            Kind::Furnace
-            | Kind::TradePost
-            | Kind::Lathe
-            | Kind::AdvancedAssembler
-            | Kind::PrecisionAssembler
-            | Kind::Welder => (3, 3),
+            Kind::Furnace | Kind::TradePost | Kind::Lathe | Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::Welder => (3, 3),
             Kind::Kiln => (3, 5),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
             Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
@@ -481,7 +474,11 @@ impl Kind {
     /// Footprint (width, height) of a part facing `dir`.
     pub fn dims(self, dir: Dir) -> (i32, i32) {
         let (w, h) = self.base_dims();
-        if self.directional() && matches!(dir, Dir::N | Dir::S) { (h, w) } else { (w, h) }
+        if self.directional() && matches!(dir, Dir::N | Dir::S) {
+            (h, w)
+        } else {
+            (w, h)
+        }
     }
     pub fn power_draw(self) -> f64 {
         match self {
@@ -520,7 +517,11 @@ impl Kind {
     /// Runs this many recipe runs at once: it loads inputs for all of them, then fires them
     /// together (one recipe time). Only kilns do.
     pub fn batch(self) -> u32 {
-        if self == Kind::Kiln { 8 } else { 1 }
+        if self == Kind::Kiln {
+            8
+        } else {
+            1
+        }
     }
     /// Finished goods a machine holds before it stops.
     pub fn out_cap(self) -> usize {
@@ -528,10 +529,7 @@ impl Kind {
     }
     /// Has a front that can be rotated (belts and arms move that way; buildings output there).
     pub fn directional(self) -> bool {
-        !matches!(
-            self,
-            Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::Pole | Kind::Pipe | Kind::SteamEngine
-        )
+        !matches!(self, Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::Pole | Kind::Pipe | Kind::SteamEngine)
     }
     pub fn is_belt(self) -> bool {
         matches!(self, Kind::Belt | Kind::FastBelt)
@@ -638,10 +636,7 @@ impl Kind {
         }
     }
     pub fn is_drill(self) -> bool {
-        matches!(
-            self,
-            Kind::Drill | Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill
-        )
+        matches!(self, Kind::Drill | Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill)
     }
     pub fn is_pump(self) -> bool {
         matches!(self, Kind::Pump | Kind::AdvancedPump)
@@ -680,11 +675,19 @@ impl Kind {
     }
     /// What a drill can be set to mine (f cycles through these).
     pub fn ores(self) -> &'static [Item] {
-        if self.is_drill() { &[Item::CopperOre, Item::Coal, Item::IronOre, Item::Stone] } else { &[] }
+        if self.is_drill() {
+            &[Item::CopperOre, Item::Coal, Item::IronOre, Item::Stone]
+        } else {
+            &[]
+        }
     }
     /// How much water a pump adds per second.
     pub fn pump_rate(self) -> f64 {
-        if self == Kind::AdvancedPump { 4.0 * PUMP_RATE } else { PUMP_RATE }
+        if self == Kind::AdvancedPump {
+            4.0 * PUMP_RATE
+        } else {
+            PUMP_RATE
+        }
     }
 }
 
@@ -777,9 +780,17 @@ pub struct BeltItem {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum St {
-    Drill { mines: Option<Item>, fuel: u32, coal: u32, progress: f64, out: VecDeque<Item> },
+    Drill {
+        mines: Option<Item>,
+        fuel: u32,
+        coal: u32,
+        progress: f64,
+        out: VecDeque<Item>,
+    },
     /// Items sorted front first (highest pos first).
-    Belt { items: Vec<BeltItem> },
+    Belt {
+        items: Vec<BeltItem>,
+    },
     Splitter {
         buf: VecDeque<Item>,
         cooldown: f64,
@@ -790,7 +801,11 @@ pub enum St {
         #[serde(default)]
         filter: Option<Item>,
     },
-    Arm { filter: Option<Item>, hold: Option<Item>, progress: f64 },
+    Arm {
+        filter: Option<Item>,
+        hold: Option<Item>,
+        progress: f64,
+    },
     /// Furnaces, molders, presses and blast furnaces: a chosen recipe, a stock of inputs, and finished goods.
     Crafter {
         recipe: u8,
@@ -806,7 +821,9 @@ pub enum St {
         #[serde(default)]
         fluid_out: u32,
     },
-    Crate { items: VecDeque<Item> },
+    Crate {
+        items: VecDeque<Item>,
+    },
     /// `stuck`: ticks left to show that waste was just turned away.
     Trade {
         mode: SellMode,
@@ -825,14 +842,26 @@ pub enum St {
         mode: DoorMode,
     },
     Pipe,
-    Pump { busy: bool },
+    Pump {
+        busy: bool,
+    },
     /// Burns coal to turn water (from pipes) into steam (out of its front).
-    Boiler { fuel: u32, coal: u32, busy: bool },
+    Boiler {
+        fuel: u32,
+        coal: u32,
+        busy: bool,
+    },
     /// Turns steam into power for its grid.
-    Engine { steam: f64, output: f64 },
+    Engine {
+        steam: f64,
+        output: f64,
+    },
     /// A belt tunnel end. An entrance holds what's passing under, with how far each item
     /// still has to go (in tiles); an exit only marks where they come back up.
-    Tunnel { exit: bool, items: VecDeque<(Item, f64)> },
+    Tunnel {
+        exit: bool,
+        items: VecDeque<(Item, f64)>,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -879,9 +908,16 @@ impl Building {
             | Kind::WireDrawer
             | Kind::RollingMill
             | Kind::Lathe
-            | Kind::Winder => {
-                St::Crafter { recipe: 0, stock: [0; ITEMS], fuel: 0, progress: 0.0, busy: false, out: VecDeque::new(), fluid: 0, fluid_out: 0 }
-            }
+            | Kind::Winder => St::Crafter {
+                recipe: 0,
+                stock: [0; ITEMS],
+                fuel: 0,
+                progress: 0.0,
+                busy: false,
+                out: VecDeque::new(),
+                fluid: 0,
+                fluid_out: 0,
+            },
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
             Kind::TradePost => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0, stuck: 0 },
@@ -1041,7 +1077,11 @@ impl Econ {
 
 /// "$100" or "$0.50".
 pub fn money_text(v: f64) -> String {
-    if v.fract() == 0.0 { format!("${v:.0}") } else { format!("${v:.2}") }
+    if v.fract() == 0.0 {
+        format!("${v:.0}")
+    } else {
+        format!("${v:.2}")
+    }
 }
 
 /// Running totals, once a second, for the production panel.
@@ -1103,7 +1143,7 @@ impl Progress {
             // Either way into a second floor brings elevators.
             return self.has(Tech::SupportBeams) || self.has(Tech::Excavation);
         }
-        k.company().map_or(true, |c| self.is_open(c)) && k.tech().map_or(true, |t| self.has(t))
+        k.company().is_none_or(|c| self.is_open(c)) && k.tech().is_none_or(|t| self.has(t))
     }
 }
 
@@ -1295,7 +1335,11 @@ pub fn footprint(x: i32, y: i32, w: i32, h: i32) -> impl Iterator<Item = (i32, i
 
 /// Footprint of a part facing `dir`; `s` is the side of an elevator (ignored for other parts).
 pub fn dims_of(kind: Kind, dir: Dir, s: i32) -> (i32, i32) {
-    if kind == Kind::Elevator { (s, s) } else { kind.dims(dir) }
+    if kind == Kind::Elevator {
+        (s, s)
+    } else {
+        kind.dims(dir)
+    }
 }
 
 /// How many tiles long a building's edge is on side `d`.
@@ -1352,12 +1396,7 @@ impl World {
             version: SAVE_VERSION,
             floors: LEVELS.iter().map(|&l| Floor::new(l, true)).collect(),
             econ: Econ { money: 1e6, ..Default::default() },
-            progress: Progress {
-                opened: [true; COMPANIES],
-                researched: [true; TECHS],
-                events: VecDeque::new(),
-                notes: VecDeque::new(),
-            },
+            progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], events: VecDeque::new(), notes: VecDeque::new() },
             tick: 0,
             lifts: Vec::new(),
             saved_at: 0,
@@ -1513,7 +1552,9 @@ impl World {
         let mut added = false;
         for k in 0..self.lifts.len() {
             let anchor = self.lifts[k].anchor;
-            let Some(door) = self.floors.iter().find_map(|fl| fl.tiles[anchor].clone()) else { continue };
+            let Some(door) = self.floors.iter().find_map(|fl| fl.tiles[anchor].clone()) else {
+                continue;
+            };
             let (x, y) = pos_of(anchor);
             let (w, h) = door.dims();
             for g in 0..self.floors.len() {
@@ -1522,7 +1563,9 @@ impl World {
                 }
                 if footprint(x, y, w, h).any(|(tx, ty)| self.floors[g].owner[idx(tx, ty)].is_some()) {
                     let level = self.floors[g].level;
-                    self.progress.notes.push_back(format!("An elevator's shaft is built over on floor {level:+}: clear it and rebuild the elevator for a door there"));
+                    self.progress.notes.push_back(format!(
+                        "An elevator's shaft is built over on floor {level:+}: clear it and rebuild the elevator for a door there"
+                    ));
                     continue;
                 }
                 let mut d = door.clone();
@@ -1555,11 +1598,8 @@ impl World {
             return Err(self.floor_hint(self.floors[f].level).into());
         }
         // Elevators reach every open floor; everything else sits on this one.
-        let floors: Vec<usize> = if kind == Kind::Elevator {
-            (0..self.floors.len()).filter(|&g| self.floor_open(g)).collect()
-        } else {
-            vec![f]
-        };
+        let floors: Vec<usize> =
+            if kind == Kind::Elevator { (0..self.floors.len()).filter(|&g| self.floor_open(g)).collect() } else { vec![f] };
         if kind == Kind::Elevator && floors.len() < 2 {
             return Err("Elevators need a second floor to go to".into());
         }
@@ -1665,7 +1705,9 @@ impl World {
     /// How much waste the storage covering (x, y) holds: crates, warehouses, and an
     /// elevator (its car and its doors on every floor).
     pub fn waste_inside(&self, f: usize, x: i32, y: i32) -> usize {
-        let Some(a) = self.floors[f].anchor_at(x, y) else { return 0 };
+        let Some(a) = self.floors[f].anchor_at(x, y) else {
+            return 0;
+        };
         let count = |it: &mut dyn Iterator<Item = &Item>| it.filter(|i| **i == Item::Waste).count();
         match self.floors[f].tiles[a].as_ref().map(|b| (&b.st, b.kind)) {
             Some((St::Crate { items }, _)) => count(&mut items.iter()),
@@ -1791,9 +1833,13 @@ impl World {
 
     /// Gives a just-placed part a copied setting. Recipes that aren't researched are skipped.
     pub fn apply_setting(&mut self, f: usize, x: i32, y: i32, set: Setting) {
-        let Some(a) = self.floors[f].anchor_at(x, y) else { return };
+        let Some(a) = self.floors[f].anchor_at(x, y) else {
+            return;
+        };
         let progress = &self.progress;
-        let Some(b) = self.floors[f].tiles[a].as_mut() else { return };
+        let Some(b) = self.floors[f].tiles[a].as_mut() else {
+            return;
+        };
         let kind = b.kind;
         match (&mut b.st, set) {
             (St::Arm { filter, .. }, Setting::Filter(v)) => *filter = v,
@@ -1803,12 +1849,12 @@ impl World {
                 *mines = Some(m);
                 *progress = 0.0;
             }
-            (St::Crafter { recipe, fluid, fluid_out, .. }, Setting::Recipe(v)) => {
-                if kind.recipes().get(v as usize).is_some_and(|r| r.needs.map_or(true, |t| progress.has(t))) {
-                    *recipe = v;
-                    *fluid = 0;
-                    *fluid_out = 0;
-                }
+            (St::Crafter { recipe, fluid, fluid_out, .. }, Setting::Recipe(v))
+                if kind.recipes().get(v as usize).is_some_and(|r| r.needs.is_none_or(|t| progress.has(t))) =>
+            {
+                *recipe = v;
+                *fluid = 0;
+                *fluid_out = 0;
             }
             _ => {}
         }
@@ -1853,7 +1899,7 @@ impl World {
             }
             St::Crafter { recipe, progress: p, fluid, fluid_out, .. } => {
                 let list = kind.recipes();
-                let usable = |r: &Recipe| r.needs.map_or(true, |t| progress.has(t));
+                let usable = |r: &Recipe| r.needs.is_none_or(|t| progress.has(t));
                 if list.iter().filter(|r| usable(r)).count() < 2 {
                     return Some(format!("{} has only one recipe so far", kind.name()));
                 }
@@ -1942,12 +1988,7 @@ impl World {
                 nets[id].solar += SOLAR_OUTPUT;
             }
         }
-        let engines = nodes
-            .iter()
-            .enumerate()
-            .filter(|(_, n)| n.3 == Kind::SteamEngine)
-            .map(|(k, n)| (n.0, n.1, node_net[k]))
-            .collect();
+        let engines = nodes.iter().enumerate().filter(|(_, n)| n.3 == Kind::SteamEngine).map(|(k, n)| (n.0, n.1, node_net[k])).collect();
         let mut unpowered = 0;
         let mut bursts = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
@@ -1969,7 +2010,11 @@ impl World {
         }
         let sources = nodes.iter().enumerate().map(|(k, n)| (n.0, n.1, node_net[k])).collect();
         self.grid = Grid { cover, nets, unpowered, engines, sources, bursts };
-        self.active = self.floors.iter().map(|fl| fl.tiles.iter().enumerate().filter(|(_, b)| b.is_some()).map(|(i, _)| i as u32).collect()).collect();
+        self.active = self
+            .floors
+            .iter()
+            .map(|fl| fl.tiles.iter().enumerate().filter(|(_, b)| b.is_some()).map(|(i, _)| i as u32).collect())
+            .collect();
         self.update_power(false);
         self.rebuild_fluids();
     }
@@ -2153,7 +2198,9 @@ impl World {
             let level = level_of;
             for &i in &self.active[f] {
                 let i = i as usize;
-                let Some(mut b) = tiles[i].take() else { continue };
+                let Some(mut b) = tiles[i].take() else {
+                    continue;
+                };
                 let (x, y) = pos_of(i);
                 let ratio = match grid_of(cover, x, y, b.dims()) {
                     id if id >= 0 => nets[id as usize].ratio,
@@ -2167,7 +2214,7 @@ impl World {
         self.tick += 1;
         self.run_lifts();
         self.check_discoveries();
-        if self.tick % TPS == 0 {
+        if self.tick.is_multiple_of(TPS) {
             self.sample_earnings();
         }
     }
@@ -2193,7 +2240,13 @@ impl World {
             }
         }
         let e = &self.econ;
-        self.flow_samples.push_back(FlowSample { made: e.made, used: e.used, sold: e.sold, money: e.money_from, research: e.research_from });
+        self.flow_samples.push_back(FlowSample {
+            made: e.made,
+            used: e.used,
+            sold: e.sold,
+            money: e.money_from,
+            research: e.research_from,
+        });
         while self.flow_samples.len() > 61 {
             self.flow_samples.pop_front();
         }
@@ -2217,7 +2270,9 @@ impl World {
     /// sold per minute, and the money and research its sales brought per minute.
     /// Only items with something going on. The second value is how many seconds it covers.
     pub fn flow(&self) -> (Vec<Flow>, u64) {
-        let (Some(a), Some(b)) = (self.flow_samples.front(), self.flow_samples.back()) else { return (Vec::new(), 0) };
+        let (Some(a), Some(b)) = (self.flow_samples.front(), self.flow_samples.back()) else {
+            return (Vec::new(), 0);
+        };
         let secs = (self.flow_samples.len() - 1) as u64;
         if secs == 0 {
             return (Vec::new(), 0);
@@ -2344,11 +2399,7 @@ impl World {
             let levels: Vec<i32> = self.floors.iter().map(|fl| fl.level).collect();
             let level = |f: usize| levels[f];
             let nearest = |from: usize, want: DoorMode| {
-                doors
-                    .iter()
-                    .filter(|d| d.2 == want && d.0 != from)
-                    .min_by_key(|d| ((d.1 - level(from)).abs(), d.0))
-                    .map(|d| d.0)
+                doors.iter().filter(|d| d.2 == want && d.0 != from).min_by_key(|d| ((d.1 - level(from)).abs(), d.0)).map(|d| d.0)
             };
             let mode_at = |f: usize| doors.iter().find(|d| d.0 == f).map_or(DoorMode::Pass, |d| d.2);
             let mut car = std::mem::replace(
@@ -2411,7 +2462,9 @@ impl World {
                     car.carry = (car.carry + LIFT_RATE).min(2.0);
                     if let Some(Building { st: St::Elevator { outbox, .. }, .. }) = self.floors[car.at].tiles[anchor].as_mut() {
                         while car.carry >= 1.0 && outbox.len() < cap {
-                            let Some(it) = car.load.pop_front() else { break };
+                            let Some(it) = car.load.pop_front() else {
+                                break;
+                            };
                             outbox.push_back(it);
                             car.carry -= 1.0;
                         }
@@ -2435,7 +2488,9 @@ impl World {
     /// A full building says EC? when everything in front of it is a belt with no power,
     /// since that's the real reason it can't get rid of its output.
     fn full_word(&self, f: usize, a: usize) -> &'static str {
-        let Some(b) = self.floors[f].tiles[a].as_ref() else { return "FULL" };
+        let Some(b) = self.floors[f].tiles[a].as_ref() else {
+            return "FULL";
+        };
         let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
         let dims = b.dims();
         let mut belts = 0;
@@ -2444,7 +2499,9 @@ impl World {
             if !in_bounds(tx, ty) {
                 continue;
             }
-            let Some(o) = self.floors[f].owner[idx(tx, ty)] else { continue };
+            let Some(o) = self.floors[f].owner[idx(tx, ty)] else {
+                continue;
+            };
             match self.floors[f].tiles[o as usize].as_ref() {
                 Some(nb) if nb.kind.is_belt() => {
                     if self.building_ratio(f, o as usize) > 0.0 {
@@ -2456,7 +2513,11 @@ impl World {
                 None => {}
             }
         }
-        if belts > 0 { "EC?" } else { "FULL" }
+        if belts > 0 {
+            "EC?"
+        } else {
+            "FULL"
+        }
     }
 
     /// How many buildings are idle across every floor, and the most common reason.
@@ -2546,7 +2607,7 @@ impl World {
         self.place(f, 58, 37, Press, Dir::E)?; // pushes plates straight into the trade post
         self.place(f, 60, 36, TradePost, Dir::E)?;
         self.configure(f, 60, 36); // split 40/40
-        // Coal drill sends coal west; a splitter shares it between the furnace and the copper drill.
+                                   // Coal drill sends coal west; a splitter shares it between the furnace and the copper drill.
         self.place(f, 65, 41, Drill, Dir::W)?;
         self.apply_setting(f, 65, 41, Setting::Mines(Item::Coal));
         for x in 55..=64 {
@@ -2647,7 +2708,13 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             // A drill on coal with nothing to burn fuels itself from what it mines.
             let mut self_fuel = burn > 0 && *fuel == 0 && item == Item::Coal;
             // Electric drills slow down with the grid.
-            let speed = if burn == 0 { ratio } else if *fuel > 0 || self_fuel { 1.0 } else { 0.0 };
+            let speed = if burn == 0 {
+                ratio
+            } else if *fuel > 0 || self_fuel {
+                1.0
+            } else {
+                0.0
+            };
             if speed > 0.0 && out.len() < cap {
                 *fuel = fuel.saturating_sub(burn);
                 *progress += mult as f64 * speed;
@@ -2684,11 +2751,11 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 }
             }
             // A batch machine (the kiln) waits until it holds the inputs for every run, then fires them all.
-            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) && r.fluid_in.map_or(true, |(_, n)| *fluid >= n * batch);
+            let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) && r.fluid_in.is_none_or(|(_, n)| *fluid >= n * batch);
             let made: usize = r.outputs.iter().map(|o| (o.1 * batch) as usize).sum();
             // Both outputs need room: items and fluid.
-            let room = out.len() + made <= kind.out_cap()
-                && r.fluid_out.map_or(true, |(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
+            let room =
+                out.len() + made <= kind.out_cap() && r.fluid_out.is_none_or(|(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
             if have && room {
                 let speed = match r.fuel {
                     Some(f) => {
@@ -2756,7 +2823,9 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 *fuel = Item::Coal.burn_ticks().unwrap_or(0);
             }
             // Water comes from pipes on any side but the front.
-            let source = pools_around(pipe_pool, x, y, dims, Some(dir)).into_iter().find(|&p| pools[p].fluid == Some(Fluid::Water) && pools[p].amount >= step);
+            let source = pools_around(pipe_pool, x, y, dims, Some(dir))
+                .into_iter()
+                .find(|&p| pools[p].fluid == Some(Fluid::Water) && pools[p].amount >= step);
             if *fuel > 0 {
                 if let Some(src) = source {
                     // Steam goes out the front: straight into an engine, or into a pipe network.
@@ -2849,7 +2918,9 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Tunnel { exit: false, items } => {
             // Items travel under at belt speed, keeping their spacing, and come up out of
             // the exit's front. With no exit ahead they wait.
-            let Some(k) = tunnel_partner(tiles, x, y, dir) else { return };
+            let Some(k) = tunnel_partner(tiles, x, y, dir) else {
+                return;
+            };
             let mut limit = f64::MIN;
             for it in items.iter_mut() {
                 it.1 = (it.1 - BELT_SPEED).max(limit + BELT_GAP).max(0.0);
@@ -2873,7 +2944,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
 }
 
 fn belt_accept(items: &mut Vec<BeltItem>, item: Item) -> bool {
-    if items.last().map_or(true, |l| l.pos >= BELT_GAP) {
+    if items.last().is_none_or(|l| l.pos >= BELT_GAP) {
         items.push(BeltItem { item, pos: 0.0 });
         true
     } else {
@@ -2921,7 +2992,11 @@ fn fluid_out_cap(per_fire: u32) -> u32 {
 
 /// How much of one input a machine takes in: a few runs' worth, or a whole batch.
 fn input_cap(per_run: u32, batch: u32) -> u32 {
-    if batch > 1 { per_run * batch } else { (per_run * 4).max(10) }
+    if batch > 1 {
+        per_run * batch
+    } else {
+        (per_run * 4).max(10)
+    }
 }
 
 /// Pushes up to `n` whole units of a fluid out of a building's front edge: into a pipe
@@ -2957,7 +3032,9 @@ fn push_fluid(
                 }
                 continue;
             }
-            let Some(a) = owner[idx(tx, ty)] else { continue };
+            let Some(a) = owner[idx(tx, ty)] else {
+                continue;
+            };
             if let Some(Building { kind, st: St::Crafter { recipe, fluid, .. }, .. }) = tiles[a as usize].as_mut() {
                 if let Some((f2, per)) = kind.recipes()[*recipe as usize].fluid_in {
                     if f2 == fl && *fluid < fluid_cap(per * kind.batch()) {
@@ -2976,7 +3053,14 @@ fn push_fluid(
 /// Splitters send items, in turn, onto every neighbouring belt that leads away from them.
 /// `only`: a filter splitter's front and filter: the filtered item goes out the front only,
 /// everything else out the other sides only.
-fn split_out(tiles: &mut [Option<Building>], x: i32, y: i32, q: &mut VecDeque<Item>, rr: &mut u8, only: Option<(Dir, Option<Item>)>) -> bool {
+fn split_out(
+    tiles: &mut [Option<Building>],
+    x: i32,
+    y: i32,
+    q: &mut VecDeque<Item>,
+    rr: &mut u8,
+    only: Option<(Dir, Option<Item>)>,
+) -> bool {
     let Some(&item) = q.front() else { return false };
     for k in 0..4 {
         let d = Dir::ALL[(*rr as usize + k) % 4];
@@ -3004,25 +3088,21 @@ fn split_out(tiles: &mut [Option<Building>], x: i32, y: i32, q: &mut VecDeque<It
 }
 
 /// Something moving in direction `travel` arrives at tile (tx, ty).
-fn try_insert(
-    tiles: &mut [Option<Building>],
-    owner: &[Option<u32>],
-    econ: &mut Econ,
-    tx: i32,
-    ty: i32,
-    item: Item,
-    travel: Dir,
-) -> bool {
+fn try_insert(tiles: &mut [Option<Building>], owner: &[Option<u32>], econ: &mut Econ, tx: i32, ty: i32, item: Item, travel: Dir) -> bool {
     if !in_bounds(tx, ty) {
         return false;
     }
-    let Some(a) = owner[idx(tx, ty)] else { return false };
+    let Some(a) = owner[idx(tx, ty)] else {
+        return false;
+    };
     // A tunnel entrance only takes items when its exit is in place.
     let tunnel = match tiles[a as usize].as_ref() {
         Some(Building { kind: Kind::Tunnel, dir, .. }) => tunnel_partner(tiles, tx, ty, *dir),
         _ => None,
     };
-    let Some(b) = tiles[a as usize].as_mut() else { return false };
+    let Some(b) = tiles[a as usize].as_mut() else {
+        return false;
+    };
     let (bdir, bkind, bside) = (b.dir, b.kind, b.dims().0);
     match &mut b.st {
         St::Belt { items } => bdir != travel.opposite() && belt_accept(items, item),
@@ -3065,7 +3145,7 @@ fn try_insert(
         }
         St::Tunnel { exit: false, items } => {
             let Some(k) = tunnel else { return false };
-            let room = items.back().map_or(true, |it| it.1 <= k as f64 - BELT_GAP);
+            let room = items.back().is_none_or(|it| it.1 <= k as f64 - BELT_GAP);
             if travel != bdir.opposite() && room {
                 items.push_back((item, k as f64));
                 true
@@ -3151,7 +3231,7 @@ fn tunnel_behind(tiles: &[Option<Building>], x: i32, y: i32, dir: Dir) -> Option
 
 /// What an arm can pick up from the tile behind it.
 fn take_from(src: &mut Building, filter: Option<Item>) -> Option<Item> {
-    let ok = |it: Item| filter.map_or(true, |f| f == it);
+    let ok = |it: Item| filter.is_none_or(|f| f == it);
     match &mut src.st {
         St::Belt { items } => {
             let p = items.iter().position(|bi| ok(bi.item))?;
@@ -4164,7 +4244,7 @@ mod tests {
         w.place(0, 8, 7, Kind::Crate, Dir::N).unwrap(); // pushes coal up into the boiler
         fill_crate(&mut w, 0, 8, 7, &[Item::Coal; 5]);
         w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap(); // runs the pump, and links to the engine's grid
-        // A pole and 27 belts: far more than one solar panel can run.
+                                                        // A pole and 27 belts: far more than one solar panel can run.
         w.place(0, 14, 5, Kind::Pole, Dir::E).unwrap();
         for (x, y) in footprint(14, 2, 4, 4).chain(footprint(14, 6, 3, 3)) {
             if w.check_place(0, x, y, Kind::Belt).is_ok() {
@@ -4883,7 +4963,9 @@ mod tests {
         assert_eq!((l.econ.made[last.idx()], l.econ.sold[last.idx()], l.econ.research_sales[last.idx()]), (7, 5, 3));
         assert_eq!(l.econ.made[Item::Gauge.idx()], 11);
         match &l.tile(0, 8, 5).unwrap().st {
-            St::Crafter { stock, .. } => assert_eq!((stock[last.idx()], stock[Item::ControlPanel.idx()]), (4, 2)),
+            St::Crafter { stock, .. } => {
+                assert_eq!((stock[last.idx()], stock[Item::ControlPanel.idx()]), (4, 2))
+            }
             _ => panic!("not a machine"),
         }
         assert_eq!(crate_items(&l, 0, 5, 5), vec![last, Item::PumpUnit]);
@@ -5261,7 +5343,7 @@ mod tests {
     /// company as researchable (techs can always be bought or earned). Pumps give water.
     fn makeable(open: &[bool; COMPANIES]) -> ([bool; ITEMS], Vec<Fluid>) {
         let tech_ok = |t: Tech| open[t.company().idx()];
-        let kind_ok = |k: Kind| k.company().map_or(true, |c| open[c.idx()]) && k.tech().map_or(true, tech_ok);
+        let kind_ok = |k: Kind| k.company().is_none_or(|c| open[c.idx()]) && k.tech().is_none_or(tech_ok);
         let mut have = [false; ITEMS];
         let mut fluids: Vec<Fluid> = Vec::new();
         loop {
@@ -5273,10 +5355,10 @@ mod tests {
                 if k.is_pump() && !fluids.contains(&Fluid::Water) {
                     fluids.push(Fluid::Water);
                 }
-                for r in k.recipes().iter().filter(|r| r.needs.map_or(true, tech_ok)) {
+                for r in k.recipes().iter().filter(|r| r.needs.is_none_or(tech_ok)) {
                     let ok = r.inputs.iter().all(|(i, _)| have[i.idx()])
-                        && r.fuel.map_or(true, |f| have[f.idx()])
-                        && r.fluid_in.map_or(true, |(f, _)| fluids.contains(&f));
+                        && r.fuel.is_none_or(|f| have[f.idx()])
+                        && r.fluid_in.is_none_or(|(f, _)| fluids.contains(&f));
                     if ok {
                         for (i, _) in r.outputs {
                             have[i.idx()] = true;
@@ -5346,7 +5428,6 @@ mod tests {
         assert!(fluids.contains(&Fluid::MoltenIron) && fluids.contains(&Fluid::MoltenSteel) && fluids.contains(&Fluid::Water));
     }
 
-
     #[test]
     fn a_company_never_gates_its_own_key_item() {
         // With every other company open, a key item is still makeable without its own company.
@@ -5392,7 +5473,10 @@ mod tests {
         w.place(0, 9, 6, Kind::Crate, Dir::E).unwrap(); // the steel
         w.place(0, 7, 8, Kind::Solar, Dir::E).unwrap();
         run(&mut w, secs);
-        (crate_items(&w, 0, 9, 6).iter().filter(|i| **i == Item::Steel).count(), crate_items(&w, 0, 7, 5).iter().filter(|i| **i == Item::Waste).count())
+        (
+            crate_items(&w, 0, 9, 6).iter().filter(|i| **i == Item::Steel).count(),
+            crate_items(&w, 0, 7, 5).iter().filter(|i| **i == Item::Waste).count(),
+        )
     }
 
     #[test]
@@ -5511,12 +5595,24 @@ mod tests {
         t(Kind::CrudeAssembler, "relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], Item::Relay, 11);
         t(Kind::CrudeAssembler, "gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], Item::Gearbox, 11);
         // Basic: motors and pistons, 10 s; the crude parts at 5 s.
-        t(Kind::BasicAssembler, "electric motor", &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)], Item::ElectricMotor, 11);
+        t(
+            Kind::BasicAssembler,
+            "electric motor",
+            &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)],
+            Item::ElectricMotor,
+            11,
+        );
         t(Kind::BasicAssembler, "piston", &[(Item::SteelRod, 1), (Item::HardenedIronPlate, 1), (Item::Screw, 2)], Item::Piston, 11);
         t(Kind::BasicAssembler, "valve", &[(Item::CopperPipe, 1), (Item::IronGear, 1)], Item::Valve, 6);
         // Advanced: control boards, 10 s; motors at 5 s, crude parts at 2.5 s.
         t(Kind::AdvancedAssembler, "control board", &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)], Item::ControlBoard, 11);
-        t(Kind::AdvancedAssembler, "electric motor", &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)], Item::ElectricMotor, 6);
+        t(
+            Kind::AdvancedAssembler,
+            "electric motor",
+            &[(Item::CopperCoil, 2), (Item::SteelRod, 1), (Item::Bearing, 2)],
+            Item::ElectricMotor,
+            6,
+        );
         t(Kind::AdvancedAssembler, "gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], Item::Gearbox, 3);
         // Large basic: 20 s.
         t(
@@ -5570,7 +5666,13 @@ mod tests {
             61,
         );
         // Not before their time.
-        assert!(run_powered(Kind::LargeAdvancedAssembler, "steam tractor", &[(Item::EngineBlock, 1), (Item::Frame, 1), (Item::HardenedGear, 4), (Item::ControlPanel, 1), (Item::Generator, 1)], 59).is_empty());
+        assert!(run_powered(
+            Kind::LargeAdvancedAssembler,
+            "steam tractor",
+            &[(Item::EngineBlock, 1), (Item::Frame, 1), (Item::HardenedGear, 4), (Item::ControlPanel, 1), (Item::Generator, 1)],
+            59
+        )
+        .is_empty());
     }
 
     #[test]
@@ -5717,7 +5819,15 @@ mod tests {
             let last = pts.len() - 2;
             for (n, pair) in pts.windows(2).enumerate() {
                 let ((x0, y0), (x1, y1)) = (pair[0], pair[1]);
-                let d = if x1 > x0 { Dir::E } else if x1 < x0 { Dir::W } else if y1 > y0 { Dir::S } else { Dir::N };
+                let d = if x1 > x0 {
+                    Dir::E
+                } else if x1 < x0 {
+                    Dir::W
+                } else if y1 > y0 {
+                    Dir::S
+                } else {
+                    Dir::N
+                };
                 let (dx, dy) = d.delta();
                 let steps = (x1 - x0).abs() + (y1 - y0).abs() + (n == last) as i32;
                 for k in 0..steps {
@@ -5732,7 +5842,7 @@ mod tests {
         w.place(0, 11, 10, Kind::Press, Dir::E).unwrap(); // copper plate
         w.place(0, 13, 10, Kind::WireDrawer, Dir::E).unwrap(); // 3 wire a plate
         w.place(0, 15, 10, Kind::Winder, Dir::E).unwrap(); // coils
-        // Iron line along y = 20.
+                                                           // Iron line along y = 20.
         crate_with(&mut w, 5, 20, Dir::E, &mix(Item::IronOre, 9, 8));
         w.place(0, 6, 19, Kind::Furnace, Dir::E).unwrap();
         pick_recipe(&mut w, 6, 19, "molten iron");

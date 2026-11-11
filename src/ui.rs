@@ -39,8 +39,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let compact = app.compact.unwrap_or(area.width < SMALL_W || area.height < SMALL_H);
     app.compact_now = compact;
-    let [top, mid, bottom] =
-        Layout::vertical([Constraint::Length(1), Constraint::Min(1), Constraint::Length(1)]).areas(area);
+    let [top, mid, bottom] = Layout::vertical([Constraint::Length(1), Constraint::Min(1), Constraint::Length(1)]).areas(area);
     if compact {
         // Small pane: the map fills everything between a one-line ticker and a one-line status.
         draw_ticker(f, top, app);
@@ -116,18 +115,30 @@ pub fn floor_label(level: i32) -> String {
 /// source or a powered machine, otherwise every grid together ("global").
 fn power_spans(app: &App, label: &str) -> Vec<Span<'static>> {
     let w = &app.world;
-    let colour = |r: f64| if r >= 1.0 { Color::Green } else if r >= 0.5 { Color::Yellow } else { Color::Red };
+    let colour = |r: f64| {
+        if r >= 1.0 {
+            Color::Green
+        } else if r >= 0.5 {
+            Color::Yellow
+        } else {
+            Color::Red
+        }
+    };
     let dim = Style::new().fg(Color::DarkGray);
     let here = if app.selected.is_none() { w.grid_at(app.floor, app.cursor.0, app.cursor.1) } else { None };
     match here {
         Some(id) => {
             let n = w.grid.nets[id];
             let ratio = if n.demand > 0.0 { n.ratio } else { 1.0 };
-            vec![Span::styled(format!("{label}{:.0}/{:.0}", n.supply, n.demand), Style::new().fg(colour(ratio))), Span::styled(" regional", dim)]
+            vec![
+                Span::styled(format!("{label}{:.0}/{:.0}", n.supply, n.demand), Style::new().fg(colour(ratio))),
+                Span::styled(" regional", dim),
+            ]
         }
         None => {
             let (supply, demand, worst, _, _, unused) = w.power_summary();
-            let mut v = vec![Span::styled(format!("{label}{supply:.0}/{demand:.0}"), Style::new().fg(colour(worst))), Span::styled(" global", dim)];
+            let mut v =
+                vec![Span::styled(format!("{label}{supply:.0}/{demand:.0}"), Style::new().fg(colour(worst))), Span::styled(" global", dim)];
             if unused > 0.0 {
                 v.push(Span::styled(format!(" +{unused:.0} unused"), dim));
             }
@@ -151,10 +162,7 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
     ];
     spans.extend(power_spans(app, "EC "));
     spans.extend([
-        Span::styled(
-            if unpowered > 0 { format!("  {unpowered} no EC") } else { String::new() },
-            Style::new().fg(Color::Indexed(214)),
-        ),
+        Span::styled(if unpowered > 0 { format!("  {unpowered} no EC") } else { String::new() }, Style::new().fg(Color::Indexed(214))),
         Span::raw("   "),
         Span::styled(format!("{:02}:{:02}", secs / 60, secs % 60), Style::new().fg(Color::DarkGray)),
         Span::raw("   "),
@@ -230,7 +238,10 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
         // A part is picked: its price, size and facing, and how to place it.
         let mut spans = crumb;
         let afford = w.progress.part_unlocked(k) && w.econ.money >= k.price(app.lift_size);
-        spans.push(Span::styled(format!("  {}", price_label(w, k, app.lift_size)), if afford { Style::new().fg(Color::Green) } else { dim }));
+        spans.push(Span::styled(
+            format!("  {}", price_label(w, k, app.lift_size)),
+            if afford { Style::new().fg(Color::Green) } else { dim },
+        ));
         let (fw, fh) = dims_of(k, app.dir, app.lift_size);
         if fw * fh > 1 {
             spans.push(Span::styled(format!("  {fw}x{fh}"), dim));
@@ -263,7 +274,9 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
                 (format!("{} {}{more}", n + 1, k.name()), price_label(w, k, app.lift_size), st)
             })
             .collect();
-        let width_with = |prices: bool| -> usize { entries.iter().map(|(l, p, _)| 2 + l.chars().count() + if prices { 1 + p.chars().count() } else { 0 }).sum() };
+        let width_with = |prices: bool| -> usize {
+            entries.iter().map(|(l, p, _)| 2 + l.chars().count() + if prices { 1 + p.chars().count() } else { 0 }).sum()
+        };
         let (prices, cut) = if width_with(true) <= room {
             (true, usize::MAX)
         } else if width_with(false) <= room {
@@ -389,17 +402,15 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
     let inside = |tx: i32, ty: i32, (ax, ay): (i32, i32), (w, h): (i32, i32)| tx >= ax && tx < ax + w && ty >= ay && ty < ay + h;
     // Power ranges show when asked (v), while placing a power source, or when hovering one.
     let hovering_source = app.world.tile(app.floor, cx, cy).is_some_and(|b| coverage(b.kind, (1, 1), 0, 0).is_some());
-    let show_range = app.power_view
-        || app.selected.is_some_and(|k| coverage(k, (1, 1), 0, 0).is_some())
-        || (app.selected.is_none() && hovering_source);
+    let show_range =
+        app.power_view || app.selected.is_some_and(|k| coverage(k, (1, 1), 0, 0).is_some()) || (app.selected.is_none() && hovering_source);
     // Hovering a source shades only its own grid; v shows every grid.
     let only_grid = if !app.power_view && app.selected.is_none() && hovering_source { app.world.grid_at(app.floor, cx, cy) } else { None };
     let new_range = app.selected.and_then(|k| coverage(k, ghost_dims(k), cx, cy));
     for sy in 0..vh {
         for sx in 0..vw {
             let (tx, ty) = (app.cam.0 + sx, app.cam.1 + sy);
-            let mut cells =
-                if in_bounds(tx, ty) { tile_glyph(&app.world, app.floor, tx, ty) } else { [(' ', Style::new()); 2] };
+            let mut cells = if in_bounds(tx, ty) { tile_glyph(&app.world, app.floor, tx, ty) } else { [(' ', Style::new()); 2] };
             if show_range && in_bounds(tx, ty) && cells[0].1.bg == Some(GROUND) {
                 let in_new = new_range.is_some_and(|(x0, y0, x1, y1)| tx >= x0 && tx <= x1 && ty >= y0 && ty <= y1);
                 let id = app.world.grid.cover[app.floor][idx(tx, ty)];
@@ -407,7 +418,13 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
                     Some(g) => id == g as i32,
                     None => id >= 0,
                 };
-                let tint = if in_new { Some(RANGE_NEW) } else if covered { Some(RANGE) } else { None };
+                let tint = if in_new {
+                    Some(RANGE_NEW)
+                } else if covered {
+                    Some(RANGE)
+                } else {
+                    None
+                };
                 if let Some(t) = tint {
                     cells = cells.map(|(c, s)| (c, s.bg(t)));
                 }
@@ -844,9 +861,7 @@ fn belt_cell(kind: Kind, shape: BeltShape, dir: Dir, items: &[BeltItem], powered
                 _ => [(a, st), (bend, st)],
             }
         }
-        BeltShape::Merge(left, right) => {
-            [(if left { '+' } else { a }, st), (if right { '+' } else { a }, st)]
-        }
+        BeltShape::Merge(left, right) => [(if left { '+' } else { a }, st), (if right { '+' } else { a }, st)],
     };
     if let Some(front) = items.first() {
         // An item shows in place of a bend or join, or the first arrow on a straight belt.
@@ -979,7 +994,9 @@ fn lift_cell(w: &World, f: usize, b: &Building, anchor: usize, lx: i32, ly: i32)
             let a = if w.floors[c.target].level > w.floors[c.at].level { "▲" } else { "▼" };
             vec![format!("{a} moving"), format!("{a} go"), a.into()]
         }
-        Some(c) if c.phase == LiftPhase::Closing && c.at == f => vec!["closing".into(), "shut".into()],
+        Some(c) if c.phase == LiftPhase::Closing && c.at == f => {
+            vec!["closing".into(), "shut".into()]
+        }
         _ => vec!["car away".into(), "away".into(), "··".into()],
     };
     let inner = (s * 2 - 2) as usize;
@@ -993,7 +1010,13 @@ fn lift_cell(w: &World, f: usize, b: &Building, anchor: usize, lx: i32, ly: i32)
         };
         let st = match car {
             Some(c) if here => format!("{:>2}", (c.load.len() * 99 / c.cap().max(1)).min(99)),
-            Some(c) if c.phase == LiftPhase::Moving => if w.floors[c.target].level > w.floors[c.at].level { "▲▲".into() } else { "▼▼".into() },
+            Some(c) if c.phase == LiftPhase::Moving => {
+                if w.floors[c.target].level > w.floors[c.at].level {
+                    "▲▲".into()
+                } else {
+                    "▼▼".into()
+                }
+            }
             _ => "··".into(),
         };
         vec![m.into(), st]
@@ -1002,12 +1025,21 @@ fn lift_cell(w: &World, f: usize, b: &Building, anchor: usize, lx: i32, ly: i32)
     };
     let chars = lift_chars(s, b.dir, &lines, lx, ly);
     let edge = Style::new().fg(if here { LIFT_EDGE } else { Color::Indexed(66) }).bg(LIFT_BG).add_modifier(Modifier::BOLD);
-    let text = Style::new().fg(match mode {
-        DoorMode::Load => Color::Indexed(120),
-        DoorMode::Unload => Color::Indexed(222),
-        DoorMode::Pass => Color::Indexed(244),
-    }).bg(LIFT_BG).add_modifier(Modifier::BOLD);
-    let pick = |c: char| if "┌┐└┘─│▶◀▲▼".contains(c) && !(s == 2 && "▲▼".contains(c) && ly == 1) { edge } else { text };
+    let text = Style::new()
+        .fg(match mode {
+            DoorMode::Load => Color::Indexed(120),
+            DoorMode::Unload => Color::Indexed(222),
+            DoorMode::Pass => Color::Indexed(244),
+        })
+        .bg(LIFT_BG)
+        .add_modifier(Modifier::BOLD);
+    let pick = |c: char| {
+        if "┌┐└┘─│▶◀▲▼".contains(c) && !(s == 2 && "▲▼".contains(c) && ly == 1) {
+            edge
+        } else {
+            text
+        }
+    };
     [(chars[0], pick(chars[0])), (chars[1], pick(chars[1]))]
 }
 
@@ -1087,7 +1119,10 @@ fn draw_side(f: &mut Frame, area: Rect, app: &App) {
                     let tag = if v == 0 { format!(" {} ", n + 1) } else { "   ".to_string() };
                     let mut spans = vec![Span::styled(tag, st.add_modifier(Modifier::BOLD))];
                     spans.extend(swatch(kind_cells(*k, Dir::E, unlocked)));
-                    spans.push(Span::styled(format!(" {:<room$}{:>w$}{:>7}", name, size, price, w = if size.is_empty() { 0 } else { 4 }), st));
+                    spans.push(Span::styled(
+                        format!(" {:<room$}{:>w$}{:>7}", name, size, price, w = if size.is_empty() { 0 } else { 4 }),
+                        st,
+                    ));
                     lines.push(Line::from(spans));
                 }
             }
@@ -1335,7 +1370,11 @@ fn item_counts(items: impl Iterator<Item = Item>) -> Vec<String> {
     for it in items {
         n[it.idx()] += 1;
     }
-    Item::ALL.iter().filter(|it| n[it.idx()] > 0).map(|it| format!("  {} {} x{}", item_cell(*it, GROUND).0, it.name(), n[it.idx()])).collect()
+    Item::ALL
+        .iter()
+        .filter(|it| n[it.idx()] > 0)
+        .map(|it| format!("  {} {} x{}", item_cell(*it, GROUND).0, it.name(), n[it.idx()]))
+        .collect()
 }
 
 fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
@@ -1372,7 +1411,11 @@ fn centered(area: Rect, w: u16, h: u16) -> Rect {
 
 /// "$1,234" or "-$56".
 fn signed_money(v: f64) -> String {
-    if v < -0.5 { format!("-${}", grouped((-v).round())) } else { format!("${}", grouped(v.round())) }
+    if v < -0.5 {
+        format!("-${}", grouped((-v).round()))
+    } else {
+        format!("${}", grouped(v.round()))
+    }
 }
 
 /// A per-minute amount: "·" for nothing, one decimal below 10, whole above.
@@ -1406,7 +1449,10 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
     let money: f64 = rows.iter().map(|r| r.money).sum();
     let research: f64 = rows.iter().map(|r| r.research).sum();
     let mut lines: Vec<Line> = vec![Line::from(vec![
-        Span::styled(format!("{}/min", signed_money(money)), Style::new().fg(if money < 0.0 { Color::Red } else { Color::Green }).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{}/min", signed_money(money)),
+            Style::new().fg(if money < 0.0 { Color::Red } else { Color::Green }).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  ·  ", dim),
         Span::styled(format!("{} research/min", rate(research)), Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD)),
     ])];
@@ -1450,7 +1496,13 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
                         }
                         let next = w.econ.next_research(r.item);
                         let worth = r.item.curve().worth;
-                        let st = if next >= worth * 0.5 { Style::new().fg(Color::Green) } else if next >= worth * 0.15 { Style::new().fg(Color::Yellow) } else { dim };
+                        let st = if next >= worth * 0.5 {
+                            Style::new().fg(Color::Green)
+                        } else if next >= worth * 0.15 {
+                            Style::new().fg(Color::Yellow)
+                        } else {
+                            dim
+                        };
                         (format!("{} RP", num(next)), st)
                     }
                 };
@@ -1480,7 +1532,7 @@ fn grouped(v: f64) -> String {
     let s = n.to_string();
     let mut out = String::new();
     for (k, ch) in s.chars().enumerate() {
-        if k > 0 && (s.len() - k) % 3 == 0 {
+        if k > 0 && (s.len() - k).is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);
@@ -1521,7 +1573,11 @@ fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
         "Researched.".to_string()
     } else if !w.progress.is_open(t.company()) {
         let key = t.requires().map_or("its key item", |i| i.name());
-        format!("Make {key} once: it opens {}, and then this. Made with the {}", t.company().name(), t.requires().map_or(String::new(), recipe_hint))
+        format!(
+            "Make {key} once: it opens {}, and then this. Made with the {}",
+            t.company().name(),
+            t.requires().map_or(String::new(), recipe_hint)
+        )
     } else {
         format!("Enter: research for {} RP (you have {rp}). Or free once you've made {n} {} ({made}/{n}).", grouped(t.cost()), item.name())
     };
@@ -1648,7 +1704,10 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     if !more.is_empty() {
         let text = format!("more {}", more.join(" "));
         let tw = text.chars().count() as u16;
-        f.render_widget(Paragraph::new(Span::styled(text, Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD))), Rect::new(x0 + width.saturating_sub(tw), footer_y, tw.min(width), 1));
+        f.render_widget(
+            Paragraph::new(Span::styled(text, Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD))),
+            Rect::new(x0 + width.saturating_sub(tw), footer_y, tw.min(width), 1),
+        );
     }
 }
 
@@ -1716,7 +1775,7 @@ fn item_known(w: &World, item: Item) -> bool {
         || w.econ.made[item.idx()] > 0
         || CRAFTERS.iter().any(|&k| {
             w.progress.part_unlocked(k)
-                && k.recipes().iter().any(|r| r.outputs.iter().any(|o| o.0 == item) && r.needs.map_or(true, |t| w.progress.has(t)))
+                && k.recipes().iter().any(|r| r.outputs.iter().any(|o| o.0 == item) && r.needs.is_none_or(|t| w.progress.has(t)))
         })
 }
 
@@ -1891,7 +1950,9 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let mut first = true;
             let label = |first: &mut bool, l: &'static str| if std::mem::take(first) { l } else { "" };
             let mined: Option<(Vec<Kind>, &str)> = match item {
-                Item::CopperOre => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere: press f on a drill to pick its ore; faster underground")),
+                Item::CopperOre => {
+                    Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere: press f on a drill to pick its ore; faster underground"))
+                }
                 Item::Coal => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore); a drill on coal fuels itself")),
                 Item::IronOre => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore); a cheap drill is half as fast")),
                 Item::Stone => Some((vec![Kind::Drill, Kind::BasicDrill], "anywhere (f picks the ore)")),
@@ -1940,7 +2001,10 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let mut uses: Vec<(&'static Recipe, Vec<Kind>)> = Vec::new();
             for k in CRAFTERS {
                 for r in k.recipes().iter().filter(|r| r.inputs.iter().any(|i| i.0 == item)) {
-                    match uses.iter_mut().find(|u| u.0.name == r.name && u.0.inputs == r.inputs && u.0.outputs == r.outputs && u.0.fluid_out == r.fluid_out) {
+                    match uses
+                        .iter_mut()
+                        .find(|u| u.0.name == r.name && u.0.inputs == r.inputs && u.0.outputs == r.outputs && u.0.fluid_out == r.fluid_out)
+                    {
                         Some(u) => u.1.push(k),
                         None => uses.push((r, vec![k])),
                     }
@@ -2056,7 +2120,12 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     }
                     labelled(&mut out, "Mines", GUTTER, segs);
                     if k.burns_coal() {
-                        labelled(&mut out, "Burns", GUTTER, vec![link(Entry::Item(Item::Coal), e), seg(" (a drill on coal fuels itself)", dim)]);
+                        labelled(
+                            &mut out,
+                            "Burns",
+                            GUTTER,
+                            vec![link(Entry::Item(Item::Coal), e), seg(" (a drill on coal fuels itself)", dim)],
+                        );
                     } else {
                         labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC, no coal", k.power_draw()), Style::new())]);
                     }
@@ -2072,7 +2141,12 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     }
                 }
                 _ if k.is_pump() => {
-                    labelled(&mut out, "Pumps", GUTTER, vec![seg(format!("{:.0} water a second, anywhere on the ground", k.pump_rate()), Style::new())]);
+                    labelled(
+                        &mut out,
+                        "Pumps",
+                        GUTTER,
+                        vec![seg(format!("{:.0} water a second, anywhere on the ground", k.pump_rate()), Style::new())],
+                    );
                     labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
                 }
                 _ => {
@@ -2226,7 +2300,11 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     let mut x = body.x;
     for (name, on_parts) in [("Items", false), ("Machines", true)] {
         let label = format!(" {name} ");
-        let st = if on_parts == parts { Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD) } else { Style::new().fg(Color::Gray) };
+        let st = if on_parts == parts {
+            Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(Color::Gray)
+        };
         buf.set_string(x, y, &label, st);
         // The other tab opens on its last page, or its first match if a search hides that.
         let target = if on_parts == parts {
@@ -2234,7 +2312,11 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         } else {
             let l = Entry::list(&app.book_query, on_parts);
             let last = app.book_last[on_parts as usize];
-            if l.contains(&last) || l.is_empty() { last } else { l[0] }
+            if l.contains(&last) || l.is_empty() {
+                last
+            } else {
+                l[0]
+            }
         };
         app.book_cells.push((Rect::new(x, y, label.chars().count() as u16, 1), target));
         x += label.chars().count() as u16 + 1;
@@ -2247,7 +2329,9 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     for row in gtop..gtop + gh {
         let mut x = body.x;
         for col in 0..cols {
-            let Some(&e) = list.get(row * cols + col) else { break };
+            let Some(&e) = list.get(row * cols + col) else {
+                break;
+            };
             let (glyph, gst, known) = match e {
                 Entry::Item(i) => {
                     let (g, st) = item_cell(i, Color::Reset);
@@ -2430,12 +2514,7 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let block = Block::bordered().title(title).title_style(head).border_style(Style::new().fg(KEY_ITEM));
     let inner = block.inner(r);
     f.render_widget(block, r);
-    let [a, b, c] = Layout::vertical([
-        Constraint::Length(top.len() as u16),
-        Constraint::Min(1),
-        Constraint::Length(foot_h),
-    ])
-    .areas(inner);
+    let [a, b, c] = Layout::vertical([Constraint::Length(top.len() as u16), Constraint::Min(1), Constraint::Length(foot_h)]).areas(inner);
     f.render_widget(Paragraph::new(top), a);
     f.render_widget(Paragraph::new(body).scroll((app.mail_scroll, 0)), b);
     f.render_widget(Paragraph::new(foot), c);
@@ -2465,10 +2544,7 @@ fn draw_letter(f: &mut Frame, area: Rect, c: Company) {
     lines.push(Line::styled(" press any key", Style::new().fg(Color::DarkGray)));
     let r = centered(area, 70, 12);
     f.render_widget(Clear, r);
-    f.render_widget(
-        Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(" A letter ").title_style(head)),
-        r,
-    );
+    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(" A letter ").title_style(head)), r);
 }
 
 fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {
@@ -2561,9 +2637,7 @@ CONTROLS
     let title = if max > 0 { format!(" Help · ↑↓ scroll {}/{max} ", app.help_scroll) } else { " Help ".into() };
     f.render_widget(Clear, r);
     f.render_widget(
-        Paragraph::new(text)
-            .scroll((app.help_scroll, 0))
-            .block(Block::bordered().title(title).title_style(Style::new().fg(Color::Cyan))),
+        Paragraph::new(text).scroll((app.help_scroll, 0)).block(Block::bordered().title(title).title_style(Style::new().fg(Color::Cyan))),
         r,
     );
 }
@@ -3016,7 +3090,10 @@ mod tests {
         app.menu = Some(Category::Create);
         let t = text(&render(&mut app, 64, 16));
         let last = t.lines().last().unwrap().to_string();
-        assert!(last.contains(" Create › 1 Cheap") && last.contains("5 Wat") && !last.contains("$50"), "five slots all show their numbers: {last}");
+        assert!(
+            last.contains(" Create › 1 Cheap") && last.contains("5 Wat") && !last.contains("$50"),
+            "five slots all show their numbers: {last}"
+        );
 
         // A picked part: the path to it, its price and facing.
         app.menu = Some(Category::Create);
@@ -3217,11 +3294,28 @@ mod tests {
         let mut app = App::new(World::blank());
         let mut shots = Vec::new();
         for (k, wants) in [
-            (Kind::PrecisionAssembler, vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4000 · 3x3", "64 EC"]),
-            (Kind::AdvancedAssembler, vec!["3 iron gear + steel  ──→  gearbox", "2 copper coil + steel rod + 2 bearing  ──→  electric motor", "weakest microprocessor", "16 EC"]),
-            (Kind::LargeAdvancedAssembler, vec!["frame + 2 electric motor + gauge + control board  ──→  generator", "4 steel girder", "steam tractor", "5x5"]),
+            (
+                Kind::PrecisionAssembler,
+                vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4000 · 3x3", "64 EC"],
+            ),
+            (
+                Kind::AdvancedAssembler,
+                vec![
+                    "3 iron gear + steel  ──→  gearbox",
+                    "2 copper coil + steel rod + 2 bearing  ──→  electric motor",
+                    "weakest microprocessor",
+                    "16 EC",
+                ],
+            ),
+            (
+                Kind::LargeAdvancedAssembler,
+                vec!["frame + 2 electric motor + gauge + control board  ──→  generator", "4 steel girder", "steam tractor", "5x5"],
+            ),
             (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
-            (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
+            (
+                Kind::Kiln,
+                vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"],
+            ),
             (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
             (Kind::LargeBasicDrill, vec!["16x a basic drill's ore, burns 32x the coal", "8x8", "front edge"]),
             (Kind::LargeAdvancedDrill, vec!["16x an advanced drill's ore", "128 EC, no coal"]),
@@ -3271,7 +3365,7 @@ mod tests {
         for _ in 0..40 {
             w.tick();
         }
-        while (w.tick / TPS) % 2 == 0 {
+        while (w.tick / TPS).is_multiple_of(2) {
             w.tick(); // land on a second where idle words show
         }
         let mut app = App::new(w);
@@ -3341,8 +3435,10 @@ mod tests {
 
     fn hex(c: Option<Color>, default: &str) -> String {
         let named = |i: u8| -> &'static str {
-            ["000000", "cd3131", "0dbc79", "e5e510", "2472c8", "bc3fbc", "11a8cd", "e5e5e5", "666666", "f14c4c",
-             "23d18b", "f5f543", "3b8eea", "d670d6", "29b8db", "ffffff"][i as usize]
+            [
+                "000000", "cd3131", "0dbc79", "e5e510", "2472c8", "bc3fbc", "11a8cd", "e5e5e5", "666666", "f14c4c", "23d18b", "f5f543",
+                "3b8eea", "d670d6", "29b8db", "ffffff",
+            ][i as usize]
         };
         match c {
             None | Some(Color::Reset) => default.to_string(),
@@ -3387,7 +3483,12 @@ mod tests {
                     std::mem::swap(&mut fg, &mut bg);
                 }
                 let w = if c.modifier.contains(Modifier::BOLD) { "bold" } else { "normal" };
-                let sym = match c.symbol() { "<" => "&lt;", ">" => "&gt;", "&" => "&amp;", o => o };
+                let sym = match c.symbol() {
+                    "<" => "&lt;",
+                    ">" => "&gt;",
+                    "&" => "&amp;",
+                    o => o,
+                };
                 s.push_str(&format!("<span style='color:#{fg};background:#{bg};font-weight:{w}'>{sym}</span>"));
             }
             s.push('\n');

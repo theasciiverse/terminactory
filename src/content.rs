@@ -575,7 +575,9 @@ impl Tech {
             Tech::Excavation => "dig one floor below the ground, where ore is richer, and elevators to reach it",
             Tech::Assembler => "the crude assembler, a 4x4 machine that builds valves, gauges, lamps, relays and gearboxes",
             Tech::FastBelts => "belts that move twice as much",
-            Tech::Tunnels => "belts that dive under up to 4 tiles: place an entrance, then its exit further along, and build anything in between",
+            Tech::Tunnels => {
+                "belts that dive under up to 4 tiles: place an entrance, then its exit further along, and build anything in between"
+            }
             Tech::LongArms => "an arm that reaches 2 tiles: it grabs from 2 behind and drops 2 ahead, over whatever sits in between",
             Tech::FilterSplitters => "a splitter that sends one chosen item out its front and everything else out its sides",
             Tech::Warehouses => "a 2x2 crate that holds four times as much",
@@ -787,45 +789,45 @@ pub enum Node {
 
 /// The research tree, read left to right: (node, parent).
 pub const TREE: &[(Node, Option<usize>)] = &[
-    (Node::Start, None),                                    // 0
-    (Node::Tech(Tech::Press), Some(0)),                     // 1
-    (Node::Key(Item::CopperWire), Some(1)),                 // 2
-    (Node::Tech(Tech::BasicDrill), Some(2)),                // 3
-    (Node::Tech(Tech::Crusher), Some(2)),                   // 4
-    (Node::Key(Item::CopperCoil), Some(2)),                 // 5
-    (Node::Tech(Tech::Steam), Some(5)),                     // 6
-    (Node::Tech(Tech::WireDrawer), Some(5)),                // 7
-    (Node::Tech(Tech::Winder), Some(5)),                    // 8
-    (Node::Key(Item::CopperPipe), Some(1)),                 // 9
-    (Node::Tech(Tech::Pumps), Some(9)),                     // 10
-    (Node::Tech(Tech::Mixer), Some(9)),                     // 11
-    (Node::Tech(Tech::AdvancedPump), Some(9)),              // 12
-    (Node::Key(Item::Concrete), Some(11)),                  // 13
-    (Node::Tech(Tech::Excavation), Some(13)),               // 14
-    (Node::Tech(Tech::Kiln), Some(13)),                     // 15
-    (Node::Tech(Tech::Coking), Some(0)),                    // 16
-    (Node::Key(Item::Coke), Some(16)),                      // 17
-    (Node::Tech(Tech::BlastFurnace), Some(17)),             // 18
-    (Node::Tech(Tech::CokeOven), Some(17)),                 // 19
-    (Node::Key(Item::SteelGirder), Some(18)),               // 20
-    (Node::Tech(Tech::SupportBeams), Some(20)),             // 21
-    (Node::Tech(Tech::RollingMill), Some(20)),              // 22
-    (Node::Tech(Tech::Welder), Some(20)),                   // 23
-    (Node::Key(Item::IronGear), Some(18)),                  // 24
-    (Node::Tech(Tech::Lathe), Some(24)),                    // 25
-    (Node::Tech(Tech::Assembler), Some(24)),                // 26
-    (Node::Key(Item::Gearbox), Some(26)),                   // 27
-    (Node::Tech(Tech::FastBelts), Some(27)),                // 28
-    (Node::Tech(Tech::BasicAssembler), Some(27)),           // 29
-    (Node::Key(Item::ElectricMotor), Some(29)),             // 30
-    (Node::Tech(Tech::AdvancedDrill), Some(30)),            // 31
-    (Node::Tech(Tech::AdvancedAssembler), Some(30)),        // 32
-    (Node::Tech(Tech::LargeBasicDrill), Some(30)),          // 33
-    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),      // 34
-    (Node::Key(Item::ControlBoard), Some(32)),              // 35
-    (Node::Tech(Tech::PrecisionAssembler), Some(35)),       // 36
-    (Node::Tech(Tech::LargeAdvancedDrill), Some(35)),       // 37
-    (Node::Tech(Tech::LargeAdvancedAssembler), Some(35)),   // 38
+    (Node::Start, None),                                  // 0
+    (Node::Tech(Tech::Press), Some(0)),                   // 1
+    (Node::Key(Item::CopperWire), Some(1)),               // 2
+    (Node::Tech(Tech::BasicDrill), Some(2)),              // 3
+    (Node::Tech(Tech::Crusher), Some(2)),                 // 4
+    (Node::Key(Item::CopperCoil), Some(2)),               // 5
+    (Node::Tech(Tech::Steam), Some(5)),                   // 6
+    (Node::Tech(Tech::WireDrawer), Some(5)),              // 7
+    (Node::Tech(Tech::Winder), Some(5)),                  // 8
+    (Node::Key(Item::CopperPipe), Some(1)),               // 9
+    (Node::Tech(Tech::Pumps), Some(9)),                   // 10
+    (Node::Tech(Tech::Mixer), Some(9)),                   // 11
+    (Node::Tech(Tech::AdvancedPump), Some(9)),            // 12
+    (Node::Key(Item::Concrete), Some(11)),                // 13
+    (Node::Tech(Tech::Excavation), Some(13)),             // 14
+    (Node::Tech(Tech::Kiln), Some(13)),                   // 15
+    (Node::Tech(Tech::Coking), Some(0)),                  // 16
+    (Node::Key(Item::Coke), Some(16)),                    // 17
+    (Node::Tech(Tech::BlastFurnace), Some(17)),           // 18
+    (Node::Tech(Tech::CokeOven), Some(17)),               // 19
+    (Node::Key(Item::SteelGirder), Some(18)),             // 20
+    (Node::Tech(Tech::SupportBeams), Some(20)),           // 21
+    (Node::Tech(Tech::RollingMill), Some(20)),            // 22
+    (Node::Tech(Tech::Welder), Some(20)),                 // 23
+    (Node::Key(Item::IronGear), Some(18)),                // 24
+    (Node::Tech(Tech::Lathe), Some(24)),                  // 25
+    (Node::Tech(Tech::Assembler), Some(24)),              // 26
+    (Node::Key(Item::Gearbox), Some(26)),                 // 27
+    (Node::Tech(Tech::FastBelts), Some(27)),              // 28
+    (Node::Tech(Tech::BasicAssembler), Some(27)),         // 29
+    (Node::Key(Item::ElectricMotor), Some(29)),           // 30
+    (Node::Tech(Tech::AdvancedDrill), Some(30)),          // 31
+    (Node::Tech(Tech::AdvancedAssembler), Some(30)),      // 32
+    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 33
+    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 34
+    (Node::Key(Item::ControlBoard), Some(32)),            // 35
+    (Node::Tech(Tech::PrecisionAssembler), Some(35)),     // 36
+    (Node::Tech(Tech::LargeAdvancedDrill), Some(35)),     // 37
+    (Node::Tech(Tech::LargeAdvancedAssembler), Some(35)), // 38
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -987,12 +989,7 @@ pub const PRESS_RECIPES: &[Recipe] = &[
 
 /// Molten steel: the steel stays molten and leaves the front as fluid (into a pipe or a molder
 /// that casts it), the waste leaves as items.
-const fn molten_steel(
-    name: &'static str,
-    inputs: &'static [(Item, u32)],
-    waste: &'static [(Item, u32)],
-    ticks: u32,
-) -> Recipe {
+const fn molten_steel(name: &'static str, inputs: &'static [(Item, u32)], waste: &'static [(Item, u32)], ticks: u32) -> Recipe {
     Recipe {
         name,
         inputs,

@@ -163,10 +163,7 @@ pub struct Controls {
 
 impl Controls {
     pub fn defaults() -> Self {
-        let binds = Action::ALL
-            .iter()
-            .map(|a| (*a, a.defaults().iter().filter_map(|s| parse_key(s)).collect()))
-            .collect();
+        let binds = Action::ALL.iter().map(|a| (*a, a.defaults().iter().filter_map(|s| parse_key(s)).collect())).collect();
         Controls { binds }
     }
 
