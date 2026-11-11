@@ -1001,7 +1001,7 @@ fn book_pages_for_the_new_machines_and_items() {
     // An item page: where the screw comes from, and what a spring needs.
     app.book_go(Entry::Item(Item::Screw));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $4"), "{t}");
+    assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $2"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("7 coal  ──→  2 coke + 3 waste") && t.contains("2 coal  ──→  coke + waste"), "{t}");

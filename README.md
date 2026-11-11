@@ -73,7 +73,7 @@ Six new machines (all in Create), each from a company that opens when you first 
 - **Winder**: 3 copper wire → 1 copper coil (4 s); 2 iron rod → 1 spring (5 s).
 - **Rolling mill**: 2 copper plate → 1 copper sheet (5 s); 2 iron plate → 1 iron sheet (2.5 s); 1 steel → 1 steel sheet (5 s); 3 steel → 2 steel girder (4 s).
 - **Lathe**: 1 iron plate → 2 iron rod (5 s); 1 iron rod → 4 screw (5 s); 1 steel → 2 steel rod (5 s); 1 steel rod → 2 bearing (2.5 s).
-- New items and prices: copper grit $0.80, iron grit $1.20, sand $0.25, fine wire $2.50, copper sheet $12, iron rod $5, screw $4, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
+- New items and prices: copper grit $0.60, iron grit $0.60, sand $0.25, fine wire $2.50, copper sheet $12, iron rod $5, screw $2, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
 - **Companies now** (key item → what they offer): copper wire → Ashgrove (basic drill, crusher); coke → Cinderhall (blast furnace, coke oven); copper pipe → Wellbourne (pump, pipes); copper coil → Kettering (boiler, steam engine, wire drawer, winder); iron gear → Gearwright (assembler, lathe); steel girder → Pillar (floor +1, rolling mill). Swiftline's fast belts now open on a gearbox instead of an iron gear.
 
 ## Steel, stone, parts and big goods
@@ -89,9 +89,9 @@ Everything the earlier steps pointed at is real now. Times are seconds; prices a
 | 2 iron plate + 2 coke | 5 | 2 |
 | 2 iron plate + 4 coal | 5 | 4 |
 
-The blast furnace also makes **hardened iron plate** ($20): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 1 waste). The press makes **hardened gear** ($65, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
+The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 1 waste). The press makes **hardened gear** ($50, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
 
-**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1.50), 3 sand → 1 **glass** ($2), 5 s. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
+**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), 5 s. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
 - Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel).

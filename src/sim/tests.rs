@@ -1823,13 +1823,13 @@ fn count(items: &[Item], it: Item) -> usize {
 #[test]
 fn new_items_have_the_asked_prices_and_curves() {
     let prices = [
-        (Item::CopperGrit, 0.8),
-        (Item::IronGrit, 1.2),
+        (Item::CopperGrit, 0.6),
+        (Item::IronGrit, 0.6),
         (Item::Sand, 0.25),
         (Item::FineWire, 2.5),
         (Item::CopperSheet, 12.0),
         (Item::IronRod, 5.0),
-        (Item::Screw, 4.0),
+        (Item::Screw, 2.0),
         (Item::Spring, 15.0),
         (Item::IronSheet, 18.0),
         (Item::CopperWire, 3.0),
@@ -2335,7 +2335,7 @@ fn the_blast_furnace_hardens_plate_with_coke_or_coal() {
     assert_eq!((count(&out, Item::HardenedIronPlate), count(&out, Item::Waste)), (2, 2));
     let out = run_machine(Kind::BlastFurnace, "hardened iron plate (coal)", &[(Item::IronPlate, 1), (Item::Coal, 1)], 11);
     assert!(out.is_empty(), "2 coal each");
-    assert_eq!(Item::HardenedIronPlate.price(), 20.0);
+    assert_eq!(Item::HardenedIronPlate.price(), 14.0);
 }
 
 /// Every recipe that takes no fluid runs in its machine: a batch of inputs in, its outputs
@@ -2558,13 +2558,13 @@ fn crown_items_keep_a_high_research_floor() {
 #[test]
 fn new_items_have_prices_and_research_curves() {
     let prices = [
-        (Item::Brick, 1.5),
+        (Item::Brick, 1.0),
         (Item::Glass, 2.0),
         (Item::SteelRod, 16.0),
         (Item::Bearing, 12.0),
         (Item::SteelSheet, 36.0),
-        (Item::HardenedIronPlate, 20.0),
-        (Item::HardenedGear, 65.0),
+        (Item::HardenedIronPlate, 14.0),
+        (Item::HardenedGear, 50.0),
         (Item::ReinforcedConcrete, 16.0),
         (Item::Valve, 50.0),
         (Item::Gauge, 35.0),
