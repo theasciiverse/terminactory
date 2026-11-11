@@ -2809,7 +2809,6 @@ fn mail_parts(m: &crate::mail::Message, width: u16) -> (Vec<Line<'static>>, Vec<
 fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let Some(m) = &app.mail else { return };
     let head = Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD);
-    let dim = Style::new().fg(Color::DarkGray);
     let inner_w = r.width.saturating_sub(3);
     let (top, body, mut foot) = mail_parts(m, inner_w);
     let waiting = app.world.mail.len();
@@ -2818,14 +2817,18 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let view = r.height.saturating_sub(2 + (top.len() + foot.len()) as u16 + 2);
     let max_scroll = (body.len() as u16).saturating_sub(view);
     app.mail_scroll = app.mail_scroll.min(max_scroll);
-    let hint = match (overlay, max_scroll > 0) {
-        (true, true) => format!(" ↑↓ scroll {}/{max_scroll} · {key} or Esc closes", app.mail_scroll),
-        (true, false) => format!(" {key} or Esc closes"),
-        (false, true) => format!(" PgUp/PgDn {}/{max_scroll} · {key} {}", app.mail_scroll, if waiting > 0 { "next" } else { "dismiss" }),
-        (false, false) => format!(" {key} {}", if waiting > 0 { "next" } else { "dismiss" }),
+    let scroll = if overlay {
+        format!("↑↓ scroll {}/{max_scroll}", app.mail_scroll)
+    } else {
+        format!("PgUp/PgDn {}/{max_scroll}", app.mail_scroll)
     };
+    let act = if overlay { format!("{key}/Esc close") } else { format!("{key} {}", if waiting > 0 { "next" } else { "dismiss" }) };
+    let mut hints: Vec<(u8, &str)> = vec![(0, act.as_str())];
+    if max_scroll > 0 {
+        hints.insert(0, (1, scroll.as_str()));
+    }
     foot.push(Line::raw(""));
-    foot.extend(crate::mail::wrap(&Line::styled(hint, dim), inner_w));
+    foot.push(footer_line(inner_w, &hints, None));
     let foot_h = foot.len() as u16;
     let title = match (waiting, overlay) {
         (0, _) => " Telegram ".to_string(),
