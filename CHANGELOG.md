@@ -19,11 +19,13 @@ Saves: format version 6 (older saves are refused; start a fresh game with `tfac 
 - Basic solar panel (2×2, 20 EC, reach 4, $300, Kettering & Vane; research 1,800 RP or make 60 glass): the second version in the solar slot. Panels still link only through poles.
 - Large kiln (5×7, batch of 32, an 80 s firing, $7,500, Underhill; research 10,000 RP or make 1,000 brick): the kiln's recipes in one bigger lump. It is the second version in the kiln's build slot (press the slot's number again).
 
+- Area tool (`c`): mark a rectangle with two corners or a drag, then `x` removes everything in it with a full refund (waste held in storage pays its fee once, after a second `x` when it is over $20). `z` puts back the last area you removed. Free from the start.
+
 ### Changed
 - Saves name items, companies, techs and recipes instead of counting positions, so new content never breaks a save. A machine whose recipe has gone goes back to its first recipe, with a note. Pipes keep their fluid across a save, and a save records which game version wrote it.
 - Balance pass on prices, research costs and free unlocks, and several recipe routes (see the plan 01 commits).
 - Pipes moved from Create 5 to Transport 5 (the key to press for pipes is now `2` `5`), Misc has room for a third slot, and the research screen has a Pipes group. The build menu layout is temporary until a playtest.
-- Settings moved from `c` to `g`; `c`, `l` and `u` stay free for the building tools.
+- Settings moved from `c` to `g`; `c` is now the area tool, and `l` and `u` stay free for the rest of the building tools.
 - The repo-root sample `controls.json` is gone; the game still writes its own to `~/.terminactory` on first run.
 
 ### Fixed
