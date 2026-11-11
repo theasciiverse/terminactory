@@ -1323,6 +1323,48 @@ fn grid_of(cover: &[i32], x: i32, y: i32, (w, h): (i32, i32)) -> i32 {
     footprint(x, y, w, h).filter(|&(tx, ty)| in_bounds(tx, ty)).map(|(tx, ty)| cover[idx(tx, ty)]).find(|&id| id >= 0).unwrap_or(-1)
 }
 
+/// Why a part can't be placed. `Display` gives the text the player reads.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PlaceErr {
+    Locked(Kind),
+    /// The floor (by level) isn't open yet.
+    FloorClosed(i32),
+    NeedsSecondFloor,
+    OffMap,
+    Blocked,
+    OtherFloorBlocked,
+    /// Drills and pumps need ground under them.
+    NotAboveGround(Kind),
+    NeedsSun,
+    /// Not enough money: the full cost.
+    Money(f64),
+}
+
+impl std::fmt::Display for PlaceErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PlaceErr::Locked(k) => write!(f, "{} is locked: see the research tree (t)", k.name()),
+            PlaceErr::FloorClosed(level) => f.write_str(floor_hint_text(*level)),
+            PlaceErr::NeedsSecondFloor => f.write_str("Elevators need a second floor to go to"),
+            PlaceErr::OffMap => f.write_str("Doesn't fit on the map here"),
+            PlaceErr::Blocked => f.write_str("Something is in the way"),
+            PlaceErr::OtherFloorBlocked => f.write_str("Another floor is blocked at this spot"),
+            PlaceErr::NotAboveGround(k) => write!(f, "{}s need ground under them: build them on the surface or below", k.name()),
+            PlaceErr::NeedsSun => f.write_str("Solar panels need sunlight"),
+            PlaceErr::Money(cost) => write!(f, "Not enough money (need ${:.0})", cost),
+        }
+    }
+}
+
+/// Why a floor is closed, for messages.
+pub fn floor_hint_text(level: i32) -> &'static str {
+    match level {
+        1 => "Building upward needs support beams (make steel girders, then see the tree)",
+        -1 => "Digging down needs excavation (make concrete, then see the tree)",
+        _ => "That floor opens in a later phase",
+    }
+}
+
 /// The tiles a power source reaches: (x0, y0, x1, y1), inclusive.
 pub fn coverage(kind: Kind, (w, h): (i32, i32), ax: i32, ay: i32) -> Option<(i32, i32, i32, i32)> {
     let r = kind.reach()?;
@@ -1683,11 +1725,7 @@ impl World {
 
     /// Why a floor is closed, for messages.
     pub fn floor_hint(&self, level: i32) -> &'static str {
-        match level {
-            1 => "Building upward needs support beams (make steel girders, then see the tree)",
-            -1 => "Digging down needs excavation (make concrete, then see the tree)",
-            _ => "That floor opens in a later phase",
-        }
+        floor_hint_text(level)
     }
 
     /// The car of the elevator whose corner is at tile index `anchor`.
@@ -1770,17 +1808,34 @@ impl World {
 
     /// Like `check_place`, facing `dir`; `s` is the side of an elevator (ignored for other parts).
     pub fn check_place_sized(&self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<f64, String> {
+        self.place_cost_money(f, x, y, kind, dir, s).map_err(|e| e.to_string())
+    }
+
+    /// `place_cost` and then the money test: the whole check for one placement.
+    pub(crate) fn place_cost_money(&self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<f64, PlaceErr> {
+        let cost = self.place_cost(f, x, y, kind, dir, s)?;
+        if self.econ.money + 1e-9 < cost {
+            return Err(PlaceErr::Money(cost));
+        }
+        Ok(cost)
+    }
+
+    /// Everything `check_place_sized` checks except the player's money: the part is unlocked,
+    /// the floor is open, the footprint is on the map and free on every floor it touches, and the
+    /// ground suits it. Returns the full cost (part plus digging or decking), which a batch adds
+    /// up against the money it has left.
+    pub(crate) fn place_cost(&self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<f64, PlaceErr> {
         if !self.progress.part_unlocked(kind) {
-            return Err(format!("{} is locked: see the research tree (t)", kind.name()));
+            return Err(PlaceErr::Locked(kind));
         }
         if !self.floor_open(f) {
-            return Err(self.floor_hint(self.floors[f].level).into());
+            return Err(PlaceErr::FloorClosed(self.floors[f].level));
         }
         // Elevators reach every open floor; everything else sits on this one.
         let floors: Vec<usize> =
             if kind == Kind::Elevator { (0..self.floors.len()).filter(|&g| self.floor_open(g)).collect() } else { vec![f] };
         if kind == Kind::Elevator && floors.len() < 2 {
-            return Err("Elevators need a second floor to go to".into());
+            return Err(PlaceErr::NeedsSecondFloor);
         }
         let (w, h) = dims_of(kind, dir, s);
         let mut cost = kind.price(w);
@@ -1788,11 +1843,11 @@ impl World {
             let fl = &self.floors[g];
             for (tx, ty) in footprint(x, y, w, h) {
                 if !in_bounds(tx, ty) {
-                    return Err("Doesn't fit on the map here".into());
+                    return Err(PlaceErr::OffMap);
                 }
                 let i = idx(tx, ty);
                 if fl.owner[i].is_some() {
-                    return Err(if g == f { "Something is in the way".into() } else { "Another floor is blocked at this spot".into() });
+                    return Err(if g == f { PlaceErr::Blocked } else { PlaceErr::OtherFloorBlocked });
                 }
                 if !fl.dug[i] {
                     cost += tile_cost(fl.level);
@@ -1800,13 +1855,10 @@ impl World {
             }
         }
         if (kind.is_drill() || kind.is_pump()) && self.floors[f].level > 0 {
-            return Err(format!("{}s need ground under them: build them on the surface or below", kind.name()));
+            return Err(PlaceErr::NotAboveGround(kind));
         }
         if kind.is_solar() && self.floors[f].level < 0 {
-            return Err("Solar panels need sunlight".into());
-        }
-        if self.econ.money + 1e-9 < cost {
-            return Err(format!("Not enough money (need ${:.0})", cost));
+            return Err(PlaceErr::NeedsSun);
         }
         Ok(cost)
     }
@@ -1828,8 +1880,16 @@ impl World {
     }
 
     pub fn place_sized(&mut self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<(), String> {
+        self.place_no_rebuild(f, x, y, kind, dir, s).map_err(|e| e.to_string())?;
+        self.rebuild_grid();
+        Ok(())
+    }
+
+    /// Places a part and pays for it, but leaves the power grids and pipe networks as they were:
+    /// a batch places many parts this way and then calls `rebuild_grid` once.
+    pub(crate) fn place_no_rebuild(&mut self, f: usize, x: i32, y: i32, kind: Kind, dir: Dir, s: i32) -> Result<(), PlaceErr> {
         let s = s.clamp(MIN_LIFT, MAX_LIFT);
-        let cost = self.check_place_sized(f, x, y, kind, dir, s)?;
+        let cost = self.place_cost_money(f, x, y, kind, dir, s)?;
         self.econ.money -= cost;
         let mut b = Building::new(kind, dir);
         if kind == Kind::Elevator {
@@ -1866,7 +1926,6 @@ impl World {
             });
         }
         self.put(f, x, y, b);
-        self.rebuild_grid();
         Ok(())
     }
 
@@ -1930,6 +1989,15 @@ impl World {
     }
 
     fn remove_part(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {
+        let kind = self.remove_no_rebuild(f, x, y)?;
+        self.rebuild_grid();
+        Some(kind)
+    }
+
+    /// Takes the part covering (x, y) away and refunds its full price, leaving the power grids
+    /// and pipe networks as they were (a batch rebuilds once at the end). An elevator takes its
+    /// doors on every floor and its car with it. Waste fees are the caller's business.
+    pub(crate) fn remove_no_rebuild(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {
         let a = self.floors[f].anchor_at(x, y)?;
         let b = self.take_building(f, a)?;
         self.econ.money += b.kind.price(b.dims().0);
@@ -1941,7 +2009,6 @@ impl World {
             }
             self.lifts.retain(|c| c.anchor != a);
         }
-        self.rebuild_grid();
         Some(b.kind)
     }
 
@@ -2106,6 +2173,8 @@ impl World {
 
     /// Works out the power grids. Runs whenever something is placed or removed.
     pub fn rebuild_grid(&mut self) {
+        #[cfg(test)]
+        REBUILDS.with(|c| c.set(c.get() + 1));
         // Every power source, with the floor it's on and the tiles it reaches.
         let mut nodes = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
@@ -3606,6 +3675,12 @@ fn take_from(src: &mut Building, filter: Option<Item>) -> Option<Item> {
 /// there mine faster: see `richness`); floors above the ground start as open air.
 fn gen_floors() -> Vec<Floor> {
     LEVELS.iter().map(|&level| Floor::new(level, level == 0)).collect()
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many times `rebuild_grid` ran on this thread, so tests can check a batch rebuilds once.
+    pub(crate) static REBUILDS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
 }
 
 #[cfg(test)]

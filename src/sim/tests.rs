@@ -1,5 +1,6 @@
 use super::*;
 
+mod batch;
 mod boiler;
 mod elevators;
 mod keys;
