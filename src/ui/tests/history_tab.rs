@@ -289,3 +289,19 @@ fn history_snapshots() {
     let buf = render(&mut app, 36, 30);
     std::fs::write("target/snapshot-history-phone.html", to_html(&buf)).unwrap();
 }
+
+#[test]
+fn the_chart_fills_the_width_of_the_pane() {
+    let mut app = app_with_history();
+    for key in ['1', '2', '3'] {
+        press(&mut app, key);
+        for width in [80u16, 130] {
+            let t = text(&render(&mut app, width, 36));
+            // The time axis ends with "now" right by the panel's right border.
+            let axis: Vec<char> = t.lines().find(|l| l.contains("now")).unwrap_or_else(|| panic!("no axis:\n{t}")).chars().collect();
+            let now = (0..axis.len() - 2).find(|&i| axis[i..i + 3] == ['n', 'o', 'w']).unwrap() + 3;
+            let border = (now..axis.len()).find(|&i| axis[i] == '│').unwrap_or(axis.len());
+            assert!(border - now <= 3, "{key} at {width}: 'now' ends at {now}, border at {border}\n{t}");
+        }
+    }
+}

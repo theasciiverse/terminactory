@@ -154,8 +154,11 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
     let lw = [top, top / 2.0, 0.0].iter().map(|v| axis_label(*v, research).chars().count()).max().unwrap_or(2);
     let avail = width.saturating_sub(lw + 1);
     let n = range.count().min(avail.max(1));
-    let cw = if n * 2 <= avail && n == range.count() { 2 } else { 1 };
     let shown = &pts[pts.len() - n..];
+    // Spread the bars over the whole width: bar i covers columns xs[i]..xs[i + 1]. With two or
+    // more columns a bar, the last one is a gap; with fewer, the bars touch.
+    let xs: Vec<usize> = (0..=n).map(|i| i * avail.max(n) / n.max(1)).collect();
+    let gaps = avail >= n * 2;
 
     // Summary: what's shown, the total and the best bar.
     let total: f64 = shown.iter().map(|p| val(p, research)).sum();
@@ -210,7 +213,7 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
         };
         let mut spans = vec![Span::styled(format!("{label:>lw$}┤"), dim)];
         let from_bottom = ch - 1 - r;
-        for p in shown {
+        for (i, p) in shown.iter().enumerate() {
             let v = val(p, research);
             let eighths = if v <= 0.0 { 0 } else { ((v / top * rows as f64).round() as usize).clamp(1, rows) };
             let fill = eighths.saturating_sub(from_bottom * 8).min(8);
@@ -221,22 +224,24 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
             } else {
                 (' ', Style::new())
             };
-            spans.push(Span::styled(c.to_string(), st));
-            if cw == 2 {
+            let w = xs[i + 1] - xs[i];
+            let solid = if gaps { w - 1 } else { w };
+            spans.push(Span::styled(c.to_string().repeat(solid), st));
+            if gaps {
                 spans.push(Span::raw(" "));
             }
         }
         lines.push(Line::from(spans));
     }
-    lines.push(time_axis(shown, range, lw, cw));
+    lines.push(time_axis(shown, range, lw, &xs));
     (lines, summary)
 }
 
 /// The labels under the bars: how long ago, or the months.
-fn time_axis(shown: &[Point], range: Range, lw: usize, cw: usize) -> Line<'static> {
+fn time_axis(shown: &[Point], range: Range, lw: usize, xs: &[usize]) -> Line<'static> {
     let dim = Style::new().fg(Color::DarkGray);
     let n = shown.len();
-    let w = n * cw;
+    let w = xs[n];
     let mut labels: Vec<(usize, String)> = Vec::new();
     // "now" is always at the right end, so nothing else may run into it.
     let right = w.saturating_sub(3);
@@ -257,7 +262,7 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, cw: usize) -> Line<'stati
             _ => None,
         };
         if let Some(t) = text {
-            labels.push((i * cw, t));
+            labels.push((xs[i], t));
         }
     }
     labels.push((right, "now".to_string()));
