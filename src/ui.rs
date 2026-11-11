@@ -114,6 +114,13 @@ pub fn floor_label(level: i32) -> String {
 /// "EC 20/12": the grid under the cursor (labelled "regional") when it's on a power
 /// source or a powered machine, otherwise every grid together ("global").
 fn power_spans(app: &App, label: &str) -> Vec<Span<'static>> {
+    let (main, word, unused) = power_parts(app, label, false);
+    std::iter::once(main).chain(word).chain(unused).collect()
+}
+
+/// The figure, the word after it ("regional" or "global") and the unused-supply note. A
+/// small pane leaves "global" out: it is what you get unless it says "regional".
+fn power_parts(app: &App, label: &str, compact: bool) -> (Span<'static>, Option<Span<'static>>, Option<Span<'static>>) {
     let w = &app.world;
     let colour = |r: f64| {
         if r >= 1.0 {
@@ -130,19 +137,19 @@ fn power_spans(app: &App, label: &str) -> Vec<Span<'static>> {
         Some(id) => {
             let n = w.grid.nets[id];
             let ratio = if n.demand > 0.0 { n.ratio } else { 1.0 };
-            vec![
+            (
                 Span::styled(format!("{label}{:.0}/{:.0}", n.supply, n.demand), Style::new().fg(colour(ratio))),
-                Span::styled(" regional", dim),
-            ]
+                Some(Span::styled(" regional", dim)),
+                None,
+            )
         }
         None => {
             let (supply, demand, worst, _, _, unused) = w.power_summary();
-            let mut v =
-                vec![Span::styled(format!("{label}{supply:.0}/{demand:.0}"), Style::new().fg(colour(worst))), Span::styled(" global", dim)];
-            if unused > 0.0 {
-                v.push(Span::styled(format!(" +{unused:.0} unused"), dim));
-            }
-            v
+            (
+                Span::styled(format!("{label}{supply:.0}/{demand:.0}"), Style::new().fg(colour(worst))),
+                (!compact).then(|| Span::styled(" global", dim)),
+                (unused > 0.0).then(|| Span::styled(format!(" +{unused:.0} unused"), dim)),
+            )
         }
     }
 }
@@ -155,7 +162,7 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
     let mut spans = vec![
         Span::styled(" TERMINACTORY ", Style::new().fg(Color::Black).bg(Color::Cyan).add_modifier(bold)),
         Span::raw(" "),
-        Span::styled(format!(" ${:.0}", w.econ.money), Style::new().fg(Color::Green).add_modifier(bold)),
+        Span::styled(format!(" {}", signed_money(w.econ.money)), Style::new().fg(Color::Green).add_modifier(bold)),
         Span::raw("   "),
         Span::styled(format!("Research {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold)),
         Span::raw("   "),
@@ -175,149 +182,356 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-/// Small-pane top line: money, research, EC, idle machines, floor, waiting mail.
+/// Small-pane top line, by priority so a narrow pane drops the least useful bits from the
+/// right end of the list rather than the end of the line: PAUSED or speed, the floor, mail,
+/// money, EC, unpowered machines, research, idle machines, and why they are idle.
 fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
     let w = &app.world;
     let (_, _, _, _, unpowered, _) = w.power_summary();
     let bold = Modifier::BOLD;
     let warn = Style::new().fg(Color::Indexed(214));
-    let mut spans = vec![
-        Span::styled(format!(" ${:.0}", w.econ.money), Style::new().fg(Color::Green).add_modifier(bold)),
-        Span::styled(format!("  R {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold)),
-    ];
-    spans.extend(power_spans(app, "  EC "));
-    let (idle, why) = w.idle_summary();
-    if idle > 0 {
-        spans.push(Span::styled(format!("  {idle} idle"), warn));
-        if let Some(r) = why {
-            spans.push(Span::styled(format!(" ({r})"), warn));
-        }
-    }
-    if unpowered > 0 {
-        spans.push(Span::styled(format!("  {unpowered} no EC"), warn));
+    // (priority, spans) in the order they show; a bigger priority number goes first when short of room.
+    let mut parts: Vec<(u8, Vec<Span<'static>>)> = Vec::new();
+    if app.paused {
+        parts.push((0, vec![Span::styled(" PAUSED ", Style::new().fg(Color::Black).bg(Color::Yellow).add_modifier(bold))]));
+    } else if app.speed > 1 {
+        parts.push((0, vec![Span::styled(format!(" {}x ", app.speed), Style::new().fg(Color::Black).bg(Color::Yellow))]));
     }
     let level = w.floors[app.floor].level;
     if level != 0 {
-        spans.push(Span::styled(format!("  floor {level:+}"), Style::new().fg(Color::Cyan)));
+        parts.push((1, vec![Span::styled(format!(" floor {level:+}"), Style::new().fg(Color::Cyan))]));
     }
     let mail = w.mail.len() + app.mail.is_some() as usize;
     if mail > 0 {
-        spans.push(Span::styled(format!("  {mail} mail"), Style::new().fg(KEY_ITEM)));
+        parts.push((2, vec![Span::styled(format!(" {mail} mail"), Style::new().fg(KEY_ITEM))]));
     }
-    if app.paused {
-        spans.push(Span::styled("  PAUSED", Style::new().fg(Color::Yellow).add_modifier(bold)));
-    } else if app.speed > 1 {
-        spans.push(Span::styled(format!("  {}x", app.speed), Style::new().fg(Color::Yellow)));
+    parts.push((3, vec![Span::styled(format!(" {}", short_money(w.econ.money)), Style::new().fg(Color::Green).add_modifier(bold))]));
+    let (power, place, unused) = power_parts(app, " EC ", true);
+    parts.push((4, vec![power]));
+    if let Some(p) = place {
+        parts.push((9, vec![p]));
     }
+    if let Some(u) = unused {
+        parts.push((9, vec![u]));
+    }
+    if unpowered > 0 {
+        parts.push((5, vec![Span::styled(format!(" {unpowered} no EC"), warn)]));
+    }
+    parts.push((6, vec![Span::styled(format!(" R {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold))]));
+    let (idle, why) = w.idle_summary();
+    if idle > 0 {
+        parts.push((7, vec![Span::styled(format!(" {idle} idle"), warn)]));
+        if let Some(r) = why {
+            parts.push((8, vec![Span::styled(format!(" ({r})"), warn)]));
+        }
+    }
+    let width = |p: &(u8, Vec<Span<'static>>)| p.1.iter().map(|s| s.content.chars().count()).sum::<usize>();
+    // Drop the least important until it fits (the first part is never dropped).
+    while parts.iter().map(width).sum::<usize>() > area.width as usize && parts.len() > 1 {
+        let worst = parts.iter().enumerate().max_by_key(|(i, p)| (p.0, *i)).map(|(i, _)| i).unwrap_or(0);
+        parts.remove(worst);
+    }
+    // PAUSED and the speed block sit at the left edge, with the rest after a space.
+    let spans: Vec<Span<'static>> = parts.into_iter().flat_map(|p| p.1).collect();
     f.render_widget(Paragraph::new(Line::from(spans)).style(Style::new().bg(Color::Indexed(236))), area);
 }
 
-/// Small-pane bottom line, most useful first: a fresh message, the open build menu,
-/// what's under the cursor, or the main keys.
-fn draw_status(f: &mut Frame, area: Rect, app: &App) {
+/// What the build bar calls a part when its full name won't fit: the short label the
+/// map draws on the block.
+fn map_label(k: Kind) -> &'static str {
+    match k {
+        Kind::Drill => "DRIL",
+        Kind::BasicDrill => "DRL2",
+        Kind::AdvancedDrill => "ADRL",
+        Kind::LargeBasicDrill => "LBDR",
+        Kind::LargeAdvancedDrill => "LADR",
+        Kind::Belt => "BELT",
+        Kind::FastBelt => "FAST",
+        Kind::Tunnel => "TUNL",
+        Kind::Splitter => "SPLT",
+        Kind::Sorter => "SORT",
+        Kind::Arm => "ARM",
+        Kind::LongArm => "LARM",
+        Kind::Furnace => "FURN",
+        Kind::Molder => "MOLD",
+        Kind::BlastFurnace => "BLST",
+        Kind::CokeOven => "COKE",
+        Kind::Kiln => "KILN",
+        Kind::Press => "PRES",
+        Kind::WireDrawer => "WIRE",
+        Kind::Winder => "WIND",
+        Kind::RollingMill => "ROLL",
+        Kind::Lathe => "LATH",
+        Kind::Crusher => "CRSH",
+        Kind::CrudeAssembler => "CRUD",
+        Kind::BasicAssembler => "BASM",
+        Kind::AdvancedAssembler => "ADVA",
+        Kind::PrecisionAssembler => "PREC",
+        Kind::LargeBasicAssembler => "LRGB",
+        Kind::LargeAdvancedAssembler => "LRGA",
+        Kind::Welder => "WELD",
+        Kind::Pump => "PUMP",
+        Kind::AdvancedPump => "APMP",
+        Kind::Pipe => "PIPE",
+        Kind::Mixer => "MIXR",
+        Kind::Solar => "SOLR",
+        Kind::Pole => "POLE",
+        Kind::Boiler => "BOIL",
+        Kind::SteamEngine => "ENGN",
+        Kind::Elevator => "LIFT",
+        Kind::Crate => "CRAT",
+        Kind::Warehouse => "WARE",
+        Kind::TradePost => "TRAD",
+    }
+}
+
+/// A part's name with "advanced" shortened, for tight spots.
+fn short_name(k: Kind) -> String {
+    k.name().replace("advanced", "adv.").replace("Advanced", "Adv.")
+}
+
+/// How the open category's slots show in the status line, at the richest level that fits `room`:
+/// names with prices, names, map labels, then two-letter codes. A short "Esc back" ends the
+/// line when there are columns to spare.
+fn category_spans(app: &App, cat: Category, room: usize) -> Vec<Span<'static>> {
     let dim = Style::new().fg(Color::DarkGray);
+    let w = &app.world;
+    let entries: Vec<(usize, Kind, bool, Style)> = slots(cat)
+        .iter()
+        .enumerate()
+        .map(|(n, slot)| {
+            let k = app.selected.filter(|k| slot.contains(k)).unwrap_or(slot[0]);
+            let unlocked = w.progress.part_unlocked(k);
+            let mut st = if unlocked && w.econ.money >= k.cost() { Style::new() } else { dim };
+            if app.selected == Some(k) {
+                st = st.add_modifier(Modifier::REVERSED);
+            }
+            (n + 1, k, slot.len() > 1, st)
+        })
+        .collect();
+    let bold = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+    let code = |k: Kind| -> String { kind_cells(k, Dir::E, true).iter().map(|c| c.0).collect() };
+    // (crumb, entry text, gap between entries) per level.
+    let level = |lvl: usize| -> (String, Vec<String>, usize) {
+        let crumb =
+            if lvl == 4 { format!(" {}›", cat.name().chars().take(2).collect::<String>()) } else { format!(" {} ›", cat.name()) };
+        let texts = entries
+            .iter()
+            .map(|(n, k, more, _)| {
+                let plus = if *more { "+" } else { "" };
+                match lvl {
+                    0 => format!(" {n} {}{plus} {} ", k.name(), price_label(w, *k, app.lift_size)),
+                    1 => format!(" {n} {}{plus} ", k.name()),
+                    2 => format!(" {n} {}{plus} ", map_label(*k)),
+                    3 => format!(" {n} {} ", map_label(*k)),
+                    _ => format!("{n}{}", code(*k)),
+                }
+            })
+            .collect();
+        (crumb, texts, if lvl == 4 { 1 } else { 0 })
+    };
+    let width = |lvl: usize| -> usize {
+        let (crumb, texts, gap) = level(lvl);
+        let lead = if lvl == 4 { 1 } else { 0 };
+        crumb.chars().count() + lead + texts.iter().map(|t| t.chars().count()).sum::<usize>() + gap * texts.len().saturating_sub(1)
+    };
+    let lvl = (0..5).find(|l| width(*l) <= room).unwrap_or(4);
+    let (crumb, texts, gap) = level(lvl);
+    let mut spans = vec![Span::styled(crumb, bold)];
+    if lvl == 4 {
+        spans.push(Span::raw(" "));
+    }
+    for (i, (text, (_, _, _, st))) in texts.into_iter().zip(&entries).enumerate() {
+        if i > 0 && gap > 0 {
+            spans.push(Span::raw(" ".repeat(gap)));
+        }
+        spans.push(Span::styled(text, *st));
+    }
+    let back = format!("  {} back", app.controls.key(Action::Back));
+    if room >= width(lvl) + back.chars().count() {
+        spans.push(Span::styled(back, dim));
+    }
+    spans
+}
+
+/// The picked part in the status line: price (or "locked") and facing matter most, so a long
+/// name is shortened, and the keys go before the numbers do.
+fn part_spans(app: &App, cat: Category, k: Kind, room: usize) -> Vec<Span<'static>> {
+    let dim = Style::new().fg(Color::DarkGray);
+    let bold = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let c = &app.controls;
     let w = &app.world;
-    // Where you are in the build menu leads the line: "Create › Copper furnace".
-    let mut crumb = Vec::new();
-    if let Some(cat) = app.menu {
-        crumb.push(Span::styled(format!(" {}", cat.name()), Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
-        if let Some(k) = app.selected {
-            crumb.push(Span::styled(" › ", dim));
-            crumb.push(Span::styled(k.name(), Style::new().add_modifier(Modifier::BOLD)));
+    let afford = w.progress.part_unlocked(k) && w.econ.money >= k.price(app.lift_size);
+    let price = price_label(w, k, app.lift_size);
+    let price_st = if afford { Style::new().fg(Color::Green) } else { dim };
+    let (fw, fh) = dims_of(k, app.dir, app.lift_size);
+    let size = if fw * fh > 1 { format!("{fw}x{fh}") } else { String::new() };
+    let rot = c.key(Action::Rotate);
+    // Levels, from everything down to price and short name: (category, keys, name short, price first, size, rotate key)
+    let levels: [(bool, u8, bool, bool, bool, bool); 7] = [
+        (true, 2, false, false, true, true),
+        (true, 1, false, false, true, true),
+        (true, 0, false, false, true, true),
+        (false, 1, false, false, true, true),
+        (false, 0, false, false, true, true),
+        (false, 0, true, true, true, false),
+        (false, 0, true, true, false, false),
+    ];
+    let build = |lvl: usize, cut: Option<usize>| -> Vec<Span<'static>> {
+        let (with_cat, keys, short, price_first, with_size, with_rot) = levels[lvl];
+        let mut spans =
+            if with_cat { vec![Span::styled(format!(" {}", cat.name()), bold), Span::styled(" › ", dim)] } else { vec![Span::raw(" ")] };
+        let name = if short { short_name(k) } else { k.name().to_string() };
+        let name = match cut {
+            Some(n) => fit(&name, n),
+            None => name,
+        };
+        let name_span = Span::styled(name, Style::new().add_modifier(Modifier::BOLD));
+        let price_span = Span::styled(price.clone(), price_st);
+        if price_first {
+            spans.push(price_span);
+            spans.push(Span::raw(" "));
+            spans.push(name_span);
+        } else {
+            spans.push(name_span);
+            spans.push(Span::raw("  "));
+            spans.push(price_span);
         }
-    }
-    let line = if app.msg_at.elapsed().as_secs() < 6 {
-        let mut spans = crumb;
-        if !spans.is_empty() {
-            spans.push(Span::styled("  │", dim));
-        }
-        spans.push(Span::styled(format!(" {}", app.msg), Style::new().fg(Color::Yellow)));
-        Line::from(spans)
-    } else if let (Some(_), Some(k)) = (app.menu, app.selected) {
-        // A part is picked: its price, size and facing, and how to place it.
-        let mut spans = crumb;
-        let afford = w.progress.part_unlocked(k) && w.econ.money >= k.price(app.lift_size);
-        spans.push(Span::styled(
-            format!("  {}", price_label(w, k, app.lift_size)),
-            if afford { Style::new().fg(Color::Green) } else { dim },
-        ));
-        let (fw, fh) = dims_of(k, app.dir, app.lift_size);
-        if fw * fh > 1 {
-            spans.push(Span::styled(format!("  {fw}x{fh}"), dim));
+        if with_size && !size.is_empty() {
+            spans.push(Span::styled(format!("  {size}"), dim));
         }
         if k.directional() {
             spans.push(Span::raw(format!("  facing {}", app.dir.arrow())));
-            spans.push(Span::styled(format!(" ({})", c.key(Action::Rotate)), dim));
+            if with_rot {
+                spans.push(Span::styled(format!(" ({rot})"), dim));
+            }
         }
-        spans.push(Span::styled(format!("  ·  {} place  {} back", c.key(Action::Place), c.key(Action::Back)), dim));
-        Line::from(spans)
-    } else if let Some(cat) = app.menu {
-        // A category is open: its parts by number.
-        let mut spans = crumb;
-        spans.push(Span::styled(" ›", dim));
-        // Each slot shows the kind picked in it (or its first kind). If the line is too wide,
-        // the prices go, then the names are cut to share what's left (the numbers always show).
-        let used: usize = spans.iter().map(|s| s.content.chars().count()).sum();
-        let room = (area.width as usize).saturating_sub(used);
-        let entries: Vec<(String, String, Style)> = slots(cat)
-            .iter()
-            .enumerate()
-            .map(|(n, slot)| {
-                let k = app.selected.filter(|k| slot.contains(k)).unwrap_or(slot[0]);
-                let unlocked = w.progress.part_unlocked(k);
-                let mut st = if unlocked && w.econ.money >= k.cost() { Style::new() } else { dim };
-                if app.selected == Some(k) {
-                    st = st.add_modifier(Modifier::REVERSED);
-                }
-                let more = if slot.len() > 1 { "+" } else { "" };
-                (format!("{} {}{more}", n + 1, k.name()), price_label(w, k, app.lift_size), st)
-            })
-            .collect();
-        let width_with = |prices: bool| -> usize {
-            entries.iter().map(|(l, p, _)| 2 + l.chars().count() + if prices { 1 + p.chars().count() } else { 0 }).sum()
-        };
-        let (prices, cut) = if width_with(true) <= room {
-            (true, usize::MAX)
-        } else if width_with(false) <= room {
-            (false, usize::MAX)
+        match keys {
+            2 => spans.push(Span::styled(format!("  ·  {} place  {} back", c.key(Action::Place), c.key(Action::Back)), dim)),
+            1 => spans.push(Span::styled(format!("  ·  {} place", c.key(Action::Place)), dim)),
+            _ => {}
+        }
+        spans
+    };
+    let width = |s: &[Span<'static>]| s.iter().map(|s| s.content.chars().count()).sum::<usize>();
+    for lvl in 0..levels.len() {
+        let spans = build(lvl, None);
+        if width(&spans) <= room {
+            return spans;
+        }
+    }
+    // Even price and short name are too wide: cut the name.
+    let last = levels.len() - 1;
+    let over = width(&build(last, None)).saturating_sub(room);
+    let name_len = short_name(k).chars().count();
+    build(last, Some(name_len.saturating_sub(over).max(4)))
+}
+
+/// Room for a fresh message beside the build line: (room for the build line, the message).
+/// The build line keeps at least `least` columns (and half the line); the message gets the
+/// rest, cut with "…", or nothing at all if that leaves under 10 columns.
+fn message_beside(app: &App, avail: usize, least: usize) -> (usize, Option<Span<'static>>) {
+    if app.msg_at.elapsed().as_secs() >= 6 {
+        return (avail, None);
+    }
+    let want = app.msg.chars().count() + 3;
+    let spare = avail.saturating_sub(least);
+    let msg_w = if want <= spare { want } else { want.min(avail / 2).min(spare) };
+    if msg_w < 12 && msg_w < want {
+        return (avail, None);
+    }
+    (avail - msg_w, Some(Span::styled(format!(" │ {}", fit(&app.msg, msg_w - 3)), Style::new().fg(Color::Yellow))))
+}
+
+/// The first line of `inspect` that says something is wrong, if any.
+fn problem_line(lines: &[String]) -> Option<&String> {
+    lines.iter().skip(1).find(|l| {
+        ["NO EC", "needs ", "waiting", "idle:", "Won't take", "no filter", "put its exit"].iter().any(|p| l.starts_with(p))
+            || l.contains("no fire")
+            || l.contains("needs coal")
+    })
+}
+
+/// What's under the cursor for the status line: what is wrong first, then the name and the
+/// state, then the output side, with the EC figures last and no lore ("by Company": the
+/// book has it).
+fn inspect_short(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
+    let lines = inspect(w, f, x, y);
+    let problem = problem_line(&lines).cloned();
+    let mut out: Vec<String> = problem.iter().cloned().collect();
+    let (mut side, mut power) = (Vec::new(), Vec::new());
+    for l in lines {
+        if l.starts_with("by ") || Some(&l) == problem.as_ref() {
+            continue;
+        }
+        if l.starts_with("output goes out") {
+            side.push(l);
+        } else if l.starts_with("EC ")
+            || l.starts_with("grid:")
+            || l.starts_with("draws ")
+            || l.starts_with("drawing ")
+            || l.contains("EC only while")
+        {
+            power.push(l);
         } else {
-            (false, (room / entries.len().max(1)).saturating_sub(2).max(3))
-        };
-        for (label, price, st) in entries {
-            // A cut name keeps its "+" (more kinds in the slot).
-            let label: String = if label.chars().count() > cut && label.ends_with('+') {
-                label.chars().take(cut.saturating_sub(1)).chain(std::iter::once('+')).collect()
-            } else {
-                label.chars().take(cut).collect()
-            };
-            let text = if prices { format!(" {label} {price} ") } else { format!(" {label} ") };
-            spans.push(Span::styled(text, st));
+            out.push(l);
         }
+    }
+    out.extend(side);
+    out.extend(power);
+    out
+}
+
+/// Small-pane bottom line, most useful first: the open build menu (with a fresh message
+/// beside it, never over it), what's under the cursor, or the main keys.
+fn draw_status(f: &mut Frame, area: Rect, app: &App) {
+    let dim = Style::new().fg(Color::DarkGray);
+    let c = &app.controls;
+    let note = mail_note(app, area.width);
+    let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
+    let fresh = app.msg_at.elapsed().as_secs() < 6;
+    let spans_width = |s: &[Span<'static>]| s.iter().map(|s| s.content.chars().count()).sum::<usize>();
+    let line = if let Some(cat) = app.menu {
+        // The part list or the picked part always shows: a message gets what is left.
+        let tightest = match app.selected {
+            Some(k) => spans_width(&part_spans(app, cat, k, 0)),
+            None => spans_width(&category_spans(app, cat, 0)),
+        };
+        let (room, msg) = message_beside(app, avail, tightest);
+        let mut spans = match app.selected {
+            Some(k) => part_spans(app, cat, k, room),
+            None => category_spans(app, cat, room),
+        };
+        spans.extend(msg);
         Line::from(spans)
+    } else if fresh {
+        Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow))
     } else {
         let (x, y) = app.cursor;
-        let here = inspect(&app.world, app.floor, x, y);
+        let here = inspect_short(&app.world, app.floor, x, y);
         if here.first().is_some_and(|h| h != "Empty ground") {
-            Line::raw(format!(" {}", here.iter().take(3).cloned().collect::<Vec<_>>().join(" · ")))
+            Line::raw(fit(&format!(" {}", here.iter().take(3).cloned().collect::<Vec<_>>().join(" · ")), avail))
         } else {
-            Line::styled(
-                format!(
-                    " {} help · 1-4 build · {} research · {} recipes · {} production · Ctrl+C quit",
-                    c.key(Action::Help),
-                    c.key(Action::Tree),
-                    c.key(Action::Book),
-                    c.key(Action::Stats)
-                ),
-                dim,
-            )
+            let (help, tree, book, stats) = (c.key(Action::Help), c.key(Action::Tree), c.key(Action::Book), c.key(Action::Stats));
+            let hints = [
+                (0, format!("{help} help")),
+                (1, "1-4 build".to_string()),
+                (2, format!("{tree} research")),
+                (3, format!("{book} recipes")),
+                (4, format!("{stats} production")),
+                (5, "Ctrl+C quit".to_string()),
+            ];
+            let refs: Vec<(u8, &str)> = hints.iter().map(|h| (h.0, h.1.as_str())).collect();
+            let mut spans = vec![Span::styled(" ", dim)];
+            spans.extend(footer_line(avail.saturating_sub(1) as u16, &refs, None).spans);
+            Line::from(spans)
         }
     };
-    line_with_note(f, area, line, mail_note(app, area.width));
+    line_with_note(f, area, line, note);
 }
 
 /// A waiting telegram as a short note for the right end of the bottom line:
-/// "agent finished · n to view" (or just "n ✉" when there's no room).
+/// "agent finished · n to view" (or just "n mail" when there's no room).
 fn mail_note(app: &App, width: u16) -> Option<String> {
     let m = app.mail.as_ref()?;
     let c = &app.controls;
@@ -331,7 +545,7 @@ fn mail_note(app: &App, width: u16) -> Option<String> {
         n => format!(" (+{n})"),
     };
     let full = format!(" {what}{more} · {} to view ", c.key(Action::Mail));
-    Some(if full.chars().count() + 16 > width as usize { format!(" {} ✉ ", c.key(Action::Mail)) } else { full })
+    Some(if full.chars().count() + 16 > width as usize { format!(" {} mail ", c.key(Action::Mail)) } else { full })
 }
 
 /// Draws `line` in `area`, with the waiting-telegram note (if any) at its right end.
@@ -1379,8 +1593,10 @@ fn item_counts(items: impl Iterator<Item = Item>) -> Vec<String> {
 
 fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
     let fresh = app.msg_at.elapsed().as_secs() < 6;
+    let note = if app.tree || app.book { mail_note(app, area.width) } else { None };
+    let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
     let line = if fresh {
-        Line::styled(format!(" {}", app.msg), Style::new().fg(Color::Yellow))
+        Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow))
     } else {
         {
             let c = &app.controls;
@@ -1399,7 +1615,6 @@ fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
         }
     };
     // The tree and the book cover the sidebar, so a waiting telegram shows down here meanwhile.
-    let note = if app.tree || app.book { mail_note(app, area.width) } else { None };
     line_with_note(f, area, line, note);
 }
 
@@ -1471,7 +1686,9 @@ fn footer_line(width: u16, hints: &[(u8, &str)], more: Option<&str>) -> Line<'st
 /// Money for a tight line: "$1,234" up to 99,999, then "$123k" and "$1.2M".
 fn short_money(v: f64) -> String {
     let v = v.round();
-    if v < 100_000.0 {
+    if v < 0.0 {
+        format!("-{}", short_money(-v))
+    } else if v < 100_000.0 {
         format!("${}", grouped(v))
     } else if v < 1_000_000.0 {
         format!("${:.0}k", v / 1e3)

@@ -409,8 +409,11 @@ impl App {
                 };
                 self.menu = Some(cat);
                 let count = slots(cat).len();
-                let back = self.controls.label(Action::Back);
-                self.say(format!("{}: press 1-{count} to pick, again to switch kind, {back} to go back", cat.name()));
+                // The small-pane status line already lists the slots, so it needs no message.
+                if !self.compact_now {
+                    let back = self.controls.label(Action::Back);
+                    self.say(format!("{}: press 1-{count} to pick, again to switch kind, {back} to go back", cat.name()));
+                }
             }
             Some(cat) => {
                 let Some(&slot) = slots(cat).get(n - 1) else {
@@ -458,7 +461,10 @@ impl App {
         self.selected = Some(kind);
         self.paste = None;
         let note = if kind.preview() { " (preview: not in the base tier)" } else { "" };
-        self.say(format!("{} selected, ${:.0}{}", kind.name(), kind.cost(), note));
+        // The small-pane status line shows the price, size and facing instead.
+        if !self.compact_now {
+            self.say(format!("{} selected, ${:.0}{}", kind.name(), kind.cost(), note));
+        }
     }
 
     /// Arrow keys walk the tree: left to the parent, right to the first child,

@@ -445,7 +445,7 @@ fn small_pane_view() {
     let t = text(&render(&mut app, 64, 16));
     let last = t.lines().last().unwrap().to_string();
     assert!(
-        last.contains(" Create › 1 Cheap") && last.contains("5 Wat") && !last.contains("$50"),
+        last.contains(" Create › 1 DRIL+  2 FURN+") && last.contains("5 PUMP+") && !last.contains("$50"),
         "five slots all show their numbers: {last}"
     );
 
@@ -463,12 +463,13 @@ fn small_pane_view() {
     // A message keeps the path in front of it.
     app.say("Placed");
     let t = text(&render(&mut app, 64, 16));
-    assert!(t.lines().last().unwrap().contains("Transport › Basic splitter  │ Placed"), "{t}");
+    let last = t.lines().last().unwrap();
+    assert!(last.contains("Transport › Basic splitter  $10") && last.contains("│ Placed"), "{t}");
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
     app.selected = None;
 
     // The power figure is global away from power, regional on a pole or panel.
-    assert!(t.lines().next().unwrap().contains(" global"), "{t}");
+    assert!(t.lines().next().unwrap().contains("EC 20/15") && !t.contains("global"), "{t}");
     let pole = (0..(W * H) as usize).map(pos_of).find(|&(x, y)| app.world.tile(0, x, y).is_some_and(|b| b.kind == Kind::Pole)).unwrap();
     app.cursor = pole;
     let t = text(&render(&mut app, 64, 16));
@@ -929,7 +930,7 @@ fn new_machines_snapshot() {
     assert!(t.lines().last().unwrap().contains("Create › Lathe  $200  3x3  facing"), "{t}");
     app.selected = None;
     let buf = render(&mut app, 60, 20);
-    assert!(text(&buf).lines().last().unwrap().contains("Create › 1 Cheap"), "{}", text(&buf));
+    assert!(text(&buf).lines().last().unwrap().contains("Create › 1 DRIL+  2 FURN+"), "{}", text(&buf));
     std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
 }
 
@@ -1017,7 +1018,7 @@ fn content_step_screens_fit_every_size() {
         let buf = render(&mut app, width, 20);
         let t = text(&buf);
         let last = t.lines().last().unwrap();
-        assert!(last.contains("5 W"), "{width}: {last}");
+        assert!(last.contains(if width < 70 { "5 PUMP" } else { "5 Water" }), "{width}: {last}");
         std::fs::write(format!("target/snapshot-create-menu-{width}.html"), to_html(&buf)).unwrap();
     }
     app.menu = None;
