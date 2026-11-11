@@ -1,4 +1,4 @@
-//! The production panel's History tab: an earnings chart (minutes, hours, days or weeks) and a
+//! The production panel's History tab: an earnings chart (seconds, minutes, hours or days) and a
 //! GitHub-style heatmap of daily earnings. Built as plain lines, so it scrolls like the
 //! Production tab when the pane is short.
 
@@ -33,7 +33,7 @@ pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
             Line::raw(""),
             Line::raw(fit("Earnings show up here as your factory sells.", width)),
             Line::raw(""),
-            Line::styled(fit("Sales are charted by the minute, hour, day and week.", width), dim),
+            Line::styled(fit("Sales are charted by the second, minute, hour and day.", width), dim),
         ];
         return Page { lines, hits: Vec::new() };
     }
@@ -137,10 +137,10 @@ fn date_text(day: u64) -> String {
 /// What a bar covers, for the "best" note.
 fn when(range: Range, t: u64) -> String {
     match range {
+        Range::Seconds => format!("{}:{:02}", clock_text(t / 60), t % 60),
         Range::Minutes => clock_text(t),
         Range::Hours => format!("{:02}:00 {}", t % 24, date_text(t / 24)),
         Range::Days => date_text(t),
-        Range::Weeks => format!("week of {}", date_text((t * 7).saturating_sub(4))),
     }
 }
 
@@ -240,6 +240,7 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, cw: usize) -> Line<'stati
     for (i, p) in shown.iter().enumerate() {
         let age = n - 1 - i;
         let text = match range {
+            Range::Seconds if age % 10 == 0 && age > 0 => Some(format!("-{age}s")),
             Range::Minutes if age % 10 == 0 && age > 0 => Some(format!("-{age}m")),
             Range::Hours if age % 6 == 0 && age > 0 => Some(format!("-{age}h")),
             Range::Days => {
@@ -249,10 +250,6 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, cw: usize) -> Line<'stati
                     8 | 15 | 22 => Some(d.to_string()),
                     _ => None,
                 }
-            }
-            Range::Weeks => {
-                let (_, m, d) = civil((p.t * 7).saturating_sub(4));
-                (d <= 7).then(|| MONTHS[m as usize - 1].to_string())
             }
             _ => None,
         };

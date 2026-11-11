@@ -146,7 +146,7 @@ Every key item can be made with machines from companies that open before it, so 
 
 ## Production and history
 
-The production panel (`o`) has two tabs, switched with `Tab` (or a click): **Production** shows the last minute per item, and **History** charts what you have earned. The chart shows money (or research, with `r`) per minute, hour, day or week: pick the range with `1`-`4` or `[` `]`. Below it is a GitHub-style heatmap of daily earnings for up to 53 weeks (fewer in a narrow pane): the arrow keys (or a click) pick a day and its earnings are written underneath. Days are your local calendar days; company deliveries are not counted as earnings, and what the factory earns while the game is closed is counted in the hour and day you come back. The game keeps running underneath.
+The production panel (`o`) has two tabs, switched with `Tab` (or a click): **Production** shows the last minute per item, and **History** charts what you have earned. The chart shows money (or research, with `r`) per second, minute, hour or day: pick the range with `1`-`4` or `[` `]`. Below it is a GitHub-style heatmap of daily earnings for up to 53 weeks (fewer in a narrow pane): the arrow keys (or a click) pick a day and its earnings are written underneath. Days are your local calendar days; company deliveries are not counted as earnings, what the factory earns while the game is closed is counted in the hour and day you come back, and the seconds view covers this session only. The game keeps running underneath.
 
 ## Agent telegrams
 

@@ -92,9 +92,9 @@ fn clicking_a_tab_switches_to_it() {
     // And a click on a range pill picks it, a click on a day picks that day.
     app.stats_history = true;
     render(&mut app, 100, 30);
-    let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Range(Range::Weeks)).unwrap();
+    let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Range(Range::Days)).unwrap();
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
-    assert_eq!(app.hist_range, Range::Weeks);
+    assert_eq!(app.hist_range, Range::Days);
     let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Day(10)).unwrap();
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
     assert_eq!(app.hist_day, 10);
@@ -102,34 +102,34 @@ fn clicking_a_tab_switches_to_it() {
 }
 
 #[test]
-fn range_keys_pick_minutes_hours_days_and_weeks() {
+fn range_keys_pick_seconds_minutes_hours_and_days() {
     let mut app = app_with_history();
-    for (c, r) in [('1', Range::Minutes), ('2', Range::Hours), ('3', Range::Days), ('4', Range::Weeks)] {
+    for (c, r) in [('1', Range::Seconds), ('2', Range::Minutes), ('3', Range::Hours), ('4', Range::Days)] {
         press(&mut app, c);
         assert_eq!(app.hist_range, r, "{c}");
         assert!(app.stats, "{c} keeps the panel open on the History tab");
     }
     press(&mut app, '[');
-    assert_eq!(app.hist_range, Range::Days);
+    assert_eq!(app.hist_range, Range::Hours);
     press(&mut app, ']');
     press(&mut app, ']');
-    assert_eq!(app.hist_range, Range::Weeks, "stops at the last range");
+    assert_eq!(app.hist_range, Range::Days, "stops at the last range");
     for _ in 0..5 {
         press(&mut app, '[');
     }
-    assert_eq!(app.hist_range, Range::Minutes, "and at the first");
+    assert_eq!(app.hist_range, Range::Seconds, "and at the first");
     // The chart says which range it is showing.
     let t = text(&render(&mut app, 100, 30));
-    assert!(t.contains("last 60 minutes") && t.contains("-10m") && t.contains("now"), "{t}");
+    assert!(t.contains("last 60 seconds") && t.contains("-10s") && t.contains("now"), "{t}");
     press(&mut app, '2');
     let t = text(&render(&mut app, 100, 30));
-    assert!(t.contains("last 48 hours") && t.contains("-12h"), "{t}");
+    assert!(t.contains("last 60 minutes") && t.contains("-10m") && t.contains("now"), "{t}");
     press(&mut app, '3');
     let t = text(&render(&mut app, 100, 30));
-    assert!(t.contains("days") && t.contains("Nov"), "{t}");
+    assert!(t.contains("last 48 hours") && t.contains("-12h"), "{t}");
     press(&mut app, '4');
     let t = text(&render(&mut app, 100, 30));
-    assert!(t.contains("last 53 weeks") || t.contains("weeks"), "{t}");
+    assert!(t.contains("days") && t.contains("Nov"), "{t}");
     // On the Production tab the same keys are the game's: 1 closes the panel and picks a slot.
     app.stats_history = false;
     press(&mut app, '1');
@@ -153,7 +153,7 @@ fn research_swaps_with_money() {
 #[test]
 fn the_chart_has_a_y_axis_a_time_axis_a_total_and_the_best_bar() {
     let mut app = app_with_history();
-    press(&mut app, '2');
+    press(&mut app, '3');
     let t = text(&render(&mut app, 100, 36));
     // Hours: the best of the last 48 is 12 * 60 = $720 at some hour; the axis tops out above it.
     assert!(t.contains("best $720"), "{t}");

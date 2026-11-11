@@ -1,5 +1,6 @@
-//! Earnings history: money and research earned per minute (last hour), per hour (last two
-//! days) and per calendar day (last 53 weeks), kept in the save for the History tab.
+//! Earnings history: money and research earned per second (last minute, this session only),
+//! per minute (last hour), per hour (last two days) and per calendar day (last 53 weeks), kept
+//! in the save for the History tab.
 //!
 //! Nothing here draws. Buckets are keyed by *local* time (the clock plus the zone's offset at
 //! that moment), so a "day" is the player's own day. Only buckets that were touched are
@@ -9,51 +10,53 @@ use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
+/// Second buckets kept: the last minute.
+pub const SECONDS: u64 = 60;
 /// Minute buckets kept: the last hour.
 pub const MINUTES: u64 = 60;
 /// Hour buckets kept: the last two days.
 pub const HOURS: u64 = 48;
 /// Day buckets kept: 53 whole weeks, the most a heatmap can show.
 pub const DAYS: u64 = 371;
-/// Weeks shown by the weekly range (and the heatmap's columns).
+/// Weeks the heatmap can show (its columns).
 pub const WEEKS: u64 = 53;
 
 /// How much time each bar of the earnings chart covers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Range {
+    Seconds,
     Minutes,
     Hours,
     Days,
-    Weeks,
 }
 
 impl Range {
-    pub const ALL: [Range; 4] = [Range::Minutes, Range::Hours, Range::Days, Range::Weeks];
+    pub const ALL: [Range; 4] = [Range::Seconds, Range::Minutes, Range::Hours, Range::Days];
 
     pub fn name(self) -> &'static str {
         match self {
+            Range::Seconds => "Seconds",
             Range::Minutes => "Minutes",
             Range::Hours => "Hours",
             Range::Days => "Days",
-            Range::Weeks => "Weeks",
         }
     }
     /// Bars in the whole range.
     pub fn count(self) -> usize {
         match self {
+            Range::Seconds => SECONDS as usize,
             Range::Minutes => MINUTES as usize,
             Range::Hours => HOURS as usize,
             Range::Days => DAYS as usize,
-            Range::Weeks => WEEKS as usize,
         }
     }
-    /// "minute", "hour", "day", "week".
+    /// "second", "minute", "hour", "day".
     pub fn unit(self) -> &'static str {
         match self {
+            Range::Seconds => "second",
             Range::Minutes => "minute",
             Range::Hours => "hour",
             Range::Days => "day",
-            Range::Weeks => "week",
         }
     }
     pub fn next(self) -> Range {
@@ -76,7 +79,7 @@ pub struct Bucket {
 /// One bar of a series, with gaps filled in.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
-    /// The bucket key (for weeks: the week number, Sunday to Saturday).
+    /// The bucket key: seconds, minutes, hours or days since 1970, local time.
     pub t: u64,
     pub money: f64,
     pub research: f64,
@@ -86,6 +89,9 @@ pub struct Point {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct History {
+    /// The last minute, second by second. Not saved: it only means something while playing.
+    #[serde(skip)]
+    pub seconds: VecDeque<Bucket>,
     #[serde(default)]
     pub minutes: VecDeque<Bucket>,
     #[serde(default)]
@@ -168,8 +174,10 @@ impl History {
 
     fn add(&mut self, ls: u64, money: f64, research: f64, minute: bool) {
         if minute {
+            upsert(&mut self.seconds, ls, money, research);
             upsert(&mut self.minutes, ls / 60, money, research);
         }
+        prune(&mut self.seconds, ls, SECONDS);
         upsert(&mut self.hours, ls / 3600, money, research);
         upsert(&mut self.days, ls / 86_400, money, research);
         prune(&mut self.minutes, ls / 60, MINUTES);
@@ -199,24 +207,10 @@ impl History {
                 .collect()
         };
         match range {
+            Range::Seconds => fill(&self.seconds, ls, SECONDS),
             Range::Minutes => fill(&self.minutes, ls / 60, MINUTES),
             Range::Hours => fill(&self.hours, ls / 3600, HOURS),
             Range::Days => fill(&self.days, ls / 86_400, DAYS),
-            Range::Weeks => {
-                let today = ls / 86_400;
-                let this_week = week_of(today);
-                let mut weeks: Vec<Point> = (0..WEEKS)
-                    .map(|i| Point { t: (this_week + 1 + i).saturating_sub(WEEKS), money: 0.0, research: 0.0, seen: false })
-                    .collect();
-                for d in fill(&self.days, today, DAYS) {
-                    if let Some(w) = weeks.iter_mut().find(|w| w.t == week_of(d.t)) {
-                        w.money += d.money;
-                        w.research += d.research;
-                        w.seen |= d.seen;
-                    }
-                }
-                weeks
-            }
         }
     }
 }

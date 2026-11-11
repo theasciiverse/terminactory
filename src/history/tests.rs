@@ -30,7 +30,7 @@ fn the_zone_offset_is_sane() {
 }
 
 #[test]
-fn earnings_land_in_the_minute_hour_and_day_they_came_in() {
+fn earnings_land_in_the_second_minute_hour_and_day_they_came_in() {
     let mut h = History::default();
     h.record(NOON, 0, (0.0, 0.0));
     h.record(NOON + 1, 0, (10.0, 1.0));
@@ -41,7 +41,10 @@ fn earnings_land_in_the_minute_hour_and_day_they_came_in() {
     assert!(s[59].seen && !s[58].seen);
     assert_eq!(money(&h, Range::Hours, NOON), 15.0);
     assert_eq!(money(&h, Range::Days, NOON), 15.0);
-    assert_eq!(money(&h, Range::Weeks, NOON), 15.0);
+    let secs = h.series(Range::Seconds, NOON + 2, 0);
+    assert_eq!(secs.len(), 60);
+    assert_eq!((secs[58].money, secs[59].money), (10.0, 5.0), "one bar per second");
+    assert_eq!(money(&h, Range::Seconds, NOON + 2), 15.0);
 }
 
 #[test]
@@ -69,8 +72,6 @@ fn a_new_minute_rolls_to_the_next_bar_and_the_hour_and_day_keep_adding() {
     h.record(NOON + 86_400, 0, (total, 0.0));
     let days = h.series(Range::Days, NOON + 86_400, 0);
     assert_eq!((days[370].money, days[369].money), (7.0, 205.0));
-    let weeks = h.series(Range::Weeks, NOON + 86_400, 0);
-    assert_eq!(weeks[52].money, 212.0, "Wed and Thu share a week");
 }
 
 #[test]
@@ -170,8 +171,8 @@ fn the_tiny_clock_does_not_panic() {
 
 #[test]
 fn ranges_step_and_stop_at_the_ends() {
-    assert_eq!(Range::Minutes.prev(), Range::Minutes);
-    assert_eq!(Range::Minutes.next(), Range::Hours);
-    assert_eq!(Range::Weeks.next(), Range::Weeks);
-    assert_eq!(Range::Weeks.prev(), Range::Days);
+    assert_eq!(Range::Seconds.prev(), Range::Seconds);
+    assert_eq!(Range::Seconds.next(), Range::Minutes);
+    assert_eq!(Range::Days.next(), Range::Days);
+    assert_eq!(Range::Days.prev(), Range::Hours);
 }
