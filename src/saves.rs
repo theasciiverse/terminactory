@@ -79,33 +79,93 @@ pub fn path_of(data: &Path, name: &str) -> PathBuf {
 
 /// While a save is open, a `.lock` file beside it holds the game's process id, so a second
 /// window can't open the same save and overwrite it. Removed when the game closes.
-pub struct Lock(PathBuf);
+pub struct Lock {
+    path: PathBuf,
+    /// Windows keeps the file open (without write sharing) for as long as the game runs.
+    file: Option<std::fs::File>,
+}
 
 impl Drop for Lock {
     fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
+        self.file.take();
+        let _ = std::fs::remove_file(&self.path);
     }
 }
 
-fn alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok_and(|s| s.success())
+/// The process id a lock file holds.
+fn pid_in(path: &Path) -> Option<u32> {
+    std::fs::read_to_string(path).ok()?.trim().parse().ok()
+}
+
+/// Is a process with this id running? (A signal of 0 only checks; EPERM means it exists but isn't ours.)
+#[cfg(unix)]
+fn running(pid: u32) -> bool {
+    match i32::try_from(pid) {
+        // Process 0 would mean "my own process group" to kill.
+        Ok(p) if p > 0 => unsafe { libc::kill(p, 0) == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM) },
+        _ => false,
+    }
+}
+
+/// The process that has this lock file open, if any.
+#[cfg(unix)]
+fn held_by(path: &Path) -> Option<u32> {
+    pid_in(path).filter(|&pid| running(pid))
+}
+
+/// On Windows a running game keeps its lock file open with writing not shared, so opening it
+/// for writing fails exactly while a game has it. A file left by a crash opens fine.
+#[cfg(windows)]
+fn held_by(path: &Path) -> Option<u32> {
+    use std::os::windows::fs::OpenOptionsExt;
+    match std::fs::OpenOptions::new().write(true).share_mode(FILE_SHARE_READ).open(path) {
+        Err(e) if in_use(&e) => Some(pid_in(path).unwrap_or(0)),
+        _ => None,
+    }
+}
+
+#[cfg(windows)]
+const FILE_SHARE_READ: u32 = 1;
+
+/// Sharing violation (32), lock violation (33) or access denied.
+#[cfg(windows)]
+fn in_use(e: &std::io::Error) -> bool {
+    e.kind() == std::io::ErrorKind::PermissionDenied || matches!(e.raw_os_error(), Some(32 | 33))
+}
+
+/// Without a way to ask the system, a lock is never held (the last window to quit wins).
+#[cfg(not(any(unix, windows)))]
+fn held_by(_path: &Path) -> Option<u32> {
+    None
 }
 
 /// Takes the lock for a save, or says which process has it open. A lock left behind by a
 /// game that crashed (its process is gone) is taken over.
 pub fn lock(save: &Path) -> Result<Lock, u32> {
     let path = save.with_extension("lock");
-    if let Some(pid) = std::fs::read_to_string(&path).ok().and_then(|t| t.trim().parse::<u32>().ok()) {
-        if pid != std::process::id() && alive(pid) {
-            return Err(pid);
+    #[cfg(windows)]
+    {
+        use std::io::Write;
+        use std::os::windows::fs::OpenOptionsExt;
+        let opened = std::fs::OpenOptions::new().write(true).create(true).truncate(true).share_mode(FILE_SHARE_READ).open(&path);
+        match opened {
+            Ok(mut f) => {
+                let _ = write!(f, "{}", std::process::id());
+                let _ = f.flush();
+                Ok(Lock { path, file: Some(f) })
+            }
+            Err(e) if in_use(&e) => Err(pid_in(&path).unwrap_or(0)),
+            Err(_) => Ok(Lock { path, file: None }),
         }
     }
-    let _ = std::fs::write(&path, std::process::id().to_string());
-    Ok(Lock(path))
+    #[cfg(not(windows))]
+    {
+        if let Some(pid) = held_by(&path).filter(|&pid| pid != std::process::id()) {
+            return Err(pid);
+        }
+        let _ = std::fs::write(&path, std::process::id().to_string());
+        Ok(Lock { path, file: None })
+    }
 }
 
 /// "3 minutes ago", "2 days ago".
@@ -160,8 +220,7 @@ pub fn describe(data: &Path) -> String {
             }
             Err(_) => "(can't be read)".into(),
         };
-        let open =
-            std::fs::read_to_string(s.path.with_extension("lock")).ok().and_then(|t| t.trim().parse::<u32>().ok()).is_some_and(alive);
+        let open = held_by(&s.path.with_extension("lock")).is_some();
         let mark = if open {
             "   (open now)"
         } else if last.as_deref() == Some(s.name.as_str()) {
@@ -206,10 +265,14 @@ mod tests {
         assert_eq!(std::fs::read_to_string(save.with_extension("lock")).unwrap(), std::process::id().to_string());
         drop(held);
         assert!(!save.with_extension("lock").exists(), "closing removes the lock");
-        let parent = std::os::unix::process::parent_id();
-        std::fs::write(save.with_extension("lock"), parent.to_string()).unwrap();
-        assert_eq!(lock(&save).err(), Some(parent), "a running game keeps its lock");
-        assert!(describe(&data).contains("(open now)"));
+        // The parent process (the test runner's shell or cargo) stands in for another running game.
+        #[cfg(unix)]
+        {
+            let parent = std::os::unix::process::parent_id();
+            std::fs::write(save.with_extension("lock"), parent.to_string()).unwrap();
+            assert_eq!(lock(&save).err(), Some(parent), "a running game keeps its lock");
+            assert!(describe(&data).contains("(open now)"));
+        }
         let _ = std::fs::remove_dir_all(&data);
     }
 }

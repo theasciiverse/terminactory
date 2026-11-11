@@ -1,0 +1,28 @@
+# Changelog
+
+Each release notes whether saves from the previous one still open. Saves from another
+version are refused, never deleted.
+
+## Unreleased
+
+Saves: format version 4 (older saves are refused; start a fresh game with `tfac --new`).
+
+### Added
+- Earnings history: a History tab in the production panel, and a compact earnings graph under the build menu.
+- Settings pane (`g`): the sidebar graph and its range, the small-pane view and width, the telegram style (Sidebar, Note, Ticker) and Hints.
+- Telegram log (`i`) with unread marks, a scrollbar for long telegrams, and company letters that arrive as telegrams and never pause the game.
+- A welcome telegram on a new game, and quiet hints on the idle status line (Hints setting).
+- Small-pane view for narrow splits next to an agent, with the stuck-machine reason first.
+- Boilers burn waste (4 waste give the fire of 1 coal); waste leaves a machine by its back edge.
+- `tfac --version` / `-V`.
+- Apache-2.0 license and package metadata.
+
+### Changed
+- Balance pass on prices, research costs and free unlocks, and several recipe routes (see the plan 01 commits).
+- Settings moved from `c` to `g`; `c`, `l` and `u` stay free for the building tools.
+- The repo-root sample `controls.json` is gone; the game still writes its own to `~/.terminactory` on first run.
+
+### Fixed
+- Windows: saves and settings now go to `USERPROFILE` / `APPDATA` when `HOME` is unset.
+- The single-window lock no longer shells out to `kill`; it uses `kill(pid, 0)` on unix and an open lock file on Windows.
+- Clippy warnings.

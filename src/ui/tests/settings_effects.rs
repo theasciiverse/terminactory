@@ -67,10 +67,10 @@ fn a_short_pane_scrolls_the_rows_to_keep_the_pick_in_view() {
     let mut app = app();
     press(&mut app, 'g');
     // 64x7 leaves the pane room for only a few rows.
-    for pick in 0..ROWS.len() {
+    for (pick, row) in ROWS.iter().enumerate() {
         app.settings_pick = pick;
         let t = text(&render(&mut app, 64, 7));
-        assert!(t.contains(ROWS[pick].name), "row {pick}: {t}");
+        assert!(t.contains(row.name), "row {pick}: {t}");
     }
 }
 

@@ -313,9 +313,9 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, xs: &[usize]) -> Line<'st
     for (i, p) in shown.iter().enumerate() {
         let age = n - 1 - i;
         let text = match range {
-            Range::Seconds if age % 10 == 0 && age > 0 => Some(format!("-{age}s")),
-            Range::Minutes if age % 10 == 0 && age > 0 => Some(format!("-{age}m")),
-            Range::Hours if age % 6 == 0 && age > 0 => Some(format!("-{age}h")),
+            Range::Seconds if age.is_multiple_of(10) && age > 0 => Some(format!("-{age}s")),
+            Range::Minutes if age.is_multiple_of(10) && age > 0 => Some(format!("-{age}m")),
+            Range::Hours if age.is_multiple_of(6) && age > 0 => Some(format!("-{age}h")),
             Range::Days => {
                 let (_, m, d) = civil(p.t);
                 match d {

@@ -1,22 +1,39 @@
 # Terminactory
 
-A cozy factory game in the terminal. It grows from basic items: copper, coal and iron, and the many parts, recipes and toys they lead to. Design notes live in `../NOTES.md`.
+A cozy factory game in the terminal. It grows from basic items: copper, coal and iron, and the many parts, recipes and toys they lead to.
 
-## Run
+## Install
 
-Install both commands, `terminactory` and its shortcut `tfac`:
+You need [Rust](https://rustup.rs) 1.88 or newer and a UTF-8 terminal. macOS and Linux are supported. On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) for now.
+
+Either way installs both commands, `terminactory` and its shortcut `tfac`.
+
+From a clone of this repository:
 
 ```bash
 cargo install --path .
 ```
 
-Or play straight from the source folder:
+Or straight from the Git remote, at a release tag (replace the URL and tag):
 
 ```bash
-cargo run --release
+cargo install --git https://example.com/OWNER/terminactory --tag vX.Y.Z
 ```
 
-That continues the save you played last. Saves are numbered (`save1`, `save2`, ...):
+To update, run the same command again with `--force` (and the new tag). To remove the game, `cargo uninstall terminactory`; your saves in `~/.terminactory` stay.
+
+Check it worked:
+
+```bash
+tfac --version   # prints: terminactory 0.1.0
+tfac --demo      # starts next to a small working factory
+```
+
+Make sure `~/.cargo/bin` is on your `PATH` (rustup normally does this). To try it without installing, `cargo run --release` in the source folder does the same as `tfac`.
+
+## Run
+
+`tfac` continues the save you played last. Saves are numbered (`save1`, `save2`, ...):
 
 ```bash
 tfac --saves   # list them: money, research, time played, when last played
@@ -28,6 +45,54 @@ tfac --help    # everything tfac can do
 `--demo` starts next to a small working factory with its own save. Saves, key settings (`controls.json`) and game settings (`settings.json`) live in `~/.terminactory` (saves in `saves/`), so the game finds them from any folder; it saves every 30 seconds, when you quit or close the terminal, and on Ctrl+S. A save can only be open in one window at a time: a second `tfac` on the same save says which window has it. Saves carry a format version: one made by an older version of the game isn't opened (and never deleted). `tfac` tells you, `tfac --saves` marks it "(old version)", and `tfac --new` starts a fresh one.
 
 Best in a terminal at least 120×40. In anything narrower than 120 columns or shorter than 30 rows (say, a split next to your agent) it switches to a **small-pane view** by itself (the settings pane, `g`, can make that Always or Never, and change the width from 120 to 80, 100, 140 or 160; below 46×12 even Never gives way, since the full view cannot draw there): the map fills the pane, one line on top shows money, research, EC, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
+
+## Agent telegrams: setup
+
+Your AI agents can message you inside the game, so you can play while they work. A message costs the agent only the words in it, and the commands below print nothing on success. Messages wait while the game is closed (the newest 8 are kept). Pick the path that fits your agent, then run its test command with the game open.
+
+### Claude Code (automatic, no tokens)
+
+Add this to `~/.claude/settings.json`. When an agent finishes, its own last reply becomes the telegram; when it needs permission or input, you get a "needs you" telegram.
+
+```json
+{
+  "hooks": {
+    "Stop": [{ "hooks": [{ "type": "command", "command": "tfac hook" }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "tfac hook" }] }]
+  }
+}
+```
+
+Test it by feeding the hook what Claude Code would:
+
+```bash
+printf '%s' '{"hook_event_name":"Stop","cwd":"/tmp/demo","last_assistant_message":"## It works\n- a telegram from the hook"}' | tfac hook
+```
+
+A telegram from `demo` should show up in the game. (`tfac hook` understands Claude Code's hook JSON only; for anything else use `tfac msg`.)
+
+### Any other agent (`tfac msg`)
+
+Anything that can run a shell command can send a telegram:
+
+```bash
+tfac msg --from my-agent "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
+```
+
+`\n` is a line break. With no text, `tfac msg` reads Markdown from stdin (`echo "## Done" | tfac msg`). `--from NAME` says who it's from; the default is the current folder's name. Markdown is rendered: headings, lists, checkboxes, quotes, code, tables, **bold**, `code`. To send a long report, pipe it in, or drop a `*.md` file into `~/.terminactory/inbox/` (an optional first line `from: NAME` sets the sender).
+
+Two ways to use it:
+
+- **Tell the agent.** Put a line like this in the agent's instructions (`AGENTS.md`, `GEMINI.md`, a system prompt, or whatever file it reads): *When you finish a task or need my input, run `tfac msg --from <project> "<two or three lines in Markdown>"`.* This works with any agent that can run commands, and costs a few tokens per message.
+- **Use the agent's own hook or notify setting**, if it has one: point it at a command such as `tfac msg --from my-agent "finished"`, which costs no tokens. Check your agent's documentation for where that goes. Only Claude Code's hook has been tested with the game so far.
+
+Test it:
+
+```bash
+tfac msg --from test "## Hello\n- this is a test telegram"
+```
+
+A telegram from `test` should appear at the bottom of the sidebar (in the small-pane view, a note in the corner). If nothing shows up, check that `tfac --version` works in the same shell your agent uses, and that the agent's shell has `~/.cargo/bin` on its `PATH`.
 
 ## What's in it
 
@@ -152,24 +217,7 @@ The production panel (`o`) has two tabs, switched with `Tab` (or a click): **Pro
 
 Your AI agents can message you inside the game. Each message shows up as a telegram (Markdown rendered: headings, lists, checkboxes, quotes, code, tables, **bold**, `code`). Every few minutes a company sends a small delivery with one: about a minute of your factory's earnings.
 
-Agents write plain Markdown, never game text, so a message costs only the words in it. Both commands print nothing on success.
-
-```bash
-tfac msg "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
-```
-
-`\n` is a line break; with no text, `tfac msg` reads Markdown from stdin. The sender defaults to the current folder's name (`--from NAME` changes it). Anything can also drop a `*.md` file into `~/.terminactory/inbox/` (optional first line `from: NAME`).
-
-**Claude Code, automatically, at no token cost:** add this to `~/.claude/settings.json`. When an agent finishes, its own last reply becomes the telegram; when it needs permission or input, you get a "needs you" telegram.
-
-```json
-{
-  "hooks": {
-    "Stop": [{ "hooks": [{ "type": "command", "command": "tfac hook" }] }],
-    "Notification": [{ "hooks": [{ "type": "command", "command": "tfac hook" }] }]
-  }
-}
-```
+Setup for Claude Code and other agents is under *Agent telegrams: setup*, above.
 
 Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Two quieter styles are in the settings pane (`g`, Telegram style): **Note** shows only the short "agent finished · n to view" note in both views, and **Ticker** only a mail count in the top line; with either, `n` opens the telegram over the map. Every telegram and company letter is also kept in a log (the last 50, saved with the game): `i` opens it, newest first with unread ones marked, and Enter reads one again.
 
@@ -267,3 +315,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 - `src/hints.rs`: the hints and asides for the bottom line, their triggers and pacing (`ui::status_slot` ranks the slot).
 - `src/mail.rs`: agent telegrams: the inbox, `tfac msg` / `tfac hook`, and the Markdown renderer.
 - `cargo test`: simulation tests plus screen snapshots (`target/snapshot*.html` show the map, tree and a letter in colour).
+
+## License
+
+Apache-2.0. See `LICENSE`.

@@ -2232,14 +2232,9 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Details, under a rule.
-    let mut dy = list_bottom + 1;
     line(f, list_bottom, vec![Span::styled("─".repeat(width as usize), dim)]);
-    for (text, st) in details {
-        if dy >= footer_y {
-            break;
-        }
+    for (dy, (text, st)) in (list_bottom + 1..footer_y).zip(details) {
         line(f, dy, vec![Span::styled(text, st)]);
-        dy += 1;
     }
 
     // Footer: keys, and which way the list goes on.
@@ -2312,10 +2307,7 @@ const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
 fn item_known(w: &World, item: Item) -> bool {
-    let mined = match item {
-        Item::CopperOre | Item::Coal | Item::IronOre | Item::Stone => true,
-        _ => false,
-    };
+    let mined = matches!(item, Item::CopperOre | Item::Coal | Item::IronOre | Item::Stone);
     mined
         || w.econ.made[item.idx()] > 0
         || CRAFTERS.iter().any(|&k| {

@@ -8,8 +8,7 @@ fn belts_carry_the_same_in_all_four_directions() {
     // The order must not change how much a belt carries.
     let mut w = World::blank();
     // (crate that feeds, belt tiles, crate that collects), with a panel beside each line.
-    let lines: [((i32, i32), Dir, (i32, i32)); 4] =
-        [((20, 20), Dir::E, (26, 20)), ((46, 20), Dir::W, (40, 20)), ((60, 20), Dir::S, (60, 26)), ((80, 26), Dir::N, (80, 20))];
+    let lines = [((20, 20), Dir::E, (26, 20)), ((46, 20), Dir::W, (40, 20)), ((60, 20), Dir::S, (60, 26)), ((80, 26), Dir::N, (80, 20))];
     for ((sx, sy), dir, (ex, ey)) in lines {
         w.place(0, sx, sy, Kind::Crate, dir).unwrap();
         fill_crate(&mut w, 0, sx, sy, &[Item::Coal; 300]);

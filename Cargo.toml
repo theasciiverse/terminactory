@@ -2,7 +2,12 @@
 name = "terminactory"
 version = "0.1.0"
 edition = "2021"
-description = "A cozy factory game in the terminal"
+rust-version = "1.88"
+description = "A cozy factory game in the terminal, played next to your AI agents"
+license = "Apache-2.0"
+readme = "README.md"
+keywords = ["game", "terminal", "factory", "tui", "ratatui"]
+categories = ["games"]
 default-run = "terminactory"
 
 [dependencies]
