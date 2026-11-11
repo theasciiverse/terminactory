@@ -3,6 +3,7 @@ use super::*;
 mod boiler;
 mod elevators;
 mod molten;
+mod names;
 mod offline;
 mod others;
 mod perf;

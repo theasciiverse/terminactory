@@ -3,7 +3,7 @@
 use super::*;
 use serde_json::{json, Value};
 
-fn temp(name: &str) -> std::path::PathBuf {
+pub(super) fn temp(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("tfac-saving-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(crate::saves::dir(&dir)).unwrap();
@@ -86,23 +86,6 @@ fn a_saved_recipe_past_the_end_of_the_list_falls_back_to_the_first() {
     run(&mut loaded, 1); // and it doesn't panic when it ticks
 }
 
-/// Every array in a save is by position, so the existing items must keep their numbers.
-/// New items go on the end.
-#[test]
-fn item_order_is_pinned() {
-    const PINNED: &str = "CopperOre Coal CopperPlate CopperWire CopperPipe CopperCoil Coke IronOre IronPlate Steel Waste SteelGirder \
-        Concrete IronGear Gearbox DrillingRig CopperIngot IronIngot Stone CopperGrit IronGrit Sand FineWire CopperSheet IronRod Screw \
-        Spring IronSheet Brick Glass SteelRod Bearing SteelSheet HardenedIronPlate HardenedGear ReinforcedConcrete Valve Gauge Lamp \
-        Relay ElectricMotor Piston ControlBoard BoilerShell SiloShell Frame PumpUnit Generator EngineBlock ControlPanel SteamTractor";
-    let now: Vec<String> = Item::ALL.iter().map(|i| format!("{i:?}")).collect();
-    let pinned: Vec<&str> = PINNED.split_whitespace().collect();
-    assert!(now.len() >= pinned.len(), "items were removed");
-    assert_eq!(&now[..pinned.len()], &pinned[..], "existing items moved: old saves would read the wrong item's numbers");
-    for (i, item) in Item::ALL.iter().enumerate() {
-        assert_eq!(item.idx(), i);
-    }
-}
-
 /// The structure of a JSON value with the data left out: object keys, what kind of value each is,
 /// and for arrays their length and the distinct shapes of their elements. Strings keep their text,
 /// since that is how enum variants (kinds, directions, items) are saved.
@@ -124,7 +107,7 @@ fn shape(v: &Value) -> Value {
 }
 
 /// A world with one of every part, an elevator car, mail and some goods in transit.
-fn everything() -> World {
+pub(super) fn everything() -> World {
     let mut w = World::blank();
     for (n, kind) in Kind::ALL.into_iter().enumerate() {
         let (x, y) = (4 + 9 * (n as i32 % 10), 4 + 9 * (n as i32 / 10));
