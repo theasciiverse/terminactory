@@ -7,7 +7,7 @@ fn earner() -> World {
     let mut w = World::new();
     w.rate = (2.0, 0.0);
     w.rate_long = (2.0, 0.0);
-    w.sale_rate = vec![0.0; ITEMS];
+    w.sale_rate = PerItem::default();
     w.sale_rate[Item::CopperPlate.idx()] = 1.0;
     w.saved_at = 1_000;
     w
@@ -36,13 +36,13 @@ fn a_minute_away_is_the_least_that_pays() {
 #[test]
 fn saves_without_per_item_rates_count_ten_minutes_of_research() {
     let mut w = earner();
-    w.sale_rate.clear(); // saved before per-item rates were kept
+    w.sale_rate = PerItem::default(); // saved before per-item rates were kept
     w.rate = (0.0, 3.0);
     w.rate_long = (0.0, 0.0);
     let (_, m, r) = w.apply_offline(1_000 + 300).unwrap();
     assert_eq!((m, r), (0.0, 900.0), "five minutes away: the whole time at the last rate");
     let mut w = earner();
-    w.sale_rate.clear();
+    w.sale_rate = PerItem::default();
     w.rate = (0.0, 3.0);
     w.rate_long = (0.0, 0.0);
     let (_, _, r) = w.apply_offline(1_000 + 10 * 3600).unwrap();
@@ -74,14 +74,14 @@ fn a_negative_rate_pays_nothing_instead_of_a_debt() {
     let mut w = earner();
     w.rate = (-3.0, 0.0); // waste fees outran sales
     w.rate_long = (-1.0, 0.0);
-    w.sale_rate.clear();
+    w.sale_rate = PerItem::default();
     assert!(w.apply_offline(1_000 + 3600).is_none());
     assert_eq!(w.econ.money, START_MONEY, "no money taken");
     // With research owed, the money part is still just zero.
     let mut w = earner();
     w.rate = (-3.0, 2.0);
     w.rate_long = (-1.0, 0.0);
-    w.sale_rate.clear();
+    w.sale_rate = PerItem::default();
     let (_, m, r) = w.apply_offline(1_000 + 600).unwrap();
     assert_eq!((m, r), (0.0, 1200.0));
     assert_eq!(w.econ.money, START_MONEY);

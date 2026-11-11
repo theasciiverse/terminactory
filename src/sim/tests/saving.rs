@@ -139,11 +139,22 @@ fn everything() -> World {
         items.push(BeltItem { item: Item::Stone, pos: 0.5 });
     }
     w.lifts[0].load.push_back(Item::Coal);
+    w.fluids.pools[0].add(Fluid::Water, 5.0);
     w.receive(crate::mail::parse("from: tests\nevent: finished\nhello", 0), 1_000);
     w.saved_at = 1_000;
     w.sample_history(1_000, 0);
     w.econ.earned_money += 5.0;
     w.sample_history(1_001, 0);
+    // Every per-item table has a count (the tables leave out zeros, so an empty one shows no shape).
+    w.econ.made[Item::Coal] = 3;
+    w.econ.sold[Item::Coal] = 2;
+    w.econ.research_sales[Item::Coal] = 1;
+    w.sale_rate[Item::Coal] = 0.5;
+    for b in w.floors.iter_mut().flat_map(|fl| fl.tiles.iter_mut().flatten()) {
+        if let St::Crafter { stock, .. } = &mut b.st {
+            stock[Item::Coal] = 4;
+        }
+    }
     w
 }
 
@@ -154,8 +165,11 @@ fn save_format_matches_the_golden_shape() {
     let mut w = everything();
     let path = std::env::temp_dir().join(format!("factory-test-shape-{}.json", std::process::id()));
     w.save(&path).unwrap();
-    let saved: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let mut saved: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     let _ = std::fs::remove_file(&path);
+    // The game version changes with every release; only the fact that it is there matters.
+    assert_eq!(saved["game"], env!("CARGO_PKG_VERSION"));
+    saved["game"] = json!("<game version>");
     let now = serde_json::to_string_pretty(&shape(&saved)).unwrap() + "\n";
     let golden = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/save-shape.json");
     if std::env::var_os("UPDATE_GOLDEN").is_some() {
@@ -237,14 +251,14 @@ fn history_survives_a_save_and_load() {
 }
 
 #[test]
-fn a_version_4_save_without_history_still_loads() {
+fn a_current_save_without_history_still_loads() {
     let data = temp("no-history");
     let path = crate::saves::path_of(&data, "save1");
     let mut w = everything();
     w.save(&path).unwrap();
     let mut json: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert!(json.as_object_mut().unwrap().remove("history").is_some(), "the save has the field");
-    assert_eq!(json["version"], 4, "the save format has not changed version");
+    assert_eq!(json["version"], SAVE_VERSION);
     std::fs::write(&path, json.to_string()).unwrap();
     let back = World::load(&path).unwrap();
     assert!(back.history.is_empty());

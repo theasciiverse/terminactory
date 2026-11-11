@@ -104,7 +104,6 @@ fn a_pump_next_to_another_fluid_adds_nothing() {
 }
 
 #[test]
-#[ignore = "bug: pipe contents aren't saved, so a loaded factory has empty pipes (World.fluids is serde(skip))"]
 fn pipe_contents_survive_saving_and_loading() {
     let mut w = World::blank();
     for x in 10..15 {

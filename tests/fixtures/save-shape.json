@@ -3,36 +3,21 @@
     "earned_money": "float",
     "earned_research": "float",
     "made": {
-      "len": 51,
-      "of": [
-        "int"
-      ]
+      "Coal": "int"
     },
     "money": "float",
     "research": "float",
     "research_sales": {
-      "len": 51,
-      "of": [
-        "int"
-      ]
+      "Coal": "int"
     },
     "sold": {
-      "len": 51,
-      "of": [
-        "int"
-      ]
+      "Coal": "int"
     }
   },
   "floors": {
     "len": 7,
     "of": [
       {
-        "deposits": {
-          "len": 9600,
-          "of": [
-            "\"None\""
-          ]
-        },
         "dug": {
           "len": 9600,
           "of": [
@@ -67,12 +52,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"valve\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -135,12 +117,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"valve\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -198,12 +177,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"molten iron\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -237,12 +213,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"coke\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -294,12 +267,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"valve\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -320,12 +290,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper grit\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -397,12 +364,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"molten copper\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -423,12 +387,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"brick\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -449,12 +410,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"pump unit\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -493,12 +451,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"pump unit\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -537,12 +492,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"iron rod\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -576,12 +528,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"concrete\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -602,12 +551,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper ingot\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -642,12 +588,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"control board\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -668,12 +611,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper plate\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -705,12 +645,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper sheet\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -832,12 +769,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"boiler shell\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -858,12 +792,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper coil\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -884,12 +815,9 @@
                     "of": []
                   },
                   "progress": "float",
-                  "recipe": "int",
+                  "recipe_name": "\"copper wire\"",
                   "stock": {
-                    "len": 51,
-                    "of": [
-                      "int"
-                    ]
+                    "Coal": "int"
                   }
                 }
               }
@@ -898,12 +826,6 @@
         }
       },
       {
-        "deposits": {
-          "len": 9600,
-          "of": [
-            "\"None\""
-          ]
-        },
         "dug": {
           "len": 9600,
           "of": [
@@ -945,12 +867,6 @@
         }
       },
       {
-        "deposits": {
-          "len": 9600,
-          "of": [
-            "\"None\""
-          ]
-        },
         "dug": {
           "len": 9600,
           "of": [
@@ -973,6 +889,7 @@
       }
     ]
   },
+  "game": "\"<game version>\"",
   "gifts": "int",
   "history": {
     "days": {
@@ -1069,17 +986,71 @@
     ]
   },
   "mail_seq": "int",
+  "pipe_fluid": {
+    "len": 1,
+    "of": [
+      {
+        "amount": "float",
+        "fluid": "\"Water\"",
+        "level": "int",
+        "x": "int",
+        "y": "int"
+      }
+    ]
+  },
   "progress": {
     "opened": {
       "len": 12,
       "of": [
-        "bool"
+        "\"Ampleworth\"",
+        "\"Ashgrove\"",
+        "\"Brannock\"",
+        "\"Cinderhall\"",
+        "\"Gearwright\"",
+        "\"Hollowmere\"",
+        "\"Kettering\"",
+        "\"LatticeFinch\"",
+        "\"Pillar\"",
+        "\"Swiftline\"",
+        "\"Underhill\"",
+        "\"Wellbourne\""
       ]
     },
     "researched": {
       "len": 32,
       "of": [
-        "bool"
+        "\"AdvancedAssembler\"",
+        "\"AdvancedDrill\"",
+        "\"AdvancedPump\"",
+        "\"Assembler\"",
+        "\"BasicAssembler\"",
+        "\"BasicDrill\"",
+        "\"BlastFurnace\"",
+        "\"CokeOven\"",
+        "\"Coking\"",
+        "\"Crusher\"",
+        "\"Excavation\"",
+        "\"FastBelts\"",
+        "\"FilterSplitters\"",
+        "\"Kiln\"",
+        "\"LargeAdvancedAssembler\"",
+        "\"LargeAdvancedDrill\"",
+        "\"LargeBasicAssembler\"",
+        "\"LargeBasicDrill\"",
+        "\"Lathe\"",
+        "\"LongArms\"",
+        "\"Mixer\"",
+        "\"PrecisionAssembler\"",
+        "\"Press\"",
+        "\"Pumps\"",
+        "\"RollingMill\"",
+        "\"Steam\"",
+        "\"SupportBeams\"",
+        "\"Tunnels\"",
+        "\"Warehouses\"",
+        "\"Welder\"",
+        "\"Winder\"",
+        "\"WireDrawer\""
       ]
     }
   },
@@ -1096,8 +1067,7 @@
     ]
   },
   "sale_rate": {
-    "len": 0,
-    "of": []
+    "Coal": "float"
   },
   "saved_at": "int",
   "tick": "int",

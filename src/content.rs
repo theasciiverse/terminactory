@@ -1,6 +1,7 @@
 //! Game content: items, companies, research and recipes.
 //! Kept apart from the mechanics so it can move into data files later.
-//! Changing these lists changes the save format: bump SAVE_VERSION in sim.rs.
+//! Saves name items, companies, techs and recipes, so adding or reordering them does not change the
+//! save format. Renaming a variant or a recipe does (a recipe falls back to the machine's first).
 
 use serde::{Deserialize, Serialize};
 
@@ -841,7 +842,7 @@ pub fn tree_children(i: usize) -> Vec<usize> {
 }
 
 /// Things that flow through pipes. A pipe network holds one at a time.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Fluid {
     Water,
     Steam,

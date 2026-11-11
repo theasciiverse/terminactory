@@ -1015,19 +1015,8 @@ fn steam_engines_power_a_grid_when_solar_is_not_enough() {
 }
 
 #[test]
-fn short_lists_are_padded() {
-    let e: Econ = serde_json::from_str(r#"{"money":5.0,"research":1.0,"research_sales":[1,2],"sold":[0],"made":[3]}"#).unwrap();
-    assert_eq!(e.made[0], 3);
-    assert_eq!(e.made.len(), ITEMS);
-    assert_eq!(e.made[ITEMS - 1], 0);
-}
-
-#[test]
 fn no_ore_patches_or_lakes_drills_and_pumps_go_anywhere_on_the_ground() {
     let w = World::new();
-    for fl in &w.floors {
-        assert!(fl.deposits.iter().all(|d| *d == Deposit::None), "no ore patches or lakes");
-    }
     assert!(w.check_place(0, 30, 30, Kind::Drill).is_ok(), "bare ground is fine");
     let w = World::blank();
     assert!(w.check_place(0, 30, 30, Kind::Pump).is_ok(), "pumps draw water from anywhere");
@@ -1648,7 +1637,7 @@ fn offline_earnings_have_no_cap() {
     // Selling one copper plate a second, all of it for research.
     let plate = Item::CopperPlate;
     w.rate = (2.0, w.econ.next_research(plate));
-    w.sale_rate = vec![0.0; ITEMS];
+    w.sale_rate = PerItem::default();
     w.sale_rate[plate.idx()] = 1.0;
     w.saved_at = 1_000;
     let (away, m, r) = w.apply_offline(1_000 + 10 * 3600).unwrap();
@@ -1802,7 +1791,6 @@ fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
     assert_eq!(last, Item::SteamTractor);
-    assert!(ITEMS > 32, "longer than serde's own array limit");
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -1816,9 +1804,9 @@ fn saves_round_trip_with_the_full_item_list() {
     w.progress.opened[Company::ALL[COMPANIES - 1].idx()] = true;
     let path = std::env::temp_dir().join(format!("factory-test-items-{}.json", std::process::id()));
     w.save(&path).unwrap();
-    // The file holds a whole list per item array.
+    // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"].as_array().unwrap().len(), ITEMS);
+    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "SteamTractor": 7}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();

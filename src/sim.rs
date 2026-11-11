@@ -10,7 +10,11 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
+
+mod serde_util;
+pub use serde_util::PerItem;
+use serde_util::{de_set, ser_set};
 
 pub use crate::content::*;
 
@@ -65,34 +69,13 @@ pub const BOILER_COAL_CAP: u32 = 10;
 pub const WASTE_PER_COAL: u32 = 4;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 4;
-
-/// Writes a fixed-size array as a list (serde itself stops at 32 elements).
-fn ser_arr<S, T, const N: usize>(a: &[T; N], s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    T: Serialize,
-{
-    s.collect_seq(a.iter())
-}
+pub const SAVE_VERSION: u32 = 5;
+/// The game version, saved in every file.
+pub const GAME_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// An array of defaults (the std Default stops at 32 elements).
 fn zeros<T: Default + Copy, const N: usize>() -> [T; N] {
     [T::default(); N]
-}
-
-/// Reads a saved list into a fixed-size array (serde itself stops at 32), padding with defaults.
-fn pad<'de, D, T, const N: usize>(d: D) -> Result<[T; N], D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de> + Default + Copy,
-{
-    let v = Vec::<T>::deserialize(d)?;
-    let mut a = [T::default(); N];
-    for (i, x) in v.into_iter().take(N).enumerate() {
-        a[i] = x;
-    }
-    Ok(a)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -176,17 +159,6 @@ impl SellMode {
             SellMode::Research => "sell for research",
         }
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub enum Deposit {
-    None,
-    /// Ore patches and lakes are gone (drills and pumps work anywhere). Old saves still
-    /// name them; loading clears them.
-    Copper,
-    Coal,
-    Iron,
-    Water,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -818,9 +790,14 @@ pub enum St {
     },
     /// Furnaces, molders, presses and blast furnaces: a chosen recipe, a stock of inputs, and finished goods.
     Crafter {
+        /// Index into `kind.recipes()`. Saved by name instead (`recipe_name`): indices shift when a recipe is added.
+        #[serde(skip)]
         recipe: u8,
-        #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
-        stock: [u32; ITEMS],
+        /// The recipe's name. Only filled in while saving (`World::save`) and read back on load
+        /// (`World::load`); during play `recipe` is the truth.
+        #[serde(default)]
+        recipe_name: String,
+        stock: PerItem<u32>,
         fuel: u32,
         progress: f64,
         busy: bool,
@@ -920,7 +897,8 @@ impl Building {
             | Kind::Lathe
             | Kind::Winder => St::Crafter {
                 recipe: 0,
-                stock: [0; ITEMS],
+                recipe_name: String::new(),
+                stock: PerItem::default(),
                 fuel: 0,
                 progress: 0.0,
                 busy: false,
@@ -963,7 +941,6 @@ impl Building {
 #[derive(Serialize, Deserialize)]
 pub struct Floor {
     pub level: i32,
-    pub deposits: Vec<Deposit>,
     pub dug: Vec<bool>,
     /// Buildings, stored at their anchor (top-left) tile.
     pub tiles: Vec<Option<Building>>,
@@ -974,7 +951,7 @@ pub struct Floor {
 impl Floor {
     fn new(level: i32, dug: bool) -> Self {
         let n = (W * H) as usize;
-        Floor { level, deposits: vec![Deposit::None; n], dug: vec![dug; n], tiles: vec![None; n], owner: vec![None; n] }
+        Floor { level, dug: vec![dug; n], tiles: vec![None; n], owner: vec![None; n] }
     }
     pub fn anchor_at(&self, x: i32, y: i32) -> Option<usize> {
         if !in_bounds(x, y) {
@@ -989,13 +966,10 @@ pub struct Econ {
     pub money: f64,
     pub research: f64,
     /// Units sold that earned research, per item (drives the fading curve).
-    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
-    pub research_sales: [u64; ITEMS],
-    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
-    pub sold: [u64; ITEMS],
+    pub research_sales: PerItem<u64>,
+    pub sold: PerItem<u64>,
     /// Units ever produced by a machine, per item (drives discoveries).
-    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
-    pub made: [u64; ITEMS],
+    pub made: PerItem<u64>,
     /// This session only: units used up by machines (inputs and fuel), and what each
     /// item's sales brought in. They drive the production panel.
     #[serde(skip, default = "zeros")]
@@ -1019,9 +993,9 @@ impl Default for Econ {
         Econ {
             money: 0.0,
             research: 0.0,
-            research_sales: [0; ITEMS],
-            sold: [0; ITEMS],
-            made: [0; ITEMS],
+            research_sales: PerItem::default(),
+            sold: PerItem::default(),
+            made: PerItem::default(),
             used: [0; ITEMS],
             money_from: [0.0; ITEMS],
             research_from: [0.0; ITEMS],
@@ -1115,12 +1089,29 @@ pub struct Flow {
     pub research: f64,
 }
 
+fn ser_companies<S: serde::Serializer>(f: &[bool; COMPANIES], s: S) -> Result<S::Ok, S::Error> {
+    ser_set(f, &Company::ALL, Company::idx, s)
+}
+
+fn de_companies<'de, D: serde::Deserializer<'de>>(d: D) -> Result<[bool; COMPANIES], D::Error> {
+    de_set(d, &Company::ALL, Company::idx, "company")
+}
+
+fn ser_techs<S: serde::Serializer>(f: &[bool; TECHS], s: S) -> Result<S::Ok, S::Error> {
+    ser_set(f, &Tech::ALL, Tech::idx, s)
+}
+
+fn de_techs<'de, D: serde::Deserializer<'de>>(d: D) -> Result<[bool; TECHS], D::Error> {
+    de_set(d, &Tech::ALL, Tech::idx, "tech")
+}
+
 /// Which companies are open and what has been researched.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Progress {
-    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
+    /// Saved as lists of names.
+    #[serde(serialize_with = "ser_companies", deserialize_with = "de_companies")]
     pub opened: [bool; COMPANIES],
-    #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
+    #[serde(serialize_with = "ser_techs", deserialize_with = "de_techs")]
     pub researched: [bool; TECHS],
     /// Short messages for the player (free unlocks).
     #[serde(skip)]
@@ -1227,6 +1218,17 @@ impl Pool {
     }
 }
 
+/// One pipe network's fluid in a save. The network is named by one of its pipes (networks have no ids
+/// that last), and the floor by its level.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PipeFill {
+    pub level: i32,
+    pub x: i32,
+    pub y: i32,
+    pub fluid: Fluid,
+    pub amount: f64,
+}
+
 #[derive(Default)]
 pub struct Fluids {
     /// Per floor, per tile: which pipe network a pipe belongs to (-1 = not a pipe).
@@ -1261,6 +1263,9 @@ pub struct World {
     /// The save format (0 when missing: those saves are from before versions).
     #[serde(default)]
     pub version: u32,
+    /// The game version that wrote the save (`Cargo.toml`'s version).
+    #[serde(default)]
+    pub game: String,
     pub floors: Vec<Floor>,
     pub econ: Econ,
     pub progress: Progress,
@@ -1287,7 +1292,7 @@ pub struct World {
     /// Recent research sales per second, per item: research earned while away fades
     /// item by item, just as it does in play.
     #[serde(default)]
-    pub sale_rate: Vec<f64>,
+    pub sale_rate: PerItem<f64>,
     #[serde(skip)]
     pub sale_samples: VecDeque<[u64; ITEMS]>,
     /// The last minute of production, one sample a second, for the production panel.
@@ -1315,6 +1320,10 @@ pub struct World {
     pub grid: Grid,
     #[serde(skip)]
     pub fluids: Fluids,
+    /// The fluid in each pipe network, as saved. Only filled in while saving and applied on load;
+    /// during play `fluids` is the truth.
+    #[serde(default)]
+    pub pipe_fluid: Vec<PipeFill>,
     #[serde(skip)]
     pub active: Vec<Vec<u32>>,
 }
@@ -1384,6 +1393,7 @@ impl World {
     pub fn new() -> Self {
         let mut w = World {
             version: SAVE_VERSION,
+            game: GAME_VERSION.to_string(),
             floors: gen_floors(),
             econ: Econ { money: START_MONEY, ..Default::default() },
             progress: Progress::default(),
@@ -1394,7 +1404,7 @@ impl World {
             rate_long: (0.0, 0.0),
             gifted: 0.0,
             samples: VecDeque::new(),
-            sale_rate: Vec::new(),
+            sale_rate: PerItem::default(),
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             history: Default::default(),
@@ -1405,6 +1415,7 @@ impl World {
             gifts: 0,
             grid: Grid::default(),
             fluids: Fluids::default(),
+            pipe_fluid: Vec::new(),
             active: Vec::new(),
         };
         w.rebuild_grid();
@@ -1416,6 +1427,7 @@ impl World {
     pub fn blank() -> Self {
         let mut w = World {
             version: SAVE_VERSION,
+            game: GAME_VERSION.to_string(),
             floors: LEVELS.iter().map(|&l| Floor::new(l, true)).collect(),
             econ: Econ { money: 1e6, ..Default::default() },
             progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], notes: VecDeque::new() },
@@ -1426,7 +1438,7 @@ impl World {
             rate_long: (0.0, 0.0),
             gifted: 0.0,
             samples: VecDeque::new(),
-            sale_rate: Vec::new(),
+            sale_rate: PerItem::default(),
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             history: Default::default(),
@@ -1437,6 +1449,7 @@ impl World {
             gifts: 0,
             grid: Grid::default(),
             fluids: Fluids::default(),
+            pipe_fluid: Vec::new(),
             active: Vec::new(),
         };
         w.rebuild_grid();
@@ -1448,7 +1461,12 @@ impl World {
             std::fs::create_dir_all(dir)?;
         }
         self.saved_at = now_secs();
-        let json = serde_json::to_string(self).map_err(std::io::Error::other)?;
+        self.game = GAME_VERSION.to_string();
+        self.stamp_recipe_names();
+        self.pipe_fluid = self.pipe_fills();
+        let json = serde_json::to_string(self);
+        self.pipe_fluid = Vec::new();
+        let json = json.map_err(std::io::Error::other)?;
         // Write a temp file next to the save, flush it to disk, then swap it in, so a crash
         // mid-write never leaves a half-written save behind.
         let mut tmp = path.as_os_str().to_owned();
@@ -1482,21 +1500,82 @@ impl World {
         }
         let json = std::fs::read_to_string(path)?;
         let mut w: World = serde_json::from_str(&json).map_err(std::io::Error::other)?;
-        w.clamp_recipes();
+        w.resolve_recipes();
         w.rebuild_grid();
+        w.restore_pipe_fluid();
+        // A company that opens from the start is open, whatever the save says (it may be new).
+        for c in Company::ALL {
+            if c.key_item().is_none() {
+                w.progress.opened[c.idx()] = true;
+            }
+        }
         Ok(w)
     }
 
-    /// A saved recipe index can point past the end if a recipe list shrank; fall back to the first recipe.
-    fn clamp_recipes(&mut self) {
-        for fl in &mut self.floors {
-            for b in fl.tiles.iter_mut().flatten() {
-                let n = b.kind.recipes().len();
-                if let St::Crafter { recipe, .. } = &mut b.st {
-                    if *recipe as usize >= n {
-                        *recipe = 0;
+    /// Writes each machine's recipe name beside its index, for the save.
+    fn stamp_recipe_names(&mut self) {
+        for b in self.floors.iter_mut().flat_map(|fl| fl.tiles.iter_mut().flatten()) {
+            let list = b.kind.recipes();
+            if let St::Crafter { recipe, recipe_name, .. } = &mut b.st {
+                *recipe_name = list.get(*recipe as usize).map_or_else(String::new, |r| r.name.to_string());
+            }
+        }
+    }
+
+    /// Turns each saved recipe name back into an index. A name the machine no longer has (a recipe
+    /// that was renamed or removed) falls back to its first recipe, with a note for the player.
+    fn resolve_recipes(&mut self) {
+        let mut lost = Vec::new();
+        for (f, fl) in self.floors.iter_mut().enumerate() {
+            for (i, b) in fl.tiles.iter_mut().enumerate() {
+                let Some(b) = b else { continue };
+                let list = b.kind.recipes();
+                if let St::Crafter { recipe, recipe_name, .. } = &mut b.st {
+                    match list.iter().position(|r| r.name == recipe_name.as_str()) {
+                        Some(n) => *recipe = n as u8,
+                        None => {
+                            *recipe = 0;
+                            let (x, y) = pos_of(i);
+                            lost.push(format!("The {} at {x},{y} on floor {} lost its recipe '{recipe_name}'.", b.kind.name(), f));
+                        }
                     }
+                    recipe_name.clear();
                 }
+            }
+        }
+        self.progress.notes.extend(lost);
+    }
+
+    /// The fluid in each pipe network, one entry per network that holds any.
+    fn pipe_fills(&self) -> Vec<PipeFill> {
+        let mut out = Vec::new();
+        for (f, fl) in self.floors.iter().enumerate() {
+            let Some(ids) = self.fluids.pipe_pool.get(f) else { continue };
+            let mut seen = vec![false; self.fluids.pools.len()];
+            for (i, &id) in ids.iter().enumerate() {
+                if id < 0 || std::mem::replace(&mut seen[id as usize], true) {
+                    continue;
+                }
+                let pool = &self.fluids.pools[id as usize];
+                if let Some(fluid) = pool.fluid.filter(|_| pool.amount > 0.0) {
+                    let (x, y) = pos_of(i);
+                    out.push(PipeFill { level: fl.level, x, y, fluid, amount: pool.amount });
+                }
+            }
+        }
+        out
+    }
+
+    /// Puts the saved fluid back into the pipe networks (after they are worked out).
+    fn restore_pipe_fluid(&mut self) {
+        for p in std::mem::take(&mut self.pipe_fluid) {
+            let Some(f) = self.floor_of(p.level) else { continue };
+            if !in_bounds(p.x, p.y) {
+                continue;
+            }
+            let id = self.fluids.pipe_pool[f][idx(p.x, p.y)];
+            if id >= 0 {
+                self.fluids.pools[id as usize].add(p.fluid, p.amount);
             }
         }
     }
@@ -2275,9 +2354,9 @@ impl World {
         }
         let e = &self.econ;
         self.flow_samples.push_back(FlowSample {
-            made: e.made,
+            made: e.made.to_array(),
             used: e.used,
-            sold: e.sold,
+            sold: e.sold.to_array(),
             money: e.money_from,
             research: e.research_from,
         });
@@ -2288,14 +2367,16 @@ impl World {
             let earned = Item::ALL.iter().filter(|i| **i != Item::Waste).map(|i| a.money[i.idx()]).sum();
             self.econ.minute_ago = (earned, -a.money[Item::Waste.idx()]);
         }
-        self.sale_samples.push_back(self.econ.research_sales);
+        self.sale_samples.push_back(self.econ.research_sales.to_array());
         while self.sale_samples.len() > 120 {
             self.sale_samples.pop_front();
         }
         if let (Some(a), Some(b)) = (self.sale_samples.front(), self.sale_samples.back()) {
             let n = (self.sale_samples.len() - 1) as f64;
             if n > 0.0 {
-                self.sale_rate = (0..ITEMS).map(|i| (b[i] - a[i]) as f64 / n).collect();
+                for i in 0..ITEMS {
+                    self.sale_rate[i] = (b[i] - a[i]) as f64 / n;
+                }
             }
         }
     }
@@ -2356,8 +2437,8 @@ impl World {
     /// Research earned while away: each item keeps selling at its recent pace, and its
     /// research fades the way it does in play. Moves each item along its curve.
     fn offline_research(&mut self, secs: f64) -> f64 {
-        if self.sale_rate.len() != ITEMS {
-            // Saved before per-item rates were kept: count ten minutes at the last rate.
+        if self.sale_rate.iter().all(|r| *r == 0.0) {
+            // No per-item rates (a new game, or too soon to tell): count ten minutes at the last rate.
             return self.rate.1 * secs.min(600.0);
         }
         // How the recent research compares with full-price sales (trade post modes, notebooks).
@@ -2834,7 +2915,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 }
             }
         }
-        St::Crafter { recipe, stock, fuel, progress, busy, out, fluid, fluid_out } => {
+        St::Crafter { recipe, stock, fuel, progress, busy, out, fluid, fluid_out, .. } => {
             let r = &kind.recipes()[*recipe as usize];
             let batch = kind.batch();
             *busy = false;
