@@ -206,41 +206,6 @@ fn new_game_note(has_other_saves: bool) -> String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_fresh_games_first_message_says_how_to_start() {
-        let first = new_game_note(false);
-        assert!(first.contains("1 opens the build menu") && first.contains("? has help"), "{first}");
-        // With other saves around, the saves note replaces it, as it must only when they exist.
-        let second = new_game_note(true);
-        assert!(second.contains("other saves are safe") && !second.contains("build menu"), "{second}");
-    }
-
-    #[test]
-    fn data_dir_falls_back_from_home_to_the_windows_variables() {
-        fn env<'a>(pairs: &'a [(&str, &str)]) -> impl Fn(&str) -> Option<std::ffi::OsString> + 'a {
-            move |name| pairs.iter().find(|p| p.0 == name).map(|p| std::ffi::OsString::from(p.1))
-        }
-        let both = [("HOME", "/h"), ("USERPROFILE", "C:/u")];
-        assert_eq!(data_dir_from(env(&both)), Path::new("/h").join(".terminactory"));
-        let windows = [("USERPROFILE", "C:/u"), ("APPDATA", "C:/a")];
-        assert_eq!(data_dir_from(env(&windows)), Path::new("C:/u").join(".terminactory"));
-        let empty_home = [("HOME", ""), ("APPDATA", "C:/a")];
-        assert_eq!(data_dir_from(env(&empty_home)), Path::new("C:/a").join(".terminactory"));
-        assert_eq!(data_dir_from(env(&[])), Path::new("."));
-    }
-
-    #[test]
-    fn a_new_game_has_its_welcome_and_the_demo_does_not() {
-        let w = new_world();
-        assert_eq!(w.mail.len(), 1);
-        assert!(sim::World::new().mail.is_empty());
-    }
-}
-
 /// How often the game saves by itself.
 const AUTOSAVE: Duration = Duration::from_secs(30);
 
@@ -257,7 +222,7 @@ fn stop_signal() -> std::sync::Arc<std::sync::atomic::AtomicBool> {
 
 /// Fixed 60 ticks per second for the simulation, about 30 frames per second for drawing.
 /// `inbox` is the data folder whose agent mail to pick up (none in the demo).
-fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &PathBuf, inbox: Option<&Path>) -> io::Result<()> {
+fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &Path, inbox: Option<&Path>) -> io::Result<()> {
     let tick = Duration::from_nanos(1_000_000_000 / sim::TPS);
     let frame = Duration::from_millis(33);
     let mut last = Instant::now();
@@ -341,4 +306,39 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_fresh_games_first_message_says_how_to_start() {
+        let first = new_game_note(false);
+        assert!(first.contains("1 opens the build menu") && first.contains("? has help"), "{first}");
+        // With other saves around, the saves note replaces it, as it must only when they exist.
+        let second = new_game_note(true);
+        assert!(second.contains("other saves are safe") && !second.contains("build menu"), "{second}");
+    }
+
+    #[test]
+    fn data_dir_falls_back_from_home_to_the_windows_variables() {
+        fn env<'a>(pairs: &'a [(&str, &str)]) -> impl Fn(&str) -> Option<std::ffi::OsString> + 'a {
+            move |name| pairs.iter().find(|p| p.0 == name).map(|p| std::ffi::OsString::from(p.1))
+        }
+        let both = [("HOME", "/h"), ("USERPROFILE", "C:/u")];
+        assert_eq!(data_dir_from(env(&both)), Path::new("/h").join(".terminactory"));
+        let windows = [("USERPROFILE", "C:/u"), ("APPDATA", "C:/a")];
+        assert_eq!(data_dir_from(env(&windows)), Path::new("C:/u").join(".terminactory"));
+        let empty_home = [("HOME", ""), ("APPDATA", "C:/a")];
+        assert_eq!(data_dir_from(env(&empty_home)), Path::new("C:/a").join(".terminactory"));
+        assert_eq!(data_dir_from(env(&[])), Path::new("."));
+    }
+
+    #[test]
+    fn a_new_game_has_its_welcome_and_the_demo_does_not() {
+        let w = new_world();
+        assert_eq!(w.mail.len(), 1);
+        assert!(sim::World::new().mail.is_empty());
+    }
 }

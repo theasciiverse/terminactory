@@ -2506,7 +2506,8 @@ fn every_item_recipe_runs_in_its_machine() {
 
 #[test]
 fn welder_parts() {
-    let recipes: [(&str, &[(Item, u32)], Item); 3] = [
+    type Case<'a> = (&'a str, &'a [(Item, u32)], Item);
+    let recipes: [Case; 3] = [
         ("boiler shell", &[(Item::SteelSheet, 1), (Item::Brick, 4)], Item::BoilerShell),
         ("silo shell", &[(Item::SteelSheet, 3), (Item::Valve, 1)], Item::SiloShell),
         ("frame", &[(Item::SteelGirder, 2), (Item::Screw, 8)], Item::Frame),

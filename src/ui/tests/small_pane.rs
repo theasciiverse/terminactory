@@ -143,7 +143,7 @@ fn tall_44x60() {
     // The page gets at least half of the pane, however long the item list is.
     let rule = rows.iter().position(|l| l.contains("────────") && l.starts_with('│')).unwrap();
     let footer = rows.len() - 3;
-    assert!(footer - rule - 1 >= 28, "page rows {}: {t}", footer - rule - 1);
+    assert!(footer - rule > 28, "page rows {}: {t}", footer - rule - 1);
     assert_no_glued_hints(&t);
     app.book = false;
     // The whole research list fits and says which group the picked row is in.
@@ -174,7 +174,7 @@ fn short_64x12() {
     let t = text(&render(&mut app, 64, 12));
     let rows = lines(&t);
     let rule = rows.iter().position(|l| l.contains("────────") && l.starts_with('│')).unwrap();
-    assert!(rows.len() - 3 - rule - 1 >= 4, "page rows: {t}");
+    assert!(rows.len() - 3 - rule > 4, "page rows: {t}");
     assert_no_glued_hints(&t);
     app.book = false;
     // The production panel says when rows are hidden.
@@ -310,7 +310,7 @@ fn overlays_fit_every_pane_size() {
             if scene == 16 {
                 assert!(app.compact_now, "Always at {w}x{h}");
             }
-            if matches!(scene, 0 | 1 | 2 | 3) {
+            if (0..=3).contains(&scene) {
                 assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));
                 assert_no_glued_hints(&t);
             }

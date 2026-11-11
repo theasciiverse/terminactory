@@ -1992,13 +1992,13 @@ impl World {
         let mut net_of_root = vec![usize::MAX; n];
         let mut node_net = vec![0; n];
         let mut nets: Vec<Net> = Vec::new();
-        for a in 0..n {
+        for (a, net) in node_net.iter_mut().enumerate() {
             let r = find(&mut parent, a);
             if net_of_root[r] == usize::MAX {
                 net_of_root[r] = nets.len();
                 nets.push(Net::default());
             }
-            node_net[a] = net_of_root[r];
+            *net = net_of_root[r];
         }
         // Paint each grid's reach, and add up supply and demand.
         let mut cover = vec![vec![-1i32; (W * H) as usize]; self.floors.len()];
