@@ -1,6 +1,7 @@
 use super::*;
 
 mod elevators;
+mod molten;
 mod tunnels;
 mod waste;
 
