@@ -1577,8 +1577,9 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         }
         St::Boiler { coal, fuel, busy } => {
             v.push(format!("coal {}/{}   {}", coal, BOILER_COAL_CAP, if *fuel > 0 { "burning" } else { "no fire" }));
+            v.push(format!("burns waste too: {WASTE_PER_COAL} = 1 coal   fire {}s", fuel / TPS as u32));
             v.push(format!("water in from pipes, steam out the {} side", b.dir.arrow()));
-            v.push(if *busy { "making steam".into() } else { "waiting: needs coal, water and room for steam".into() });
+            v.push(if *busy { "making steam".into() } else { "waiting: needs coal or waste, water, room for steam".into() });
         }
         St::Engine { steam, output } => {
             v.push(format!("steam {:.1}/{:.0}", steam, ENGINE_BUF));
@@ -2380,6 +2381,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let fuel: Option<(Vec<Kind>, &str)> = match item {
                 Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln], "")),
                 Item::Coke => Some((vec![Kind::BlastFurnace], " (burns twice as long as coal)")),
+                Item::Waste => Some((vec![Kind::Boiler], " (4 waste burn like 1 coal; only as much as the grid needs)")),
                 _ => None,
             };
             if let Some((kinds, note)) = fuel {
@@ -2935,8 +2937,9 @@ HOW IT WORKS
     it); overlapping ranges join into one grid that shares only its own
     EC. Panels never join each other directly: put poles between them.
   Pumps draw water anywhere on the ground. Pipes join into networks, each holding one fluid.
-    Boilers burn coal to turn water into steam (out their front); steam
-    engines turn steam into EC, only as much as their grid needs.
+    Boilers burn coal, or waste (4 waste = 1 coal), to turn water into steam
+    (out their front); steam engines turn steam into EC, only as much as
+    their grid needs, and a boiler burns only what its engines call for.
   Blast furnaces make molten steel (a molder casts it) and hardened plate
     from plate and coke or coal. Most recipes leave waste out the back: a
     trade post set to money takes it for $0.50 each; research posts refuse it

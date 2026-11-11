@@ -1151,4 +1151,9 @@ fn machines_say_waste_leaves_by_the_back() {
     app.book_go(Entry::Item(Item::Waste));
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("back edge"), "{t}");
+    assert!(t.contains("fuel for boiler") && t.contains("4 waste burn like 1 coal"), "{t}");
+    // And a placed boiler says it burns waste too.
+    let mut w = World::blank();
+    w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();
+    assert!(inspect(&w, 0, 20, 20).join("\n").contains("burns waste too: 4 = 1 coal"));
 }
