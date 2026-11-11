@@ -142,9 +142,12 @@ pub fn describe(data: &Path) -> String {
     let last = latest(data).map(|s| s.name);
     let mut out = format!("Your saves (in {}):\n", dir(data).display());
     for s in &saves {
-        let old = crate::sim::World::file_version(&s.path).is_some_and(|v| v < crate::sim::SAVE_VERSION);
+        let version = crate::sim::World::file_version(&s.path);
+        let old = version.is_some_and(|v| v < crate::sim::SAVE_VERSION);
+        let newer = version.is_some_and(|v| v > crate::sim::SAVE_VERSION);
         let stats = match crate::sim::World::load(&s.path) {
             _ if old => "(old version)".to_string(),
+            _ if newer => "(newer version)".to_string(),
             Ok(w) => {
                 let secs = w.tick / crate::sim::TPS;
                 format!(

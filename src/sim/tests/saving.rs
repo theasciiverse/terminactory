@@ -27,7 +27,6 @@ fn a_newer_save_is_refused_with_its_own_message_and_left_alone() {
 }
 
 #[test]
-#[ignore = "bug: `tfac --saves` calls a newer-version save \"(can't be read)\" instead of \"(newer version)\" (saves.rs describe only checks v < SAVE_VERSION)"]
 fn the_save_list_says_newer_version_for_a_newer_save() {
     let data = temp("list-newer");
     std::fs::write(crate::saves::path_of(&data, "save1"), format!(r#"{{"version":{}}}"#, SAVE_VERSION + 1)).unwrap();
