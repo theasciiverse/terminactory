@@ -167,7 +167,7 @@ tfac msg "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
 }
 ```
 
-Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Every telegram and company letter is also kept in a log (the last 50, saved with the game): `l` opens it, newest first with unread ones marked, and Enter reads one again.
+Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Every telegram and company letter is also kept in a log (the last 50, saved with the game): `i` opens it, newest first with unread ones marked, and Enter reads one again.
 
 ## Rules in one breath
 
@@ -202,7 +202,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or 
 | Recipe book (opens on what's under the cursor) | b |
 | Small-pane view on/off | m |
 | Next telegram / dismiss all | n / Shift+N (PgUp/PgDn scroll; Esc also closes) |
-| Telegram log | l (Enter reads one again) |
+| Telegram log | i (Enter reads one again) |
 | Help | ? (arrows scroll it in a small pane) |
 | Quit | Ctrl+C (saves first) |
 

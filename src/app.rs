@@ -251,7 +251,7 @@ impl App {
         }
     }
 
-    /// Keys in the telegram log: pick a row, Enter reads it again, l or Esc closes.
+    /// Keys in the telegram log: pick a row, Enter reads it again, i or Esc closes.
     fn log_key(&mut self, code: KeyCode) {
         let n = self.world.log.len();
         let last = n.saturating_sub(1);
@@ -1124,7 +1124,7 @@ mod tests {
         app.compact_now = false;
         key(&mut app, KeyCode::Char('N')); // dismiss all by accident
         assert!(app.mail.is_none());
-        key(&mut app, KeyCode::Char('l'));
+        key(&mut app, KeyCode::Char('i'));
         assert!(app.log_open);
         key(&mut app, KeyCode::Down); // 0 is the newest; this picks the one before
         key(&mut app, KeyCode::Char('x')); // stray keys do nothing
@@ -1136,12 +1136,12 @@ mod tests {
         assert!(app.world.mail.is_empty());
         key(&mut app, KeyCode::Char('n'));
         assert!(app.mail.is_none());
-        // Esc and l both close the log.
-        key(&mut app, KeyCode::Char('l'));
+        // Esc and i both close the log.
+        key(&mut app, KeyCode::Char('i'));
         key(&mut app, KeyCode::Esc);
         assert!(!app.log_open);
-        key(&mut app, KeyCode::Char('l'));
-        key(&mut app, KeyCode::Char('l'));
+        key(&mut app, KeyCode::Char('i'));
+        key(&mut app, KeyCode::Char('i'));
         assert!(!app.log_open);
     }
 
@@ -1159,7 +1159,7 @@ mod tests {
     fn the_log_does_not_pause_or_hide_the_world() {
         let mut app = with_telegrams(1);
         let before = app.world.tick;
-        key(&mut app, KeyCode::Char('l'));
+        key(&mut app, KeyCode::Char('i'));
         app.world.tick();
         assert_eq!(app.world.tick, before + 1);
         assert!(!app.paused);

@@ -2604,7 +2604,7 @@ CONTROLS
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
   Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,
-                 l log of past telegrams (Enter reads one again)
+                 i log of past telegrams (Enter reads one again)
   Mouse ........ click places, drag lays belts, right-click removes,
                  middle-click copies a part (facing and settings too)
   Quit ......... Ctrl+C (saves first)

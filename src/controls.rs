@@ -113,7 +113,7 @@ impl Action {
             Action::Smaller => &["-", "_"],
             Action::Compact => &["m"],
             Action::Mail => &["n"],
-            Action::MailLog => &["l"],
+            Action::MailLog => &["i"],
             Action::Book => &["b"],
             Action::Stats => &["o"],
         }
