@@ -20,15 +20,6 @@ fn preview(md: &str) -> String {
     line.chars().filter(|c| !matches!(c, '*' | '`')).collect()
 }
 
-/// `s` cut to `n` characters, ending in "…" when it was cut.
-fn fit(s: &str, n: usize) -> String {
-    if s.chars().count() <= n {
-        s.to_string()
-    } else {
-        s.chars().take(n.saturating_sub(1)).chain(['…']).collect()
-    }
-}
-
 /// One row of the log, `width` columns wide: marker, sender, kind, what it says, age.
 fn row(e: &crate::mail::LogEntry, width: usize, now: u64) -> Vec<Span<'static>> {
     let dim = Style::new().fg(Color::DarkGray);
@@ -102,10 +93,12 @@ pub fn draw_log(f: &mut Frame, area: Rect, app: &mut App) {
             .collect();
         f.render_widget(Paragraph::new(lines), list);
     }
-    let hint = if inner.width >= 44 {
-        format!(" ↑↓ pick · Enter read · {key} or Esc close")
-    } else {
-        format!(" Enter read · {key}/Esc close")
-    };
-    f.render_widget(Paragraph::new(Span::styled(hint, dim)), foot);
+    let close = format!("{key}/Esc close");
+    let hints = [(2, "↑↓ pick"), (1, "Enter read"), (0, close.as_str())];
+    let height = list.height as usize;
+    let more = if n > height { Some("more ▲▼") } else { None };
+    f.render_widget(
+        Paragraph::new(footer_line(foot.width.saturating_sub(1), &hints, more)),
+        Rect { x: foot.x + 1, width: foot.width.saturating_sub(1), ..foot },
+    );
 }
