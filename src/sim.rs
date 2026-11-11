@@ -1503,7 +1503,41 @@ impl World {
         }
         self.econ.research -= t.cost();
         self.progress.researched[t.idx()] = true;
+        self.add_new_floor_doors();
         Ok(())
+    }
+
+    /// When a floor opens, every elevator gets a free unload door there, so the player
+    /// never has to rebuild one. A door whose spot is taken is skipped, with a note.
+    fn add_new_floor_doors(&mut self) {
+        let mut added = false;
+        for k in 0..self.lifts.len() {
+            let anchor = self.lifts[k].anchor;
+            let Some(door) = self.floors.iter().find_map(|fl| fl.tiles[anchor].clone()) else { continue };
+            let (x, y) = pos_of(anchor);
+            let (w, h) = door.dims();
+            for g in 0..self.floors.len() {
+                if !self.floor_open(g) || self.floors[g].tiles[anchor].is_some() {
+                    continue;
+                }
+                if footprint(x, y, w, h).any(|(tx, ty)| self.floors[g].owner[idx(tx, ty)].is_some()) {
+                    let level = self.floors[g].level;
+                    self.progress.notes.push_back(format!("An elevator's shaft is built over on floor {level:+}: clear it and rebuild the elevator for a door there"));
+                    continue;
+                }
+                let mut d = door.clone();
+                if let St::Elevator { mode, inbox, outbox } = &mut d.st {
+                    *mode = DoorMode::Unload;
+                    inbox.clear();
+                    outbox.clear();
+                }
+                self.put(g, x, y, d);
+                added = true;
+            }
+        }
+        if added {
+            self.rebuild_grid();
+        }
     }
 
     /// Checks a placement facing east (top-left at x, y) and returns its full cost (part + any digging).
@@ -2002,14 +2036,18 @@ impl World {
                 }
                 let id = pools.len();
                 let mut pool = Pool::default();
-                let mut olds: Vec<usize> = Vec::new();
+                // Old networks this one takes pipes from, and how many of their pipes.
+                let mut olds: Vec<(usize, u32)> = Vec::new();
                 let mut stack = vec![start];
                 pipe_pool[f][start] = id as i32;
                 while let Some(i) = stack.pop() {
                     pool.pipes += 1;
                     if let Some(&o) = old.pipe_pool.get(f).and_then(|v| v.get(i)) {
-                        if o >= 0 && !olds.contains(&(o as usize)) {
-                            olds.push(o as usize);
+                        if o >= 0 {
+                            match olds.iter_mut().find(|(k, _)| *k == o as usize) {
+                                Some((_, c)) => *c += 1,
+                                None => olds.push((o as usize, 1)),
+                            }
                         }
                     }
                     let (x, y) = pos_of(i);
@@ -2025,10 +2063,12 @@ impl World {
                     }
                 }
                 pool.cap = pool.pipes as f64 * PIPE_CAP;
-                for o in olds {
+                // A network cut in two splits its fluid by pipe count, so cutting never makes fluid.
+                for (o, c) in olds {
                     if let Some(op) = old.pools.get(o) {
                         if let Some(fl) = op.fluid {
-                            pool.add(fl, op.amount);
+                            let share = c as f64 / op.pipes.max(1) as f64;
+                            pool.add(fl, op.amount * share.min(1.0));
                         }
                     }
                 }
@@ -2285,6 +2325,9 @@ impl World {
             if !self.progress.has(t) && self.progress.is_open(t.company()) && self.econ.made[item.idx()] >= n {
                 self.progress.researched[t.idx()] = true;
                 self.progress.notes.push_back(format!("{} unlocked for free: you've made {} {}", t.name(), n, item.name()));
+                if matches!(t, Tech::SupportBeams | Tech::Excavation) {
+                    self.add_new_floor_doors();
+                }
             }
         }
     }
@@ -3983,6 +4026,51 @@ mod tests {
         run(&mut w, 70);
         assert!(w.econ.waste_refusal(SellMode::Money).is_none());
         assert!(offer(&mut w, 10, 4, Item::Waste));
+    }
+
+    #[test]
+    fn cutting_a_pipe_splits_its_fluid_instead_of_making_more() {
+        let mut w = World::blank();
+        for x in 10..20 {
+            w.place(0, x, 10, Kind::Pipe, Dir::E).unwrap();
+        }
+        assert_eq!(w.fluids.pools.len(), 1);
+        w.fluids.pools[0].fluid = Some(Fluid::Water);
+        w.fluids.pools[0].amount = 100.0; // half full: 10 pipes hold 200
+        w.try_remove(0, 14, 10).unwrap();
+        assert_eq!(w.fluids.pools.len(), 2);
+        let total: f64 = w.fluids.pools.iter().map(|p| p.amount).sum();
+        assert!((total - 90.0).abs() < 1e-9, "the cut pipe's share leaves with it: {total}");
+        let amounts: Vec<f64> = w.fluids.pools.iter().map(|p| p.amount).collect();
+        assert!(amounts.contains(&40.0) && amounts.contains(&50.0), "{amounts:?}");
+    }
+
+    #[test]
+    fn opening_a_floor_gives_elevators_a_door_there() {
+        let mut w = World::blank();
+        // Only the floor above is open: the elevator gets a door on the surface and up.
+        w.progress.researched[Tech::Excavation.idx()] = false;
+        w.progress.researched[Tech::SupportBeams.idx()] = true;
+        let down = w.floors.iter().position(|fl| fl.level == -1).unwrap();
+        assert!(!w.floor_open(down));
+        w.place_sized(0, 10, 10, Kind::Elevator, Dir::E, 2).unwrap();
+        let a = w.floors[0].anchor_at(10, 10).unwrap();
+        if let Some(Building { st: St::Elevator { inbox, .. }, .. }) = w.floors[0].tiles[a].as_mut() {
+            inbox.push_back(Item::Coal);
+        }
+        assert!(w.floors[down].tiles[a].is_none());
+        // Excavation opens floor -1 (unlocked through research here).
+        w.progress.opened[Tech::Excavation.company().idx()] = true;
+        w.econ.research = Tech::Excavation.cost();
+        w.research(Tech::Excavation).unwrap();
+        match &w.floors[down].tiles[a] {
+            Some(Building { st: St::Elevator { mode, inbox, outbox }, .. }) => {
+                assert_eq!(*mode, DoorMode::Unload);
+                assert!(inbox.is_empty() && outbox.is_empty(), "no items copied");
+            }
+            other => panic!("no door on the new floor: {other:?}"),
+        }
+        assert!(w.check_place(down, 10, 10, Kind::Crate).is_err(), "the shaft is taken");
     }
 
     #[test]
