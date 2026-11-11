@@ -171,14 +171,6 @@ fn the_tiny_clock_does_not_panic() {
 }
 
 #[test]
-fn ranges_step_and_stop_at_the_ends() {
-    assert_eq!(Range::Seconds.prev(), Range::Seconds);
-    assert_eq!(Range::Seconds.next(), Range::Minutes);
-    assert_eq!(Range::Days.next(), Range::Days);
-    assert_eq!(Range::Days.prev(), Range::Hours);
-}
-
-#[test]
 fn a_steady_stream_of_whole_sales_reads_as_a_flat_line() {
     // About 4.4 sales a second at $1: some seconds sell 4, some 5.
     let mut h = History::default();

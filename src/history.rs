@@ -64,12 +64,6 @@ impl Range {
             Range::Days => "day",
         }
     }
-    pub fn next(self) -> Range {
-        Range::ALL[(self as usize + 1).min(3)]
-    }
-    pub fn prev(self) -> Range {
-        Range::ALL[(self as usize).saturating_sub(1)]
-    }
 }
 
 /// What was earned in one stretch of time. `t` is the bucket's key: minutes, hours or days

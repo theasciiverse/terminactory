@@ -109,15 +109,16 @@ fn range_keys_pick_seconds_minutes_hours_and_days() {
         assert_eq!(app.hist_range, r, "{c}");
         assert!(app.stats, "{c} keeps the panel open on the History tab");
     }
+    // [ and ] stay the game's speed keys, and pause works too, all without closing the panel.
+    let speed = app.speed;
+    press(&mut app, ']');
+    assert_eq!((app.speed, app.hist_range, app.stats), (speed * 2, Range::Days, true));
     press(&mut app, '[');
-    assert_eq!(app.hist_range, Range::Hours);
-    press(&mut app, ']');
-    press(&mut app, ']');
-    assert_eq!(app.hist_range, Range::Days, "stops at the last range");
-    for _ in 0..5 {
-        press(&mut app, '[');
-    }
-    assert_eq!(app.hist_range, Range::Seconds, "and at the first");
+    assert_eq!((app.speed, app.stats), (speed, true));
+    press(&mut app, 'p');
+    assert!(app.paused && app.stats);
+    press(&mut app, 'p');
+    press(&mut app, '1');
     // The chart says which range it is showing.
     let t = text(&render(&mut app, 100, 30));
     assert!(t.contains("last 60 seconds") && t.contains("-10s") && t.contains("now"), "{t}");

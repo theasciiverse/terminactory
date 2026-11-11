@@ -380,7 +380,8 @@ impl App {
             return;
         }
         if self.stats && !self.book {
-            // Arrows scroll it, o or Esc closes it; any other key closes it and goes on to the game.
+            // Arrows scroll it, o or Esc closes it, pause and speed work without closing it;
+            // any other key closes it and goes on to the game.
             match (k.code, action) {
                 (KeyCode::Tab | KeyCode::BackTab, _) => self.stats_tab(!self.stats_history),
                 _ if self.stats_history && self.history_key(k.code, action, shift) => {}
@@ -389,6 +390,9 @@ impl App {
                 (_, Some(Action::MoveUp)) if !shift => self.stats_scroll = self.stats_scroll.saturating_sub(1),
                 (_, Some(Action::MoveDown)) if !shift => self.stats_scroll += 1,
                 (_, Some(Action::Stats | Action::Back)) => self.stats = false,
+                (_, Some(Action::Pause)) => self.paused = !self.paused,
+                (_, Some(Action::Faster)) => self.speed = (self.speed * 2).min(8),
+                (_, Some(Action::Slower)) => self.speed = (self.speed / 2).max(1),
                 _ => {
                     self.stats = false;
                     self.on_key(k);
@@ -617,12 +621,10 @@ impl App {
         self.stats_scroll = 0;
     }
 
-    /// Keys on the History tab: `[` `]` or 1 to 4 pick the chart's range, r swaps money and
+    /// Keys on the History tab: 1 to 4 pick the chart's range, r swaps money and
     /// research, the arrows pick a day on the heatmap. True when the key was used.
     fn history_key(&mut self, code: KeyCode, action: Option<Action>, shift: bool) -> bool {
         match code {
-            KeyCode::Char('[') => self.hist_range = self.hist_range.prev(),
-            KeyCode::Char(']') => self.hist_range = self.hist_range.next(),
             KeyCode::Char(c @ '1'..='4') => self.hist_range = Range::ALL[c as usize - '1' as usize],
             KeyCode::Char('r') => self.hist_research = !self.hist_research,
             _ => {
