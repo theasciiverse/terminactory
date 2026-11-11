@@ -1,4 +1,4 @@
-//! The production panel's History tab: tab switching, range keys, the chart, the heatmap
+//! The production panel's History tab: tab switching, range keys, the charts
 //! at narrow and wide sizes, the empty state and a few snapshots.
 
 use super::*;
@@ -56,11 +56,6 @@ fn rows(t: &str) -> Vec<&str> {
     t.lines().collect()
 }
 
-/// How many heatmap squares the first full week row of the grid has.
-fn heat_cells(t: &str) -> usize {
-    rows(t).iter().map(|l| l.matches('■').count() + l.matches('·').count()).filter(|n| *n > 0).max().unwrap_or(0)
-}
-
 #[test]
 fn tab_switches_between_production_and_history() {
     let mut app = app_with_history();
@@ -71,7 +66,7 @@ fn tab_switches_between_production_and_history() {
     key(&mut app, KeyCode::Tab);
     assert!(app.stats && app.stats_history);
     let t = text(&render(&mut app, 100, 30));
-    assert!(t.contains("less") && t.contains("more") && t.contains("Tab production"), "{t}");
+    assert!(t.contains("Money ·") && t.contains("Tab production"), "{t}");
     assert!(!t.contains("last minute"), "{t}");
     key(&mut app, KeyCode::Tab);
     assert!(app.stats && !app.stats_history);
@@ -97,9 +92,6 @@ fn clicking_a_tab_switches_to_it() {
     let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Range(Range::Days)).unwrap();
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
     assert_eq!(app.hist_range, Range::Days);
-    let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Day(10)).unwrap();
-    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
-    assert_eq!(app.hist_day, 10);
     assert!(app.stats, "still open");
 }
 
@@ -166,76 +158,6 @@ fn the_chart_has_a_y_axis_a_time_axis_a_total_and_the_best_bar() {
 }
 
 #[test]
-fn the_heatmap_shows_fewer_weeks_in_a_narrow_pane() {
-    let mut app = app_with_history();
-    let wide = text(&render(&mut app, 150, 42));
-    let medium = text(&render(&mut app, 80, 42));
-    let narrow = text(&render(&mut app, 40, 42));
-    // The grid is 7 rows by up to 53 weeks; the newest weeks are the ones kept.
-    assert!(heat_cells(&wide) >= 53, "wide: {wide}");
-    let (m, n) = (heat_cells(&medium), heat_cells(&narrow));
-    assert!(m > n && (45..=53).contains(&m) || m == 53, "medium {m}: {medium}");
-    assert!(n >= 20 && n < 40, "narrow {n}: {narrow}");
-    for t in [&wide, &medium, &narrow] {
-        assert!(t.contains("less") && t.contains("more"), "{t}");
-        assert!(rows(t).iter().all(|l| l.chars().count() <= 150));
-    }
-    // Month labels sit above the grid: the newest month is always there.
-    assert!(wide.contains("Nov") && wide.contains("Oct") && wide.contains("Jul"), "{wide}");
-    assert!(narrow.contains("Nov") && narrow.contains("Oct"), "{narrow}");
-    // Weekday names down the side (initials in a narrow pane).
-    assert!(wide.contains("Mon") && wide.contains("Wed") && wide.contains("Fri"), "{wide}");
-    // Seven rows: today (Wednesday) ends the newest column, so Thursday to Saturday are one short.
-    let grid: Vec<usize> = rows(&wide)
-        .iter()
-        .filter(|l| l.matches('■').count() + l.matches('·').count() > 20)
-        .map(|l| l.matches('■').count() + l.matches('·').count())
-        .collect();
-    assert_eq!(grid.len(), 7, "{grid:?}");
-    assert_eq!(grid[0], 53);
-    assert_eq!(grid[3], 53, "Wednesday is today's row");
-    assert_eq!(grid[4], 52, "Thursday is still to come");
-    // Days nobody played are a faint dot; played days are squares.
-    assert!(wide.contains('·') && wide.contains('■'));
-}
-
-#[test]
-fn arrows_pick_a_day_and_the_line_below_says_what_it_earned() {
-    let mut app = app_with_history();
-    let t = text(&render(&mut app, 120, 42));
-    assert!(t.contains("Wed Nov 11: $1,234"), "today: {t}");
-    key(&mut app, KeyCode::Up);
-    assert_eq!(app.hist_day, 1);
-    let t = text(&render(&mut app, 120, 42));
-    assert!(t.contains("Tue Nov 10: $"), "{t}");
-    key(&mut app, KeyCode::Left);
-    assert_eq!(app.hist_day, 8);
-    let t = text(&render(&mut app, 120, 42));
-    assert!(t.contains("Tue Nov 3: $"), "a week earlier: {t}");
-    key(&mut app, KeyCode::Right);
-    key(&mut app, KeyCode::Down);
-    assert_eq!(app.hist_day, 0);
-    key(&mut app, KeyCode::Down);
-    key(&mut app, KeyCode::Right);
-    assert_eq!(app.hist_day, 0, "can't go past today");
-    // A day off is "not played"; 4 days back is one (day 4 of the fill).
-    app.hist_day = 4;
-    let t = text(&render(&mut app, 120, 42));
-    assert!(t.contains("Sat Nov 7: not played"), "{t}");
-    // WASD works as the arrows do (they are the game's move keys).
-    press(&mut app, 'w');
-    assert_eq!(app.hist_day, 5);
-    // The picked day stays on screen: in a narrow pane it's clamped to the weeks shown.
-    app.hist_day = 370;
-    render(&mut app, 40, 42);
-    assert!(app.hist_day < 370 && app.hist_day >= 100, "{}", app.hist_day);
-    // Holding Shift (belts) doesn't move it.
-    app.hist_day = 3;
-    app.on_key(KeyEvent::new(KeyCode::Left, KeyModifiers::SHIFT));
-    assert_eq!(app.hist_day, 3);
-}
-
-#[test]
 fn no_history_yet_is_a_friendly_empty_state() {
     let mut app = app_with_history();
     app.world.history = Default::default();
@@ -255,28 +177,22 @@ fn no_history_yet_is_a_friendly_empty_state() {
 #[test]
 fn a_short_pane_scrolls_and_says_so() {
     let mut app = app_with_history();
-    let t = text(&render(&mut app, 64, 14));
-    assert!(t.contains("more ▼") && !t.contains("less"), "{t}");
-    key(&mut app, KeyCode::PageDown);
-    key(&mut app, KeyCode::PageDown);
-    key(&mut app, KeyCode::PageDown);
-    let t = text(&render(&mut app, 64, 14));
-    assert!(t.contains("more ▲") && t.contains("less"), "{t}");
-    // Picking a day jumps to the heatmap.
-    app.stats_scroll = 0;
-    key(&mut app, KeyCode::Left);
-    let t = text(&render(&mut app, 64, 14));
-    assert!(t.contains("Wed Nov 4:") || t.contains("Nov 4"), "{t}");
+    let t = text(&render(&mut app, 64, 10));
+    assert!(t.contains("more ▼"), "{t}");
+    for _ in 0..5 {
+        key(&mut app, KeyCode::PageDown);
+    }
+    let t = text(&render(&mut app, 64, 10));
+    assert!(t.contains("more ▲") && t.contains("now"), "{t}");
 }
 
 #[test]
 fn history_snapshots() {
     let mut app = app_with_history();
     press(&mut app, '3');
-    app.hist_day = 12;
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("Money") && t.contains("less"), "{t}");
+    assert!(t.contains("Money") && !t.contains("less") && !t.contains("Mon "), "no heatmap: {t}");
     std::fs::write("target/snapshot-history.html", to_html(&buf)).unwrap();
     press(&mut app, '2');
     let buf = render(&mut app, 130, 42);
@@ -285,7 +201,7 @@ fn history_snapshots() {
     press(&mut app, '3');
     let buf = render(&mut app, 64, 24);
     let t = text(&buf);
-    assert!(t.contains("less") && t.contains("Tab"), "{t}");
+    assert!(t.contains("Money ·") && t.contains("Tab"), "{t}");
     std::fs::write("target/snapshot-history-small.html", to_html(&buf)).unwrap();
     press(&mut app, 'r');
     let buf = render(&mut app, 36, 30);
@@ -306,21 +222,6 @@ fn the_chart_fills_the_width_of_the_pane() {
             assert!(border - now <= 3, "{key} at {width}: 'now' ends at {now}, border at {border}\n{t}");
         }
     }
-}
-
-#[test]
-fn a_zoomed_out_pane_centres_the_heatmap() {
-    let mut app = app_with_history();
-    let t = text(&render(&mut app, 220, 60));
-    let row = t.lines().find(|l| l.contains("Wed ")).unwrap_or_else(|| panic!("{t}"));
-    let border = row.find('│').map(|b| row[..b].chars().count()).unwrap_or(0);
-    let wed = row[..row.find("Wed ").unwrap()].chars().count() - border;
-    assert!(wed > 10, "the grid is centred, not hugging the left: Wed at {wed}\n{t}");
-    // 53 weeks a column each plus the weekday labels just fit in 57 columns: no room to centre.
-    let t = text(&render(&mut app, 57, 36));
-    let row = t.lines().find(|l| l.contains("Wed ")).unwrap();
-    let wed = row[..row.find("Wed ").unwrap()].chars().count();
-    assert!(wed <= 4, "a pane it just fits keeps it at the left: {wed}\n{t}");
 }
 
 #[test]
@@ -357,8 +258,8 @@ fn a_tall_pane_stacks_money_and_research() {
             }
         }
         assert!(green && blue, "{w}x{h}: green {green} research {blue}");
-        // Both charts and the heatmap fit without scrolling.
-        assert!(t.contains("less") && t.contains("Wed Nov 11") && !t.contains("more ▼"), "{w}x{h}: {t}");
+        // Both charts fit without scrolling.
+        assert!(!t.contains("more ▼"), "{w}x{h}: {t}");
         if (w, h) == (150, 42) {
             snapshot_tall(&buf);
         }
@@ -372,46 +273,13 @@ fn snapshot_tall(buf: &Buffer) {
 #[test]
 fn a_short_pane_keeps_the_money_research_toggle() {
     let mut app = app_with_history();
-    // 100x24: the pane is too short for two charts.
-    let t = text(&render(&mut app, 100, 24));
+    // 100x16: the pane is too short for two charts.
+    let t = text(&render(&mut app, 100, 16));
     assert_eq!(charts(&t), (1, 0), "{t}");
     press(&mut app, 'r');
-    let t = text(&render(&mut app, 100, 24));
+    let t = text(&render(&mut app, 100, 16));
     assert_eq!(charts(&t), (0, 1), "{t}");
     // The same pane taller shows both whatever r says.
     let t = text(&render(&mut app, 100, 42));
     assert_eq!(charts(&t), (1, 1), "{t}");
-}
-
-#[test]
-fn r_shades_the_heatmap_by_research() {
-    // The fill earns money every played day but research (0, 3, 6, 9, 12) only on some.
-    let mut app = app_with_history();
-    let shades = |app: &mut App| {
-        let buf = render(app, 150, 42);
-        let mut played = Vec::new();
-        // The legend squares are the shades themselves, not days.
-        let legend = text(&buf).lines().position(|l| l.contains("less")).unwrap() as u16;
-        for y in (0..buf.area.height).filter(|y| *y != legend) {
-            for x in 0..buf.area.width {
-                let c = buf.cell((x, y)).unwrap();
-                if c.symbol() == "■" && x < 110 {
-                    played.push(c.fg);
-                }
-            }
-        }
-        (played, text(&buf))
-    };
-    let (money, t) = shades(&mut app);
-    assert!(!money.contains(&Color::Indexed(238)) && !t.contains("· research"), "money shading never leaves a played day blank");
-    press(&mut app, 'r');
-    let (research, t) = shades(&mut app);
-    assert!(research.contains(&Color::Indexed(238)), "days without research are the empty shade");
-    assert!(research.contains(&Color::Indexed(46)) && t.contains("more · research"), "{t}");
-    assert_ne!(money, research);
-    press(&mut app, 'r');
-    let (again, _) = shades(&mut app);
-    assert_eq!(again, money);
-    // The picked day still tells both.
-    assert!(text(&render(&mut app, 150, 42)).contains("Wed Nov 11: $1,234"));
 }

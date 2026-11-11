@@ -8,19 +8,12 @@ fn money(h: &History, range: Range, now: u64) -> f64 {
 }
 
 #[test]
-fn civil_dates_and_weekdays() {
+fn civil_dates() {
     assert_eq!(civil(0), (1970, 1, 1));
-    assert_eq!(weekday(0), 4, "a Thursday");
     assert_eq!(civil(NOON / 86_400), (2026, 11, 11));
-    assert_eq!(WEEKDAYS[weekday(NOON / 86_400) as usize], "Wed");
     // Leap day, and the day after.
     assert_eq!(civil(19_782), (2024, 2, 29));
     assert_eq!(civil(19_783), (2024, 3, 1));
-    // Weeks run Sunday to Saturday.
-    let sunday = NOON / 86_400 - 3;
-    assert_eq!(weekday(sunday), 0);
-    assert_eq!(week_of(sunday), week_of(sunday + 6));
-    assert_ne!(week_of(sunday), week_of(sunday - 1));
 }
 
 #[test]

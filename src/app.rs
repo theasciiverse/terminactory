@@ -16,12 +16,7 @@ pub enum StatsHit {
     /// A tab: true for History.
     Tab(bool),
     Range(Range),
-    /// A heatmap day, this many days back from today.
-    Day(u16),
 }
-
-/// The most days back the History tab can pick (53 weeks, today included).
-pub const HIST_BACK: u16 = crate::history::DAYS as u16 - 1;
 
 /// The numbered slots in a build category. A slot can hold several kinds of the
 /// same part (copper drill, basic drill...); pressing its number again switches between them.
@@ -171,11 +166,10 @@ pub struct App {
     pub stats: bool,
     pub stats_scroll: u16,
     /// The panel's History tab is showing (Tab switches), with its chart range, whether the chart
-    /// shows research instead of money, and the heatmap's picked day (how many days back from today).
+    /// shows research instead of money.
     pub stats_history: bool,
     pub hist_range: Range,
     pub hist_research: bool,
-    pub hist_day: u16,
     /// What a click does where the panel was last drawn.
     pub stats_hits: Vec<(Rect, StatsHit)>,
     /// A fixed (seconds since 1970, zone offset) for the History tab, so tests can draw a known date.
@@ -235,7 +229,6 @@ impl App {
             stats_history: false,
             hist_range: Range::Hours,
             hist_research: false,
-            hist_day: 0,
             stats_hits: Vec::new(),
             clock: None,
             tree_rows: Vec::new(),
@@ -464,7 +457,7 @@ impl App {
             // any other key closes it and goes on to the game.
             match (k.code, action) {
                 (KeyCode::Tab | KeyCode::BackTab, _) => self.stats_tab(!self.stats_history),
-                _ if self.stats_history && self.history_key(k.code, action, shift) => {}
+                _ if self.stats_history && self.history_key(k.code) => {}
                 (KeyCode::PageUp, _) => self.stats_scroll = self.stats_scroll.saturating_sub(5),
                 (KeyCode::PageDown, _) => self.stats_scroll += 5,
                 (_, Some(Action::MoveUp)) if !shift => self.stats_scroll = self.stats_scroll.saturating_sub(1),
@@ -702,27 +695,13 @@ impl App {
         self.stats_scroll = 0;
     }
 
-    /// Keys on the History tab: 1 to 4 pick the chart's range, r swaps money and
-    /// research (the chart in a short pane, and always the heatmap's shading), the arrows pick a day on the heatmap. True when the key was used.
-    fn history_key(&mut self, code: KeyCode, action: Option<Action>, shift: bool) -> bool {
+    /// Keys on the History tab: 1 to 4 pick the chart's range, r swaps money and research
+    /// (when the pane is too short to show both). True when the key was used.
+    fn history_key(&mut self, code: KeyCode) -> bool {
         match code {
             KeyCode::Char(c @ '1'..='4') => self.hist_range = Range::ALL[c as usize - '1' as usize],
             KeyCode::Char('r') => self.hist_research = !self.hist_research,
-            _ => {
-                // Left and right step a week (a column), up and down a day; the heatmap reads
-                // oldest first, so up and left go back in time.
-                let day = self.hist_day;
-                self.hist_day = match action {
-                    Some(Action::MoveLeft) if !shift => (day + 7).min(HIST_BACK),
-                    Some(Action::MoveRight) if !shift => day.saturating_sub(7),
-                    Some(Action::MoveUp) if !shift => (day + 1).min(HIST_BACK),
-                    Some(Action::MoveDown) if !shift => day.saturating_sub(1),
-                    _ => return false,
-                };
-                // The heatmap is the lower part of the page: bring it into view.
-                self.stats_scroll = u16::MAX;
-                return true;
-            }
+            _ => return false,
         }
         true
     }
@@ -915,7 +894,6 @@ impl App {
                 MouseEventKind::Down(_) => match self.stats_hits.iter().find(|(r, _)| r.contains((m.column, m.row).into())) {
                     Some((_, StatsHit::Tab(h))) => self.stats_tab(*h),
                     Some((_, StatsHit::Range(r))) => self.hist_range = *r,
-                    Some((_, StatsHit::Day(d))) => self.hist_day = *d,
                     None => self.stats = false,
                 },
                 _ => {}

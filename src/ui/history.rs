@@ -1,16 +1,14 @@
-//! The production panel's History tab: an earnings chart (seconds, minutes, hours or days) and a
-//! GitHub-style heatmap of daily earnings. Built as plain lines, so it scrolls like the
-//! Production tab when the pane is short.
+//! The production panel's History tab: earnings charts over seconds, minutes, hours or days.
+//! Built as plain lines, so it scrolls like the Production tab when the pane is short.
+//! (No calendar of played days: the game should never feel like a commitment.)
 
 use super::*;
-use crate::app::{StatsHit, HIST_BACK};
-use crate::history::{self as hist, civil, weekday, Point, Range, DAYS, MONTHS, WEEKDAYS, WEEKS};
+use crate::app::StatsHit;
+use crate::history::{self as hist, civil, Point, Range, MONTHS};
 
-/// Heatmap shades: a played day with nothing earned, then four steps of green.
-const SHADES: [Color; 5] = [Color::Indexed(238), Color::Indexed(22), Color::Indexed(28), Color::Indexed(34), Color::Indexed(46)];
 /// Bars for an eighth to a whole row.
 const BARS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-/// A day nobody played.
+/// A stretch with nothing earned.
 const FAINT: Color = Color::Indexed(238);
 
 pub(super) struct Page {
@@ -19,20 +17,20 @@ pub(super) struct Page {
     pub hits: Vec<(usize, usize, usize, StatsHit)>,
 }
 
-/// Rows of bars in each chart on a page `height` rows tall: one chart takes what the heatmap
-/// leaves, two stacked share it.
+/// Rows of bars in each chart on a page `height` rows tall: one chart takes the page (less the
+/// range pills, its summary and its axis), two stacked share it.
 fn chart_rows(height: usize) -> usize {
     if stacked(height) {
-        (height.saturating_sub(17) / 2).clamp(4, 10)
+        (height.saturating_sub(7) / 2).clamp(4, 16)
     } else {
-        height.saturating_sub(14).clamp(4, 12)
+        height.saturating_sub(4).clamp(4, 24)
     }
 }
 
 /// Whether a page `height` rows tall shows money and research stacked: both charts (a summary,
-/// four bars and an axis each) and the heatmap fit without scrolling.
+/// at least five rows of bars and an axis each) fit without scrolling.
 pub(super) fn stacked(height: usize) -> bool {
-    height >= 25
+    height >= 17
 }
 
 /// The History tab for a body `width` columns by `height` rows (taller pages scroll).
@@ -62,7 +60,7 @@ pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
     let mut spans: Vec<Span> = Vec::new();
     let mut col = 0;
     for (i, r) in Range::ALL.iter().enumerate() {
-        let name = if short { ["Min", "Hrs", "Day", "Wk"][i] } else { r.name() };
+        let name = if short { ["Sec", "Min", "Hrs", "Day"][i] } else { r.name() };
         let label = format!(" {name} ");
         let st = if *r == range { Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD) } else { Style::new().fg(Color::Gray) };
         page.hits.push((0, col, label.chars().count(), StatsHit::Range(*r)));
@@ -84,11 +82,6 @@ pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
             page.lines.push(Line::raw(""));
         }
     }
-    page.lines.push(Line::raw(""));
-
-    // The heatmap.
-    let days = h.series(Range::Days, now, off);
-    heatmap(&mut page, app, &days, now, off, width, research);
     page
 }
 
@@ -352,126 +345,4 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, xs: &[usize]) -> Line<'st
     }
     let text: String = row.into_iter().collect();
     Line::styled(format!("{}{}", " ".repeat(lw + 1), text.trim_end()), dim)
-}
-
-/// The weekday rows by week columns, with month labels, a legend and the picked day.
-fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, width: usize, research: bool) {
-    let dim = Style::new().fg(Color::DarkGray);
-    let today = hist::day_of(now, off);
-    let margin = if width >= 36 { 4 } else { 2 };
-    let room = width.saturating_sub(margin);
-    let cw = if room >= WEEKS as usize * 2 { 2 } else { 1 };
-    let cols = (room / cw).clamp(1, WEEKS as usize);
-    // A wide pane (or a zoomed-out terminal) has room to spare: centre the grid in it.
-    let lead = room.saturating_sub(cols * cw) / 2;
-    let pad = " ".repeat(lead);
-    let this_week = hist::week_of(today);
-    let first_week = this_week + 1 - cols as u64;
-    let first_day = (first_week * 7).saturating_sub(4);
-    // The day picked can't be before the first column.
-    let max_back = (today - first_day).min(HIST_BACK as u64) as u16;
-    app.hist_day = app.hist_day.min(max_back);
-    let pick = today - app.hist_day as u64;
-    let oldest = today.saturating_sub(DAYS - 1);
-    let of = |day: u64| -> Option<&Point> { (day >= oldest && day <= today).then(|| &days[(day - oldest) as usize]) };
-
-    // Shades by how a day compares with the best one shown (square root, so one great day
-    // doesn't wash out the rest).
-    let best = (first_day..=today).filter_map(of).map(|p| val(p, research)).fold(0.0, f64::max);
-    let level = |p: &Point| -> usize {
-        if val(p, research) <= 0.0 || best <= 0.0 {
-            0
-        } else {
-            ((4.0 * (val(p, research) / best).sqrt()).ceil() as usize).clamp(1, 4)
-        }
-    };
-
-    // Month labels over the first week of each month.
-    let mut months = vec![' '; cols * cw];
-    let mut last_end = 0;
-    for j in 0..cols {
-        let (_, m, d) = civil(first_day + j as u64 * 7);
-        // A label too close to the right edge slides left to fit, if the one before it allows.
-        let at = (j * cw).min((cols * cw).saturating_sub(3));
-        if d <= 7 && at >= last_end {
-            for (k, c) in MONTHS[m as usize - 1].chars().enumerate().filter(|(k, _)| at + k < cols * cw) {
-                months[at + k] = c;
-            }
-            last_end = at + 4;
-        }
-    }
-    let months: String = months.into_iter().take(cols * cw).collect();
-    page.lines.push(Line::styled(format!("{pad}{}{}", " ".repeat(margin), months.trim_end()), dim));
-
-    let first_row = page.lines.len();
-    for r in 0..7u64 {
-        let name = match (r, margin) {
-            (1, 4) => "Mon ",
-            (3, 4) => "Wed ",
-            (5, 4) => "Fri ",
-            (1, _) => "M ",
-            (3, _) => "W ",
-            (5, _) => "F ",
-            _ => "",
-        };
-        let mut spans = vec![Span::styled(format!("{pad}{name:<margin$}"), dim)];
-        for j in 0..cols {
-            let day = first_day + j as u64 * 7 + r;
-            if day > today {
-                spans.push(Span::raw(" ".repeat(cw)));
-                continue;
-            }
-            let mut st = Style::new();
-            let glyph = match of(day) {
-                Some(p) if p.seen => {
-                    st = st.fg(SHADES[level(p)]);
-                    "■"
-                }
-                Some(_) => {
-                    st = st.fg(FAINT);
-                    "·"
-                }
-                None => {
-                    spans.push(Span::raw(" ".repeat(cw)));
-                    continue;
-                }
-            };
-            if day == pick {
-                st = st.add_modifier(Modifier::REVERSED | Modifier::BOLD);
-            }
-            spans.push(Span::styled(glyph, st));
-            if cw == 2 {
-                spans.push(Span::raw(" "));
-            }
-            page.hits.push((first_row + r as usize, lead + margin + j * cw, cw.max(1), StatsHit::Day((today - day) as u16)));
-        }
-        page.lines.push(Line::from(spans));
-    }
-
-    // "less ■■■■■ more", under the grid's left edge.
-    let mut legend = vec![Span::raw(" ".repeat(lead + margin)), Span::styled("less ", dim)];
-    legend.extend(SHADES.iter().map(|c| Span::styled("■ ", Style::new().fg(*c))));
-    legend.push(Span::styled("more", dim));
-    if research {
-        legend.push(Span::styled(" · research", Style::new().fg(RESEARCH)));
-    }
-    page.lines.push(Line::from(legend));
-
-    // The picked day.
-    let (year, ..) = civil(pick);
-    let mut name = format!("{} {}", WEEKDAYS[weekday(pick) as usize], date_text(pick));
-    if year != civil(today).0 {
-        name += &format!(" {year}");
-    }
-    let text = match of(pick) {
-        Some(p) if p.seen => {
-            let mut t = format!("{name}: {}", signed_money(p.money));
-            if p.research > 0.0 {
-                t += &format!(" · {} research", axis_num((p.research * 10.0).round() / 10.0));
-            }
-            t
-        }
-        _ => format!("{name}: not played"),
-    };
-    page.lines.push(Line::raw(format!("{pad}{}", fit(&text, width - lead))));
 }
