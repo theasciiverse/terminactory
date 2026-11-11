@@ -5,6 +5,7 @@ mod molten;
 mod offline;
 mod others;
 mod perf;
+mod ports;
 mod saving;
 mod tunnels;
 mod waste;
@@ -1845,8 +1846,9 @@ fn cycle_to(w: &mut World, x: i32, y: i32, name: &str) {
     panic!("no recipe called {name}");
 }
 
-/// A machine facing east with a recipe, its inputs in stock, a panel beside it and a
-/// crate at its front. Runs it and returns what landed in the crate.
+/// A machine facing east with a recipe, its inputs in stock, a panel beside it, a crate at
+/// its front (products) and one at its back (waste). Runs it and returns what landed in the
+/// two crates, front first.
 fn run_machine(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Vec<Item> {
     let mut w = World::blank();
     let (x, y) = (10, 10);
@@ -1857,9 +1859,12 @@ fn run_machine(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Ve
         set_stock(&mut w, x, y, *item, *n);
     }
     w.place(0, x + mw, y, Kind::Crate, Dir::E).unwrap();
+    w.place(0, x - 1, y, Kind::Crate, Dir::W).unwrap();
     w.place(0, x, y + mh, Kind::Solar, Dir::E).unwrap();
     run(&mut w, secs);
-    crate_items(&w, 0, x + mw, y)
+    let mut out = crate_items(&w, 0, x + mw, y);
+    out.extend(crate_items(&w, 0, x - 1, y));
+    out
 }
 
 fn count(items: &[Item], it: Item) -> usize {
@@ -1999,10 +2004,13 @@ fn coke_oven_makes_coke_and_waste_with_no_fuel_or_ec() {
     let mut w = World::blank();
     w.place(0, 10, 10, Kind::CokeOven, Dir::E).unwrap();
     set_stock(&mut w, 10, 10, Item::Coal, 6);
-    w.place(0, 12, 10, Kind::Crate, Dir::E).unwrap();
+    w.place(0, 12, 10, Kind::Crate, Dir::E).unwrap(); // the coke, out the front
+    w.place(0, 9, 10, Kind::Crate, Dir::W).unwrap(); // the waste, out the back
     run(&mut w, 7); // 2 s a batch
     let out = crate_items(&w, 0, 12, 10);
-    assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (3, 3));
+    let waste = crate_items(&w, 0, 9, 10);
+    assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (3, 0));
+    assert_eq!((count(&waste, Item::Coke), count(&waste, Item::Waste)), (0, 3));
     assert_eq!(w.econ.used[Item::Coal.idx()], 6);
     assert_eq!(Kind::CokeOven.recipes().len(), 1);
 }
@@ -2339,7 +2347,7 @@ fn run_powered(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Ve
 }
 
 /// A blast furnace set to `recipe`, with its stock; molten steel runs into a molder
-/// (waste into a crate beside it). Returns (steel, waste) after `secs`.
+/// (waste into a crate behind it). Returns (steel, waste) after `secs`.
 fn steel_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize) {
     let mut w = World::blank();
     w.place(0, 5, 5, Kind::BlastFurnace, Dir::E).unwrap(); // covers 5-6, 5-6: front is x=7
@@ -2347,7 +2355,7 @@ fn steel_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize)
     for (item, n) in stock {
         set_stock(&mut w, 5, 5, *item, *n);
     }
-    w.place(0, 7, 5, Kind::Crate, Dir::E).unwrap(); // the waste
+    w.place(0, 4, 5, Kind::Crate, Dir::W).unwrap(); // the waste, out the back
     w.place(0, 7, 6, Kind::Molder, Dir::E).unwrap(); // covers 7-8, 6-7, on the furnace's other front tile
     pick_recipe(&mut w, 7, 6, "steel");
     w.place(0, 9, 6, Kind::Crate, Dir::E).unwrap(); // the steel
@@ -2355,7 +2363,7 @@ fn steel_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize)
     run(&mut w, secs);
     (
         crate_items(&w, 0, 9, 6).iter().filter(|i| **i == Item::Steel).count(),
-        crate_items(&w, 0, 7, 5).iter().filter(|i| **i == Item::Waste).count(),
+        crate_items(&w, 0, 4, 5).iter().filter(|i| **i == Item::Waste).count(),
     )
 }
 
@@ -2468,15 +2476,18 @@ fn every_item_recipe_runs_in_its_machine() {
             }
             let front = x + kind.dims(Dir::E).0;
             w.place(0, front, y, Kind::Crate, Dir::E).unwrap();
-            // Just short of the recipe's time nothing has come out; shortly after, it all has.
+            w.place(0, x - 1, y, Kind::Crate, Dir::W).unwrap(); // waste leaves by the back
+                                                                // Just short of the recipe's time nothing has come out; shortly after, it all has.
             for _ in 0..r.ticks - 3 {
                 w.tick();
             }
             assert!(crate_items(&w, 0, front, y).is_empty(), "{kind:?} {} early", r.name);
+            assert!(crate_items(&w, 0, x - 1, y).is_empty(), "{kind:?} {} early", r.name);
             for _ in 0..13 {
                 w.tick();
             }
-            let out = crate_items(&w, 0, front, y);
+            let mut out = crate_items(&w, 0, front, y);
+            out.extend(crate_items(&w, 0, x - 1, y));
             for (it, n) in r.outputs {
                 assert_eq!(count(&out, *it) as u32, n * batch, "{kind:?} {}: {out:?}", r.name);
             }

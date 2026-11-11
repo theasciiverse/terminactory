@@ -2544,17 +2544,19 @@ impl World {
         }
     }
 
-    /// A full building says EC? when everything in front of it is a belt with no power,
-    /// since that's the real reason it can't get rid of its output.
-    fn full_word(&self, f: usize, a: usize) -> &'static str {
+    /// A full building says `word` (FULL for the front, BACK for waste), or EC? when everything
+    /// along that port's edge is a belt with no power, since that's the real reason it can't
+    /// get rid of its output.
+    fn full_word(&self, f: usize, a: usize, port: Port, word: &'static str) -> &'static str {
         let Some(b) = self.floors[f].tiles[a].as_ref() else {
-            return "FULL";
+            return word;
         };
         let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
         let dims = b.dims();
+        let edge = port.edge(b.dir);
         let mut belts = 0;
-        for j in 0..edge_len(dims, b.dir) {
-            let (tx, ty) = front_tile(ax, ay, dims, b.dir, j);
+        for j in 0..edge_len(dims, edge) {
+            let (tx, ty) = front_tile(ax, ay, dims, edge, j);
             if !in_bounds(tx, ty) {
                 continue;
             }
@@ -2564,18 +2566,18 @@ impl World {
             match self.floors[f].tiles[o as usize].as_ref() {
                 Some(nb) if nb.kind.is_belt() => {
                     if self.building_ratio(f, o as usize) > 0.0 {
-                        return "FULL";
+                        return word;
                     }
                     belts += 1;
                 }
-                Some(_) => return "FULL",
+                Some(_) => return word,
                 None => {}
             }
         }
         if belts > 0 {
             "EC?"
         } else {
-            "FULL"
+            word
         }
     }
 
@@ -2608,7 +2610,7 @@ impl World {
                 if mines.is_none() {
                     Some("ORE?")
                 } else if out.len() >= b.kind.drill_out_cap() {
-                    Some(self.full_word(f, a))
+                    Some(self.full_word(f, a, Port::Front, "FULL"))
                 } else if b.kind.burns_coal() && *fuel == 0 && *coal == 0 && *mines != Some(Item::Coal) {
                     Some("COAL")
                 } else if !b.kind.burns_coal() && !powered {
@@ -2620,10 +2622,13 @@ impl World {
             St::Crafter { busy: false, stock, fuel, out, fluid, fluid_out, .. } => {
                 let r = b.recipe()?;
                 let batch = b.kind.batch();
-                let made: usize = r.outputs.iter().map(|o| (o.1 * batch) as usize).sum();
                 let fluid_full = r.fluid_out.is_some_and(|(_, n)| *fluid_out + n * batch > fluid_out_cap(n * batch));
-                if out.len() + made > b.kind.out_cap() || fluid_full {
-                    Some(self.full_word(f, a))
+                let (products_fit, waste_fits) = outputs_fit(r, batch, out, b.kind.out_cap());
+                if !products_fit || fluid_full {
+                    Some(self.full_word(f, a, Port::Front, "FULL"))
+                } else if !waste_fits {
+                    // Waste leaves by the back: nothing there takes it.
+                    Some(self.full_word(f, a, Port::Back, "BACK"))
                 } else if !r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) {
                     // A kiln is still loading its batch.
                     Some(if batch > 1 { "LOAD" } else { "NEED" })
@@ -2811,10 +2816,9 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             }
             // A batch machine (the kiln) waits until it holds the inputs for every run, then fires them all.
             let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) && r.fluid_in.is_none_or(|(_, n)| *fluid >= n * batch);
-            let made: usize = r.outputs.iter().map(|o| (o.1 * batch) as usize).sum();
-            // Both outputs need room: items and fluid.
-            let room =
-                out.len() + made <= kind.out_cap() && r.fluid_out.is_none_or(|(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
+            // Every output needs room: products (out the front), waste (out the back) and fluid.
+            let (products_fit, waste_fits) = outputs_fit(r, batch, out, kind.out_cap());
+            let room = products_fit && waste_fits && r.fluid_out.is_none_or(|(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
             if have && room {
                 let speed = match r.fuel {
                     Some(f) => {
@@ -2860,7 +2864,8 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             if let (Some((fl, _)), true) = (r.fluid_out, *fluid_out > 0) {
                 *fluid_out -= push_fluid(tiles, owner, pipe_pool, pools, x, y, dims, dir, fl, *fluid_out);
             }
-            push_front(tiles, owner, econ, x, y, dims, dir, out, rr);
+            push_port(tiles, owner, econ, x, y, dims, dir, Port::Front, out, rr);
+            push_port(tiles, owner, econ, x, y, dims, dir, Port::Back, out, rr);
         }
         St::Pump { busy } => {
             *busy = false;
@@ -3025,18 +3030,106 @@ fn push_front(
     q: &mut VecDeque<Item>,
     rr: &mut u8,
 ) -> bool {
-    let Some(&item) = q.front() else { return false };
-    let n = edge_len(dims, dir);
+    push_edge(tiles, owner, econ, ax, ay, dims, dir, q, rr, |_| true)
+}
+
+/// Which edge of a machine an output leaves by. Every machine pushes its products out the
+/// front and its waste out the back, the edge facing away from the arrow. A second fluid
+/// output would take `Port::Back` the same way: `push_fluid` already takes the edge to use,
+/// so pass it `Port::Back.edge(dir)`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Port {
+    Front,
+    Back,
+}
+
+impl Port {
+    /// The side of a machine facing `dir` that this port is on.
+    fn edge(self, dir: Dir) -> Dir {
+        match self {
+            Port::Front => dir,
+            Port::Back => dir.opposite(),
+        }
+    }
+    /// Whether an item leaves by this port.
+    fn takes(self, item: Item) -> bool {
+        (item == Item::Waste) == (self == Port::Back)
+    }
+    /// Where this port keeps its round-robin spot in a building's `rr` (a nibble each).
+    fn shift(self) -> u8 {
+        match self {
+            Port::Front => 0,
+            Port::Back => 4,
+        }
+    }
+}
+
+/// Pushes the first item in `q` that leaves by `port` out of that edge, taking turns between
+/// the spots along it. A machine's queue holds products and waste together; each port only
+/// ever sends its own, so a stuck waste item never holds up the products.
+#[allow(clippy::too_many_arguments)]
+fn push_port(
+    tiles: &mut [Option<Building>],
+    owner: &[Option<u32>],
+    econ: &mut Econ,
+    ax: i32,
+    ay: i32,
+    dims: (i32, i32),
+    dir: Dir,
+    port: Port,
+    q: &mut VecDeque<Item>,
+    rr: &mut u8,
+) -> bool {
+    let shift = port.shift();
+    let mut spot = (*rr >> shift) & 0xF;
+    let sent = push_edge(tiles, owner, econ, ax, ay, dims, port.edge(dir), q, &mut spot, |it| port.takes(it));
+    *rr = (*rr & !(0xF << shift)) | (spot << shift);
+    sent
+}
+
+/// Sends the first item of `q` that `pick` accepts out of `edge`, onto a belt or into the
+/// building there. Takes turns between the spots along the edge.
+#[allow(clippy::too_many_arguments)]
+fn push_edge(
+    tiles: &mut [Option<Building>],
+    owner: &[Option<u32>],
+    econ: &mut Econ,
+    ax: i32,
+    ay: i32,
+    dims: (i32, i32),
+    edge: Dir,
+    q: &mut VecDeque<Item>,
+    rr: &mut u8,
+    pick: impl Fn(Item) -> bool,
+) -> bool {
+    let Some(at) = q.iter().position(|it| pick(*it)) else { return false };
+    let item = q[at];
+    let n = edge_len(dims, edge);
     for k in 0..n {
         let j = (*rr as i32 + k) % n;
-        let (tx, ty) = front_tile(ax, ay, dims, dir, j);
-        if try_insert(tiles, owner, econ, tx, ty, item, dir) {
-            q.pop_front();
+        let (tx, ty) = front_tile(ax, ay, dims, edge, j);
+        if try_insert(tiles, owner, econ, tx, ty, item, edge) {
+            q.remove(at);
             *rr = ((j + 1) % n) as u8;
             return true;
         }
     }
     false
+}
+
+/// Whether a machine's queue has room for one more run (or batch) of the recipe's items,
+/// as (products fit, waste fits). Products and waste each get the machine's whole `cap`,
+/// so a blocked back stops it only once the waste fills up, and a blocked front only
+/// once the products do.
+fn outputs_fit(r: &Recipe, batch: u32, out: &VecDeque<Item>, cap: usize) -> (bool, bool) {
+    let (held_waste, held_products) = split_waste(out.iter().copied());
+    let (made_waste, made_products) = split_waste(r.outputs.iter().flat_map(|(it, n)| std::iter::repeat_n(*it, (*n * batch) as usize)));
+    (held_products + made_products <= cap, held_waste + made_waste <= cap)
+}
+
+/// How many of these items are waste, and how many are not.
+fn split_waste(items: impl Iterator<Item = Item>) -> (usize, usize) {
+    items.fold((0, 0), |(w, p), it| if it == Item::Waste { (w + 1, p) } else { (w, p + 1) })
 }
 
 /// How much of its input fluid a machine keeps on hand (whole units).

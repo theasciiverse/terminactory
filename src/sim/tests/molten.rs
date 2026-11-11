@@ -176,9 +176,9 @@ fn a_kiln_batch_multiplies_every_output_by_eight() {
     run(&mut w, 8);
     assert_eq!((w.econ.made[Item::Brick.idx()], w.econ.made[Item::Waste.idx()]), (8, 8));
     assert_eq!(out_len(&w, 5, 5), 16);
-    // The batch needs room for all sixteen at once: with 65 waiting, 65 + 16 is over the cap of 80.
+    // The batch needs room for all eight bricks at once: with 73 waiting, 73 + 8 is over the cap of 80.
     if let Some(Building { st: St::Crafter { out, .. }, .. }) = w.floors[0].tiles[idx(5, 5)].as_mut() {
-        out.extend(std::iter::repeat_n(Item::Brick, 49));
+        out.extend(std::iter::repeat_n(Item::Brick, 65));
     }
     set_stock(&mut w, 5, 5, Item::Stone, 16);
     run(&mut w, 8);
