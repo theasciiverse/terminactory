@@ -1621,7 +1621,7 @@ fn grouped(v: f64) -> String {
 }
 
 /// One row on the research screen: a mark, the name, and what it costs or needs.
-fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool) -> Vec<Span<'static>> {
+fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bool) -> Vec<Span<'static>> {
     let rp = w.econ.research;
     let dim = Style::new().fg(Color::DarkGray);
     let ready = Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD);
@@ -1638,7 +1638,13 @@ fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool) -> Vec<Span<'s
         ("○", Style::new(), Span::styled(format!("{} RP", grouped(t.cost())), saving))
     };
     let mark_st = if mark == "●" { ready } else { ns };
-    let name = format!("{:<name_w$}", t.name().chars().take(name_w).collect::<String>());
+    let name = format!("{:<name_w$}", fit(t.name(), name_w));
+    if very_short {
+        // A fixed status column: the full "needs X" is in the details under the list.
+        let text = if status.content.starts_with("needs") { "needs".to_string() } else { status.content.to_string() };
+        let status = Span::styled(format!("{text:>8}"), status.style);
+        return vec![Span::styled(format!("{mark} "), mark_st), Span::styled(name, ns), status];
+    }
     vec![Span::styled(format!("{mark} "), mark_st), Span::styled(name, ns), status]
 }
 
@@ -1694,9 +1700,18 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     let rows = tree_rows();
     let pick = app.tree_pick.min(rows.len() - 1);
     app.tree_pick = pick;
+    // In a short pane the details are three lines (title, about, status) so the list keeps its room.
+    let short_pane = r.height < 24;
     let details: Vec<(String, Style)> = tree_details(&app.world, rows[pick])
         .into_iter()
-        .flat_map(|(text, st)| wrap_words(&text, width.max(10) as usize).into_iter().map(move |l| (l, st)))
+        .flat_map(|(text, st)| {
+            let mut wrapped = wrap_words(&text, width.max(10) as usize);
+            if short_pane {
+                wrapped.truncate(1);
+                wrapped[0] = fit(&wrapped[0], width as usize);
+            }
+            wrapped.into_iter().map(move |l| (l, st))
+        })
         .collect();
 
     // The list: group names in a left gutter when there's room, or as their own dim lines.
@@ -1732,8 +1747,19 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     let top = if lines.len() <= view { 0 } else { (at + 2).saturating_sub(view).min(lines.len() - view) };
     // Names are never cut (some are long); narrow rows say "needs X" instead of "make X first".
     let room = (width - gutter) as usize;
-    let name_w = room.saturating_sub(22).clamp(14, 22);
     let short = room < 52;
+    let very_short = room < 46;
+    let name_w = if very_short { room.saturating_sub(10).max(8) } else { room.saturating_sub(22).clamp(14, 22) };
+    // With no gutter the group's label may be scrolled off: the picked row carries it as a tag.
+    let mut before = 0;
+    let mut pick_group = None;
+    for (label, n) in &groups {
+        if pick < before + n {
+            pick_group = Some(*label);
+            break;
+        }
+        before += n;
+    }
     app.tree_rows.clear();
     for (n, (label, row)) in lines.iter().enumerate().skip(top).take(view) {
         let ly = y + (n - top) as u16;
@@ -1744,11 +1770,19 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
             spans.push(Span::styled(label.unwrap_or("").to_string(), dim));
         }
         if let Some(i) = row {
-            let mut rs = tree_row_spans(&app.world, rows[*i], name_w, short);
+            let mut rs = tree_row_spans(&app.world, rows[*i], name_w, short, very_short);
             if *i == pick {
                 // The picked row: one even band across the row, colours kept.
                 let used: usize = rs.iter().map(|s| s.content.chars().count()).sum();
-                rs.push(Span::raw(" ".repeat((width - gutter) as usize - used.min((width - gutter) as usize))));
+                let free = (width - gutter) as usize - used.min((width - gutter) as usize);
+                match pick_group.filter(|g| gutter == 0 && free > g.chars().count() + 1) {
+                    Some(g) => {
+                        rs.push(Span::raw(" ".repeat(free - g.chars().count() - 1)));
+                        rs.push(Span::styled(g.to_string(), dim));
+                        rs.push(Span::raw(" "));
+                    }
+                    None => rs.push(Span::raw(" ".repeat(free))),
+                }
                 for s in rs.iter_mut() {
                     s.style = s.style.bg(Color::Indexed(238));
                 }
