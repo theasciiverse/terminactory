@@ -3,6 +3,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
 mod history_tab;
+mod settings_effects;
 mod settings_pane;
 mod sidebar_graph;
 mod small_pane;

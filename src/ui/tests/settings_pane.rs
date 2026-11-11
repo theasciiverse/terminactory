@@ -70,10 +70,15 @@ fn keys_move_between_rows_and_change_values() {
     key(&mut app, KeyCode::Right);
     assert_eq!(app.settings.sidebar_graph_range, GraphRange::Hours);
     press(&mut app, 'j');
-    assert_eq!(app.settings_pick, 0);
+    assert_eq!(app.settings_pick, 2);
     press(&mut app, 'k');
     assert_eq!(app.settings_pick, 1);
     key(&mut app, KeyCode::Up);
+    assert_eq!(app.settings_pick, 0);
+    // The ends wrap.
+    key(&mut app, KeyCode::Up);
+    assert_eq!(app.settings_pick, crate::settings::ROWS.len() - 1);
+    key(&mut app, KeyCode::Down);
     assert_eq!(app.settings_pick, 0);
     // The map isn't moved by the arrows meanwhile.
     let cursor = app.cursor;

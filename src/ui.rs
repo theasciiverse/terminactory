@@ -38,10 +38,14 @@ const RESEARCH_DIM: Color = Color::Indexed(67);
 /// Below this size the game switches to the small-pane view on its own.
 pub const SMALL_W: u16 = 120;
 pub const SMALL_H: u16 = 30;
+/// The full view needs the sidebar and ten columns of map, and a dozen rows. Smaller than this
+/// it can't draw, so even "Never" (small-pane view) falls back to the compact view.
+pub const FULL_MIN_W: u16 = SIDE_W + 10;
+pub const FULL_MIN_H: u16 = 12;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
-    let compact = app.compact.unwrap_or(area.width < SMALL_W || area.height < SMALL_H);
+    let compact = app.compact.unwrap_or_else(|| app.settings.small_pane(area.width, area.height));
     app.compact_now = compact;
     let [top, mid, bottom] = Layout::vertical([Constraint::Length(1), Constraint::Min(1), Constraint::Length(1)]).areas(area);
     if compact {
