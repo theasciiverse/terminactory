@@ -12,8 +12,11 @@ use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
+mod blueprint;
 mod serde_util;
 mod tools;
+#[allow(unused_imports)]
+pub use blueprint::{Blueprint, BpPart, PartSetting, PastePlan, PasteReport, PlanState, BP_FORMAT};
 use serde_util::{de_set, ser_set};
 pub use serde_util::{PerFluid, PerItem};
 pub use tools::{rect_of, rect_size, Removed, TileRect};

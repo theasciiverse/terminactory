@@ -2,6 +2,7 @@ use super::*;
 
 mod area;
 mod batch;
+mod blueprints;
 mod boiler;
 mod elevators;
 mod keys;
