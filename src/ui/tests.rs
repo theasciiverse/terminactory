@@ -650,7 +650,7 @@ fn later_machines_have_book_pages() {
     for (k, wants) in [
         (
             Kind::PrecisionAssembler,
-            vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4000 · 3x3", "64 EC"],
+            vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4,000 · 3x3", "64 EC"],
         ),
         (
             Kind::AdvancedAssembler,

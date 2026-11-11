@@ -1409,6 +1409,79 @@ fn centered(area: Rect, w: u16, h: u16) -> Rect {
     Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h)
 }
 
+/// Cuts `text` to `width` columns, at a word boundary when that keeps most of it, and ends
+/// it with "…" so a clipped message never looks like a whole one.
+fn fit(text: &str, width: usize) -> String {
+    if text.chars().count() <= width {
+        return text.to_string();
+    }
+    match width {
+        0 => return String::new(),
+        1 => return "…".into(),
+        _ => {}
+    }
+    let cut: String = text.chars().take(width - 1).collect();
+    let at_word_end = text.chars().nth(width - 1) == Some(' ');
+    let keep = match cut.rfind(' ') {
+        Some(i) if !at_word_end && cut[..i].chars().count() * 2 >= width => &cut[..i],
+        _ => cut.as_str(),
+    };
+    format!("{}…", keep.trim_end_matches([' ', ',', ':', ';', '-', '·']))
+}
+
+/// One row of key hints for the bottom of a box. `hints` are (priority, text), a lower
+/// priority number being more important: hints are added in that order while they fit
+/// (shown in the order given, joined with " · "), so the least important ones go first.
+/// `more` ("more ▲▼") is right-aligned and never overlaps a hint.
+fn footer_line(width: u16, hints: &[(u8, &str)], more: Option<&str>) -> Line<'static> {
+    let width = width as usize;
+    let more = more.map(|m| fit(m, width));
+    let more_w = more.as_ref().map_or(0, |m| m.chars().count() + 1);
+    let room = width.saturating_sub(more_w);
+    let mut order: Vec<usize> = (0..hints.len()).collect();
+    order.sort_by_key(|&i| hints[i].0);
+    let mut chosen = vec![false; hints.len()];
+    let mut used = 0;
+    let mut count = 0;
+    for i in order {
+        let add = hints[i].1.chars().count() + if count > 0 { 3 } else { 0 };
+        if used + add <= room {
+            chosen[i] = true;
+            used += add;
+            count += 1;
+        }
+    }
+    let mut text = hints.iter().zip(&chosen).filter(|(_, c)| **c).map(|(h, _)| h.1).collect::<Vec<_>>().join(" · ");
+    if count == 0 {
+        // Not even the most important one fits whole: cut it.
+        if let Some(first) = hints.iter().min_by_key(|h| h.0) {
+            text = fit(first.1, room);
+        }
+    }
+    let dim = Style::new().fg(Color::DarkGray);
+    let pad = room.saturating_sub(text.chars().count());
+    let mut spans = vec![Span::styled(text, dim), Span::raw(" ".repeat(pad))];
+    if let Some(m) = more {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(m, Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD)));
+    }
+    Line::from(spans)
+}
+
+/// Money for a tight line: "$1,234" up to 99,999, then "$123k" and "$1.2M".
+fn short_money(v: f64) -> String {
+    let v = v.round();
+    if v < 100_000.0 {
+        format!("${}", grouped(v))
+    } else if v < 1_000_000.0 {
+        format!("${:.0}k", v / 1e3)
+    } else if v < 100_000_000.0 {
+        format!("${:.1}M", v / 1e6)
+    } else {
+        format!("${:.0}M", v / 1e6)
+    }
+}
+
 /// "$1,234" or "-$56".
 fn signed_money(v: f64) -> String {
     if v < -0.5 {
@@ -1516,14 +1589,21 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
             lines.push(Line::styled("Waste costs money to sell (shown negative) and earns no research.", dim));
         }
     }
-    let footer = format!("↑↓ scroll · {} or Esc close · the game keeps running", app.controls.key(Action::Stats));
     let body_h = inner.height.saturating_sub(1);
     let max_scroll = (lines.len() as u16).saturating_sub(body_h);
     app.stats_scroll = app.stats_scroll.min(max_scroll);
     let body = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), body_h);
     f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).scroll((app.stats_scroll, 0)), body);
     let foot = Rect::new(inner.x + 1, inner.y + inner.height - 1, inner.width.saturating_sub(2), 1);
-    f.render_widget(Paragraph::new(Span::styled(footer, dim)), foot);
+    let close = format!("{}/Esc close", app.controls.key(Action::Stats));
+    let more = match (app.stats_scroll > 0, app.stats_scroll < max_scroll) {
+        (true, true) => Some("more ▲▼"),
+        (true, false) => Some("more ▲"),
+        (false, true) => Some("more ▼"),
+        _ => None,
+    };
+    let hints = [(1, "↑↓ scroll"), (0, close.as_str()), (2, "the game keeps running")];
+    f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
 }
 
 /// A whole number with thousands marks: 17,687.
@@ -1691,24 +1771,15 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Footer: keys, and which way the list goes on.
-    let c = &app.controls;
-    let keys = format!("↑↓ pick · Enter research · {} close", c.key(Action::Tree));
-    line(f, footer_y, vec![Span::styled(keys, dim)]);
-    let mut more = Vec::new();
-    if top > 0 {
-        more.push("▲");
-    }
-    if top + view < lines.len() {
-        more.push("▼");
-    }
-    if !more.is_empty() {
-        let text = format!("more {}", more.join(" "));
-        let tw = text.chars().count() as u16;
-        f.render_widget(
-            Paragraph::new(Span::styled(text, Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD))),
-            Rect::new(x0 + width.saturating_sub(tw), footer_y, tw.min(width), 1),
-        );
-    }
+    let close = format!("{}/Esc close", app.controls.key(Action::Tree));
+    let more = match (top > 0, top + view < lines.len()) {
+        (true, true) => Some("more ▲▼"),
+        (true, false) => Some("more ▲"),
+        (false, true) => Some("more ▼"),
+        _ => None,
+    };
+    let hints = [(2, "↑↓ pick"), (1, "Enter research"), (0, close.as_str())];
+    f.render_widget(Paragraph::new(footer_line(width, &hints, more)), Rect::new(x0, footer_y, width, 1));
 }
 
 /// Machines that craft, in the order the book lists them.
@@ -2077,7 +2148,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let (kw, kh) = k.base_dims();
             let from = k.company().map_or(String::new(), |c| format!(" · from {}", c.name()));
             title.push(seg(format!(" {}", k.name()), Style::new().add_modifier(Modifier::BOLD)));
-            title.push(seg(format!("   ${:.0} · {kw}x{kh}{from}", k.cost()), dim));
+            title.push(seg(format!("   ${} · {kw}x{kh}{from}", grouped(k.cost())), dim));
             out.push(title);
             out.push(vec![]);
 
@@ -2098,7 +2169,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 }
                 if let Some(t) = k.tech().filter(|t| !w.progress.has(*t)) {
                     let (item, n) = t.milestone();
-                    segs.push(seg(format!("research {} ({:.0}R) or make {n} ", t.name(), t.cost()), warn));
+                    segs.push(seg(format!("research {} ({} RP) or make {n} ", t.name(), grouped(t.cost())), warn));
                     segs.push(link(Entry::Item(item), e));
                     segs.push(seg(format!(" ({}/{n})", w.econ.made[item.idx()].min(n)), warn));
                 }
@@ -2292,7 +2363,8 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     // Rows: the tabs, the grid, a rule, the page, the footer.
     let avail = body.height as usize - 1;
     let grid_rows = list.len().div_ceil(cols).max(1);
-    let gh = grid_rows.min(avail.saturating_sub(7).max(1));
+    // The grid takes at most 40% of the rows, so the page (the point of the screen) gets the rest.
+    let gh = grid_rows.min(avail.saturating_sub(7).min((avail * 2 / 5).max(3)).max(1));
     let gtop = (sel / cols + 1).saturating_sub(gh);
     let buf = f.buffer_mut();
     let mut y = body.y;
@@ -2347,7 +2419,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
                 st = Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD);
             }
             buf.set_string(x, y, glyph.to_string(), gst);
-            buf.set_stringn(x + 1, y, format!(" {:<w$}", e.name(), w = CELL - 3), CELL - 2, st);
+            buf.set_stringn(x + 1, y, format!(" {:<w$}", fit(e.name(), CELL - 3), w = CELL - 3), CELL - 2, st);
             app.book_cells.push((Rect::new(x, y, CELL as u16 - 1, 1), e));
             x += CELL as u16;
         }
@@ -2377,28 +2449,30 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Footer: keys, and where there's more.
     let foot = Rect { y: body.y + avail as u16, height: 1, ..body };
-    let key = app.controls.key(Action::Book);
-    let back = if app.book_back.is_empty() { "" } else { " · Bksp back" };
-    let keys = if app.book_typing {
-        "type to search · Enter done · Esc stop".to_string()
+    let close = format!("{}/Esc close", app.controls.key(Action::Book));
+    let wide = body.width >= 72;
+    let line = if app.book_typing {
+        footer_line(body.width, &[(1, "type to search"), (0, "Enter done"), (2, "Esc stop")], None)
     } else {
-        format!("arrows pick · Tab items/machines · / search · click a link{back} · {key} close")
+        let tab = if wide { "Tab items/machines" } else { "Tab" };
+        let back = if app.book_back.is_empty() { None } else { Some((4, "Bksp back")) };
+        let hints: Vec<(u8, &str)> =
+            [Some((3, "↑↓ pick")), Some((2, tab)), Some((1, "/ search")), back, Some((5, "click a link")), Some((0, close.as_str()))]
+                .into_iter()
+                .flatten()
+                .collect();
+        let list = gtop > 0 || gtop + gh < grid_rows;
+        let page = if app.book_scroll < max_scroll { "▼" } else { "▲" };
+        let more = match (list, max_scroll > 0) {
+            (false, false) => None,
+            _ if !wide => Some("more ▲▼".to_string()),
+            (true, false) => Some("more: list ▲▼".to_string()),
+            (false, true) => Some(format!("more: page {page}")),
+            (true, true) => Some(format!("more: list ▲▼ page {page}")),
+        };
+        footer_line(body.width, &hints, more.as_deref())
     };
-    f.render_widget(Paragraph::new(Line::styled(keys, dim)), foot);
-    let mut more = Vec::new();
-    if gtop > 0 || gtop + gh < grid_rows {
-        more.push("list ▲▼");
-    }
-    if max_scroll > 0 {
-        more.push(if app.book_scroll < max_scroll { "page ▼" } else { "page ▲" });
-    }
-    if !more.is_empty() {
-        let text = format!("more: {}", more.join(" "));
-        f.render_widget(
-            Paragraph::new(Line::styled(text, Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD))).alignment(Alignment::Right),
-            foot,
-        );
-    }
+    f.render_widget(Paragraph::new(line), foot);
 }
 
 /// Splits text into lines of at most `width` characters, at spaces.
