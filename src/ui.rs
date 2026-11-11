@@ -32,6 +32,8 @@ const PAPER: Color = Color::Indexed(231);
 const KEY_ITEM: Color = Color::Indexed(220);
 /// Research, wherever it's shown: a sky blue that reads on dark and light terminals alike.
 const RESEARCH: Color = Color::Indexed(75);
+/// Research that is out of reach or nothing yet: the same blue, softer, still readable.
+const RESEARCH_DIM: Color = Color::Indexed(67);
 
 /// Below this size the game switches to the small-pane view on its own.
 pub const SMALL_W: u16 = 120;
@@ -174,7 +176,7 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
         Span::raw(" "),
         Span::styled(format!(" {}", signed_money(w.econ.money)), Style::new().fg(Color::Green).add_modifier(bold)),
         Span::raw("   "),
-        Span::styled(format!("Research {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold)),
+        Span::styled(format!("Research {:.1}", w.econ.research), Style::new().fg(RESEARCH).add_modifier(bold)),
         Span::raw("   "),
     ];
     spans.extend(power_spans(app, "EC "));
@@ -227,7 +229,7 @@ fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
     if unpowered > 0 {
         parts.push((5, vec![Span::styled(format!(" {unpowered} no EC"), warn)]));
     }
-    parts.push((6, vec![Span::styled(format!(" R {:.1}", w.econ.research), Style::new().fg(Color::LightBlue).add_modifier(bold))]));
+    parts.push((6, vec![Span::styled(format!(" R {:.1}", w.econ.research), Style::new().fg(RESEARCH).add_modifier(bold))]));
     let (idle, why) = w.idle_summary();
     if idle > 0 {
         parts.push((7, vec![Span::styled(format!(" {idle} idle"), warn)]));
@@ -1839,7 +1841,12 @@ fn production_lines(w: &World, rows: &mut [Flow], width: usize) -> Vec<Line<'sta
             Style::new().fg(if money < 0.0 { Color::Red } else { Color::Green }).add_modifier(Modifier::BOLD),
         ),
         Span::styled("  ·  ", dim),
-        Span::styled(format!("{} research/min", rate(research)), Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD)),
+        // No research selling is a real "0", not a bare dot that reads like a second separator.
+        if research < 0.05 {
+            Span::styled("0 research/min", Style::new().fg(RESEARCH_DIM))
+        } else {
+            Span::styled(format!("{} research/min", rate(research)), Style::new().fg(RESEARCH).add_modifier(Modifier::BOLD))
+        },
     ])];
     lines.push(Line::raw(""));
     if rows.is_empty() {
@@ -1872,7 +1879,7 @@ fn production_lines(w: &World, rows: &mut [Flow], width: usize) -> Vec<Line<'sta
                         m if m < -0.05 => (format!("-${}", rate(-m)), Style::new().fg(Color::Red)),
                         _ => ("·".into(), Style::new()),
                     },
-                    "research" => (rate(r.research), Style::new().fg(Color::LightBlue)),
+                    "research" => (rate(r.research), Style::new().fg(RESEARCH)),
                     _ => {
                         // What the next sale for research would bring: it fades the more you sell.
                         if r.item == Item::Waste {
@@ -1922,8 +1929,8 @@ fn grouped(v: f64) -> String {
 fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bool) -> Vec<Span<'static>> {
     let rp = w.econ.research;
     let dim = Style::new().fg(Color::DarkGray);
-    let ready = Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD);
-    let saving = Style::new().fg(Color::Blue);
+    let ready = Style::new().fg(RESEARCH).add_modifier(Modifier::BOLD);
+    let saving = Style::new().fg(RESEARCH_DIM);
     let done = Style::new().fg(Color::Green);
     let (mark, ns, status) = if w.progress.has(t) {
         ("✓", done, Span::styled("done", dim))
@@ -1949,7 +1956,7 @@ fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bo
 /// What the picked row does, in full, for under the list.
 fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-    let note = Style::new().fg(Color::LightBlue);
+    let note = Style::new().fg(RESEARCH);
     let rp = grouped(w.econ.research);
     let (item, n) = t.milestone();
     let made = w.econ.made[item.idx()].min(n);
@@ -1990,7 +1997,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 
     // The points, on the right of the top line.
     let points = format!("{} research", grouped(app.world.econ.research));
-    let pts_st = Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD);
+    let pts_st = Style::new().fg(RESEARCH).add_modifier(Modifier::BOLD);
     line(f, y, vec![Span::styled(points, pts_st)]);
     y += if r.height < 16 { 1 } else { 2 };
 
@@ -3027,7 +3034,7 @@ CONTROLS
   EC range ..... v                   Floors ....... < >
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
-  Production ... o (the last minute, per item; the game keeps running)
+  Production ... o (last minute per item; Tab: earnings history)
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
   Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,

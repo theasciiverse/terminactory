@@ -144,6 +144,10 @@ Every key item can be made with machines from companies that open before it, so 
 - **Links:** blue names are links: click one to go there, and Backspace goes back.
 - **Search:** `/` filters the list as you type; Enter stops typing, Esc clears it.
 
+## Production and history
+
+The production panel (`o`) has two tabs, switched with `Tab` (or a click): **Production** shows the last minute per item, and **History** charts what you have earned. The chart shows money (or research, with `r`) per minute, hour, day or week: pick the range with `1`-`4` or `[` `]`. Below it is a GitHub-style heatmap of daily earnings for up to 53 weeks (fewer in a narrow pane): the arrow keys (or a click) pick a day and its earnings are written underneath. Days are your local calendar days; company deliveries are not counted as earnings, and what the factory earns while the game is closed is counted in the hour and day you come back. The game keeps running underneath.
+
 ## Agent telegrams
 
 Your AI agents can message you inside the game. Each message shows up as a telegram (Markdown rendered: headings, lists, checkboxes, quotes, code, tables, **bold**, `code`). Every few minutes a company sends a small delivery with one: about a minute of your factory's earnings.

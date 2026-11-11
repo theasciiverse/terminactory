@@ -327,6 +327,40 @@ fn production_panel() {
     assert!(!app.stats && app.tree);
 }
 
+/// Research reads in a sky blue (not the dark blue of the 16-colour palette, which is nearly
+/// invisible on dark terminals), and a minute with no research says 0 instead of a lone dot.
+#[test]
+fn research_is_readable_in_the_production_panel() {
+    let dark_blues = [Color::Blue, Color::LightBlue, Color::Indexed(4), Color::Indexed(12)];
+    let mut selling = World::new();
+    selling.build_demo().unwrap();
+    for _ in 0..TPS * 70 {
+        selling.tick();
+    }
+    // A brand-new world has sold nothing, for research or money.
+    for (world, zero) in [(selling, false), (World::new(), true)] {
+        let mut app = App::new(world);
+        app.stats = true;
+        let buf = render(&mut app, 130, 42);
+        let t = text(&buf);
+        let head = t.lines().nth(3).unwrap();
+        assert!(head.contains("research/min"), "{head}");
+        if zero {
+            assert!(head.contains("0 research/min") && !head.contains("·  ·"), "{head}");
+        }
+        // No cell of the panel or the status bar is dark blue.
+        for y in 0..buf.area.height {
+            for x in 0..buf.area.width {
+                let c = buf.cell((x, y)).unwrap();
+                assert!(!dark_blues.contains(&c.fg), "dark blue text at {x},{y} ({:?}): {t}", c.symbol());
+            }
+        }
+        // The words "research/min" use the research colour.
+        let col = head.find("research/min").map(|i| head[..i].chars().count()).unwrap();
+        assert!(matches!(buf.cell((col as u16, 3)).unwrap().fg, Color::Indexed(75) | Color::Indexed(67)));
+    }
+}
+
 /// Waste: hovering a crate of it, the production panel, and its recipe book page.
 #[test]
 fn waste_shows_up() {
