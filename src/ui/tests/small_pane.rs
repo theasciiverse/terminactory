@@ -228,7 +228,8 @@ fn edge_of_the_small_pane_view() {
 
 #[test]
 fn overlays_fit_every_pane_size() {
-    for (w, h) in [(36, 24), (44, 60), (64, 12), (64, 16), (80, 24), (99, 29), (120, 30)] {
+    // The last two are a zoomed-out terminal (Cmd -): far more cells than a normal window.
+    for (w, h) in [(36, 24), (44, 60), (64, 12), (64, 16), (80, 24), (99, 29), (120, 30), (220, 60), (300, 90)] {
         let mut app = demo();
         app.mail = Some(telegram());
         app.world.mail.push_back(telegram());

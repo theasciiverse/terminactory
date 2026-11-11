@@ -158,7 +158,8 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
     // Spread the bars over the whole width: bar i covers columns xs[i]..xs[i + 1]. With two or
     // more columns a bar, the last one is a gap; with fewer, the bars touch.
     let xs: Vec<usize> = (0..=n).map(|i| i * avail.max(n) / n.max(1)).collect();
-    let gaps = avail >= n * 2;
+    // A gap only once a bar has three columns: at two, half the chart would be gaps (a barcode).
+    let gaps = avail >= n * 3;
 
     // Summary: what's shown, the total and the best bar.
     let total: f64 = shown.iter().map(|p| val(p, research)).sum();
@@ -290,6 +291,9 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
     let room = width.saturating_sub(margin);
     let cw = if room >= WEEKS as usize * 2 { 2 } else { 1 };
     let cols = (room / cw).clamp(1, WEEKS as usize);
+    // A wide pane (or a zoomed-out terminal) has room to spare: centre the grid in it.
+    let lead = room.saturating_sub(cols * cw) / 2;
+    let pad = " ".repeat(lead);
     let this_week = hist::week_of(today);
     let first_week = this_week + 1 - cols as u64;
     let first_day = (first_week * 7).saturating_sub(4);
@@ -326,7 +330,7 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
         }
     }
     let months: String = months.into_iter().take(cols * cw).collect();
-    page.lines.push(Line::styled(format!("{}{}", " ".repeat(margin), months.trim_end()), dim));
+    page.lines.push(Line::styled(format!("{pad}{}{}", " ".repeat(margin), months.trim_end()), dim));
 
     let first_row = page.lines.len();
     for r in 0..7u64 {
@@ -339,7 +343,7 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
             (5, _) => "F ",
             _ => "",
         };
-        let mut spans = vec![Span::styled(format!("{name:<margin$}"), dim)];
+        let mut spans = vec![Span::styled(format!("{pad}{name:<margin$}"), dim)];
         for j in 0..cols {
             let day = first_day + j as u64 * 7 + r;
             if day > today {
@@ -368,13 +372,13 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
             if cw == 2 {
                 spans.push(Span::raw(" "));
             }
-            page.hits.push((first_row + r as usize, margin + j * cw, cw.max(1), StatsHit::Day((today - day) as u16)));
+            page.hits.push((first_row + r as usize, lead + margin + j * cw, cw.max(1), StatsHit::Day((today - day) as u16)));
         }
         page.lines.push(Line::from(spans));
     }
 
     // "less ■■■■■ more", under the grid's left edge.
-    let mut legend = vec![Span::raw(" ".repeat(margin)), Span::styled("less ", dim)];
+    let mut legend = vec![Span::raw(" ".repeat(lead + margin)), Span::styled("less ", dim)];
     legend.extend(SHADES.iter().map(|c| Span::styled("■ ", Style::new().fg(*c))));
     legend.push(Span::styled("more", dim));
     page.lines.push(Line::from(legend));
@@ -395,5 +399,5 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
         }
         _ => format!("{name}: not played"),
     };
-    page.lines.push(Line::raw(fit(&text, width)));
+    page.lines.push(Line::raw(format!("{pad}{}", fit(&text, width - lead))));
 }

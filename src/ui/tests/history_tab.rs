@@ -295,7 +295,7 @@ fn the_chart_fills_the_width_of_the_pane() {
     let mut app = app_with_history();
     for key in ['1', '2', '3'] {
         press(&mut app, key);
-        for width in [80u16, 130] {
+        for width in [80u16, 130, 220] {
             let t = text(&render(&mut app, width, 36));
             // The time axis ends with "now" right by the panel's right border.
             let axis: Vec<char> = t.lines().find(|l| l.contains("now")).unwrap_or_else(|| panic!("no axis:\n{t}")).chars().collect();
@@ -304,4 +304,19 @@ fn the_chart_fills_the_width_of_the_pane() {
             assert!(border - now <= 3, "{key} at {width}: 'now' ends at {now}, border at {border}\n{t}");
         }
     }
+}
+
+#[test]
+fn a_zoomed_out_pane_centres_the_heatmap() {
+    let mut app = app_with_history();
+    let t = text(&render(&mut app, 220, 60));
+    let row = t.lines().find(|l| l.contains("Wed ")).unwrap_or_else(|| panic!("{t}"));
+    let border = row.find('│').map(|b| row[..b].chars().count()).unwrap_or(0);
+    let wed = row[..row.find("Wed ").unwrap()].chars().count() - border;
+    assert!(wed > 10, "the grid is centred, not hugging the left: Wed at {wed}\n{t}");
+    // 53 weeks a column each plus the weekday labels just fit in 57 columns: no room to centre.
+    let t = text(&render(&mut app, 57, 36));
+    let row = t.lines().find(|l| l.contains("Wed ")).unwrap();
+    let wed = row[..row.find("Wed ").unwrap()].chars().count();
+    assert!(wed <= 4, "a pane it just fits keeps it at the left: {wed}\n{t}");
 }
