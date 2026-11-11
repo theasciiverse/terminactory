@@ -288,6 +288,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::BlastFurnace => "BLST",
         Kind::CokeOven => "COKE",
         Kind::Kiln => "KILN",
+        Kind::LargeKiln => "LKLN",
         Kind::Press => "PRES",
         Kind::WireDrawer => "WIRE",
         Kind::Winder => "WIND",
@@ -878,6 +879,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::LargeAdvancedAssembler => (INK, 123),
         Kind::Welder => (INK, 209),
         Kind::Kiln => (PAPER, 166),
+        Kind::LargeKiln => (PAPER, 202),
         Kind::Mixer => (INK, 152),
         Kind::AdvancedDrill => (INK, 74),
         Kind::LargeBasicDrill => (INK, 111),
@@ -936,6 +938,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::LargeAdvancedAssembler => ('L', '3'),
         Kind::Welder => ('W', 'E'),
         Kind::Kiln => ('K', 'I'),
+        Kind::LargeKiln => ('K', '2'),
         Kind::Mixer => ('M', 'X'),
         Kind::AdvancedDrill => ('D', '3'),
         Kind::LargeBasicDrill => ('D', '4'),
@@ -1037,6 +1040,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::LargeAdvancedAssembler => labelled("LRG ASM A"),
         Kind::Welder => labelled("WELDER"),
         Kind::Kiln => labelled("KILN"),
+        Kind::LargeKiln => labelled("LRG KILN"),
         Kind::Mixer => labelled("MIXR"),
         Kind::AdvancedDrill => labelled("ADV DRL"),
         Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
@@ -2247,13 +2251,14 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 19] = [
+const CRAFTERS: [Kind; 20] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
     Kind::BlastFurnace,
     Kind::CokeOven,
     Kind::Kiln,
+    Kind::LargeKiln,
     Kind::Mixer,
     Kind::Press,
     Kind::WireDrawer,
@@ -2285,6 +2290,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::RollingMill => "rolls plate flat into sheets, and steel into steel sheets and girders",
         Kind::Lathe => "turns plate into rods and screws, and steel into steel rods and bearings",
         Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass",
+        Kind::LargeKiln => "fires 32 at once, every 80 seconds: the kiln's recipes, the same rate, in one big lump",
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays and gearboxes",
@@ -2557,7 +2563,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 labelled(&mut out, label(&mut first, "Used in"), GUTTER, segs);
             }
             let fuel: Option<(Vec<Kind>, &str)> = match item {
-                Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln], "")),
+                Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln, Kind::LargeKiln], "")),
                 Item::Coke => Some((vec![Kind::BlastFurnace], " (burns twice as long as coal)")),
                 Item::Waste => Some((vec![Kind::Boiler], " (4 waste burn like 1 coal; only as much as the grid needs)")),
                 _ => None,

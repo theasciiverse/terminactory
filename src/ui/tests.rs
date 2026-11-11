@@ -736,6 +736,31 @@ fn later_machines_snapshot() {
     assert!(t.contains("by Lattice & Finch") && t.contains("making control board"), "{t}");
 }
 
+/// The large kiln in two facings, half loaded: its map label, inspector and loading count.
+#[test]
+fn large_kiln_snapshot() {
+    let mut w = World::blank();
+    let (x, y) = (52, 30);
+    w.place(0, x, y, Kind::LargeKiln, Dir::E).unwrap();
+    w.place(0, x + 7, y, Kind::LargeKiln, Dir::N).unwrap();
+    if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[idx(x, y)].as_mut() {
+        stock[Item::Stone.idx()] = 20;
+    }
+    let mut app = App::new(w);
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    app.cam = (x - 2, y - 2);
+    app.cam_ready = true;
+    app.cursor = (x + 1, y + 1);
+    let buf = render(&mut app, 130, 42);
+    std::fs::write("target/snapshot-large-kiln.html", to_html(&buf)).unwrap();
+    let t = text(&buf);
+    assert!(t.contains("LRG KILN"), "{t}");
+    assert!(t.contains("Large kiln") && t.contains("load 10/32") && t.contains("stone 20/64"), "{t}");
+    // A narrow pane still names it.
+    let narrow = render(&mut app, 44, 34);
+    assert!(text(&narrow).contains("Large kiln"), "{}", text(&narrow));
+}
+
 /// Recipe book pages for the machines that aren't in the book's list yet.
 #[test]
 fn later_machines_have_book_pages() {
@@ -761,6 +786,10 @@ fn later_machines_have_book_pages() {
         ),
         (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
         (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
+        (
+            Kind::LargeKiln,
+            vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "5x7", "fills up for 32 runs, then makes them all at once"],
+        ),
         (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
         (Kind::LargeBasicDrill, vec!["5x a basic drill's ore, burns 10x the coal", "8x8", "front edge"]),
         (Kind::LargeAdvancedDrill, vec!["5x an advanced drill's ore", "40 EC, no coal"]),

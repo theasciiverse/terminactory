@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub const ITEMS: usize = 51;
 pub const COMPANIES: usize = 12;
-pub const TECHS: usize = 32;
+pub const TECHS: usize = 33;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -502,6 +502,7 @@ pub enum Tech {
     PrecisionAssembler,
     LargeAdvancedAssembler,
     LargeAdvancedDrill,
+    LargeKiln,
 }
 
 impl Tech {
@@ -538,6 +539,7 @@ impl Tech {
         Tech::PrecisionAssembler,
         Tech::LargeAdvancedAssembler,
         Tech::LargeAdvancedDrill,
+        Tech::LargeKiln,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -576,6 +578,7 @@ impl Tech {
             Tech::PrecisionAssembler => "Precision assembler",
             Tech::LargeAdvancedAssembler => "Large adv. assembler",
             Tech::LargeAdvancedDrill => "Large adv. drill",
+            Tech::LargeKiln => "Large kiln",
         }
     }
     pub fn about(self) -> &'static str {
@@ -616,6 +619,7 @@ impl Tech {
             Tech::PrecisionAssembler => "a 3x3 assembler that builds control boards fastest, and later chips",
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
             Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
+            Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 80 seconds: the kiln's recipes in one big lump",
         }
     }
     pub fn company(self) -> Company {
@@ -626,7 +630,7 @@ impl Tech {
             Tech::Steam => Company::Kettering,
             Tech::BlastFurnace => Company::Cinderhall,
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
-            Tech::Excavation | Tech::Kiln => Company::Underhill,
+            Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler => Company::Swiftline,
             Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses => Company::Brannock,
@@ -665,7 +669,8 @@ impl Tech {
             | Tech::LargeBasicDrill
             | Tech::PrecisionAssembler
             | Tech::LargeAdvancedAssembler
-            | Tech::LargeAdvancedDrill => Category::Create,
+            | Tech::LargeAdvancedDrill
+            | Tech::LargeKiln => Category::Create,
             Tech::Steam => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
@@ -708,6 +713,7 @@ impl Tech {
             Tech::Welder => 4000.0,
             Tech::BasicAssembler => 6000.0,
             // Motor stage.
+            Tech::LargeKiln => 10_000.0,
             Tech::AdvancedDrill => 8000.0,
             Tech::AdvancedAssembler => 14_000.0,
             Tech::LargeBasicDrill => 20_000.0,
@@ -754,6 +760,7 @@ impl Tech {
             Tech::PrecisionAssembler => (Item::ControlBoard, 120),
             Tech::LargeAdvancedDrill => (Item::ControlBoard, 300),
             Tech::LargeAdvancedAssembler => (Item::ControlBoard, 800),
+            Tech::LargeKiln => (Item::Brick, 1000),
         }
     }
 }
@@ -775,6 +782,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::RollingMill,
             Tech::Welder,
             Tech::Kiln,
+            Tech::LargeKiln,
             Tech::Mixer,
         ],
     ),
@@ -849,6 +857,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::PrecisionAssembler), Some(34)),       // 36
     (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),       // 37
     (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),   // 38
+    (Node::Tech(Tech::LargeKiln), Some(15)),                // 39: beside the kiln it grows from
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -1296,6 +1305,12 @@ pub fn assembler_list(tiers: &[(&[Recipe], u32)]) -> Vec<Recipe> {
         }
     }
     out
+}
+
+/// A batch machine bigger than the kiln: the same recipes with every time scaled by `factor`
+/// (a bigger batch fires for longer: one run's time x batch / 2).
+pub fn batch_list(table: &[Recipe], factor: u32) -> Vec<Recipe> {
+    table.iter().map(|r| Recipe { ticks: r.ticks * factor, ..*r }).collect()
 }
 
 /// The welder joins parts. It draws EC only while it works.

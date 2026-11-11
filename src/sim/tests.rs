@@ -1367,9 +1367,93 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
 #[test]
 fn a_batch_machine_fires_for_one_runs_time_times_batch_over_two() {
     // The rule for every batch machine: 5 s a run x 8 runs / 2 = 20 s, so 24 bricks a minute.
-    for r in KILN_RECIPES {
-        assert_eq!(r.ticks as u64, 5 * TPS * Kind::Kiln.batch() as u64 / 2, "{}", r.name);
+    for kind in [Kind::Kiln, Kind::LargeKiln] {
+        for r in kind.recipes() {
+            assert_eq!(r.ticks as u64, 5 * TPS * kind.batch() as u64 / 2, "{kind:?} {}", r.name);
+        }
     }
+    assert_eq!((Kind::Kiln.recipes()[0].ticks, Kind::LargeKiln.recipes()[0].ticks), (20 * 60, 80 * 60));
+}
+
+#[test]
+fn the_large_kiln_has_the_kilns_recipes_at_the_kilns_rate() {
+    let (small, big) = (Kind::Kiln.recipes(), Kind::LargeKiln.recipes());
+    assert_eq!((Kind::Kiln.batch(), Kind::LargeKiln.batch()), (8, 32));
+    assert_eq!(small.len(), big.len());
+    for (a, b) in small.iter().zip(big) {
+        // Same name, tag, inputs, outputs and fuel: only the time differs.
+        assert_eq!((a.name, a.tag, a.inputs, a.outputs, a.fuel), (b.name, b.tag, b.inputs, b.outputs, b.fuel));
+        assert_eq!((a.fluid_in, a.fluid_out, a.needs), (b.fluid_in, b.fluid_out, b.needs));
+        // A bigger lump, not a faster copy: items a minute are the same.
+        let rate = |k: Kind, r: &Recipe| r.outputs[0].1 * k.batch() * 60 * 60 / r.ticks;
+        assert_eq!(rate(Kind::Kiln, a), rate(Kind::LargeKiln, b), "{}", a.name);
+        assert_eq!(rate(Kind::LargeKiln, b), 24, "{}", a.name);
+    }
+    // Four times the lump: it holds 32 runs of input and 320 finished goods.
+    assert_eq!((Kind::Kiln.out_cap(), Kind::LargeKiln.out_cap()), (80, 320));
+}
+
+#[test]
+fn the_large_kiln_is_5x7_burns_coal_and_costs_a_few_minutes_of_income() {
+    assert_eq!((Kind::LargeKiln.dims(Dir::E), Kind::LargeKiln.dims(Dir::N)), ((5, 7), (7, 5)));
+    assert!(!Kind::LargeKiln.electric());
+    assert_eq!(Kind::LargeKiln.category(), Category::Create);
+    assert_eq!(Kind::LargeKiln.name(), "Large kiln");
+    // Review 14 change 11: 3 to 5 minutes of income when it unlocks. A tidy player earns about
+    // $2,000 a minute when 10,000 RP of motor-stage research arrives (plan 01).
+    assert_eq!((Kind::LargeKiln.cost(), Tech::LargeKiln.cost()), (7500.0, 10_000.0));
+    let minutes = Kind::LargeKiln.cost() / 2000.0;
+    assert!((3.0..=5.0).contains(&minutes), "{minutes} minutes");
+    assert!(Kind::LargeKiln.cost() > 10.0 * Kind::Kiln.cost(), "it is something to save for");
+    // Sold by whoever sells the kiln, from a tech that is free after 1,000 bricks.
+    assert_eq!((Kind::LargeKiln.company(), Tech::LargeKiln.company()), (Kind::Kiln.company(), Kind::Kiln.company().unwrap()));
+    assert_eq!(Tech::LargeKiln.milestone(), (Item::Brick, 1000));
+    assert_eq!(Kind::LargeKiln.tech(), Some(Tech::LargeKiln));
+}
+
+#[test]
+fn the_large_kiln_waits_for_a_full_load_then_fires_32_at_once_after_80_seconds() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::LargeKiln, Dir::E).unwrap(); // covers 5-9, 5-11: front is x=10
+    assert!(w.place(0, 6, 11, Kind::Crate, Dir::E).is_err(), "7 tall");
+    w.place(0, 10, 11, Kind::Crate, Dir::E).unwrap(); // beside its bottom row
+    set_stock(&mut w, 5, 5, Item::Coal, 25);
+    let stones = |w: &mut World, n: u32| (0..n).for_each(|_| assert!(w.offer(0, 5, 5, Item::Stone)));
+    let made = |w: &World| w.econ.made[Item::Brick.idx()];
+    stones(&mut w, 63);
+    run(&mut w, 100);
+    assert_eq!(made(&w), 0, "31 runs of 32 is not enough");
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
+    stones(&mut w, 1);
+    assert!(!w.offer(0, 5, 5, Item::Stone), "it holds exactly one batch");
+    let mut fired_at = None;
+    for t in 0..5000 {
+        w.tick();
+        if made(&w) > 0 {
+            assert_eq!(made(&w), 32, "all at once");
+            fired_at = Some(t);
+            break;
+        }
+    }
+    let t = fired_at.expect("it fired");
+    assert!((4799..=4801).contains(&t), "one firing, 80 s (4800 ticks): {t}");
+    assert_eq!(w.econ.used[Item::Stone.idx()], 64);
+    // 20 coal burnt for the 80 s (a coal burns 4 s).
+    assert_eq!(w.econ.used[Item::Coal.idx()], 20);
+    // The goods leave by the front, into the crate beside its edge.
+    run(&mut w, 10);
+    assert_eq!(crate_items(&w, 0, 10, 11), vec![Item::Brick; 32]);
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("LOAD"));
+}
+
+#[test]
+fn the_large_kiln_makes_bricks_and_glass() {
+    let out = run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 85);
+    assert_eq!(out, vec![Item::Brick; 32]);
+    let out = run_machine(Kind::LargeKiln, "glass", &[(Item::Sand, 96), (Item::Coal, 25)], 85);
+    assert_eq!(out, vec![Item::Glass; 32]);
+    // Still waiting at 75 s.
+    assert!(run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 75).is_empty());
 }
 
 #[test]
@@ -2096,6 +2180,7 @@ fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
         (Kind::Mixer, Company::Wellbourne, Tech::Mixer, Item::CopperPipe),
         (Kind::AdvancedPump, Company::Wellbourne, Tech::AdvancedPump, Item::CopperPipe),
         (Kind::Kiln, Company::Underhill, Tech::Kiln, Item::Concrete),
+        (Kind::LargeKiln, Company::Underhill, Tech::LargeKiln, Item::Concrete),
         (Kind::BasicAssembler, Company::Swiftline, Tech::BasicAssembler, Item::Gearbox),
         (Kind::AdvancedDrill, Company::Ampleworth, Tech::AdvancedDrill, Item::ElectricMotor),
         (Kind::AdvancedAssembler, Company::LatticeFinch, Tech::AdvancedAssembler, Item::ControlBoard),
@@ -2157,6 +2242,7 @@ fn every_machine_can_be_built_once_unlocked() {
         Kind::LargeAdvancedAssembler,
         Kind::Welder,
         Kind::Kiln,
+        Kind::LargeKiln,
         Kind::Mixer,
         Kind::AdvancedDrill,
         Kind::LargeBasicDrill,
@@ -2183,6 +2269,8 @@ fn new_techs_are_priced_by_depth() {
     for t in [Tech::Mixer, Tech::Kiln, Tech::AdvancedPump, Tech::Welder, Tech::BasicAssembler] {
         assert!((1500.0..=6000.0).contains(&t.cost()), "{t:?}");
     }
+    // The large kiln sits at the start of the motor stage, beside the kiln's own company.
+    assert!((6000.0..=25_000.0).contains(&Tech::LargeKiln.cost()) && Tech::LargeKiln.cost() > Tech::Kiln.cost());
     for t in [Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeBasicAssembler] {
         assert!((6000.0..=25_000.0).contains(&t.cost()), "{t:?}");
         assert_eq!(t.company(), Company::Ampleworth);
@@ -2474,7 +2562,8 @@ fn every_item_recipe_runs_in_its_machine() {
                 set_stock(&mut w, x, y, *it, n * batch);
             }
             if let Some(f) = r.fuel {
-                set_stock(&mut w, x, y, f, 10);
+                // Enough to burn for the whole recipe time (a long firing outlasts the 10 a feed keeps in stock).
+                set_stock(&mut w, x, y, f, (r.ticks / f.burn_ticks().unwrap_or(1) + 2).max(10));
             }
             let front = x + kind.dims(Dir::E).0;
             w.place(0, front, y, Kind::Crate, Dir::E).unwrap();
@@ -2485,7 +2574,8 @@ fn every_item_recipe_runs_in_its_machine() {
             }
             assert!(crate_items(&w, 0, front, y).is_empty(), "{kind:?} {} early", r.name);
             assert!(crate_items(&w, 0, x - 1, y).is_empty(), "{kind:?} {} early", r.name);
-            for _ in 0..13 {
+            // A batch leaves one item a tick through the one crate beside its front edge.
+            for _ in 0..13 + batch {
                 w.tick();
             }
             let mut out = crate_items(&w, 0, front, y);

@@ -38,7 +38,7 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
         // Create is crowded: five slots (drills, heat, shaping, assembling, water).
         Category::Create => &[
             &[Drill, BasicDrill, AdvancedDrill, LargeBasicDrill, LargeAdvancedDrill],
-            &[Furnace, Molder, BlastFurnace, CokeOven, Kiln],
+            &[Furnace, Molder, BlastFurnace, CokeOven, Kiln, LargeKiln],
             &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
             &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
             &[Pump, AdvancedPump, Mixer],
@@ -1332,6 +1332,29 @@ mod tests {
             assert!(slots(c).len() <= most, "{c:?} has more than {most} slots");
             assert!(slots(c).iter().all(|s| !s.is_empty()), "{c:?} has an empty slot");
         }
+    }
+
+    #[test]
+    fn the_large_kiln_is_a_second_version_in_the_kilns_slot() {
+        assert_eq!(
+            slots(Category::Create)[1],
+            &[Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::CokeOven, Kind::Kiln, Kind::LargeKiln]
+        );
+        let mut app = App::new(World::new());
+        app.world.progress.opened[Company::Underhill.idx()] = true;
+        app.world.progress.researched[Tech::Kiln.idx()] = true;
+        app.menu = Some(Category::Create);
+        app.selected = Some(Kind::Kiln);
+        // Still locked: the key skips it and goes round to the first kind.
+        key(&mut app, KeyCode::Char('2'));
+        assert_eq!(app.selected, Some(Kind::Furnace));
+        // Researched: from the kiln the same key moves on to it, and back round to the first kind.
+        app.selected = Some(Kind::Kiln);
+        app.world.progress.researched[Tech::LargeKiln.idx()] = true;
+        key(&mut app, KeyCode::Char('2'));
+        assert_eq!(app.selected, Some(Kind::LargeKiln));
+        key(&mut app, KeyCode::Char('2'));
+        assert_eq!(app.selected, Some(Kind::Furnace));
     }
 
     #[test]

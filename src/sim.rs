@@ -205,6 +205,7 @@ pub enum Kind {
     LargeBasicDrill,
     LargeAdvancedDrill,
     AdvancedPump,
+    LargeKiln,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -218,6 +219,9 @@ static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
 });
 // The precision assembler only makes the top tiers: no crude or basic recipes.
 static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
+// The large kiln fires four times the batch (32 against 8) for four times as long (80 s against 20 s):
+// the kiln's recipes with every time x4, so it makes the same number a minute in one big lump.
+static LARGE_KILN: LazyLock<Vec<Recipe>> = LazyLock::new(|| batch_list(KILN_RECIPES, 4));
 static LARGE_ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
     LazyLock::new(|| assembler_list(&[(LARGE_BASIC_RECIPES, 2), (LARGE_ADVANCED_RECIPES, 1)]));
 
@@ -228,7 +232,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 42] = [
+    pub const ALL: [Kind; 43] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -271,6 +275,7 @@ impl Kind {
         Kind::LargeBasicDrill,
         Kind::LargeAdvancedDrill,
         Kind::AdvancedPump,
+        Kind::LargeKiln,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -295,6 +300,7 @@ impl Kind {
             | Kind::LargeAdvancedAssembler
             | Kind::Welder
             | Kind::Kiln
+            | Kind::LargeKiln
             | Kind::Mixer
             | Kind::AdvancedDrill
             | Kind::LargeBasicDrill
@@ -333,6 +339,7 @@ impl Kind {
             Kind::LargeAdvancedAssembler => "Large advanced assembler",
             Kind::Welder => "Welder",
             Kind::Kiln => "Kiln",
+            Kind::LargeKiln => "Large kiln",
             Kind::Mixer => "Mixer",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
@@ -380,6 +387,8 @@ impl Kind {
             Kind::LargeAdvancedAssembler => 30_000.0,
             Kind::Welder => 800.0,
             Kind::Kiln => 200.0,
+            // About four minutes of the ~$2,000 a minute a tidy player earns when its tech (10,000 RP) arrives.
+            Kind::LargeKiln => 7500.0,
             Kind::Mixer => 200.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
@@ -422,6 +431,7 @@ impl Kind {
         match self {
             Kind::Furnace | Kind::TradePost | Kind::Lathe | Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::Welder => (3, 3),
             Kind::Kiln => (3, 5),
+            Kind::LargeKiln => (5, 7),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
             Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
             Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => (8, 8),
@@ -500,10 +510,10 @@ impl Kind {
     /// Runs this many recipe runs at once: it loads inputs for all of them, then fires them
     /// together (one recipe time). Only kilns do.
     pub fn batch(self) -> u32 {
-        if self == Kind::Kiln {
-            8
-        } else {
-            1
+        match self {
+            Kind::Kiln => 8,
+            Kind::LargeKiln => 32,
+            _ => 1,
         }
     }
     /// Finished goods a machine holds before it stops.
@@ -547,7 +557,7 @@ impl Kind {
             Kind::Crusher => Some(Company::Ashgrove),
             Kind::Lathe | Kind::CrudeAssembler => Some(Company::Gearwright),
             Kind::RollingMill | Kind::Welder => Some(Company::Pillar),
-            Kind::Elevator | Kind::Kiln => Some(Company::Underhill),
+            Kind::Elevator | Kind::Kiln | Kind::LargeKiln => Some(Company::Underhill),
             Kind::FastBelt | Kind::BasicAssembler => Some(Company::Swiftline),
             Kind::AdvancedDrill | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
             Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => {
@@ -566,6 +576,7 @@ impl Kind {
             Kind::Mixer => Some(Tech::Mixer),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
+            Kind::LargeKiln => Some(Tech::LargeKiln),
             Kind::BasicAssembler => Some(Tech::BasicAssembler),
             Kind::AdvancedAssembler => Some(Tech::AdvancedAssembler),
             Kind::PrecisionAssembler => Some(Tech::PrecisionAssembler),
@@ -610,6 +621,7 @@ impl Kind {
             Kind::LargeAdvancedAssembler => &LARGE_ADVANCED_ASSEMBLER,
             Kind::Welder => WELDER_RECIPES,
             Kind::Kiln => KILN_RECIPES,
+            Kind::LargeKiln => &LARGE_KILN,
             Kind::Mixer => MIXER_RECIPES,
             Kind::CokeOven => COKE_OVEN_RECIPES,
             Kind::Crusher => CRUSHER_RECIPES,
@@ -910,6 +922,7 @@ impl Building {
             | Kind::LargeAdvancedAssembler
             | Kind::Welder
             | Kind::Kiln
+            | Kind::LargeKiln
             | Kind::Mixer
             | Kind::CokeOven
             | Kind::Crusher

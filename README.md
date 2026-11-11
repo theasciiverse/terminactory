@@ -156,7 +156,7 @@ Everything the earlier steps pointed at is real now. Times are seconds; prices a
 
 The direct route takes molten iron from a pipe, or from an iron blast furnace standing right against it (no pipe, no cast, press or second melt) and gives molten steel out the front. The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 2 waste). The press makes **hardened gear** ($50, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
 
-**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), a firing takes 20 s (24 a minute): a batch machine fires for one run's time × its batch ÷ 2. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
+**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), a firing takes 20 s (24 a minute): a batch machine fires for one run's time × its batch ÷ 2. The **large kiln** (5×7, $7,500, from Underhill; press the kiln's slot again to switch) has the same recipes but a batch of 32 and an 80 s firing: the same 24 a minute in one four times bigger lump, so it takes 64 stone or 96 sand before it fires and burns 20 coal a firing. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
 - Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
@@ -176,6 +176,7 @@ Every other item except waste goes into at least one recipe.
 | | Advanced pump (2×2, 4× the water) | 2,500 | 250 copper pipe |
 | Underhill (concrete) | Excavation (floor -1) | 3,000 | 150 concrete |
 | | Kiln | 2,000 | 250 concrete |
+| | Large kiln (5×7, $7,500) | 10,000 | 1,000 brick |
 | Pillar (steel girder) | Welder | 4,000 | 150 steel girder |
 | Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 100 gearbox |
 | **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 8,000 | 40 motor |
@@ -193,7 +194,7 @@ Every key item can be made with machines from companies that open before it, so 
 | Category | Slot | Kinds |
 | --- | --- | --- |
 | Create (1) | 1 | cheap / basic / advanced / large basic / large advanced drill |
-| | 2 | furnace / molder / blast furnace / coke oven / kiln |
+| | 2 | furnace / molder / blast furnace / coke oven / kiln / large kiln |
 | | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
 | | 4 | assemblers (crude to large advanced) and the welder |
 | | 5 | water pump / advanced pump / mixer |

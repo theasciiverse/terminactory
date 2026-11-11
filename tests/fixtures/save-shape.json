@@ -479,6 +479,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"LargeKiln\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"brick\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Lathe\"",
               "rr": "int",
               "size": "int",
@@ -1018,7 +1041,7 @@
       ]
     },
     "researched": {
-      "len": 32,
+      "len": 33,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1038,6 +1061,7 @@
         "\"LargeAdvancedDrill\"",
         "\"LargeBasicAssembler\"",
         "\"LargeBasicDrill\"",
+        "\"LargeKiln\"",
         "\"Lathe\"",
         "\"LongArms\"",
         "\"Mixer\"",
