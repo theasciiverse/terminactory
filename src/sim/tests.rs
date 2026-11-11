@@ -1,5 +1,7 @@
 use super::*;
 
+mod elevators;
+
 fn run(w: &mut World, secs: u64) {
     for _ in 0..secs * TPS {
         w.tick();
