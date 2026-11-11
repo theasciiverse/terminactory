@@ -1354,7 +1354,7 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
     stones(&mut w, 1);
     assert!(!w.offer(0, 5, 5, Item::Stone), "it holds exactly one batch");
     let mut fired_at = None;
-    for t in 0..400 {
+    for t in 0..1400 {
         w.tick();
         if made(&w) > 0 {
             assert_eq!(made(&w), 8, "all at once");
@@ -1363,7 +1363,7 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
         }
     }
     let t = fired_at.expect("it fired");
-    assert!((299..=301).contains(&t), "one recipe time (300 ticks): {t}");
+    assert!((1199..=1201).contains(&t), "one firing, 20 s (1200 ticks): {t}");
     run(&mut w, 5);
     assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::Brick; 8]);
     assert_eq!(w.econ.used[Item::Stone.idx()], 16);
@@ -1372,15 +1372,25 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
 }
 
 #[test]
+fn a_batch_machine_fires_for_one_runs_time_times_batch_over_two() {
+    // The rule for every batch machine: 5 s a run x 8 runs / 2 = 20 s, so 24 bricks a minute.
+    for r in KILN_RECIPES {
+        assert_eq!(r.ticks as u64, 5 * TPS * Kind::Kiln.batch() as u64 / 2, "{}", r.name);
+    }
+}
+
+#[test]
 fn the_kiln_makes_bricks_and_glass_in_batches_of_eight() {
-    let out = run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16), (Item::Coal, 5)], 8);
+    let out = run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16), (Item::Coal, 5)], 24);
     assert_eq!(out, vec![Item::Brick; 8]);
-    let out = run_machine(Kind::Kiln, "glass", &[(Item::Sand, 24), (Item::Coal, 5)], 8);
+    let out = run_machine(Kind::Kiln, "glass", &[(Item::Sand, 24), (Item::Coal, 5)], 24);
     assert_eq!(out, vec![Item::Glass; 8]);
+    // A firing takes 20 s, not 5: still waiting at 15 s.
+    assert!(run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16), (Item::Coal, 5)], 15).is_empty());
     // Not a full batch: nothing fires.
-    assert!(run_machine(Kind::Kiln, "glass", &[(Item::Sand, 21), (Item::Coal, 5)], 12).is_empty());
+    assert!(run_machine(Kind::Kiln, "glass", &[(Item::Sand, 21), (Item::Coal, 5)], 40).is_empty());
     // No coal, no fire.
-    assert!(run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16)], 12).is_empty());
+    assert!(run_machine(Kind::Kiln, "brick", &[(Item::Stone, 16)], 40).is_empty());
 }
 
 #[test]

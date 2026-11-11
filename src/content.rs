@@ -1236,10 +1236,11 @@ pub const WELDER_RECIPES: &[Recipe] = &[
     item_recipe("frame", &[(Item::SteelGirder, 2), (Item::Screw, 8)], &[(Item::Frame, 1)], 600, None, None, 'F'),
 ];
 
-/// The kiln fires 8 runs at once, burning coal.
+/// The kiln fires 8 runs at once, burning coal. A batch machine fires for (one run's time x batch / 2):
+/// 5 s x 8 / 2 = 20 s, so 24 a minute, not the 96 that made it an 8x speed boost in disguise.
 pub const KILN_RECIPES: &[Recipe] = &[
-    item_recipe("brick", &[(Item::Stone, 2)], &[(Item::Brick, 1)], 300, Some(Item::Coal), None, 'b'),
-    item_recipe("glass", &[(Item::Sand, 3)], &[(Item::Glass, 1)], 300, Some(Item::Coal), None, 'g'),
+    item_recipe("brick", &[(Item::Stone, 2)], &[(Item::Brick, 1)], 1200, Some(Item::Coal), None, 'b'),
+    item_recipe("glass", &[(Item::Sand, 3)], &[(Item::Glass, 1)], 1200, Some(Item::Coal), None, 'g'),
 ];
 
 /// The mixer takes water from a pipe, and items from belts.
