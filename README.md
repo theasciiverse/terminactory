@@ -31,7 +31,7 @@ Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a sp
 
 ## What's in it
 
-Phase 1: ore is melted in a furnace into molten metal, a molder casts it into ingots, and a press makes plates. Sell for money and research, research the press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company.
+Phase 1: ore is melted in a furnace into molten metal, a molder casts it into ingots, and a press makes plates. Sell for money and research, research the press and coking, and make the four key items (copper wire, coke, copper pipe, copper coil), each bringing a letter from a company (letters arrive as telegrams, and never pause the game).
 
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
@@ -167,7 +167,7 @@ tfac msg "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
 }
 ```
 
-Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dismisses one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept).
+Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Every telegram and company letter is also kept in a log (the last 50, saved with the game): `i` opens it, newest first with unread ones marked, and Enter reads one again.
 
 ## Rules in one breath
 
@@ -201,7 +201,8 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` dis
 | Pause / speed | p / [ ] |
 | Recipe book (opens on what's under the cursor) | b |
 | Small-pane view on/off | m |
-| Next telegram / dismiss all | n / Shift+N (PgUp/PgDn scroll) |
+| Next telegram / dismiss all | n / Shift+N (PgUp/PgDn scroll; Esc also closes) |
+| Telegram log | i (Enter reads one again) |
 | Help | ? (arrows scroll it in a small pane) |
 | Quit | Ctrl+C (saves first) |
 

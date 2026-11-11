@@ -62,7 +62,7 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 3;
+pub const SAVE_VERSION: u32 = 4;
 
 /// Writes a fixed-size array as a list (serde itself stops at 32 elements).
 fn ser_arr<S, T, const N: usize>(a: &[T; N], s: S) -> Result<S::Ok, S::Error>
@@ -1112,9 +1112,6 @@ pub struct Progress {
     pub opened: [bool; COMPANIES],
     #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub researched: [bool; TECHS],
-    /// Companies that opened since the player last looked (shown as letters).
-    #[serde(skip)]
-    pub events: VecDeque<Company>,
     /// Short messages for the player (free unlocks).
     #[serde(skip)]
     pub notes: VecDeque<String>,
@@ -1126,7 +1123,7 @@ impl Default for Progress {
         for c in Company::ALL {
             opened[c.idx()] = c.key_item().is_none();
         }
-        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new() }
+        Progress { opened, researched: [false; TECHS], notes: VecDeque::new() }
     }
 }
 
@@ -1289,6 +1286,13 @@ pub struct World {
     /// Agent messages waiting to be read.
     #[serde(default)]
     pub mail: crate::mail::Queue,
+    /// Every telegram and letter received, oldest first, with whether it was read.
+    /// Kept in the save, so a telegram skipped by accident can be opened again.
+    #[serde(default)]
+    pub log: VecDeque<crate::mail::LogEntry>,
+    /// How many messages have been delivered (the next one's id).
+    #[serde(default)]
+    pub mail_seq: u64,
     /// When the last company delivery came with a message, and how many have come.
     #[serde(default)]
     pub last_gift: u64,
@@ -1311,6 +1315,8 @@ const RATE_LONG_SECS: f64 = 600.0;
 pub const GIFT_GAP: u64 = 180;
 /// Most agent messages kept waiting to be read.
 pub const MAIL_KEEP: usize = 8;
+/// Most telegrams and letters kept in the log (read ones go first when it is full).
+pub const LOG_KEEP: usize = 50;
 
 pub fn now_secs() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
@@ -1379,6 +1385,8 @@ impl World {
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             mail: VecDeque::new(),
+            log: VecDeque::new(),
+            mail_seq: 0,
             last_gift: 0,
             gifts: 0,
             grid: Grid::default(),
@@ -1396,7 +1404,7 @@ impl World {
             version: SAVE_VERSION,
             floors: LEVELS.iter().map(|&l| Floor::new(l, true)).collect(),
             econ: Econ { money: 1e6, ..Default::default() },
-            progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], events: VecDeque::new(), notes: VecDeque::new() },
+            progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], notes: VecDeque::new() },
             tick: 0,
             lifts: Vec::new(),
             saved_at: 0,
@@ -1408,6 +1416,8 @@ impl World {
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             mail: VecDeque::new(),
+            log: VecDeque::new(),
+            mail_seq: 0,
             last_gift: 0,
             gifts: 0,
             grid: Grid::default(),
@@ -2357,11 +2367,53 @@ impl World {
                 msg.gift = Some((c, m));
             }
         }
+        self.deliver(msg);
+    }
+
+    /// The telegram a brand-new world starts with, from the two starting companies. It
+    /// states how things work and gives no orders; there is no delivery with it.
+    pub fn welcome(&mut self, now: u64) {
+        let md = "Hollowmere here. The ground is yours, so dig anywhere. Drills and furnaces burn coal.\n\n\
+                  Brannock here, all three of us. Molders and presses want EC: a solar panel and a pole will do. \
+                  A trade post sells whatever reaches it, and **f** picks money or research.\n\n\
+                  **1** builds, **t** is research, **b** is recipes, **?** is help. No rush.";
+        self.deliver(crate::mail::Message {
+            from: "Hollowmere & Brannock".into(),
+            event: String::new(),
+            md: md.into(),
+            at: now,
+            gift: None,
+            id: 0,
+        });
+    }
+
+    /// Puts a message in the waiting queue and in the log (unread).
+    pub fn deliver(&mut self, mut msg: crate::mail::Message) {
+        self.mail_seq += 1;
+        msg.id = self.mail_seq;
+        self.log.push_back(crate::mail::LogEntry { msg: msg.clone(), read: false });
+        while self.log.len() > LOG_KEEP {
+            let at = self.log.iter().position(|e| e.read).unwrap_or(0);
+            self.log.remove(at);
+        }
         self.mail.push_back(msg);
         // Only the newest few wait, so a few days away doesn't mean a pile of telegrams.
+        // (The log keeps the rest.)
         while self.mail.len() > MAIL_KEEP {
             self.mail.pop_front();
         }
+    }
+
+    /// Marks a logged message as read.
+    pub fn mark_read(&mut self, id: u64) {
+        if let Some(e) = self.log.iter_mut().find(|e| e.msg.id == id) {
+            e.read = true;
+        }
+    }
+
+    /// How many logged messages are still unread.
+    pub fn unread(&self) -> usize {
+        self.log.iter().filter(|e| !e.read).count()
     }
 
     /// Making a company's key item for the first time opens that company, and making
@@ -2371,7 +2423,7 @@ impl World {
             if let Some(key) = c.key_item() {
                 if !self.progress.is_open(c) && self.econ.made[key.idx()] > 0 {
                     self.progress.opened[c.idx()] = true;
-                    self.progress.events.push_back(c);
+                    self.deliver(crate::mail::letter(c, now_secs()));
                 }
             }
         }

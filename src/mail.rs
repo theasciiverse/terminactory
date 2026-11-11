@@ -12,7 +12,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use serde::{Deserialize, Serialize};
 
-use crate::content::Company;
+use crate::content::{Company, Tech};
 
 /// Longest message kept, in characters (an agent's final reply can be long).
 const MAX_CHARS: usize = 6000;
@@ -30,6 +30,16 @@ pub struct Message {
     /// A company delivery that came with it, and how much money it brought.
     #[serde(default)]
     pub gift: Option<(Company, f64)>,
+    /// Set when it is delivered (1, 2, 3...), so the log can tell which one was read.
+    #[serde(default)]
+    pub id: u64,
+}
+
+/// One line of the telegram log: a message and whether it has been closed with n / Esc yet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogEntry {
+    pub msg: Message,
+    pub read: bool,
 }
 
 pub fn inbox(data_dir: &Path) -> PathBuf {
@@ -101,7 +111,7 @@ pub fn parse(text: &str, now: u64) -> Message {
     if md.is_empty() {
         md = "Done.".into();
     }
-    Message { from, event, md, at: now, gift: None }
+    Message { from, event, md, at: now, gift: None, id: 0 }
 }
 
 /// Turns a Claude Code hook's JSON (Stop or Notification) into (sender, event, Markdown).
@@ -203,6 +213,18 @@ pub fn run_cli(args: &[String], data_dir: &Path) -> bool {
         }
         _ => false,
     }
+}
+
+/// A company's letter as a telegram: its words, then what it opens for research.
+pub fn letter(c: Company, now: u64) -> Message {
+    let mut md = format!("\"{}\"", c.letter());
+    let techs: Vec<String> =
+        Tech::ALL.iter().filter(|t| t.company() == c).map(|t| format!("- {} ({})", t.name(), t.category().name())).collect();
+    if !techs.is_empty() {
+        md.push_str("\n\n**Unlocked for research**\n");
+        md.push_str(&techs.join("\n"));
+    }
+    Message { from: c.name().to_string(), event: "letter".into(), md, at: now, gift: None, id: 0 }
 }
 
 /// A delivery's note, in the sending company's voice.

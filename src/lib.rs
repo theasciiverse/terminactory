@@ -50,8 +50,8 @@ Agent telegrams (they show up in the game as you play)
 In the game, ? shows every key. Saves and controls.json live in ~/.terminactory.
 ";
 
-/// Starts the game. `as_full_name` is true when launched as `terminactory`, so it can mention the shortcut.
-pub fn start(as_full_name: bool) -> io::Result<()> {
+/// Starts the game. (`--help` mentions that `tfac` is a shortcut, so the first message doesn't.)
+pub fn start(_as_full_name: bool) -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     // `tfac msg` and `tfac hook` post agent mail and return without starting the game.
     if mail::run_cli(&args, &data_dir()) {
@@ -112,7 +112,7 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
             return Ok(());
         }
     }
-    let (world, mut note) = if demo {
+    let (world, note) = if demo {
         let mut w = sim::World::new();
         let note = match w.build_demo() {
             Ok(()) => "Demo factory built near you. Press ? for help, t for research.".to_string(),
@@ -126,20 +126,12 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
                 // Keep the unreadable save instead of overwriting it on quit.
                 let backup = save_path.with_extension(format!("unreadable-{}.json", std::process::id()));
                 let _ = std::fs::copy(&save_path, &backup);
-                (sim::World::new(), Some(format!("Couldn't read the save ({e}); kept a copy at {}, starting fresh", backup.display())))
+                (new_world(), Some(format!("Couldn't read the save ({e}); kept a copy at {}, starting fresh", backup.display())))
             }
         }
     } else {
-        let note = format!("Started {name}, a fresh game. Your other saves are safe: tfac --saves lists them.");
-        (sim::World::new(), Some(note))
+        (new_world(), Some(new_game_note(!saves::list(&dir).is_empty())))
     };
-    if as_full_name {
-        let tip = "Tip: `tfac` is a shortcut for `terminactory`.";
-        note = Some(match note {
-            Some(n) => format!("{n}  {tip}"),
-            None => format!("Welcome to Terminactory.  {tip}"),
-        });
-    }
     let mut app = app::App::new(world);
     if let Some(n) = note {
         app.say(n);
@@ -170,6 +162,44 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
         eprintln!("could not save the game: {e}");
     }
     result
+}
+
+/// A brand-new world, with the welcome telegram waiting in the sidebar (the demo doesn't get one).
+fn new_world() -> sim::World {
+    let mut w = sim::World::new();
+    w.welcome(sim::now_secs());
+    w
+}
+
+/// The status line for a new game: how to start. Players who already have saves hear
+/// that those are safe instead (they know the keys), and the welcome telegram has the rest.
+fn new_game_note(has_other_saves: bool) -> String {
+    if has_other_saves {
+        "New game. Your other saves are safe: tfac --saves lists them.".into()
+    } else {
+        "New game. 1 opens the build menu, ? has help.".into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_fresh_games_first_message_says_how_to_start() {
+        let first = new_game_note(false);
+        assert!(first.contains("1 opens the build menu") && first.contains("? has help"), "{first}");
+        // With other saves around, the saves note replaces it, as it must only when they exist.
+        let second = new_game_note(true);
+        assert!(second.contains("other saves are safe") && !second.contains("build menu"), "{second}");
+    }
+
+    #[test]
+    fn a_new_game_has_its_welcome_and_the_demo_does_not() {
+        let w = new_world();
+        assert_eq!(w.mail.len(), 1);
+        assert!(sim::World::new().mail.is_empty());
+    }
 }
 
 /// How often the game saves by itself.
@@ -208,18 +238,14 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
         if acc > Duration::from_millis(250) {
             acc = tick; // don't try to catch up after a stall
         }
-        // The game pauses while a letter, the tree or help is open.
-        let overlay = app.letter.is_some() || app.tree || app.book || app.help || app.away.is_some() || app.mail_open;
+        // Nothing but the pause key stops the game: the tree, book, help and telegrams are read while it runs.
         while acc >= tick {
-            if !app.paused && !overlay {
+            if !app.paused {
                 for _ in 0..app.speed {
                     app.world.tick();
                 }
             }
             acc -= tick;
-        }
-        if app.letter.is_none() {
-            app.letter = app.world.progress.events.pop_front();
         }
         // Agent mail: check the inbox about once a second; show one message at a time.
         if let Some(dir) = inbox {

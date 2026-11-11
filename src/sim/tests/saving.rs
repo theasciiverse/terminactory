@@ -46,7 +46,7 @@ fn damaged_files_are_errors_not_panics() {
         ("empty", String::new()),
         ("text", "this is not a save".to_string()),
         ("truncated", json[..json.len() / 2].to_string()),
-        ("wrong type", r#"{"version":3,"floors":"none"}"#.to_string()),
+        ("wrong type", format!(r#"{{"version":{SAVE_VERSION},"floors":"none"}}"#)),
         ("array", "[1,2,3]".to_string()),
     ];
     let mut paths = Vec::new();

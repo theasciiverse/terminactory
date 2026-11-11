@@ -995,6 +995,28 @@
       }
     ]
   },
+  "log": {
+    "len": 1,
+    "of": [
+      {
+        "msg": {
+          "at": "int",
+          "event": "\"finished\"",
+          "from": "\"tests\"",
+          "gift": {
+            "len": 2,
+            "of": [
+              "\"Hollowmere\"",
+              "float"
+            ]
+          },
+          "id": "int",
+          "md": "\"hello\""
+        },
+        "read": "bool"
+      }
+    ]
+  },
   "mail": {
     "len": 1,
     "of": [
@@ -1009,10 +1031,12 @@
             "float"
           ]
         },
+        "id": "int",
         "md": "\"hello\""
       }
     ]
   },
+  "mail_seq": "int",
   "progress": {
     "opened": {
       "len": 12,

@@ -659,7 +659,11 @@ fn making_wire_opens_ashgrove() {
     run(&mut w, 5);
     assert!(w.econ.made[Item::CopperWire.idx()] >= 2);
     assert!(w.progress.is_open(Company::Ashgrove));
-    assert_eq!(w.progress.events.pop_front(), Some(Company::Ashgrove));
+    // Its letter arrives as a telegram, with what it unlocks.
+    let m = w.mail.pop_front().expect("a letter");
+    assert_eq!((m.from.as_str(), m.event.as_str()), ("Ashgrove Ironstone", "letter"));
+    assert!(m.md.contains("ironstone") && m.md.contains("Basic drill"), "{}", m.md);
+    assert!(m.gift.is_none() && w.unread() == 1);
 }
 
 #[test]
@@ -1658,6 +1662,73 @@ fn agent_mail_brings_spaced_deliveries() {
     let gifts: Vec<bool> = w.mail.iter().map(|m| m.gift.is_some()).collect();
     assert_eq!(gifts, [true, false, true]);
     assert_eq!(w.econ.money, money + 50.0);
+}
+
+#[test]
+fn a_new_world_welcomes_the_player_with_one_unread_telegram() {
+    let mut w = World::new();
+    assert!(w.mail.is_empty() && w.log.is_empty(), "World::new alone sends nothing (the demo and tests use it)");
+    w.welcome(1_000);
+    assert_eq!((w.mail.len(), w.unread()), (1, 1));
+    let m = &w.mail[0];
+    assert_eq!(m.from, "Hollowmere & Brannock");
+    assert!(m.gift.is_none() && m.md.contains("**1** builds") && m.md.contains("**f** picks money or research"), "{}", m.md);
+    // Not an agent telegram: no delivery, and the next agent telegram can still bring one.
+    assert_eq!(w.econ.money, START_MONEY);
+    assert_eq!(w.last_gift, 0);
+}
+
+#[test]
+fn every_telegram_is_logged_until_read() {
+    let mut w = World::new();
+    for i in 0..3 {
+        w.receive(crate::mail::parse(&format!("from: a\nmsg {i}"), 0), 1_000);
+    }
+    assert_eq!(w.unread(), 3);
+    let ids: Vec<u64> = w.log.iter().map(|e| e.msg.id).collect();
+    assert_eq!(ids, [1, 2, 3]);
+    w.mark_read(2);
+    assert_eq!(w.unread(), 2);
+    assert!(w.log[1].read && !w.log[0].read);
+    // Taking telegrams off the waiting queue doesn't touch the log.
+    w.mail.clear();
+    assert_eq!(w.log.len(), 3);
+}
+
+#[test]
+fn the_log_keeps_the_last_fifty_and_drops_read_ones_first() {
+    let mut w = World::new();
+    for _ in 0..LOG_KEEP {
+        w.receive(crate::mail::parse("hi", 0), 1_000);
+    }
+    assert_eq!((w.log.len(), w.mail.len()), (LOG_KEEP, MAIL_KEEP));
+    // Read the 10th; when a new one arrives it goes, not the oldest unread.
+    w.mark_read(10);
+    w.receive(crate::mail::parse("new", 0), 1_000);
+    assert_eq!(w.log.len(), LOG_KEEP);
+    assert!(w.log.iter().all(|e| e.msg.id != 10) && w.log.front().unwrap().msg.id == 1);
+    // With none read, the oldest goes.
+    w.receive(crate::mail::parse("newer", 0), 1_000);
+    assert_eq!(w.log.front().unwrap().msg.id, 2);
+    assert_eq!(w.log.back().unwrap().msg.md, "newer");
+}
+
+#[test]
+fn the_log_survives_save_and_load() {
+    let mut w = World::new();
+    w.receive(crate::mail::parse("from: a\nfirst", 0), 1_000);
+    w.receive(crate::mail::parse("from: b\nsecond", 0), 1_000);
+    w.mark_read(1);
+    let path = std::env::temp_dir().join(format!("factory-test-log-{}.json", std::process::id()));
+    w.save(&path).unwrap();
+    let loaded = World::load(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+    let log: Vec<(u64, bool, &str)> = loaded.log.iter().map(|e| (e.msg.id, e.read, e.msg.md.as_str())).collect();
+    assert_eq!(log, [(1, true, "first"), (2, false, "second")]);
+    // New messages carry on from the saved count.
+    let mut loaded = loaded;
+    loaded.receive(crate::mail::parse("third", 0), 1_000);
+    assert_eq!(loaded.log.back().unwrap().msg.id, 3);
 }
 
 #[test]

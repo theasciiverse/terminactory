@@ -49,12 +49,14 @@ fn render_snapshots() {
     assert!(text(&buf).contains("Press") && text(&buf).contains("make copper wire first"));
 
     app.tree = false;
-    app.letter = Some(Company::Ashgrove);
+    // A company's letter is a telegram in the sidebar, and the game keeps running.
+    app.mail = Some(crate::mail::letter(Company::Ashgrove, 0));
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("A letter from"));
+    let t = text(&buf);
+    assert!(t.contains("From Ashgrove") && t.contains("Unlocked for research") && t.contains("HERE"), "{t}");
     std::fs::write("target/snapshot-letter.html", to_html(&buf)).unwrap();
 
-    app.letter = None;
+    app.mail = None;
     let mut m = crate::mail::parse(
         "from: api-server\nevent: finished\n# Auth retry fixed\n\nAll **42 tests** pass. Changed `src/auth.rs`:\n\n- retry on 503, up to 3 times, with a short backoff between tries so a flaky upstream does not get hammered while it recovers\n- [x] lint clean\n- [ ] needs your review\n\n> Didn't touch the session cache.",
         0,
@@ -85,6 +87,53 @@ fn render_snapshots() {
     assert!(text(&buf).contains("From api-server"));
     std::fs::write("target/snapshot-mail-small.html", to_html(&buf)).unwrap();
     app.mail_open = false;
+}
+
+/// The welcome telegram shows in the sidebar of a new game without covering the build menu,
+/// and as a short note in a small pane.
+#[test]
+fn the_welcome_telegram_fits_the_sidebar_and_a_small_pane() {
+    let mut w = World::new();
+    w.welcome(0);
+    let mut app = App::new(w);
+    app.mail = app.world.mail.pop_front();
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("From Hollowmere & Brannock"), "{t}");
+    assert!(t.contains("No rush."), "the whole welcome fits at 42 rows: {t}");
+    assert!(t.contains("HERE"), "and the sidebar keeps its other parts: {t}");
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    let last = text(&render(&mut app, 64, 16)).lines().last().unwrap().to_string();
+    assert!(last.trim_end().ends_with("new telegram · n to view"), "{last}");
+}
+
+/// The telegram log lists everything newest first with unread ones marked, in wide and narrow panes.
+#[test]
+fn telegram_log_lists_newest_first() {
+    let mut w = World::new();
+    w.receive(crate::mail::parse("from: api-server\nevent: finished\n# Auth retry fixed\n\nAll tests pass.", 0), 1_000);
+    w.deliver(crate::mail::letter(Company::Ashgrove, crate::sim::now_secs()));
+    w.mark_read(1);
+    let mut app = App::new(w);
+    app.log_open = true;
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("Telegram log · 1 unread"), "{t}");
+    let rows: Vec<&str> = t.lines().filter(|l| l.contains("Ashgrove") || l.contains("api-server")).collect();
+    assert_eq!(rows.len(), 2, "{t}");
+    assert!(
+        rows[0].contains("● ") && rows[0].contains("Ashgrove") && rows[0].contains("· letter"),
+        "newest first, unread marked: {}",
+        rows[0]
+    );
+    assert!(rows[1].contains("Auth retry fixed") && !rows[1].contains('●'), "{}", rows[1]);
+    assert!(t.contains("Enter read"), "{t}");
+    // A narrow, short pane still shows the rows and the hint.
+    let t = text(&render(&mut app, 40, 12));
+    assert!(t.contains("● Ashgrove") && t.contains("Enter read"), "{t}");
+    std::fs::write("target/snapshot-log.html", to_html(&render(&mut app, 64, 16))).unwrap();
+    // Empty log.
+    let mut app = App::new(World::new());
+    app.log_open = true;
+    assert!(text(&render(&mut app, 64, 16)).contains("Nothing yet"));
 }
 
 /// The research tree turns top-down in a tall, narrow window, and scrolls in a small one.
@@ -238,7 +287,9 @@ fn recipe_book() {
     key(&mut app, KeyCode::Char('n'));
     assert!(app.mail_open && app.book);
     key(&mut app, KeyCode::Char('x'));
-    assert!(!app.mail_open && app.book, "closing the telegram goes back to the book");
+    assert!(app.mail_open && app.mail.is_some(), "other keys don't skip a telegram");
+    key(&mut app, KeyCode::Char('n'));
+    assert!(!app.mail_open && app.mail.is_none() && app.book, "n closes the telegram and goes back to the book");
 
     // A small pane: fewer columns, and a scrollable page.
     let buf = render(&mut app, 64, 20);

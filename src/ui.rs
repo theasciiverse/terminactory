@@ -76,6 +76,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.stats {
         draw_stats(f, app.map_area, app);
     }
+    if app.log_open {
+        maillog::draw_log(f, app.map_area, app);
+    }
     if app.tree {
         draw_tree(f, f.area(), app);
     }
@@ -87,9 +90,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
     if app.mail_open && app.mail.is_some() {
         draw_mail(f, f.area(), app);
-    }
-    if let Some(c) = app.letter {
-        draw_letter(f, f.area(), c);
     }
     if let Some(text) = &app.away {
         let r = centered(f.area(), 62, 9);
@@ -2804,7 +2804,7 @@ fn mail_parts(m: &crate::mail::Message, width: u16) -> (Vec<Line<'static>>, Vec<
     (top, body, foot)
 }
 
-/// Draws the current telegram as a box in `r`. `overlay`: open over the map (any key closes it);
+/// Draws the current telegram as a box in `r`. `overlay`: open over the map (n or Esc closes it);
 /// otherwise it sits in the sidebar while the game keeps running.
 fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let Some(m) = &app.mail else { return };
@@ -2819,8 +2819,8 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let max_scroll = (body.len() as u16).saturating_sub(view);
     app.mail_scroll = app.mail_scroll.min(max_scroll);
     let hint = match (overlay, max_scroll > 0) {
-        (true, true) => format!(" ↑↓ scroll {}/{max_scroll} · any other key closes", app.mail_scroll),
-        (true, false) => " press any key".to_string(),
+        (true, true) => format!(" ↑↓ scroll {}/{max_scroll} · {key} or Esc closes", app.mail_scroll),
+        (true, false) => format!(" {key} or Esc closes"),
         (false, true) => format!(" PgUp/PgDn {}/{max_scroll} · {key} {}", app.mail_scroll, if waiting > 0 { "next" } else { "dismiss" }),
         (false, false) => format!(" {key} {}", if waiting > 0 { "next" } else { "dismiss" }),
     };
@@ -2829,8 +2829,7 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let foot_h = foot.len() as u16;
     let title = match (waiting, overlay) {
         (0, _) => " Telegram ".to_string(),
-        (n, true) => format!(" Telegram · {n} more (Esc dismisses all) "),
-        (n, false) => format!(" Telegram · {n} more "),
+        (n, _) => format!(" Telegram · {n} more "),
     };
 
     if overlay {
@@ -2851,25 +2850,6 @@ fn draw_mail(f: &mut Frame, area: Rect, app: &mut App) {
     let h = mail_height(app, w).min(area.height.saturating_sub(2)).max(8);
     let r = centered(area, w, h);
     draw_mail_in(f, r, app, true);
-}
-
-/// A letter from a company that just opened.
-fn draw_letter(f: &mut Frame, area: Rect, c: Company) {
-    let head = Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD);
-    let mut lines = vec![
-        Line::styled(format!(" A letter from {}", c.name()), head),
-        Line::raw(""),
-        Line::raw(format!(" \"{}\"", c.letter())),
-        Line::raw(""),
-    ];
-    for t in Tech::ALL.iter().filter(|t| t.company() == c) {
-        lines.push(Line::raw(format!(" Unlocked for research: {} ({})", t.name(), t.category().name())));
-    }
-    lines.push(Line::raw(""));
-    lines.push(Line::styled(" press any key", Style::new().fg(Color::DarkGray)));
-    let r = centered(area, 70, 12);
-    f.render_widget(Clear, r);
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(" A letter ").title_style(head)), r);
 }
 
 fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {
@@ -2948,7 +2928,8 @@ CONTROLS
   Production ... o (the last minute, per item; the game keeps running)
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
-  Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll
+  Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,
+                 i log of past telegrams (Enter reads one again)
   Mouse ........ click places, drag lays belts, right-click removes,
                  middle-click copies a part (facing and settings too)
   Quit ......... Ctrl+C (saves first)
@@ -3020,5 +3001,6 @@ CONTROLS
     f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
 }
 
+mod maillog;
 #[cfg(test)]
 mod tests;
