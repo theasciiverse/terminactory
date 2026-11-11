@@ -33,10 +33,12 @@ pub enum Action {
     Book,
     Stats,
     Settings,
+    Area,
+    Restore,
 }
 
 impl Action {
-    pub const ALL: [Action; 25] = [
+    pub const ALL: [Action; 27] = [
         Action::MoveUp,
         Action::MoveDown,
         Action::MoveLeft,
@@ -62,6 +64,8 @@ impl Action {
         Action::Book,
         Action::Stats,
         Action::Settings,
+        Action::Area,
+        Action::Restore,
     ];
     /// The name used in controls.json.
     pub fn id(self) -> &'static str {
@@ -91,6 +95,8 @@ impl Action {
             Action::Book => "recipe_book",
             Action::Stats => "production",
             Action::Settings => "settings",
+            Action::Area => "area_select",
+            Action::Restore => "restore_removed",
         }
     }
     pub fn defaults(self) -> &'static [&'static str] {
@@ -119,8 +125,12 @@ impl Action {
             Action::MailLog => &["i"],
             Action::Book => &["b"],
             Action::Stats => &["o"],
-            // "," is taken (floor down), so settings use c.
+            // "," is taken (floor down), so settings use g.
             Action::Settings => &["g"],
+            // Start the area tool: mark a rectangle, then pick what to do with it (x removes).
+            Action::Area => &["c"],
+            // Puts back what the last area deconstruct took.
+            Action::Restore => &["z"],
         }
     }
 }
@@ -227,8 +237,23 @@ impl Controls {
                 slot.1 = parsed;
             }
         }
+        problems.extend(c.conflicts());
         let note = (!problems.is_empty()).then(|| format!("controls.json: {}", problems.join(", ")));
         (c, note)
+    }
+
+    /// Keys that two actions share (only the first one answers), as notes for the player. A
+    /// hand-edited controls.json can do this, and so can an old one when a new action takes a key.
+    pub fn conflicts(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for (i, (a, keys)) in self.binds.iter().enumerate() {
+            for key in keys {
+                if let Some((b, _)) = self.binds[..i].iter().find(|(_, k)| k.contains(key)) {
+                    out.push(format!("key {} is on both {} and {}", key_label(*key), b.id(), a.id()));
+                }
+            }
+        }
+        out
     }
 
     pub fn action(&self, code: KeyCode) -> Option<Action> {
@@ -285,6 +310,42 @@ mod tests {
         assert_eq!(c.action(KeyCode::Tab), Some(Action::Tree));
         assert_eq!(c.action(KeyCode::Char('x')), Some(Action::Remove)); // untouched actions keep defaults
         assert!(note.unwrap().contains("nonsense"));
+    }
+
+    #[test]
+    fn no_two_actions_share_a_default_key() {
+        assert_eq!(Controls::defaults().conflicts(), Vec::<String>::new());
+        // The area tool's keys are free of everything else.
+        let c = Controls::defaults();
+        assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
+        assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
+        assert_eq!(c.action(KeyCode::Char('g')), Some(Action::Settings));
+        for a in Action::ALL {
+            assert!(!a.defaults().is_empty(), "{} has a default", a.id());
+        }
+    }
+
+    #[test]
+    fn an_old_controls_file_loads_the_new_actions_with_their_defaults() {
+        let path = std::env::temp_dir().join(format!("factory-controls-old-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{ "place": ["Space"], "settings": ["g"] }"#).unwrap();
+        let (c, note) = Controls::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        assert!(note.is_none(), "{note:?}");
+        assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
+        assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
+    }
+
+    #[test]
+    fn a_file_that_binds_c_elsewhere_gets_a_note() {
+        let path = std::env::temp_dir().join(format!("factory-controls-clash-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{ "settings": ["c"] }"#).unwrap();
+        let (c, note) = Controls::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        let note = note.expect("a clash is reported");
+        assert!(note.contains("key c is on both settings and area_select"), "{note}");
+        // The earlier action keeps the key; the other can be rebound in the file.
+        assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Settings));
     }
 
     #[test]

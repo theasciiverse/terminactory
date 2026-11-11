@@ -241,7 +241,7 @@ fn overlays_fit_every_pane_size() {
             .flat_map(|x| (0..crate::sim::H).map(move |y| (x, y)))
             .find(|(x, y)| app.world.tile(0, *x, *y).is_none() && app.world.floors[0].dug[idx(*x, *y)])
             .unwrap();
-        for scene in 0..17 {
+        for scene in 0..21 {
             app.settings.telegram_style = match scene {
                 13 => crate::settings::TelegramStyle::Note,
                 14 => crate::settings::TelegramStyle::Ticker,
@@ -282,6 +282,17 @@ fn overlays_fit_every_pane_size() {
                 super::history_tab::fill(&mut app);
             }
             app.settings_open = scene == 10;
+            // Scenes 17 to 20 are the area tool: no corner yet, one corner, a rectangle chosen, and a
+            // rectangle over waste that has been warned about.
+            let whole = (0, 0, crate::sim::W - 1, crate::sim::H - 1);
+            let stage = |s| Some(crate::app::Area { floor: 0, stage: s });
+            app.area = match scene {
+                17 => stage(crate::app::AreaStage::Picking { corner: None }),
+                18 => stage(crate::app::AreaStage::Picking { corner: Some((0, 0)) }),
+                19 | 20 => stage(crate::app::AreaStage::Chosen { rect: whole }),
+                _ => None,
+            };
+            app.confirm_area = (scene == 20).then_some((0, whole, 50.0));
             app.mail_open = scene == 5;
             app.log_open = scene == 6;
             app.away = (scene == 7).then(|| "You were away for 1h 2m. Your factory kept going:\n\n  +$5\n  +1.0 research".to_string());
@@ -302,6 +313,16 @@ fn overlays_fit_every_pane_size() {
                 // Ticker: the count in the top line, no note.
                 14 => assert!(top.contains("mail") && !last.contains("to view"), "ticker at {w}x{h}: {t}"),
                 _ => {}
+            }
+            if (17..=20).contains(&scene) {
+                if app.compact_now {
+                    assert!(
+                        last.contains("Esc") && (scene == 17 || last.chars().any(|c| c.is_ascii_digit())),
+                        "area scene {scene} at {w}x{h}: {last}"
+                    );
+                } else {
+                    assert!(t.contains("AREA") && t.contains("HERE") && t.contains("Esc cancel"), "area scene {scene} at {w}x{h}: {t}");
+                }
             }
             if scene == 15 {
                 // Never: the full view wherever it fits (46x12 and up), else the small pane.

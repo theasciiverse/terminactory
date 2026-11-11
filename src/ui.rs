@@ -5,7 +5,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
-use crate::app::{slots, tree_rows, App, Entry, StatsHit, BOOK_PARTS};
+use crate::app::{slots, tree_rows, App, AreaStage, AreaVerb, Entry, StatsHit, BOOK_PARTS};
 use crate::controls::Action;
 use crate::settings::TelegramStyle;
 use crate::sim::*;
@@ -524,7 +524,9 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
     let spans_width = |s: &[Span<'static>]| s.iter().map(|s| s.content.chars().count()).sum::<usize>();
     let slot = status_slot(app, Instant::now());
-    let line = if slot == Slot::Menu {
+    let line = if slot == Slot::Area {
+        area_line(app, avail)
+    } else if slot == Slot::Menu {
         let cat = app.menu.unwrap_or(Category::Create);
         // The part list or the picked part always shows: a message gets what is left.
         let tightest = match app.selected {
@@ -567,10 +569,66 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     line_with_note(f, area, line, note);
 }
 
+/// The small pane's line while the area tool is open: ` Area › 12x5 · 23 parts · x remove  Esc cancel`.
+/// Too wide, it drops the key words first, then the extras (fee, the word Area), and last cuts
+/// the text. The counts and the way out always show.
+fn area_line(app: &App, avail: usize) -> Line<'static> {
+    let c = &app.controls;
+    let (place, back) = (c.key(Action::Place), c.key(Action::Back));
+    let cyan = Style::new().fg(Color::Cyan);
+    let Some(area) = app.area else { return Line::raw("") };
+    let options: Vec<String> = match app.area_rect() {
+        None => vec![
+            format!(" Area › {place} or click: first corner, or drag  {back} cancel"),
+            format!(" Area › {place}: corner  {back}"),
+            format!(" {place} {back}"),
+        ],
+        Some(r) => {
+            let (w, h) = rect_size(r);
+            let info = app.world.area_info(area.floor, r);
+            let n = info.parts;
+            let parts = format!("{n} part{}", if n == 1 { "" } else { "s" });
+            if matches!(area.stage, AreaStage::Chosen { .. }) {
+                let (verbs, keys) = (app.area_verb_hints(), AreaVerb::ALL.map(|v| c.key(v.action())).join("/"));
+                let fee = if info.fee > 0.0 { format!(" · fee {}", money_text(info.fee)) } else { String::new() };
+                if app.confirm_area.is_some() {
+                    let key = c.key(Action::Remove);
+                    vec![
+                        format!(" Area › {parts}{fee} · {key} again to pay  {back} cancel"),
+                        format!(" Area › {parts}{fee} · {key} again  {back}"),
+                        format!(" {parts}{fee} · {key} {back}"),
+                        format!(" {n} {key} {back}"),
+                    ]
+                } else {
+                    vec![
+                        format!(" Area › {w}x{h} · {parts}{fee} · {verbs}  {back} cancel"),
+                        format!(" Area › {w}x{h} · {parts}{fee} · {keys}  {back}"),
+                        format!(" Area › {parts}{fee} · {keys}  {back}"),
+                        format!(" {parts} · {keys} {back}"),
+                        format!(" {n} {keys} {back}"),
+                    ]
+                }
+            } else {
+                vec![
+                    format!(" Area › {w}x{h} · {parts} · {place}: other corner  {back} cancel"),
+                    format!(" Area › {w}x{h} · {parts} · {place}  {back}"),
+                    format!(" {parts} · {place} {back}"),
+                    format!(" {n} {place} {back}"),
+                ]
+            }
+        }
+    };
+    let text = options.iter().find(|o| o.chars().count() <= avail).or(options.last()).cloned().unwrap_or_default();
+    Line::styled(fit(&text, avail), cyan)
+}
+
 /// What holds the status line's one slot, most important first. A hint or aside never takes
 /// the place of anything above it, and the key list is what shows when none of them has it.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Slot {
+    /// The small pane's area tool: the rectangle, and the keys. It says everything a message
+    /// would (the waste warning included), so it never gives the line up.
+    Area,
     /// The small pane's open build menu (a message shows beside it).
     Menu,
     /// A message from something the player did (6 seconds).
@@ -606,13 +664,15 @@ fn cursor_holds_slot(app: &App) -> bool {
 /// True when something the player did or is looking at holds the slot, so a hint or aside
 /// must not start. Cheap: the main loop asks every frame.
 pub fn slot_taken(app: &App, now: Instant) -> bool {
-    (app.compact_now && app.menu.is_some()) || message_fresh(app, now) || cursor_holds_slot(app)
+    (app.compact_now && (app.menu.is_some() || app.area.is_some())) || message_fresh(app, now) || cursor_holds_slot(app)
 }
 
 /// The one rule for the status line's slot: messages from actions first, then a stuck-machine
 /// reason (what is under the cursor), then hints, then asides, then the key list.
 pub fn status_slot(app: &App, now: Instant) -> Slot {
-    if app.compact_now && app.menu.is_some() {
+    if app.compact_now && app.area.is_some() {
+        Slot::Area
+    } else if app.compact_now && app.menu.is_some() {
         Slot::Menu
     } else if message_fresh(app, now) {
         Slot::Message
@@ -725,9 +785,34 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
     let ghost_dims = |k: Kind| dims_of(k, app.dir, app.lift_size);
     let ghost = app.selected.map(|k| (k, app.world.check_place_sized(app.floor, cx, cy, k, app.dir, app.lift_size).is_ok()));
     let hover = match app.selected {
-        None => app.world.tile(app.floor, cx, cy).zip(app.world.anchor_of(app.floor, cx, cy)).map(|(b, a)| (a, b.dims())),
-        Some(_) => None,
+        None if app.area.is_none() => {
+            app.world.tile(app.floor, cx, cy).zip(app.world.anchor_of(app.floor, cx, cy)).map(|(b, a)| (a, b.dims()))
+        }
+        _ => None,
     };
+    // The area tool: its rectangle gets a tint (blue while marking, red once only a verb is left),
+    // the parts it would touch are lit like the hover, and the first corner shows a plus.
+    let tool = app.area.filter(|a| a.floor == app.floor);
+    let area_rect = app.area_rect().filter(|_| tool.is_some());
+    let chosen = matches!(tool.map(|a| a.stage), Some(AreaStage::Chosen { .. }));
+    let corner = match tool.map(|a| a.stage) {
+        Some(AreaStage::Picking { corner }) => corner,
+        _ => None,
+    };
+    let mut lit = vec![false; (vw.max(0) * vh.max(0)) as usize];
+    if let Some(r) = area_rect {
+        for (x, y) in app.world.parts_in(app.floor, r) {
+            let Some(b) = app.world.tile(app.floor, x, y) else { continue };
+            let (w, h) = b.dims();
+            for (tx, ty) in footprint(x, y, w, h) {
+                let (sx, sy) = (tx - app.cam.0, ty - app.cam.1);
+                if sx >= 0 && sy >= 0 && sx < vw && sy < vh {
+                    lit[(sy * vw + sx) as usize] = true;
+                }
+            }
+        }
+    }
+    let tint = Color::Indexed(if chosen { 52 } else { 24 });
     let inside = |tx: i32, ty: i32, (ax, ay): (i32, i32), (w, h): (i32, i32)| tx >= ax && tx < ax + w && ty >= ay && ty < ay + h;
     // Power ranges show when asked (v), while placing a power source, or when hovering one.
     let hovering_source = app.world.tile(app.floor, cx, cy).is_some_and(|b| coverage(b.kind, (1, 1), 0, 0).is_some());
@@ -756,6 +841,16 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
                 };
                 if let Some(t) = tint {
                     cells = cells.map(|(c, s)| (c, s.bg(t)));
+                }
+            }
+            if area_rect.is_some_and(|r| tx >= r.0 && tx <= r.2 && ty >= r.1 && ty <= r.3) {
+                if lit[(sy * vw + sx) as usize] {
+                    cells = cells.map(|(c, _)| (c, yellow));
+                } else {
+                    cells = cells.map(|(c, s)| (c, s.bg(tint)));
+                }
+                if corner == Some((tx, ty)) {
+                    cells[0] = ('+', Style::new().fg(PAPER).bg(tint).add_modifier(Modifier::BOLD));
                 }
             }
             if let Some((kind, ok)) = ghost {
@@ -1403,7 +1498,13 @@ fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
     let dim = Style::new().fg(Color::DarkGray);
     let w = &app.world;
     let mut lines: Vec<Line> = Vec::new();
-    match app.menu {
+    // The area tool takes the place of the build list (HERE stays below it).
+    let menu = if app.area.is_some() { None } else { app.menu };
+    if app.area.is_some() {
+        lines.extend(area_side(app));
+    }
+    match menu {
+        None if app.area.is_some() => {}
         None => {
             lines.push(Line::styled("BUILD", head));
             for (n, cat) in Category::ALL.iter().enumerate() {
@@ -1491,6 +1592,44 @@ fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
         lines.push(Line::raw(format!(" {}", s)));
     }
     (lines, here_rows)
+}
+
+/// The sidebar's AREA section: what the rectangle holds and what the keys do. Each line fits
+/// the sidebar's 34 columns.
+fn area_side(app: &App) -> Vec<Line<'static>> {
+    let head = Style::new().add_modifier(Modifier::BOLD).fg(Color::Cyan);
+    let dim = Style::new().fg(Color::DarkGray);
+    let c = &app.controls;
+    let (place, back) = (c.key(Action::Place), c.key(Action::Back));
+    let Some(area) = app.area else { return Vec::new() };
+    let mut lines = vec![Line::from(vec![Span::styled("AREA", head), Span::styled(format!("  {back} cancel"), dim)])];
+    // Few lines, so HERE still shows below it in a short sidebar.
+    if let Some(r) = app.area_rect() {
+        let (w, h) = rect_size(r);
+        let info = app.world.area_info(area.floor, r);
+        let mut counts = format!(" {w}x{h} · {} part{}", info.parts, if info.parts == 1 { "" } else { "s" });
+        if info.elevators > 0 {
+            counts += &format!(" · {} elevator{}", info.elevators, if info.elevators == 1 { "" } else { "s" });
+        }
+        lines.push(Line::raw(counts));
+        if matches!(area.stage, AreaStage::Chosen { .. }) {
+            if info.parts > 0 {
+                let fee = if info.fee > 0.0 { format!(" · waste fee {}", money_text(info.fee)) } else { String::new() };
+                lines.push(Line::raw(format!(" refund {}{fee}", money_text(info.refund))));
+            }
+            if app.confirm_area.is_some() {
+                lines.push(Line::styled(format!(" {} again to pay the fee", c.key(Action::Remove)), Style::new().fg(Color::Yellow)));
+            } else {
+                lines.push(Line::raw(format!(" {}", app.area_verb_hints())));
+            }
+        } else {
+            lines.push(Line::styled(format!(" {place} or let go: other corner"), dim));
+        }
+    } else {
+        lines.push(Line::styled(format!(" {place} or click: first corner"), dim));
+        lines.push(Line::styled(" or drag a rectangle", dim));
+    }
+    lines
 }
 
 /// Rows the sidebar's text needs in a panel `width` wide (borders included), so the graph only
@@ -3210,6 +3349,9 @@ CONTROLS
   Place ........ Space / Enter
   Rotate ....... r (output side)     Remove ....... x (full refund)
   Set up ....... f                   Research ..... t
+  Area ......... c marks a rectangle (Space at two corners, or drag);
+                 then x removes everything in it, full refund. Esc
+                 cancels, z puts back what the last area remove took.
   EC range ..... v                   Floors ....... < >
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
@@ -3236,7 +3378,7 @@ CONTROLS
     if small {
         let c = &app.controls;
         let keys = format!(
-            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Ctrl+C quits and saves. {} lists every item and machine.",
+            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Area {} marks a rectangle, {} removes it, {} puts it back\n  Ctrl+C quits and saves. {} lists every item and machine.",
             "WASD/arrows",
             c.key(Action::Place),
             c.key(Action::Back),
@@ -3245,6 +3387,9 @@ CONTROLS
             c.key(Action::Stats),
             c.key(Action::Settings),
             c.key(Action::Help),
+            c.key(Action::Area),
+            c.key(Action::Remove),
+            c.key(Action::Restore),
             c.key(Action::Book),
         );
         let controls = sections.pop().unwrap_or_default();

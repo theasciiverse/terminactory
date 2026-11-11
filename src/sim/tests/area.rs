@@ -204,11 +204,11 @@ fn restoring_puts_the_area_back_as_it_was() {
     let money = w.econ.money;
     let cover = w.grid.cover.clone();
     let setting = w.setting_at(0, 12, 4);
-    let (_, undo) = w.remove_area(0, (0, 0, 40, 40));
+    let (rep0, undo) = w.remove_area(0, (0, 0, 40, 40));
     let mut undo = undo.unwrap();
     assert_eq!(undo.len(), 8);
     assert!(layout(&w, 0).is_empty() && layout(&w, 1).is_empty() && w.lifts.is_empty());
-    assert!((undo.price() - (w.econ.money - money)).abs() < 1e-9);
+    assert!((rep0.refund - (w.econ.money - money)).abs() < 1e-9);
     let before = rebuilds();
     let rep = w.restore_removed(&mut undo);
     assert_eq!(rebuilds() - before, 1);

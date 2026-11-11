@@ -3,8 +3,6 @@
 //!
 //! A batch checks and pays part by part, then rebuilds the power grids and pipe networks once.
 
-#![allow(dead_code)] // until the area tool in app.rs uses it
-
 use super::*;
 
 /// A rectangle of tiles with both corners inclusive: (x0, y0, x1, y1), x0 <= x1 and y0 <= y1.
@@ -73,10 +71,6 @@ impl Removed {
     }
     pub fn is_empty(&self) -> bool {
         self.parts.is_empty()
-    }
-    /// What putting everything back costs: the full price of each part.
-    pub fn price(&self) -> f64 {
-        self.parts.iter().map(|p| p.main.kind.price(p.main.dims().0)).sum()
     }
 }
 

@@ -16,7 +16,7 @@ mod serde_util;
 mod tools;
 use serde_util::{de_set, ser_set};
 pub use serde_util::{PerFluid, PerItem};
-pub use tools::{rect_of, rect_size, AreaInfo, RemoveReport, Removed, RestoreReport, TileRect};
+pub use tools::{rect_of, rect_size, Removed, TileRect};
 
 pub use crate::content::*;
 

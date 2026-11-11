@@ -9,7 +9,59 @@ use ratatui::layout::Rect;
 use crate::controls::{Action, Controls};
 use crate::history::Range;
 use crate::settings::{Settings, ROWS};
-use crate::sim::{in_bounds, Category, Dir, Kind, Tech, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W};
+use crate::sim::{
+    in_bounds, money_text, rect_of, rect_size, Category, Dir, Kind, Removed, Tech, TileRect, World, H, MAX_LIFT, MIN_LIFT, SPAWN,
+    UNLOCK_GROUPS, W,
+};
+
+/// Where the area tool is. It marks a rectangle on one floor; the verb comes after.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AreaStage {
+    /// Choosing the rectangle: the first corner once it is set (the second follows the cursor).
+    Picking { corner: Option<(i32, i32)> },
+    /// The rectangle is chosen; a verb key does something with what is in it.
+    Chosen { rect: TileRect },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Area {
+    /// The floor the rectangle is on (changing floors cancels the tool).
+    pub floor: usize,
+    pub stage: AreaStage,
+}
+
+impl Area {
+    /// The rectangle being marked, if there is one yet (the cursor is the second corner).
+    pub fn rect(&self, cursor: (i32, i32)) -> Option<TileRect> {
+        match self.stage {
+            AreaStage::Picking { corner } => corner.map(|c| rect_of(c, cursor)),
+            AreaStage::Chosen { rect } => Some(rect),
+        }
+    }
+}
+
+/// What can be done with a chosen rectangle. Copy and upgrade will be added here: each one is a
+/// key (`action`), a word for the hints (`label`) and an arm in `App::area_verb`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AreaVerb {
+    Remove,
+}
+
+impl AreaVerb {
+    pub const ALL: [AreaVerb; 1] = [AreaVerb::Remove];
+
+    pub fn action(self) -> Action {
+        match self {
+            AreaVerb::Remove => Action::Remove,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            AreaVerb::Remove => "remove",
+        }
+    }
+}
 
 /// Something in the production panel a click can reach.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -102,6 +154,13 @@ pub struct App {
     pub world: World,
     /// Waste storage the player was warned about: removing it again confirms the fee.
     pub confirm_remove: Option<(usize, i32, i32)>,
+    /// The area tool (c), if it is open.
+    pub area: Option<Area>,
+    /// An area holding waste that the player was warned about: floor, rectangle and the fee
+    /// quoted. Removing it again (with a fee no higher) pays.
+    pub confirm_area: Option<(usize, TileRect, f64)>,
+    /// What the last area deconstruct took, so `z` can put it back (not saved).
+    pub last_removed: Option<Removed>,
     pub cursor: (i32, i32),
     pub floor: usize,
     pub cam: (i32, i32),
@@ -198,6 +257,9 @@ impl App {
         App {
             world,
             confirm_remove: None,
+            area: None,
+            confirm_area: None,
+            last_removed: None,
             cursor: SPAWN,
             floor: 0,
             cam: (0, 0),
@@ -475,6 +537,9 @@ impl App {
             self.mail_scroll = if k.code == KeyCode::PageUp { self.mail_scroll.saturating_sub(5) } else { self.mail_scroll + 5 };
             return;
         }
+        if self.area.is_some() && self.area_key(k.code, action) {
+            return;
+        }
         if let KeyCode::Char(c @ '1'..='9') = k.code {
             self.number(c as usize - '0' as usize);
             return;
@@ -510,6 +575,8 @@ impl App {
             }
             Action::Book => self.open_book(),
             Action::Settings => self.settings_open = true,
+            Action::Area => self.start_area(),
+            Action::Restore => self.restore_removed(),
             Action::MailLog => {
                 self.log_open = true;
                 self.log_pick = 0;
@@ -628,6 +695,7 @@ impl App {
             return;
         }
         self.selected = Some(kind);
+        self.cancel_area();
         self.paste = None;
         let note = if kind.preview() { " (preview: not in the base tier)" } else { "" };
         // The small-pane status line shows the price, size and facing instead.
@@ -902,7 +970,9 @@ impl App {
             MouseEventKind::Down(MouseButton::Left) => {
                 if let Some(t) = tile {
                     self.cursor = t;
-                    if self.selected.is_some() {
+                    if self.area.is_some() {
+                        self.area_click(t);
+                    } else if self.selected.is_some() {
                         self.place_here();
                     }
                     self.drag_last = Some(t);
@@ -922,12 +992,25 @@ impl App {
                     }
                 }
             }
-            MouseEventKind::Up(MouseButton::Left) => self.drag_last = None,
+            MouseEventKind::Up(MouseButton::Left) => {
+                // Letting go on another tile than the first corner finishes a dragged rectangle.
+                if let Some(Area { stage: AreaStage::Picking { corner: Some(c) }, .. }) = self.area {
+                    let t = tile.unwrap_or(self.cursor);
+                    if self.drag_last.is_some() && t != c {
+                        self.cursor = t;
+                        self.area_set_corner();
+                    }
+                }
+                self.drag_last = None;
+            }
             MouseEventKind::Down(MouseButton::Middle) => {
                 if let Some(t) = tile {
                     self.cursor = t;
                     self.copy_here();
                 }
+            }
+            MouseEventKind::Down(MouseButton::Right) | MouseEventKind::Drag(MouseButton::Right) if self.area.is_some() => {
+                self.cancel_area();
             }
             MouseEventKind::Down(MouseButton::Right) | MouseEventKind::Drag(MouseButton::Right) => {
                 if let Some(t) = tile {
@@ -1077,6 +1160,192 @@ impl App {
         }
     }
 
+    /// `c`: starts marking a rectangle. The hand is emptied (the tool and a held part exclude each other).
+    fn start_area(&mut self) {
+        self.selected = None;
+        self.menu = None;
+        self.paste = None;
+        self.confirm_area = None;
+        self.area = Some(Area { floor: self.floor, stage: AreaStage::Picking { corner: None } });
+        let (place, back) = (self.controls.key(Action::Place), self.controls.key(Action::Back));
+        self.say(format!("Area: {place} marks a corner (or drag), then the opposite one · {back} cancels"));
+    }
+
+    /// Closes the area tool and forgets any waste warning.
+    fn cancel_area(&mut self) {
+        if self.area.take().is_some() {
+            self.confirm_area = None;
+        }
+    }
+
+    /// The area's rectangle right now (the cursor is the second corner while picking).
+    pub fn area_rect(&self) -> Option<TileRect> {
+        self.area.and_then(|a| a.rect(self.cursor))
+    }
+
+    /// A corner is set at the cursor: the first one, or the opposite one that chooses the rectangle.
+    fn area_set_corner(&mut self) {
+        let Some(area) = self.area.as_mut() else { return };
+        let at = self.cursor;
+        match area.stage {
+            AreaStage::Picking { corner: None } => area.stage = AreaStage::Picking { corner: Some(at) },
+            AreaStage::Picking { corner: Some(c) } => {
+                let rect = rect_of(c, at);
+                area.stage = AreaStage::Chosen { rect };
+                self.confirm_area = None;
+                let (w, h) = rect_size(rect);
+                let info = self.world.area_info(self.area.map_or(self.floor, |a| a.floor), rect);
+                if info.parts == 0 {
+                    self.say(format!("{w}x{h} area, nothing in it · {} cancels", self.controls.key(Action::Back)));
+                } else {
+                    let verbs = self.area_verb_hints();
+                    self.say(format!(
+                        "{w}x{h} area, {} part{} · {verbs} · {} cancels",
+                        info.parts,
+                        plural(info.parts),
+                        self.controls.key(Action::Back)
+                    ));
+                }
+            }
+            AreaStage::Chosen { .. } => {}
+        }
+    }
+
+    /// A left click with the tool open: sets a corner, or starts the rectangle over once one is chosen.
+    fn area_click(&mut self, t: (i32, i32)) {
+        match self.area.map(|a| a.stage) {
+            Some(AreaStage::Chosen { .. }) => {
+                self.confirm_area = None;
+                if let Some(a) = self.area.as_mut() {
+                    a.stage = AreaStage::Picking { corner: Some(t) };
+                }
+            }
+            _ => self.area_set_corner(),
+        }
+    }
+
+    /// "x remove" for each verb, for messages and hints.
+    pub fn area_verb_hints(&self) -> String {
+        AreaVerb::ALL.iter().map(|v| format!("{} {}", self.controls.key(v.action()), v.label())).collect::<Vec<_>>().join("  ")
+    }
+
+    /// Keys while the area tool is open. Returns true when the key was used. Movement only moves
+    /// (Shift never lays belts here), digits close the tool and go on to the build menu, and
+    /// anything else that isn't the tool's (help, pause, speed, floors...) carries on as usual.
+    fn area_key(&mut self, code: KeyCode, action: Option<Action>) -> bool {
+        if matches!(code, KeyCode::Char('1'..='9')) {
+            self.cancel_area();
+            return false;
+        }
+        let Some(action) = action else { return true };
+        match action {
+            Action::MoveUp => self.move_cursor(Dir::N),
+            Action::MoveDown => self.move_cursor(Dir::S),
+            Action::MoveLeft => self.move_cursor(Dir::W),
+            Action::MoveRight => self.move_cursor(Dir::E),
+            Action::Back => {
+                self.cancel_area();
+                self.say("Area cancelled");
+            }
+            Action::Place => match self.area.map(|a| a.stage) {
+                Some(AreaStage::Chosen { .. }) => {
+                    let verbs = self.area_verb_hints();
+                    self.say(format!("Pick what to do with the area: {verbs}"));
+                }
+                _ => self.area_set_corner(),
+            },
+            Action::Area => {
+                let verbs = self.area_verb_hints();
+                match self.area.map(|a| a.stage) {
+                    Some(AreaStage::Chosen { .. }) => self.say(format!("Pick what to do with the area: {verbs}")),
+                    _ => self.say("Mark the rectangle first"),
+                }
+            }
+            Action::Rotate | Action::Setup | Action::Bigger | Action::Smaller => {}
+            a => {
+                let Some(verb) = AreaVerb::ALL.iter().copied().find(|v| v.action() == a) else { return false };
+                match self.area.map(|a| a.stage) {
+                    Some(AreaStage::Chosen { rect }) => self.area_verb(verb, rect),
+                    _ => self.say("Mark the rectangle first: corner, then the opposite corner"),
+                }
+            }
+        }
+        true
+    }
+
+    /// Does `verb` to the chosen rectangle.
+    fn area_verb(&mut self, verb: AreaVerb, rect: TileRect) {
+        match verb {
+            AreaVerb::Remove => self.area_remove(rect),
+        }
+    }
+
+    /// Deconstructs everything in the rectangle: full refund, one fee for any waste held (after a
+    /// second press when it is over the limit), and a snapshot for `z`.
+    fn area_remove(&mut self, rect: TileRect) {
+        let Some(floor) = self.area.map(|a| a.floor) else { return };
+        let info = self.world.area_info(floor, rect);
+        if info.parts == 0 {
+            self.cancel_area();
+            self.say("Nothing in the area to remove");
+            return;
+        }
+        let quoted = matches!(self.confirm_area, Some((f, r, fee)) if f == floor && r == rect && info.fee <= fee + 1e-9);
+        if info.fee > WASTE_CONFIRM && !quoted {
+            self.confirm_area = Some((floor, rect, info.fee));
+            let key = self.controls.key(Action::Remove);
+            self.say(format!("The area holds {} waste: removing it costs {} in all. {key} again to pay", info.waste, money_text(info.fee)));
+            return;
+        }
+        self.cancel_area();
+        let (rep, undo) = self.world.remove_area(floor, rect);
+        let mut msg = format!("Removed {} part{}, {} back", rep.parts, plural(rep.parts), money_text(rep.refund));
+        if rep.fee > 0.0 {
+            msg += &format!(" · waste fee {}", money_text(rep.fee));
+        }
+        if rep.kept > 0 {
+            msg += &format!(" · kept {} holding waste: need {} to remove", rep.kept, money_text(rep.kept_fee));
+        }
+        if let Some(undo) = undo {
+            msg += &format!(" · {} puts them back", self.controls.key(Action::Restore));
+            self.last_removed = Some(undo);
+        }
+        self.say(msg);
+    }
+
+    /// `z`: puts back what the last area deconstruct took, as far as it fits and the money goes.
+    fn restore_removed(&mut self) {
+        let key = self.controls.key(Action::Restore);
+        let Some(mut undo) = self.last_removed.take() else {
+            self.say("Nothing to put back: it keeps what the last area remove took");
+            return;
+        };
+        if undo.floor != self.floor {
+            let level = self.world.floors[undo.floor].level;
+            self.last_removed = Some(undo);
+            self.say(format!("Those came off floor {level:+}: go there and press {key}"));
+            return;
+        }
+        let total = undo.len();
+        let rep = self.world.restore_removed(&mut undo);
+        let mut msg = if undo.is_empty() {
+            format!("Put back {} part{}, {}", rep.placed, plural(rep.placed), money_text(rep.price))
+        } else {
+            format!("Put back {} of {total}, {}", rep.placed, money_text(rep.price))
+        };
+        if rep.blocked > 0 {
+            msg += &format!(" · {} blocked", rep.blocked);
+        }
+        if rep.short > 0 {
+            msg += &format!(" · {} short of money", rep.short);
+        }
+        if !undo.is_empty() {
+            msg += &format!(" · {key} again for the rest");
+            self.last_removed = Some(undo);
+        }
+        self.say(msg);
+    }
+
     fn rotate(&mut self) {
         if self.selected.is_some_and(|k| k.directional()) {
             self.dir = self.dir.cw();
@@ -1105,6 +1374,8 @@ impl App {
     fn go_to_level(&mut self, level: i32) {
         match self.world.floor_of(level) {
             Some(f) if self.world.floor_open(f) => {
+                // The rectangle belongs to one floor.
+                self.cancel_area();
                 self.floor = f;
                 let what = match level {
                     0 => "Ground level".to_string(),
@@ -1120,6 +1391,14 @@ impl App {
             Some(_) => self.say(self.world.floor_hint(level)),
             None => {}
         }
+    }
+}
+
+fn plural(n: usize) -> &'static str {
+    if n == 1 {
+        ""
+    } else {
+        "s"
     }
 }
 
