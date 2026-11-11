@@ -30,6 +30,16 @@ pub struct Message {
     /// A company delivery that came with it, and how much money it brought.
     #[serde(default)]
     pub gift: Option<(Company, f64)>,
+    /// Set when it is delivered (1, 2, 3...), so the log can tell which one was read.
+    #[serde(default)]
+    pub id: u64,
+}
+
+/// One line of the telegram log: a message and whether it has been closed with n / Esc yet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogEntry {
+    pub msg: Message,
+    pub read: bool,
 }
 
 pub fn inbox(data_dir: &Path) -> PathBuf {
@@ -101,7 +111,7 @@ pub fn parse(text: &str, now: u64) -> Message {
     if md.is_empty() {
         md = "Done.".into();
     }
-    Message { from, event, md, at: now, gift: None }
+    Message { from, event, md, at: now, gift: None, id: 0 }
 }
 
 /// Turns a Claude Code hook's JSON (Stop or Notification) into (sender, event, Markdown).

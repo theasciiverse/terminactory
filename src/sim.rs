@@ -62,7 +62,7 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 3;
+pub const SAVE_VERSION: u32 = 4;
 
 /// Writes a fixed-size array as a list (serde itself stops at 32 elements).
 fn ser_arr<S, T, const N: usize>(a: &[T; N], s: S) -> Result<S::Ok, S::Error>
@@ -1289,6 +1289,13 @@ pub struct World {
     /// Agent messages waiting to be read.
     #[serde(default)]
     pub mail: crate::mail::Queue,
+    /// Every telegram and letter received, oldest first, with whether it was read.
+    /// Kept in the save, so a telegram skipped by accident can be opened again.
+    #[serde(default)]
+    pub log: VecDeque<crate::mail::LogEntry>,
+    /// How many messages have been delivered (the next one's id).
+    #[serde(default)]
+    pub mail_seq: u64,
     /// When the last company delivery came with a message, and how many have come.
     #[serde(default)]
     pub last_gift: u64,
@@ -1311,6 +1318,8 @@ const RATE_LONG_SECS: f64 = 600.0;
 pub const GIFT_GAP: u64 = 180;
 /// Most agent messages kept waiting to be read.
 pub const MAIL_KEEP: usize = 8;
+/// Most telegrams and letters kept in the log (read ones go first when it is full).
+pub const LOG_KEEP: usize = 50;
 
 pub fn now_secs() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
@@ -1379,6 +1388,8 @@ impl World {
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             mail: VecDeque::new(),
+            log: VecDeque::new(),
+            mail_seq: 0,
             last_gift: 0,
             gifts: 0,
             grid: Grid::default(),
@@ -1408,6 +1419,8 @@ impl World {
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
             mail: VecDeque::new(),
+            log: VecDeque::new(),
+            mail_seq: 0,
             last_gift: 0,
             gifts: 0,
             grid: Grid::default(),
@@ -2357,11 +2370,36 @@ impl World {
                 msg.gift = Some((c, m));
             }
         }
+        self.deliver(msg);
+    }
+
+    /// Puts a message in the waiting queue and in the log (unread).
+    pub fn deliver(&mut self, mut msg: crate::mail::Message) {
+        self.mail_seq += 1;
+        msg.id = self.mail_seq;
+        self.log.push_back(crate::mail::LogEntry { msg: msg.clone(), read: false });
+        while self.log.len() > LOG_KEEP {
+            let at = self.log.iter().position(|e| e.read).unwrap_or(0);
+            self.log.remove(at);
+        }
         self.mail.push_back(msg);
         // Only the newest few wait, so a few days away doesn't mean a pile of telegrams.
+        // (The log keeps the rest.)
         while self.mail.len() > MAIL_KEEP {
             self.mail.pop_front();
         }
+    }
+
+    /// Marks a logged message as read.
+    pub fn mark_read(&mut self, id: u64) {
+        if let Some(e) = self.log.iter_mut().find(|e| e.msg.id == id) {
+            e.read = true;
+        }
+    }
+
+    /// How many logged messages are still unread.
+    pub fn unread(&self) -> usize {
+        self.log.iter().filter(|e| !e.read).count()
     }
 
     /// Making a company's key item for the first time opens that company, and making
