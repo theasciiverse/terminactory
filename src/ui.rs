@@ -32,7 +32,7 @@ const PAPER: Color = Color::Indexed(231);
 const KEY_ITEM: Color = Color::Indexed(220);
 
 /// Below this size the game switches to the small-pane view on its own.
-pub const SMALL_W: u16 = 100;
+pub const SMALL_W: u16 = 120;
 pub const SMALL_H: u16 = 30;
 
 pub fn draw(f: &mut Frame, app: &mut App) {

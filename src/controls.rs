@@ -232,6 +232,11 @@ impl Controls {
         if keys.is_empty() {
             return "(unbound)".into();
         }
+        // Hints say Esc for going back: the backtick and the like stay as quiet aliases.
+        let mut keys = keys.to_vec();
+        if a == Action::Back {
+            keys.sort_by_key(|k| *k != KeyCode::Esc);
+        }
         keys.iter().take(2).map(|k| key_label(*k)).collect::<Vec<_>>().join("/")
     }
 
@@ -244,6 +249,13 @@ impl Controls {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn back_hints_say_esc_first() {
+        let c = Controls::defaults();
+        assert_eq!(c.key(Action::Back), "Esc");
+        assert_eq!(c.label(Action::Back), "Esc/`");
+    }
 
     #[test]
     fn rupee_and_backtick_go_back_by_default() {
