@@ -485,7 +485,7 @@ impl Kind {
             Kind::Belt => 0.5,
             Kind::FastBelt | Kind::Pump => 1.0,
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
-            Kind::Press => 3.0,
+            Kind::Press => 2.0,
             Kind::CrudeAssembler | Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
