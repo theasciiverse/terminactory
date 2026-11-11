@@ -1665,6 +1665,20 @@ fn agent_mail_brings_spaced_deliveries() {
 }
 
 #[test]
+fn a_new_world_welcomes_the_player_with_one_unread_telegram() {
+    let mut w = World::new();
+    assert!(w.mail.is_empty() && w.log.is_empty(), "World::new alone sends nothing (the demo and tests use it)");
+    w.welcome(1_000);
+    assert_eq!((w.mail.len(), w.unread()), (1, 1));
+    let m = &w.mail[0];
+    assert_eq!(m.from, "Hollowmere & Brannock");
+    assert!(m.gift.is_none() && m.md.contains("**1** builds") && m.md.contains("**f** picks money or research"), "{}", m.md);
+    // Not an agent telegram: no delivery, and the next agent telegram can still bring one.
+    assert_eq!(w.econ.money, START_MONEY);
+    assert_eq!(w.last_gift, 0);
+}
+
+#[test]
 fn every_telegram_is_logged_until_read() {
     let mut w = World::new();
     for i in 0..3 {

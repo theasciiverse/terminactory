@@ -89,6 +89,23 @@ fn render_snapshots() {
     app.mail_open = false;
 }
 
+/// The welcome telegram shows in the sidebar of a new game without covering the build menu,
+/// and as a short note in a small pane.
+#[test]
+fn the_welcome_telegram_fits_the_sidebar_and_a_small_pane() {
+    let mut w = World::new();
+    w.welcome(0);
+    let mut app = App::new(w);
+    app.mail = app.world.mail.pop_front();
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("From Hollowmere & Brannock"), "{t}");
+    assert!(t.contains("No rush."), "the whole welcome fits at 42 rows: {t}");
+    assert!(t.contains("HERE"), "and the sidebar keeps its other parts: {t}");
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    let last = text(&render(&mut app, 64, 16)).lines().last().unwrap().to_string();
+    assert!(last.trim_end().ends_with("new telegram · n to view"), "{last}");
+}
+
 /// The telegram log lists everything newest first with unread ones marked, in wide and narrow panes.
 #[test]
 fn telegram_log_lists_newest_first() {

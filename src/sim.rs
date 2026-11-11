@@ -2370,6 +2370,23 @@ impl World {
         self.deliver(msg);
     }
 
+    /// The telegram a brand-new world starts with, from the two starting companies. It
+    /// states how things work and gives no orders; there is no delivery with it.
+    pub fn welcome(&mut self, now: u64) {
+        let md = "Hollowmere here. The ground is yours, so dig anywhere. Drills and furnaces burn coal.\n\n\
+                  Brannock here, all three of us. Molders and presses want EC: a solar panel and a pole will do. \
+                  A trade post sells whatever reaches it, and **f** picks money or research.\n\n\
+                  **1** builds, **t** is research, **b** is recipes, **?** is help. No rush.";
+        self.deliver(crate::mail::Message {
+            from: "Hollowmere & Brannock".into(),
+            event: String::new(),
+            md: md.into(),
+            at: now,
+            gift: None,
+            id: 0,
+        });
+    }
+
     /// Puts a message in the waiting queue and in the log (unread).
     pub fn deliver(&mut self, mut msg: crate::mail::Message) {
         self.mail_seq += 1;
