@@ -1919,7 +1919,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     let points = format!("{} research", grouped(app.world.econ.research));
     let pts_st = Style::new().fg(Color::LightBlue).add_modifier(Modifier::BOLD);
     line(f, y, vec![Span::styled(points, pts_st)]);
-    y += 2;
+    y += if r.height < 16 { 1 } else { 2 };
 
     // Details first (so the list knows how much room it has), wrapped to the window.
     let rows = tree_rows();
@@ -1927,8 +1927,13 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     app.tree_pick = pick;
     // In a short pane the details are three lines (title, about, status) so the list keeps its room.
     let short_pane = r.height < 24;
+    // In a very short one the "about" line goes too.
+    let squat = r.height < 16;
     let details: Vec<(String, Style)> = tree_details(&app.world, rows[pick])
         .into_iter()
+        .enumerate()
+        .filter(|(i, _)| !(squat && *i == 1))
+        .map(|(_, d)| d)
         .flat_map(|(text, st)| {
             let mut wrapped = wrap_words(&text, width.max(10) as usize);
             if short_pane {
@@ -1965,7 +1970,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
         k += n;
     }
     // The list takes what it needs; the details go right under it.
-    let room = footer_y.saturating_sub(details.len() as u16 + 2).max(y + 2);
+    let room = footer_y.saturating_sub(details.len() as u16 + if squat { 1 } else { 2 }).max(y + 2);
     let list_bottom = (y + lines.len() as u16).min(room);
     let view = (list_bottom - y) as usize;
     let at = lines.iter().position(|l| l.1 == Some(pick)).unwrap_or(0);
@@ -1985,6 +1990,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
         }
         before += n;
     }
+    let label_shown = lines.iter().skip(top).take(view).any(|(l, r)| r.is_none() && l.is_some() && *l == pick_group);
     app.tree_rows.clear();
     for (n, (label, row)) in lines.iter().enumerate().skip(top).take(view) {
         let ly = y + (n - top) as u16;
@@ -2000,7 +2006,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
                 // The picked row: one even band across the row, colours kept.
                 let used: usize = rs.iter().map(|s| s.content.chars().count()).sum();
                 let free = (width - gutter) as usize - used.min((width - gutter) as usize);
-                match pick_group.filter(|g| gutter == 0 && free > g.chars().count() + 1) {
+                match pick_group.filter(|g| gutter == 0 && !label_shown && free > g.chars().count() + 1) {
                     Some(g) => {
                         rs.push(Span::raw(" ".repeat(free - g.chars().count() - 1)));
                         rs.push(Span::styled(g.to_string(), dim));
@@ -2983,12 +2989,19 @@ CONTROLS
                 lines.push(Line::styled(l.to_string(), Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
                 continue;
             }
-            // A wrapped line hangs two spaces in from where it started.
-            let indent = l.len() - l.trim_start().len();
-            let wrapped = wrap_words(l.trim_start(), inner_w.saturating_sub(indent).max(8));
-            for (i, part) in wrapped.into_iter().enumerate() {
-                let pad = " ".repeat(if i == 0 { indent } else { indent + 2 });
-                lines.push(Line::raw(format!("{pad}{part}")));
+            if l.chars().count() <= inner_w {
+                lines.push(Line::raw(l.to_string()));
+                continue;
+            }
+            // Too wide: a two-column line splits at its gap, deep indents (the hand-wrapped
+            // continuation lines) come in to 4, and a wrapped line hangs two spaces in.
+            let indent = (l.len() - l.trim_start().len()).min(4);
+            let parts: Vec<&str> = l.trim_start().split("     ").map(str::trim).filter(|p| !p.is_empty()).collect();
+            for part in parts {
+                for (i, row) in wrap_words(part, inner_w.saturating_sub(indent + 2).max(8)).into_iter().enumerate() {
+                    let pad = " ".repeat(if i == 0 { indent } else { indent + 2 });
+                    lines.push(Line::raw(format!("{pad}{row}")));
+                }
             }
         }
     }

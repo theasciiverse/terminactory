@@ -2,6 +2,8 @@ use super::*;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
+mod small_pane;
+
 fn render(app: &mut App, w: u16, h: u16) -> Buffer {
     let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
     term.draw(|f| draw(f, app)).unwrap();
