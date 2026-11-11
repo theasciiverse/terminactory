@@ -1,5 +1,6 @@
 use super::*;
 
+mod boiler;
 mod elevators;
 mod molten;
 mod offline;
