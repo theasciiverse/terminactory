@@ -56,7 +56,7 @@ pub const CRATE_CAP: usize = 400;
 pub const PIPE_CAP: f64 = 20.0; // fluid each pipe tile holds
 pub const PUMP_RATE: f64 = 20.0; // water a pump adds
 pub const BOILER_RATE: f64 = 10.0; // water in, steam out
-pub const ENGINE_POWER: f64 = 40.0; // power at full steam
+pub const ENGINE_POWER: f64 = 100.0; // power at full steam
 const STEAM_PER_TICK: f64 = 10.0 / TPS as f64; // steam an engine burns per tick at full power
 pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
@@ -235,8 +235,12 @@ pub enum Kind {
 // What each assembler above the crude one can make: its tiers, each at a speed
 // (a tier runs at 1x on the lowest assembler that can make it, faster on the ones above).
 static BASIC_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 2), (BASIC_RECIPES, 1)]));
-static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
-    LazyLock::new(|| assembler_list(&[(CRUDE_RECIPES, 4), (BASIC_RECIPES, 2), (ADVANCED_RECIPES, 1)]));
+static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
+    let mut list = assembler_list(&[(CRUDE_RECIPES, 4), (BASIC_RECIPES, 2), (ADVANCED_RECIPES, 1)]);
+    // It has the proper control board recipe: no need for the hand-wired one.
+    list.retain(|r| r.name != HAND_WIRED);
+    list
+});
 // The precision assembler only makes the top tiers: no crude or basic recipes.
 static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
 static LARGE_ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
@@ -391,10 +395,10 @@ impl Kind {
             Kind::Press => 150.0,
             Kind::CrudeAssembler => 300.0,
             Kind::BasicAssembler => 600.0,
-            Kind::AdvancedAssembler => 1500.0,
-            Kind::PrecisionAssembler => 4000.0,
-            Kind::LargeBasicAssembler => 2500.0,
-            Kind::LargeAdvancedAssembler => 6000.0,
+            Kind::AdvancedAssembler => 9000.0,
+            Kind::PrecisionAssembler => 20_000.0,
+            Kind::LargeBasicAssembler => 12_000.0,
+            Kind::LargeAdvancedAssembler => 30_000.0,
             Kind::Welder => 800.0,
             Kind::Kiln => 200.0,
             Kind::Mixer => 200.0,
@@ -485,20 +489,20 @@ impl Kind {
             Kind::Belt => 0.5,
             Kind::FastBelt | Kind::Pump => 1.0,
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
-            Kind::Press => 3.0,
-            Kind::CrudeAssembler | Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
+            Kind::Press => 2.0,
+            Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
             Kind::WireDrawer | Kind::Lathe => 4.0,
             Kind::RollingMill => 8.0,
             Kind::Winder => 2.0,
-            Kind::Arm => 10.0,
-            Kind::LongArm => 15.0,
+            Kind::Arm => 2.0,
+            Kind::LongArm => 4.0,
             Kind::AdvancedAssembler => 16.0,
             Kind::LargeAdvancedAssembler => 48.0,
             Kind::PrecisionAssembler => 64.0,
-            Kind::LargeAdvancedDrill => 128.0,
+            Kind::LargeAdvancedDrill => 40.0,
             _ => 0.0,
         }
     }
@@ -566,8 +570,10 @@ impl Kind {
             Kind::RollingMill | Kind::Welder => Some(Company::Pillar),
             Kind::Elevator | Kind::Kiln => Some(Company::Underhill),
             Kind::FastBelt | Kind::BasicAssembler => Some(Company::Swiftline),
-            Kind::AdvancedDrill | Kind::AdvancedAssembler | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
-            Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => Some(Company::LatticeFinch),
+            Kind::AdvancedDrill | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
+            Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => {
+                Some(Company::LatticeFinch)
+            }
             _ => Some(Company::Brannock),
         }
     }
@@ -651,13 +657,14 @@ impl Kind {
         }
     }
     /// (work per tick, fuel burned per tick) of a drill, in units of a basic drill's.
-    /// An advanced drill is 2x a basic one and runs on EC. A large basic drill mines 16x
-    /// and burns 32x the coal; a large advanced drill is 16x an advanced one.
+    /// An advanced drill is 2x a basic one and runs on EC. A large basic drill mines 5x
+    /// (7.5 ore a second: one belt) and burns 10x the coal; a large advanced drill is 5x an
+    /// advanced one (15 a second: one fast belt).
     pub fn drill_rates(self) -> (u32, u32) {
         match self {
             Kind::AdvancedDrill => (2, 0),
-            Kind::LargeBasicDrill => (16, 32),
-            Kind::LargeAdvancedDrill => (32, 0),
+            Kind::LargeBasicDrill => (5, 10),
+            Kind::LargeAdvancedDrill => (10, 0),
             _ => (1, 1),
         }
     }

@@ -197,7 +197,7 @@ fn outputs_on_a_wide_front_take_turns_between_the_tiles() {
     w.place(0, 8, 6, Kind::Crate, Dir::E).unwrap();
     w.place(0, 8, 8, Kind::Crate, Dir::E).unwrap();
     w.place(0, 5, 10, Kind::Solar, Dir::E).unwrap();
-    run(&mut w, 10);
+    run(&mut w, 26);
     assert_eq!(crate_items(&w, 0, 8, 6).len(), 4);
     assert_eq!(crate_items(&w, 0, 8, 8).len(), 4);
 }

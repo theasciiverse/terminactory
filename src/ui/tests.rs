@@ -249,7 +249,7 @@ fn recipe_book() {
     app.book_go(Entry::Part(Kind::BlastFurnace));
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("2 iron plate + coke  ──→  molten steel + waste"), "{t}");
-    assert!(t.contains("2 iron plate + 4 coal  ──→  molten steel + 4 waste"), "{t}");
+    assert!(t.contains("2 iron plate + 2 coal  ──→  molten steel + 3 waste"), "{t}");
     assert!(t.contains("iron plate + coke  ──→  hardened iron plate"), "{t}");
     std::fs::write("target/snapshot-book-blast.html", to_html(&render(&mut app, 130, 42))).unwrap();
 
@@ -522,7 +522,7 @@ fn small_pane_view() {
     app.selected = None;
 
     // The power figure is global away from power, regional on a pole or panel.
-    assert!(t.lines().next().unwrap().contains("EC 20/15") && !t.contains("global"), "{t}");
+    assert!(t.lines().next().unwrap().contains("EC 20/14") && !t.contains("global"), "{t}");
     let pole = (0..(W * H) as usize).map(pos_of).find(|&(x, y)| app.world.tile(0, x, y).is_some_and(|b| b.kind == Kind::Pole)).unwrap();
     app.cursor = pole;
     let t = text(&render(&mut app, 64, 16));
@@ -687,7 +687,7 @@ fn later_machines_snapshot() {
     // The big drill's and the welder's inspector text.
     app.cursor = (x + 3, y + 3);
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("16x a basic drill's ore") && t.contains("burns 32x the coal"), "{t}");
+    assert!(t.contains("5x a basic drill's ore") && t.contains("burns 10x the coal"), "{t}");
     app.cursor = (x + 23, y3 + 1);
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("30 EC only while working") && t.contains("drawing 0 EC now"), "{t}");
@@ -704,7 +704,7 @@ fn later_machines_have_book_pages() {
     for (k, wants) in [
         (
             Kind::PrecisionAssembler,
-            vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$4,000 · 3x3", "64 EC"],
+            vec!["Precision assembler", "relay + 4 fine wire + iron sheet  ──→  control board", "5.0s", "$20,000 · 3x3", "64 EC"],
         ),
         (
             Kind::AdvancedAssembler,
@@ -722,8 +722,8 @@ fn later_machines_have_book_pages() {
         (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
         (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
         (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
-        (Kind::LargeBasicDrill, vec!["16x a basic drill's ore, burns 32x the coal", "8x8", "front edge"]),
-        (Kind::LargeAdvancedDrill, vec!["16x an advanced drill's ore", "128 EC, no coal"]),
+        (Kind::LargeBasicDrill, vec!["5x a basic drill's ore, burns 10x the coal", "8x8", "front edge"]),
+        (Kind::LargeAdvancedDrill, vec!["5x an advanced drill's ore", "40 EC, no coal"]),
         (Kind::AdvancedDrill, vec!["2x a basic drill's ore", "EC, no coal", "4x4"]),
         (Kind::AdvancedPump, vec!["80 water a second", "4 EC"]),
     ] {
@@ -1004,10 +1004,10 @@ fn book_pages_for_the_new_machines_and_items() {
     // An item page: where the screw comes from, and what a spring needs.
     app.book_go(Entry::Item(Item::Screw));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $4"), "{t}");
+    assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $2"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("7 coal  ──→  2 coke + 3 waste") && t.contains("2 coal  ──→  coke + waste"), "{t}");
+    assert!(t.contains("2 coal  ──→  coke + waste"), "{t}");
     // Furnace and blast furnace melt iron differently: both show on the iron ore page.
     app.book_go(Entry::Item(Item::IronOre));
     let t = text(&render(&mut app, 130, 42));

@@ -35,13 +35,13 @@ Phase 1: ore is melted in a furnace into molten metal, a molder casts it into in
 
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
-- **Steam engines** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 40 EC each, only as much as their grid needs beyond solar.
-- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 5 s), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which comes out the front too and has to go somewhere (see Waste below).
+- **Steam engines** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 100 EC each, only as much as their grid needs beyond solar.
+- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 2.5 s: 24 molten iron a minute, twice a furnace's 12), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which comes out the front too and has to go somewhere (see Waste below).
 
 Phase 3: floors, elevators and machinery.
 - **Floors**: support beams (after steel girders) open floor +1; excavation (after concrete) opens floor -1. Decking or digging costs $10 a tile (more on later floors), never any waiting. Drills underground mine 1.5x faster (2x and 3x on deeper floors later).
 - **Elevators**: boxes from 2x2 to 8x8 (`+`/`-` to resize while placing), holding 10 items per tile. Each open floor gets a door; `f` sets a door to load, unload or pass. A car leaves only when full: 0.5 s doors, 1 s per floor, 0.5 s doors, then unloads at 30 items/s out of the door's arrow side.
-- **Machinery**: the crude assembler (4×4, after an iron gear) builds small parts (see Parts, below); fast belts (after a gearbox) move twice as much.
+- **Machinery**: the crude assembler (4×4, needs no EC, after an iron gear) builds small parts (see Parts, below); fast belts (after a gearbox) move twice as much.
 - **Logistics toys** (research them in the Moving group):
   - **Belt tunnels** pass under up to 4 tiles. Place an entrance, then its exit up to 5 tiles further on facing the same way; build anything in between. They need no power.
   - **Long arm**: grabs from 2 tiles behind and drops 2 ahead, over whatever sits in between.
@@ -67,36 +67,36 @@ Six new machines (all in Create), each from a company that opens when you first 
 | **Rolling mill** | 2×2 · 8 · $400 | Pillar (steel girder) | 1,200 | 500 iron plate |
 
 - **Crusher**: 1 copper ore → 2 copper grit (4 s); 1 iron ore → 2 iron grit (4 s); 1 stone → 2 sand (2.5 s). Grit melts further than ore: 3 copper grit → 2 molten copper in a furnace, so crushed copper gives a third more ingots per ore. 2 iron grit → 1 molten iron in a furnace (5 s); 3 iron grit → 2 molten iron in a blast furnace (2.5 s).
-- **Coke oven**: 2 coal → 1 coke + 1 waste (2 s). It cooks its own coal: no EC, no separate fuel. The furnace also gets a fast and dirty coke recipe: 7 coal → 2 coke + 3 waste (2.5 s); the slow 3 coal → 1 coke (5 s) stays.
-- **Press** (retimed): copper wire 1 plate → 2 wire (5 s); copper pipe 2 plates → 1 pipe (2.5 s); copper coil 4 wire → 1 coil (5 s), or 5 fine wire → 1 coil (2.5 s); iron gear 2 plates → 1 gear (2.5 s); steel girder 2 steel → 1 girder (5 s); hardened gear 2 hardened plate → 1 gear (5 s). The gearbox moved to the crude assembler.
+- **Coke oven**: 2 coal → 1 coke + 1 waste (2 s). It cooks its own coal: no EC, no separate fuel. The furnace cooks coke the slow clean way: 3 coal → 1 coke (5 s).
+- **Press** (retimed): copper wire 1 plate → 2 wire (5 s); copper pipe 2 plates → 1 pipe (2.5 s); copper coil 4 wire → 1 coil (5 s); iron gear 2 plates → 1 gear (2.5 s); steel girder 2 steel → 1 girder (5 s); hardened gear 2 hardened plate → 1 gear (5 s); crude sheets 3 copper plate → 1 copper sheet or 3 iron plate → 1 iron sheet (5 s; the rolling mill needs only 2 plates). The gearbox moved to the crude assembler.
 - **Wire drawer**: 1 copper plate → 3 copper wire (4 s); 1 copper wire → 2 fine wire (4 s).
-- **Winder**: 3 copper wire → 1 copper coil (4 s); 2 iron rod → 1 spring (5 s).
+- **Winder**: 3 copper wire → 1 copper coil (4 s), or 6 fine wire → 2 copper coil (4 s: more drawers, half the winders); 2 iron rod → 1 spring (5 s).
 - **Rolling mill**: 2 copper plate → 1 copper sheet (5 s); 2 iron plate → 1 iron sheet (2.5 s); 1 steel → 1 steel sheet (5 s); 3 steel → 2 steel girder (4 s).
 - **Lathe**: 1 iron plate → 2 iron rod (5 s); 1 iron rod → 4 screw (5 s); 1 steel → 2 steel rod (5 s); 1 steel rod → 2 bearing (2.5 s).
-- New items and prices: copper grit $0.80, iron grit $1.20, sand $0.25, fine wire $2.50, copper sheet $12, iron rod $5, screw $4, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
+- New items and prices: copper grit $0.60, iron grit $0.60, sand $0.25, fine wire $2.50, copper sheet $14, iron rod $5, screw $2, spring $15, iron sheet $18. Existing prices now: copper wire $3, copper pipe $12, copper coil $18, iron gear $18, coke $2.50. Glyphs: `:` grit (copper orange, iron blue) and sand (tan), `~` fine wire (pale), `-` sheet, `!` rod, `x` screw, `z` spring.
 - **Companies now** (key item → what they offer): copper wire → Ashgrove (basic drill, crusher); coke → Cinderhall (blast furnace, coke oven); copper pipe → Wellbourne (pump, pipes); copper coil → Kettering (boiler, steam engine, wire drawer, winder); iron gear → Gearwright (assembler, lathe); steel girder → Pillar (floor +1, rolling mill). Swiftline's fast belts now open on a gearbox instead of an iron gear.
 
 ## Steel, stone, parts and big goods
 
 Everything the earlier steps pointed at is real now. Times are seconds; prices are sell prices.
 
-**Steel.** The blast furnace makes **molten steel** (it leaves the front into a pipe or a molder, which casts it: 1 molten steel → 1 steel, 2.5 s; steel $24). Four ways, each also leaving waste items out the front (give the waste its own belt or crate beside the molder):
+**Steel.** The blast furnace makes **molten steel** (it leaves the front into a pipe or a molder, which casts it: 1 molten steel → 1 steel, 2.5 s; steel $24). Three ways from plate, each also leaving waste items out the front (give the waste its own belt or crate beside the molder), and a fourth straight from molten iron:
 
 | Recipe | Time | Waste |
 | --- | --- | --- |
 | 2 iron plate + 1 coke | 10 | 1 |
-| 2 iron plate + 2 coal | 10 | 2 |
+| 2 iron plate + 2 coal | 10 | 3 |
 | 2 iron plate + 2 coke | 5 | 2 |
-| 2 iron plate + 4 coal | 5 | 4 |
+| 3 molten iron + 1 coke (direct) | 10 | 2 |
 
-The blast furnace also makes **hardened iron plate** ($20): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 1 waste). The press makes **hardened gear** ($65, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
+The direct route takes molten iron from a pipe, or from an iron blast furnace standing right against it (no pipe, no cast, press or second melt) and gives molten steel out the front. The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 2 waste). The press makes **hardened gear** ($50, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
 
-**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1.50), 3 sand → 1 **glass** ($2), 5 s. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
+**Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), a firing takes 20 s (24 a minute): a batch machine fires for one run's time × its batch ÷ 2. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
-- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel).
+- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
 - Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw).
-- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet). The control board is the "x1x1", the weakest microprocessor. The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
+- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor. The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
 - Welder (10 s, 30 EC only while working): boiler shell $80 (steel sheet + 4 brick), silo shell $260 (3 steel sheet + valve), frame $280 (2 steel girder + 8 screw).
 
 **Big goods.** Large basic assembler (20 s): pump unit $900 (motor + 2 valve + silo shell + gauge), engine block $1,150 (frame + 4 piston + gearbox + boiler shell). Large advanced assembler (also does those, twice as fast): generator $1,100 (frame + 2 motor + gauge + control board, 20 s), control panel $900 (2 control board + 4 lamp + 2 gauge + steel sheet, 20 s), **drilling rig** $3,500 (4 girder + 2 gearbox + 4 reinforced concrete + motor + pump unit, 40 s) and **steam tractor** $7,500 (engine block + frame + 4 hardened gear + control panel + generator, 60 s). The drilling rig and steam tractor are **crown items**: they go into nothing, only sell, and keep a high research floor so they keep paying research however many you sell.
@@ -108,26 +108,26 @@ Every other item except waste goes into at least one recipe.
 | Company (key item) | Machine | Research | Free once you've made |
 | --- | --- | --- | --- |
 | Wellbourne (copper pipe) | Mixer | 1,500 | 1,000 stone |
-| | Advanced pump (2×2, 4× the water) | 2,500 | 150 copper pipe |
-| Underhill (concrete) | Excavation (floor -1) | 3,000 | 50 concrete |
-| | Kiln | 2,000 | 150 concrete |
-| Pillar (steel girder) | Welder | 4,000 | 100 steel girder |
-| Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 40 gearbox |
-| **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 6,000 | 10 motor |
-| | Advanced assembler (3×3) | 10,000 | 25 motor |
-| | Large basic drill (8×8, coal) | 15,000 | 50 motor |
-| | Large basic assembler (5×5) | 25,000 | 100 motor |
-| **Lattice & Finch** (control board) | Precision assembler (3×3) | 25,000 | 40 control board |
-| | Large advanced drill (8×8, EC) | 50,000 | 120 control board |
-| | Large advanced assembler (5×5) | 100,000 | 250 control board |
+| | Advanced pump (2×2, 4× the water) | 2,500 | 250 copper pipe |
+| Underhill (concrete) | Excavation (floor -1) | 3,000 | 150 concrete |
+| | Kiln | 2,000 | 250 concrete |
+| Pillar (steel girder) | Welder | 4,000 | 150 steel girder |
+| Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 100 gearbox |
+| **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 8,000 | 40 motor |
+| | Large basic drill (8×8, coal) | 20,000 | 150 motor |
+| | Large basic assembler (5×5) | 25,000 | 300 motor |
+| **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
+| | Precision assembler (3×3) | 30,000 | 120 control board |
+| | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
+| | Large advanced assembler (5×5) | 100,000 | 800 control board |
 
-Every key item can be made with machines from companies that open before it, so nothing locks: copper first, then Cinderhall's steel, then Pillar, Gearwright, Underhill, Swiftline, Ampleworth and last Lattice & Finch.
+Every key item can be made with machines from companies that open before it, so nothing locks: copper and the iron gear first (a press makes both, no blast furnace needed, so Gearwright opens early), then Cinderhall's steel, then Pillar, Underhill, Swiftline and Ampleworth. Lattice & Finch is a second road: a control board can be wired by hand in the crude assembler as soon as you have relays and fine wire, no steel or motors needed.
 
 **Build menu.** Create has five groups now: 1 drills (cheap, basic, advanced, large basic, large advanced), 2 furnace / molder / blast furnace / coke oven / kiln, 3 press / wire drawer / winder / rolling mill / lathe / crusher, 4 assemblers (crude to large advanced) and the welder, 5 pump / advanced pump / pipe / mixer. On a short screen the menu folds each group to one kind (marked `+`) until you pick one; in a small pane the bottom line drops prices and shortens names so all five numbers show.
 
 ## Molten metal
 
-- **Furnace** (burns coal): copper ore → molten copper (1 → 1, 5 s); iron ore → molten iron (3 → 2, 10 s, slow); grit melts better (see above); with coking, 3 coal → coke (5 s) or 7 coal → 2 coke + 3 waste (2.5 s). Press `f` on it to change the recipe.
+- **Furnace** (burns coal): copper ore → molten copper (1 → 1, 5 s); iron ore → molten iron (3 → 2, 10 s, slow); grit melts better (see above); with coking, 3 coal → coke (5 s). Press `f` on it to change the recipe.
 - **Molder** (2 EC, $100, Create 2, next to the furnace): casts molten metal into ingots: copper ingot ($2), iron ingot ($1.50), steel (2.5 s each). `f` picks the recipe; it only takes the metal its recipe uses.
 - **Press**: copper plate and iron plate come from ingots now (2.5 s), then wire, pipe, coil and the rest as before. Copper ingots are the free milestone for the press (make 50).
 - **Fluids in pipes**: a machine that makes a fluid pushes it out of its **front**, into a pipe touching that edge, or straight into a machine that takes it (a furnace right behind a molder needs no pipe). A machine that needs a fluid takes it from pipes on any of its other sides. A pipe network holds one fluid at a time: water blue, steam white, molten copper orange, molten iron red, molten steel pale yellow, grey when empty. Pointing at a pipe or a machine names the fluid.

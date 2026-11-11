@@ -212,7 +212,7 @@ impl Item {
             Item::CopperPipe => 12.0,
             Item::CopperCoil => 18.0,
             Item::Coke => 2.5,
-            Item::IronOre => 2.5,
+            Item::IronOre => 1.0,
             Item::IronPlate => 2.0,
             Item::Steel => 24.0,
             // Waste costs money to get rid of.
@@ -225,22 +225,22 @@ impl Item {
             Item::CopperIngot => 2.0,
             Item::IronIngot => 1.5,
             Item::Stone => 0.3,
-            Item::CopperGrit => 0.8,
-            Item::IronGrit => 1.2,
+            Item::CopperGrit => 0.6,
+            Item::IronGrit => 0.6,
             Item::Sand => 0.25,
             Item::FineWire => 2.5,
-            Item::CopperSheet => 12.0,
+            Item::CopperSheet => 14.0,
             Item::IronRod => 5.0,
-            Item::Screw => 4.0,
+            Item::Screw => 2.0,
             Item::Spring => 15.0,
             Item::IronSheet => 18.0,
-            Item::Brick => 1.5,
+            Item::Brick => 1.0,
             Item::Glass => 2.0,
             Item::SteelRod => 16.0,
             Item::Bearing => 12.0,
             Item::SteelSheet => 36.0,
-            Item::HardenedIronPlate => 20.0,
-            Item::HardenedGear => 65.0,
+            Item::HardenedIronPlate => 14.0,
+            Item::HardenedGear => 50.0,
             Item::ReinforcedConcrete => 16.0,
             Item::Valve => 50.0,
             Item::Gauge => 35.0,
@@ -280,26 +280,26 @@ impl Item {
             Item::Gearbox => c(240.0, 0.997, 0.08),
             // Crown items are only for selling and research. Their floor is high, so they keep paying
             // good research however many you sell (every other item's floor is 0.1 or lower).
-            Item::DrillingRig => c(7000.0, 0.99, 0.3),
+            Item::DrillingRig => c(7000.0, 0.99, 0.2),
             Item::CopperIngot => c(6.0, 0.995, 0.03),
             Item::IronIngot => c(8.0, 0.995, 0.03),
             Item::Stone => c(1.0, 0.99, 0.02),
-            Item::CopperGrit => c(10.0, 0.99, 0.02),
-            Item::IronGrit => c(10.0, 0.99, 0.02),
-            Item::Sand => c(10.0, 0.99, 0.02),
+            Item::CopperGrit => c(10.0, 0.98, 0.02),
+            Item::IronGrit => c(10.0, 0.98, 0.02),
+            Item::Sand => c(10.0, 0.98, 0.02),
             Item::FineWire => c(10.0, 0.995, 0.03),
-            Item::CopperSheet => c(24.0, 0.995, 0.04),
+            Item::CopperSheet => c(28.0, 0.995, 0.04),
             Item::IronRod => c(10.0, 0.995, 0.03),
             Item::Screw => c(10.0, 0.995, 0.03),
             Item::Spring => c(30.0, 0.996, 0.05),
             Item::IronSheet => c(36.0, 0.996, 0.05),
-            Item::Brick => c(10.0, 0.99, 0.02),
-            Item::Glass => c(10.0, 0.99, 0.02),
+            Item::Brick => c(10.0, 0.98, 0.02),
+            Item::Glass => c(10.0, 0.98, 0.02),
             Item::SteelRod => c(32.0, 0.995, 0.04),
             Item::Bearing => c(24.0, 0.995, 0.04),
             Item::SteelSheet => c(72.0, 0.996, 0.05),
-            Item::HardenedIronPlate => c(40.0, 0.995, 0.04),
-            Item::HardenedGear => c(130.0, 0.996, 0.05),
+            Item::HardenedIronPlate => c(28.0, 0.995, 0.04),
+            Item::HardenedGear => c(100.0, 0.996, 0.05),
             Item::ReinforcedConcrete => c(32.0, 0.995, 0.04),
             Item::Valve => c(100.0, 0.996, 0.05),
             Item::Gauge => c(70.0, 0.996, 0.05),
@@ -316,7 +316,7 @@ impl Item {
             Item::EngineBlock => c(2300.0, 0.998, 0.08),
             Item::ControlPanel => c(1800.0, 0.998, 0.08),
             // A crown item too: same high floor as the drilling rig.
-            Item::SteamTractor => c(15000.0, 0.99, 0.3),
+            Item::SteamTractor => c(15000.0, 0.99, 0.2),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going.
@@ -420,8 +420,8 @@ impl Company {
             Company::Underhill => "Concrete? You're one of us. Underhill Excavation digs the floor beneath your feet, cheerfully, and the ore down there is richer than anything on top. Our kiln bakes stone into brick and sand into glass, eight at a time.",
             Company::Gearwright => "A gear with teeth like that deserves a proper home. Gearwright's crude assembler builds valves, gauges, lamps, relays and gearboxes, patiently. Our lathe turns plate into rods and screws, and steel into steel rods and bearings.",
             Company::Swiftline => "A gearbox! Now that's something that turns. Swiftline belts move twice what Brannock's do, and our basic assembler builds electric motors and pistons. Tell the sisters we said hello.",
-            Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, an advanced assembler that builds control boards, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
-            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
+            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
         }
     }
 }
@@ -595,10 +595,10 @@ impl Tech {
             Tech::AdvancedDrill => "a 4x4 drill that runs on EC and mines twice as fast as a basic drill",
             Tech::AdvancedAssembler => "a 3x3 assembler, four times the crude speed, that also builds control boards",
             Tech::LargeBasicAssembler => "a 5x5 assembler for the big goods: pump units and engine blocks",
-            Tech::LargeBasicDrill => "an 8x8 drill that mines 16 times a basic drill, and burns 32 times the coal",
+            Tech::LargeBasicDrill => "an 8x8 drill that mines 5 times a basic drill (one belt's worth), and burns 10 times the coal",
             Tech::PrecisionAssembler => "a 3x3 assembler that builds control boards fastest, and later chips",
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
-            Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 16 times an advanced drill",
+            Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
         }
     }
     pub fn company(self) -> Company {
@@ -617,8 +617,10 @@ impl Tech {
             Tech::WireDrawer | Tech::Winder => Company::Kettering,
             Tech::CokeOven => Company::Cinderhall,
             Tech::Lathe => Company::Gearwright,
-            Tech::AdvancedDrill | Tech::AdvancedAssembler | Tech::LargeBasicAssembler | Tech::LargeBasicDrill => Company::Ampleworth,
-            Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill => Company::LatticeFinch,
+            Tech::AdvancedDrill | Tech::LargeBasicAssembler | Tech::LargeBasicDrill => Company::Ampleworth,
+            Tech::AdvancedAssembler | Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill => {
+                Company::LatticeFinch
+            }
         }
     }
     pub fn category(self) -> Category {
@@ -689,13 +691,13 @@ impl Tech {
             Tech::Welder => 4000.0,
             Tech::BasicAssembler => 6000.0,
             // Motor stage.
-            Tech::AdvancedDrill => 6000.0,
-            Tech::AdvancedAssembler => 10_000.0,
-            Tech::LargeBasicDrill => 15_000.0,
+            Tech::AdvancedDrill => 8000.0,
+            Tech::AdvancedAssembler => 14_000.0,
+            Tech::LargeBasicDrill => 20_000.0,
             Tech::LargeBasicAssembler => 25_000.0,
             // Processor stage.
-            Tech::PrecisionAssembler => 25_000.0,
-            Tech::LargeAdvancedDrill => 50_000.0,
+            Tech::PrecisionAssembler => 30_000.0,
+            Tech::LargeAdvancedDrill => 60_000.0,
             Tech::LargeAdvancedAssembler => 100_000.0,
         }
     }
@@ -703,16 +705,16 @@ impl Tech {
     pub fn milestone(self) -> (Item, u64) {
         match self {
             Tech::Press => (Item::CopperIngot, 50),
-            Tech::Coking => (Item::Coal, 150),
-            Tech::BasicDrill => (Item::CopperWire, 100),
-            Tech::Pumps => (Item::CopperPipe, 40),
-            Tech::Steam => (Item::CopperCoil, 20),
-            Tech::BlastFurnace => (Item::Coke, 100),
-            Tech::SupportBeams => (Item::SteelGirder, 25),
-            Tech::Excavation => (Item::Concrete, 50),
+            Tech::Coking => (Item::Coal, 300),
+            Tech::BasicDrill => (Item::CopperWire, 150),
+            Tech::Pumps => (Item::CopperPipe, 60),
+            Tech::Steam => (Item::CopperCoil, 40),
+            Tech::BlastFurnace => (Item::Coke, 200),
+            Tech::SupportBeams => (Item::SteelGirder, 40),
+            Tech::Excavation => (Item::Concrete, 150),
             // The crude assembler is what makes gearboxes, so its milestone is the gear.
-            Tech::Assembler => (Item::IronGear, 50),
-            Tech::FastBelts => (Item::Gearbox, 20),
+            Tech::Assembler => (Item::IronGear, 300),
+            Tech::FastBelts => (Item::Gearbox, 40),
             Tech::Tunnels => (Item::CopperPlate, 400),
             Tech::LongArms => (Item::CopperWire, 200),
             Tech::FilterSplitters => (Item::CopperPipe, 60),
@@ -724,17 +726,17 @@ impl Tech {
             Tech::Lathe => (Item::IronPlate, 300),
             Tech::RollingMill => (Item::IronPlate, 500),
             Tech::Mixer => (Item::Stone, 1000),
-            Tech::Kiln => (Item::Concrete, 150),
-            Tech::AdvancedPump => (Item::CopperPipe, 150),
-            Tech::Welder => (Item::SteelGirder, 100),
-            Tech::BasicAssembler => (Item::Gearbox, 40),
-            Tech::AdvancedDrill => (Item::ElectricMotor, 10),
-            Tech::AdvancedAssembler => (Item::ElectricMotor, 25),
-            Tech::LargeBasicDrill => (Item::ElectricMotor, 50),
-            Tech::LargeBasicAssembler => (Item::ElectricMotor, 100),
-            Tech::PrecisionAssembler => (Item::ControlBoard, 40),
-            Tech::LargeAdvancedDrill => (Item::ControlBoard, 120),
-            Tech::LargeAdvancedAssembler => (Item::ControlBoard, 250),
+            Tech::Kiln => (Item::Concrete, 250),
+            Tech::AdvancedPump => (Item::CopperPipe, 250),
+            Tech::Welder => (Item::SteelGirder, 150),
+            Tech::BasicAssembler => (Item::Gearbox, 100),
+            Tech::AdvancedDrill => (Item::ElectricMotor, 40),
+            Tech::AdvancedAssembler => (Item::ControlBoard, 40),
+            Tech::LargeBasicDrill => (Item::ElectricMotor, 150),
+            Tech::LargeBasicAssembler => (Item::ElectricMotor, 300),
+            Tech::PrecisionAssembler => (Item::ControlBoard, 120),
+            Tech::LargeAdvancedDrill => (Item::ControlBoard, 300),
+            Tech::LargeAdvancedAssembler => (Item::ControlBoard, 800),
         }
     }
 }
@@ -813,7 +815,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::SupportBeams), Some(20)),           // 21
     (Node::Tech(Tech::RollingMill), Some(20)),            // 22
     (Node::Tech(Tech::Welder), Some(20)),                 // 23
-    (Node::Key(Item::IronGear), Some(18)),                // 24
+    (Node::Key(Item::IronGear), Some(1)),                 // 24: iron plate has a job from the start
     (Node::Tech(Tech::Lathe), Some(24)),                  // 25
     (Node::Tech(Tech::Assembler), Some(24)),              // 26
     (Node::Key(Item::Gearbox), Some(26)),                 // 27
@@ -821,13 +823,13 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::BasicAssembler), Some(27)),         // 29
     (Node::Key(Item::ElectricMotor), Some(29)),           // 30
     (Node::Tech(Tech::AdvancedDrill), Some(30)),          // 31
-    (Node::Tech(Tech::AdvancedAssembler), Some(30)),      // 32
-    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 33
-    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 34
-    (Node::Key(Item::ControlBoard), Some(32)),            // 35
-    (Node::Tech(Tech::PrecisionAssembler), Some(35)),     // 36
-    (Node::Tech(Tech::LargeAdvancedDrill), Some(35)),     // 37
-    (Node::Tech(Tech::LargeAdvancedAssembler), Some(35)), // 38
+    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 32
+    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 33
+    (Node::Key(Item::ControlBoard), Some(26)),            // 34: hand-wired in the crude assembler
+    (Node::Tech(Tech::AdvancedAssembler), Some(34)),      // 35
+    (Node::Tech(Tech::PrecisionAssembler), Some(34)),     // 36
+    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),     // 37
+    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)), // 38
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -933,8 +935,6 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         needs: None,
         tag: 'I',
     },
-    // Fast and dirty: more coke per coal's time, and a lot of waste.
-    item_recipe("coke (fast)", &[(Item::Coal, 7)], &[(Item::Coke, 2), (Item::Waste, 3)], 150, None, Some(Tech::Coking), 'K'),
 ];
 
 /// Molders cast molten metal into ingots. The metal comes from pipes, or straight from a furnace.
@@ -981,10 +981,12 @@ pub const PRESS_RECIPES: &[Recipe] = &[
     item_recipe("copper wire", &[(Item::CopperPlate, 1)], &[(Item::CopperWire, 2)], 300, None, None, 'W'),
     item_recipe("copper pipe", &[(Item::CopperPlate, 2)], &[(Item::CopperPipe, 1)], 150, None, None, 'P'),
     item_recipe("copper coil", &[(Item::CopperWire, 4)], &[(Item::CopperCoil, 1)], 300, None, None, 'C'),
-    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 150, None, Some(Tech::BlastFurnace), 'G'),
+    item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 150, None, None, 'G'),
     item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 300, None, Some(Tech::BlastFurnace), 'R'),
     item_recipe("hardened gear", &[(Item::HardenedIronPlate, 2)], &[(Item::HardenedGear, 1)], 300, None, Some(Tech::BlastFurnace), 'H'),
-    item_recipe("copper coil (fine wire)", &[(Item::FineWire, 5)], &[(Item::CopperCoil, 1)], 150, None, None, 'C'),
+    // Crude sheets: a third more plate than the rolling mill takes, but no company to wait for.
+    item_recipe("copper sheet (pressed)", &[(Item::CopperPlate, 3)], &[(Item::CopperSheet, 1)], 300, None, None, 'S'),
+    item_recipe("iron sheet (pressed)", &[(Item::IronPlate, 3)], &[(Item::IronSheet, 1)], 300, None, None, 'I'),
 ];
 
 /// Molten steel: the steel stays molten and leaves the front as fluid (into a pipe or a molder
@@ -1013,7 +1015,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 1)),
-        ticks: 300,
+        ticks: 150,
         fuel: Some(Item::Coke),
         needs: None,
         tag: 'I',
@@ -1030,19 +1032,31 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         tag: 'I',
     },
     molten_steel("molten steel", &[(Item::IronPlate, 2), (Item::Coke, 1)], &[(Item::Waste, 1)], 600),
-    molten_steel("molten steel (coal)", &[(Item::IronPlate, 2), (Item::Coal, 2)], &[(Item::Waste, 2)], 600),
+    molten_steel("molten steel (coal)", &[(Item::IronPlate, 2), (Item::Coal, 2)], &[(Item::Waste, 3)], 600),
     molten_steel("molten steel (fast)", &[(Item::IronPlate, 2), (Item::Coke, 2)], &[(Item::Waste, 2)], 300),
-    molten_steel("molten steel (fast, coal)", &[(Item::IronPlate, 2), (Item::Coal, 4)], &[(Item::Waste, 4)], 300),
     item_recipe("hardened iron plate", &[(Item::IronPlate, 1), (Item::Coke, 1)], &[(Item::HardenedIronPlate, 1)], 300, None, None, 'H'),
     item_recipe(
         "hardened iron plate (coal)",
         &[(Item::IronPlate, 1), (Item::Coal, 2)],
-        &[(Item::HardenedIronPlate, 1), (Item::Waste, 1)],
+        &[(Item::HardenedIronPlate, 1), (Item::Waste, 2)],
         300,
         None,
         None,
         'H',
     ),
+    // Straight from molten iron: no cast, press or second melt. An iron blast furnace can sit
+    // against this one and push its metal in with no pipe between them.
+    Recipe {
+        name: "molten steel (direct)",
+        inputs: &[(Item::Coke, 1)],
+        outputs: &[(Item::Waste, 2)],
+        fluid_in: Some((Fluid::MoltenIron, 3)),
+        fluid_out: Some((Fluid::MoltenSteel, 1)),
+        ticks: 600,
+        fuel: None,
+        needs: None,
+        tag: 'S',
+    },
 ];
 
 /// Assemblers come in tiers. Each recipe table below lists its tier's recipes, with the time
@@ -1056,7 +1070,21 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("lamp", &[(Item::Glass, 1), (Item::FineWire, 2)], &[(Item::Lamp, 1)], 600, None, None, 'L'),
     item_recipe("relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], &[(Item::Relay, 1)], 600, None, None, 'R'),
     item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 600, None, None, 'B'),
+    // The slow way round: boards by hand, before steel and motors. Advanced assemblers and up
+    // hide it (they have the 10 s recipe below).
+    item_recipe(
+        HAND_WIRED,
+        &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)],
+        &[(Item::ControlBoard, 1)],
+        2400,
+        None,
+        None,
+        'C',
+    ),
 ];
+
+/// The crude tier's control board, hidden on advanced assemblers and above.
+pub const HAND_WIRED: &str = "control board (hand-wired)";
 
 /// Coke ovens cook their own coal (no fire to feed, no EC): half the coal per coke the
 /// furnace needs, and some waste out the front.
@@ -1095,6 +1123,8 @@ pub const LATHE_RECIPES: &[Recipe] = &[
 /// Winders wind wire into coils, and rods into springs.
 pub const WINDER_RECIPES: &[Recipe] = &[
     item_recipe("copper coil", &[(Item::CopperWire, 3)], &[(Item::CopperCoil, 1)], 240, None, None, 'C'),
+    // Fine wire goes further: 3 fine wire a coil, but it takes a drawer to make it.
+    item_recipe("copper coil (fine wire)", &[(Item::FineWire, 6)], &[(Item::CopperCoil, 2)], 240, None, None, 'C'),
     item_recipe("spring", &[(Item::IronRod, 2)], &[(Item::Spring, 1)], 300, None, None, 'S'),
 ];
 
@@ -1217,10 +1247,11 @@ pub const WELDER_RECIPES: &[Recipe] = &[
     item_recipe("frame", &[(Item::SteelGirder, 2), (Item::Screw, 8)], &[(Item::Frame, 1)], 600, None, None, 'F'),
 ];
 
-/// The kiln fires 8 runs at once, burning coal.
+/// The kiln fires 8 runs at once, burning coal. A batch machine fires for (one run's time x batch / 2):
+/// 5 s x 8 / 2 = 20 s, so 24 a minute, not the 96 that made it an 8x speed boost in disguise.
 pub const KILN_RECIPES: &[Recipe] = &[
-    item_recipe("brick", &[(Item::Stone, 2)], &[(Item::Brick, 1)], 300, Some(Item::Coal), None, 'b'),
-    item_recipe("glass", &[(Item::Sand, 3)], &[(Item::Glass, 1)], 300, Some(Item::Coal), None, 'g'),
+    item_recipe("brick", &[(Item::Stone, 2)], &[(Item::Brick, 1)], 1200, Some(Item::Coal), None, 'b'),
+    item_recipe("glass", &[(Item::Sand, 3)], &[(Item::Glass, 1)], 1200, Some(Item::Coal), None, 'g'),
 ];
 
 /// The mixer takes water from a pipe, and items from belts.
