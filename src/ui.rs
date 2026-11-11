@@ -2938,7 +2938,7 @@ CONTROLS
   Move ......... arrows / WASD       Lay belts .... Shift+arrows / Shift+WASD
   Build menu ... 1-4 opens a category (1 Create, 2 Transport, 3 EC,
                  4 Misc); then a number picks a part (Create has 1-5). Press
-                 it again to switch kind (belt / fast belt...). ` ~ Esc back.
+                 it again to switch kind (belt / fast belt...). Esc goes back.
   Place ........ Space / Enter
   Rotate ....... r (output side)     Remove ....... x (full refund)
   Set up ....... f                   Research ..... t
@@ -2952,19 +2952,72 @@ CONTROLS
   Mouse ........ click places, drag lays belts, right-click removes,
                  middle-click copies a part (facing and settings too)
   Quit ......... Ctrl+C (saves first)
-  These are the default keys. Change any of them in controls.json.
-                         press any key to close";
-    let rows = text.lines().count() as u16;
-    let r = centered(area, 80, rows + 2);
-    // Too tall for the terminal: arrows scroll it.
-    let max = (rows + 2).saturating_sub(r.height);
+  These are the default keys. Change any of them in controls.json.";
+    // A small pane gets the keys first and no item table (the recipe book has it).
+    let small = area.width < 80 || area.height < 30;
+    let mut sections: Vec<String> = text.split("\n\n").map(String::from).collect();
+    if small {
+        let c = &app.controls;
+        let keys = format!(
+            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Help {}\n  Ctrl+C quits and saves. {} lists every item and machine.",
+            "WASD/arrows",
+            c.key(Action::Place),
+            c.key(Action::Back),
+            c.key(Action::Tree),
+            c.key(Action::Book),
+            c.key(Action::Stats),
+            c.key(Action::Help),
+            c.key(Action::Book),
+        );
+        let controls = sections.pop().unwrap_or_default();
+        let mut map = sections.remove(0);
+        if let (Some(a), Some(b)) = (map.find("  Items:"), map.find("  Pipes show")) {
+            map.replace_range(a..b, "  Items: the recipe book (b) shows every item and what makes it.\n");
+        }
+        sections.insert(0, map);
+        sections.insert(0, controls);
+        sections.insert(0, keys);
+    }
+    let width = 80.min(area.width);
+    let inner_w = width.saturating_sub(3).max(10) as usize;
+    let heading = |l: &str| l.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !l.starts_with("  ") && l == l.to_uppercase();
+    let mut lines: Vec<Line> = Vec::new();
+    for (n, section) in sections.iter().enumerate() {
+        if n > 0 {
+            lines.push(Line::raw(""));
+        }
+        for l in section.lines() {
+            if heading(l) {
+                lines.push(Line::styled(l.to_string(), Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                continue;
+            }
+            // A wrapped line hangs two spaces in from where it started.
+            let indent = l.len() - l.trim_start().len();
+            let wrapped = wrap_words(l.trim_start(), inner_w.saturating_sub(indent).max(8));
+            for (i, part) in wrapped.into_iter().enumerate() {
+                let pad = " ".repeat(if i == 0 { indent } else { indent + 2 });
+                lines.push(Line::raw(format!("{pad}{part}")));
+            }
+        }
+    }
+    let rows = lines.len() as u16;
+    let h = (rows + 3).min(area.height);
+    let r = centered(area, width, h);
+    // The last inner row is the footer; arrows scroll the rest when it doesn't all fit.
+    let body_h = h.saturating_sub(3);
+    let max = rows.saturating_sub(body_h);
     app.help_scroll = app.help_scroll.min(max);
-    let title = if max > 0 { format!(" Help · ↑↓ scroll {}/{max} ", app.help_scroll) } else { " Help ".into() };
     f.render_widget(Clear, r);
-    f.render_widget(
-        Paragraph::new(text).scroll((app.help_scroll, 0)).block(Block::bordered().title(title).title_style(Style::new().fg(Color::Cyan))),
-        r,
-    );
+    let block = Block::bordered().title(" Help ").title_style(Style::new().fg(Color::Cyan));
+    let inner = block.inner(r);
+    f.render_widget(block, r);
+    let body = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(1), body_h);
+    f.render_widget(Paragraph::new(lines).scroll((app.help_scroll, 0)), body);
+    let scroll = format!("↑↓ scroll {}/{max}", app.help_scroll);
+    let hints: Vec<(u8, &str)> = if max > 0 { vec![(1, scroll.as_str()), (0, "any other key closes")] } else { vec![(0, "press any key")] };
+    let more = (app.help_scroll < max).then_some("more ▼");
+    let foot = Rect::new(inner.x + 1, inner.y + inner.height.saturating_sub(1), inner.width.saturating_sub(2), 1);
+    f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
 }
 
 #[cfg(test)]
