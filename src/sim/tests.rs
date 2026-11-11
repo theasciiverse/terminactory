@@ -2,6 +2,8 @@ use super::*;
 
 mod elevators;
 mod molten;
+mod offline;
+mod saving;
 mod tunnels;
 mod waste;
 

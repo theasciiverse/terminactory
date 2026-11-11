@@ -1,0 +1,1049 @@
+{
+  "econ": {
+    "earned_money": "float",
+    "earned_research": "float",
+    "made": {
+      "len": 51,
+      "of": [
+        "int"
+      ]
+    },
+    "money": "float",
+    "research": "float",
+    "research_sales": {
+      "len": 51,
+      "of": [
+        "int"
+      ]
+    },
+    "sold": {
+      "len": 51,
+      "of": [
+        "int"
+      ]
+    }
+  },
+  "floors": {
+    "len": 7,
+    "of": [
+      {
+        "deposits": {
+          "len": 9600,
+          "of": [
+            "\"None\""
+          ]
+        },
+        "dug": {
+          "len": 9600,
+          "of": [
+            "bool"
+          ]
+        },
+        "level": "int",
+        "owner": {
+          "len": 9600,
+          "of": [
+            "int",
+            "null"
+          ]
+        },
+        "tiles": {
+          "len": 9600,
+          "of": [
+            "null",
+            {
+              "dir": "\"E\"",
+              "kind": "\"AdvancedAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"AdvancedDrill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Drill": {
+                  "coal": "int",
+                  "fuel": "int",
+                  "mines": "\"CopperOre\"",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"AdvancedPump\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Pump": {
+                  "busy": "bool"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Arm\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Arm": {
+                  "filter": "\"CopperOre\"",
+                  "hold": "null",
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"BasicAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"BasicDrill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Drill": {
+                  "coal": "int",
+                  "fuel": "int",
+                  "mines": "\"CopperOre\"",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Belt\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Belt": {
+                  "items": {
+                    "len": 1,
+                    "of": [
+                      {
+                        "item": "\"Stone\"",
+                        "pos": "float"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"BlastFurnace\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Boiler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Boiler": {
+                  "busy": "bool",
+                  "coal": "int",
+                  "fuel": "int"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"CokeOven\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Crate\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crate": {
+                  "items": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Crate\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crate": {
+                  "items": {
+                    "len": 2,
+                    "of": [
+                      "\"Coal\"",
+                      "\"Waste\""
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"CrudeAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Crusher\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Drill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Drill": {
+                  "coal": "int",
+                  "fuel": "int",
+                  "mines": "\"CopperOre\"",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Elevator\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Elevator": {
+                  "inbox": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "mode": "\"Load\"",
+                  "outbox": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"FastBelt\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Belt": {
+                  "items": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Furnace\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Kiln\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"LargeAdvancedAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"LargeAdvancedDrill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Drill": {
+                  "coal": "int",
+                  "fuel": "int",
+                  "mines": "\"CopperOre\"",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"LargeBasicAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"LargeBasicDrill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Drill": {
+                  "coal": "int",
+                  "fuel": "int",
+                  "mines": "\"CopperOre\"",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Lathe\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"LongArm\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Arm": {
+                  "filter": "\"CopperOre\"",
+                  "hold": "null",
+                  "progress": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Mixer\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Molder\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Pipe\"",
+              "rr": "int",
+              "size": "int",
+              "st": "\"Pipe\""
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Pole\"",
+              "rr": "int",
+              "size": "int",
+              "st": "\"Pole\""
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"PrecisionAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Press\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Pump\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Pump": {
+                  "busy": "bool"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"RollingMill\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Solar\"",
+              "rr": "int",
+              "size": "int",
+              "st": "\"Solar\""
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Sorter\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Splitter": {
+                  "buf": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "cooldown": "float",
+                  "filter": "\"CopperOre\"",
+                  "last_in": "null",
+                  "tried": "int",
+                  "tried_prev": "int"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Splitter\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Splitter": {
+                  "buf": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "cooldown": "float",
+                  "filter": "null",
+                  "last_in": "null",
+                  "tried": "int",
+                  "tried_prev": "int"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"SteamEngine\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Engine": {
+                  "output": "float",
+                  "steam": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"TradePost\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Trade": {
+                  "count": "int",
+                  "mode": "\"Money\"",
+                  "money": "float",
+                  "research": "float",
+                  "stuck": "int"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Tunnel\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Tunnel": {
+                  "exit": "bool",
+                  "items": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Warehouse\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crate": {
+                  "items": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Welder\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Winder\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"WireDrawer\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe": "int",
+                  "stock": {
+                    "len": 51,
+                    "of": [
+                      "int"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "deposits": {
+          "len": 9600,
+          "of": [
+            "\"None\""
+          ]
+        },
+        "dug": {
+          "len": 9600,
+          "of": [
+            "bool"
+          ]
+        },
+        "level": "int",
+        "owner": {
+          "len": 9600,
+          "of": [
+            "int",
+            "null"
+          ]
+        },
+        "tiles": {
+          "len": 9600,
+          "of": [
+            "null",
+            {
+              "dir": "\"E\"",
+              "kind": "\"Elevator\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Elevator": {
+                  "inbox": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "mode": "\"Unload\"",
+                  "outbox": {
+                    "len": 0,
+                    "of": []
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "deposits": {
+          "len": 9600,
+          "of": [
+            "\"None\""
+          ]
+        },
+        "dug": {
+          "len": 9600,
+          "of": [
+            "bool"
+          ]
+        },
+        "level": "int",
+        "owner": {
+          "len": 9600,
+          "of": [
+            "null"
+          ]
+        },
+        "tiles": {
+          "len": 9600,
+          "of": [
+            "null"
+          ]
+        }
+      }
+    ]
+  },
+  "gifts": "int",
+  "last_gift": "int",
+  "lifts": {
+    "len": 1,
+    "of": [
+      {
+        "anchor": "int",
+        "at": "int",
+        "carry": "float",
+        "load": {
+          "len": 1,
+          "of": [
+            "\"Coal\""
+          ]
+        },
+        "phase": "\"Loading\"",
+        "size": "int",
+        "target": "int",
+        "timer": "int"
+      }
+    ]
+  },
+  "mail": {
+    "len": 1,
+    "of": [
+      {
+        "at": "int",
+        "event": "\"finished\"",
+        "from": "\"tests\"",
+        "gift": {
+          "len": 2,
+          "of": [
+            "\"Hollowmere\"",
+            "float"
+          ]
+        },
+        "md": "\"hello\""
+      }
+    ]
+  },
+  "progress": {
+    "opened": {
+      "len": 12,
+      "of": [
+        "bool"
+      ]
+    },
+    "researched": {
+      "len": 32,
+      "of": [
+        "bool"
+      ]
+    }
+  },
+  "rate": {
+    "len": 2,
+    "of": [
+      "float"
+    ]
+  },
+  "rate_long": {
+    "len": 2,
+    "of": [
+      "float"
+    ]
+  },
+  "sale_rate": {
+    "len": 0,
+    "of": []
+  },
+  "saved_at": "int",
+  "tick": "int",
+  "version": "int"
+}
