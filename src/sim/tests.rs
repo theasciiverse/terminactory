@@ -2,6 +2,7 @@ use super::*;
 
 mod elevators;
 mod tunnels;
+mod waste;
 
 fn run(w: &mut World, secs: u64) {
     for _ in 0..secs * TPS {
