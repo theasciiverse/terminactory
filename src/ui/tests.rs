@@ -12,6 +12,7 @@ mod settings_effects;
 mod settings_pane;
 mod sidebar_graph;
 mod small_pane;
+mod upgrade;
 
 fn render(app: &mut App, w: u16, h: u16) -> Buffer {
     let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();

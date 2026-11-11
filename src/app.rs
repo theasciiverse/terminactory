@@ -1737,11 +1737,11 @@ impl App {
         let name = item.name().to_lowercase();
         let name = format!("{name}{}", if name.ends_with('x') { "es" } else { "s" });
         self.say(format!(
-            "Upgrades are locked: research the {} ({}, from {}) · {:.0} RP, or make {} {name}",
+            "Upgrades are locked: research the {} ({}, from {}) · {} RP, or make {} {name}",
             t.name(),
             self.controls.key(Action::Tree),
             t.company().name(),
-            t.cost(),
+            thousands(t.cost() as u64),
             thousands(n)
         ));
     }
@@ -1775,9 +1775,8 @@ impl App {
     fn area_upgrade(&mut self, rect: TileRect) {
         let Some(floor) = self.area.map(|a| a.floor) else { return };
         if !self.world.progress.has(Tech::UpgradePlanner) {
-            let t = Tech::UpgradePlanner;
             self.say_upgrades_locked();
-            let short = format!("{} locked: {} research", t.name(), self.controls.key(Action::Tree));
+            let short = format!("upgrade locked: {}", self.controls.key(Action::Tree));
             self.area_note = Some((self.msg.clone(), short));
             return;
         }

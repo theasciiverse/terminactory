@@ -9,6 +9,7 @@ use crate::app::{slots, tree_rows, App, AreaStage, AreaVerb, Entry, StatsHit, BO
 use crate::controls::Action;
 use crate::settings::TelegramStyle;
 use crate::sim::*;
+use std::collections::HashSet;
 use std::time::Instant;
 
 const SIDE_W: u16 = 36;
@@ -596,7 +597,14 @@ fn area_line(app: &App, avail: usize) -> Line<'static> {
             if matches!(area.stage, AreaStage::Chosen { .. }) {
                 let (verbs, keys) = (app.area_verb_hints(), AreaVerb::ALL.map(|v| c.key(v.action())).join("/"));
                 let fee = if info.fee > 0.0 { format!(" · fee {}", money_text(info.fee)) } else { String::new() };
-                if app.confirm_area.is_some() {
+                if let Some((long, short)) = app.area_note.as_ref() {
+                    vec![
+                        format!(" Area › {long}  {back} cancel"),
+                        format!(" Area › {long}  {back}"),
+                        format!(" {long} {back}"),
+                        format!(" {short} {back}"),
+                    ]
+                } else if app.confirm_area.is_some() {
                     let key = c.key(Action::Remove);
                     vec![
                         format!(" Area › {parts}{fee} · {key} again to pay  {back} cancel"),
@@ -814,6 +822,7 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
     let vh = area.height as i32;
     let (cx, cy) = app.cursor;
     let yellow = Style::new().fg(INK).bg(Color::Indexed(226)).add_modifier(Modifier::BOLD);
+    let green = Style::new().fg(INK).bg(Color::Indexed(41)).add_modifier(Modifier::BOLD);
     // What the cursor covers: a ghost of the part being placed, or the whole building under it.
     let ghost_dims = |k: Kind| dims_of(k, app.dir, app.lift_size);
     let ghost = app.selected.map(|k| (k, app.world.check_place_sized(app.floor, cx, cy, k, app.dir, app.lift_size).is_ok()));
@@ -833,15 +842,18 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
         _ => None,
     };
     let held_cells = app.held.as_ref().map(|bp| held_ghost(app, bp, yellow, vw, vh));
-    let mut lit = vec![false; (vw.max(0) * vh.max(0)) as usize];
+    // 0 = not in the area, 1 = a part the verb would touch (yellow), 2 = a part that can be upgraded (green).
+    let mut lit = vec![0u8; (vw.max(0) * vh.max(0)) as usize];
     if let Some(r) = area_rect {
+        let upgradable = upgradable_in(app, r);
         for (x, y) in app.world.parts_in(app.floor, r) {
             let Some(b) = app.world.tile(app.floor, x, y) else { continue };
             let (w, h) = b.dims();
+            let state = if upgradable.contains(&(x, y)) { 2 } else { 1 };
             for (tx, ty) in footprint(x, y, w, h) {
                 let (sx, sy) = (tx - app.cam.0, ty - app.cam.1);
                 if sx >= 0 && sy >= 0 && sx < vw && sy < vh {
-                    lit[(sy * vw + sx) as usize] = true;
+                    lit[(sy * vw + sx) as usize] = state;
                 }
             }
         }
@@ -878,7 +890,10 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
                 }
             }
             if area_rect.is_some_and(|r| tx >= r.0 && tx <= r.2 && ty >= r.1 && ty <= r.3) {
-                if lit[(sy * vw + sx) as usize] {
+                let state = lit[(sy * vw + sx) as usize];
+                if state == 2 {
+                    cells = cells.map(|(c, _)| (c, green));
+                } else if state == 1 {
                     cells = cells.map(|(c, _)| (c, yellow));
                 } else {
                     cells = cells.map(|(c, s)| (c, s.bg(tint)));
@@ -920,6 +935,17 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
             }
         }
     }
+}
+
+/// The anchors of the parts in `r` that the upgrade planner would swap (or would, with more money):
+/// painted green while a rectangle is chosen. Nothing before the planner is researched.
+fn upgradable_in(app: &App, r: TileRect) -> HashSet<(i32, i32)> {
+    let chosen = matches!(app.area.map(|a| a.stage), Some(AreaStage::Chosen { .. }));
+    if !chosen || !app.world.progress.has(Tech::UpgradePlanner) {
+        return HashSet::new();
+    }
+    let plan = app.world.plan_upgrade(app.floor, r);
+    plan.parts.iter().filter(|p| matches!(p.state, UpState::Fits | UpState::Short)).map(|p| (p.x, p.y)).collect()
 }
 
 /// The ghost of the blueprint in the hand, for each visible tile (row by row): yellow sprites where
@@ -1695,7 +1721,15 @@ fn area_side(app: &App) -> Vec<Line<'static>> {
                 let fee = if info.fee > 0.0 { format!(" · waste fee {}", money_text(info.fee)) } else { String::new() };
                 lines.push(Line::raw(format!(" refund {}{fee}", money_text(info.refund))));
             }
-            if app.confirm_area.is_some() {
+            if let Some(plan) = upgrade_numbers(app, area.floor, r) {
+                lines.push(Line::styled(format!(" green: {} to upgrade, {}", plan.0, money_text(plan.1)), Style::new().fg(Color::Green)));
+            }
+            if let Some(q) = app.confirm_upgrade {
+                lines.push(Line::styled(
+                    format!(" {} again: upgrade {} for {}", c.key(Action::Upgrade), q.parts, money_text(q.cost)),
+                    Style::new().fg(Color::Yellow),
+                ));
+            } else if app.confirm_area.is_some() {
                 lines.push(Line::styled(format!(" {} again to pay the fee", c.key(Action::Remove)), Style::new().fg(Color::Yellow)));
             } else {
                 lines.push(Line::raw(format!(" {}", app.area_verb_hints())));
@@ -1708,6 +1742,17 @@ fn area_side(app: &App) -> Vec<Line<'static>> {
         lines.push(Line::styled(" or drag a rectangle", dim));
     }
     lines
+}
+
+/// How many parts in the chosen rectangle the planner would upgrade now, and for how much. None
+/// when the planner isn't researched or there is nothing.
+fn upgrade_numbers(app: &App, floor: usize, r: TileRect) -> Option<(usize, f64)> {
+    if !app.world.progress.has(Tech::UpgradePlanner) {
+        return None;
+    }
+    let plan = app.world.plan_upgrade(floor, r);
+    let n = plan.count(UpState::Fits);
+    (n > 0).then(|| (n, plan.cost(UpState::Fits)))
 }
 
 /// What the blueprint in the hand would do at the cursor, as the sidebar's short lines.
@@ -3496,6 +3541,14 @@ CONTROLS
   Area ......... c marks a rectangle (Space at two corners, or drag);
                  then x removes everything in it, full refund. Esc
                  cancels, z puts back what the last area remove took.
+  Upgrades ..... (research the Upgrade planner, t) with a rectangle
+                 marked, u shows what it would do ('u again to upgrade
+                 12 parts for $360'), a second u does it: belts, cheap
+                 drills and panels, big drills and assemblers become
+                 their next version in place, same facing, settings and
+                 recipe, and you pay only the price difference. It goes
+                 in reading order and stops when the money runs out. A
+                 green tint marks the parts it will swap; z swaps back.
   Blueprints ... (research Blueprints, t) with a rectangle marked, c or
                  Space copies it to your hand; a ghost follows the cursor
                  (yellow fits, xx can't, .. can't afford). r turns it,
@@ -3532,7 +3585,7 @@ CONTROLS
     if small {
         let c = &app.controls;
         let keys = format!(
-            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Area {} marks a rectangle, {} removes it, {} puts it back\n  Ctrl+C quits and saves. {} lists every item and machine.",
+            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Area {} marks a rectangle, {} removes it, {} upgrades it, {} puts it back\n  Ctrl+C quits and saves. {} lists every item and machine.",
             "WASD/arrows",
             c.key(Action::Place),
             c.key(Action::Back),
@@ -3543,6 +3596,7 @@ CONTROLS
             c.key(Action::Help),
             c.key(Action::Area),
             c.key(Action::Remove),
+            c.key(Action::Upgrade),
             c.key(Action::Restore),
             c.key(Action::Book),
         );

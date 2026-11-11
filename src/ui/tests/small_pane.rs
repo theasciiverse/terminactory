@@ -262,7 +262,7 @@ fn overlays_fit_every_pane_size() {
             .flat_map(|x| (0..crate::sim::H).map(move |y| (x, y)))
             .find(|(x, y)| app.world.tile(0, *x, *y).is_none() && app.world.floors[0].dug[idx(*x, *y)])
             .unwrap();
-        for scene in 0..22 {
+        for scene in 0..25 {
             app.settings.telegram_style = match scene {
                 13 => crate::settings::TelegramStyle::Note,
                 14 => crate::settings::TelegramStyle::Ticker,
@@ -310,16 +310,30 @@ fn overlays_fit_every_pane_size() {
             app.area = match scene {
                 17 => stage(crate::app::AreaStage::Picking { corner: None }),
                 18 => stage(crate::app::AreaStage::Picking { corner: Some((0, 0)) }),
-                19 | 20 => stage(crate::app::AreaStage::Chosen { rect: whole }),
+                19 | 20 | 22..=24 => stage(crate::app::AreaStage::Chosen { rect: whole }),
                 _ => None,
             };
             app.confirm_area = (scene == 20).then_some((0, whole, 50.0));
+            // Scenes 22 to 24 are the upgrade planner: the preview after one u, the answer to a u before
+            // the tech, and the green tint with nothing pressed yet.
+            if scene >= 22 {
+                // Everything is researched, so the targets are open, except the planner itself in scene 23.
+                app.world.progress.researched = [true; crate::sim::TECHS];
+                app.world.progress.opened = [true; crate::sim::COMPANIES];
+                app.world.progress.researched[crate::sim::Tech::UpgradePlanner.idx()] = scene != 23;
+            }
+            app.confirm_upgrade = None;
+            app.area_note = None;
             // Scene 21 is the blueprint library: a readable one, one with a locked part, a long name, a
             // file that can't be read and one from a newer game, and enough more to scroll.
             app.library = (scene == 21).then(|| library_rows(&app));
             app.mail_open = scene == 5;
             app.log_open = scene == 6;
             app.away = (scene == 7).then(|| "You were away for 1h 2m. Your factory kept going:\n\n  +$5\n  +1.0 research".to_string());
+            // (After the other overlays are set, so the key reaches the map.)
+            if scene == 22 || scene == 23 {
+                key(&mut app, 'u')
+            }
             let t = text(&render(&mut app, w, h));
             assert!(lines(&t).len() == h as usize);
             if scene == 10 {
@@ -338,10 +352,19 @@ fn overlays_fit_every_pane_size() {
                 14 => assert!(top.contains("mail") && !last.contains("to view"), "ticker at {w}x{h}: {t}"),
                 _ => {}
             }
-            if (17..=20).contains(&scene) {
+            if scene == 22 {
+                assert!(if app.compact_now { last.contains("u again") } else { t.contains("again") }, "preview at {w}x{h}: {t}");
+            }
+            if scene == 24 && !app.compact_now {
+                assert!(t.contains("green:") && t.contains("to upgrade"), "tint count at {w}x{h}: {t}");
+            }
+            if scene == 23 && app.compact_now {
+                assert!(last.contains("locked"), "gate at {w}x{h}: {last}");
+            }
+            if (17..=20).contains(&scene) || (22..=24).contains(&scene) {
                 if app.compact_now {
                     assert!(
-                        last.contains("Esc") && (scene == 17 || last.chars().any(|c| c.is_ascii_digit())),
+                        last.contains("Esc") && (scene == 17 || scene == 23 || last.chars().any(|c| c.is_ascii_digit())),
                         "area scene {scene} at {w}x{h}: {last}"
                     );
                 } else {
