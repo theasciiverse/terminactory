@@ -13,8 +13,8 @@ use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 
 mod serde_util;
-pub use serde_util::PerItem;
 use serde_util::{de_set, ser_set};
+pub use serde_util::{PerFluid, PerItem};
 
 pub use crate::content::*;
 
@@ -69,7 +69,7 @@ pub const BOILER_COAL_CAP: u32 = 10;
 pub const WASTE_PER_COAL: u32 = 4;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 5;
+pub const SAVE_VERSION: u32 = 6;
 /// The game version, saved in every file.
 pub const GAME_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -970,6 +970,9 @@ pub struct Econ {
     pub sold: PerItem<u64>,
     /// Units ever produced by a machine, per item (drives discoveries).
     pub made: PerItem<u64>,
+    /// Units of each fluid ever produced by a machine (a fluid can be a company's key).
+    #[serde(default)]
+    pub made_fluid: PerFluid<u64>,
     /// This session only: units used up by machines (inputs and fuel), and what each
     /// item's sales brought in. They drive the production panel.
     #[serde(skip, default = "zeros")]
@@ -988,6 +991,16 @@ pub struct Econ {
     pub minute_ago: (f64, f64),
 }
 
+impl Econ {
+    /// How much of a key has been made.
+    pub fn made_of(&self, m: Made) -> u64 {
+        match m {
+            Made::Item(i) => self.made[i],
+            Made::Fluid(f) => self.made_fluid[f],
+        }
+    }
+}
+
 impl Default for Econ {
     fn default() -> Self {
         Econ {
@@ -996,6 +1009,7 @@ impl Default for Econ {
             research_sales: PerItem::default(),
             sold: PerItem::default(),
             made: PerItem::default(),
+            made_fluid: PerFluid::default(),
             used: [0; ITEMS],
             money_from: [0.0; ITEMS],
             research_from: [0.0; ITEMS],
@@ -1122,7 +1136,7 @@ impl Default for Progress {
     fn default() -> Self {
         let mut opened = [false; COMPANIES];
         for c in Company::ALL {
-            opened[c.idx()] = c.key_item().is_none();
+            opened[c.idx()] = c.key_items().is_empty();
         }
         Progress { opened, researched: [false; TECHS], notes: VecDeque::new() }
     }
@@ -1505,7 +1519,7 @@ impl World {
         w.restore_pipe_fluid();
         // A company that opens from the start is open, whatever the save says (it may be new).
         for c in Company::ALL {
-            if c.key_item().is_none() {
+            if c.key_items().is_empty() {
                 w.progress.opened[c.idx()] = true;
             }
         }
@@ -1638,7 +1652,7 @@ impl World {
             return Err(format!("{} is already researched", t.name()));
         }
         if !self.progress.is_open(t.company()) {
-            let item = t.requires().map_or("its key item", |i| i.name());
+            let item = keys_text(t.requires());
             return Err(format!("Make {item} first to unlock {}", t.name()));
         }
         if self.econ.research + 1e-9 < t.cost() {
@@ -2526,11 +2540,12 @@ impl World {
     /// enough of a milestone item unlocks its tech for free.
     fn check_discoveries(&mut self) {
         for c in Company::ALL {
-            if let Some(key) = c.key_item() {
-                if !self.progress.is_open(c) && self.econ.made[key.idx()] > 0 {
-                    self.progress.opened[c.idx()] = true;
-                    self.deliver(crate::mail::letter(c, now_secs()));
-                }
+            if self.progress.is_open(c) {
+                continue;
+            }
+            if let Some(key) = first_key_made(c.key_items(), |m| self.econ.made_of(m)) {
+                self.progress.opened[c.idx()] = true;
+                self.deliver(crate::mail::letter(c, key, now_secs()));
             }
         }
         for t in Tech::ALL {
@@ -2963,8 +2978,9 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                         if let Some((_, n)) = r.fluid_in {
                             *fluid -= n * batch;
                         }
-                        if let Some((_, n)) = r.fluid_out {
+                        if let Some((fl, n)) = r.fluid_out {
                             *fluid_out += n * batch;
+                            econ.made_fluid[fl] += (n * batch) as u64;
                         }
                         for (it, n) in r.outputs {
                             for _ in 0..*n * batch {

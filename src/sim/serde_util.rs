@@ -8,7 +8,7 @@ use serde::de::Error as _;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::content::{Item, ITEMS};
+use crate::content::{Fluid, Item, FLUIDS, ITEMS};
 
 /// One value per item. At run time it is an array indexed by `Item::idx()` (so `t[item.idx()]`,
 /// `t[item]` and the slice methods all work), kept in a box so the structs holding one stay small.
@@ -133,4 +133,51 @@ where
         flags[idx(v)] = true;
     }
     Ok(flags)
+}
+
+/// One value per fluid, like `PerItem`: an array at run time, a map of fluid name to value
+/// in a save (zero values left out).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PerFluid<T>([T; FLUIDS]);
+
+impl<T> Index<Fluid> for PerFluid<T> {
+    type Output = T;
+    fn index(&self, f: Fluid) -> &T {
+        &self.0[f.idx()]
+    }
+}
+
+impl<T> IndexMut<Fluid> for PerFluid<T> {
+    fn index_mut(&mut self, f: Fluid) -> &mut T {
+        &mut self.0[f.idx()]
+    }
+}
+
+impl<T: Serialize + Default + PartialEq> Serialize for PerFluid<T> {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let zero = T::default();
+        let mut map = s.serialize_map(None)?;
+        for f in Fluid::ALL {
+            let v = &self.0[f.idx()];
+            if *v != zero {
+                map.serialize_entry(&variant_name(&f), v)?;
+            }
+        }
+        map.end()
+    }
+}
+
+impl<'de, T: Deserialize<'de> + Default> Deserialize<'de> for PerFluid<T> {
+    /// A name that isn't a fluid is an error (a save from a newer version).
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<String, T>::deserialize(d)?;
+        let mut out = PerFluid(std::array::from_fn(|_| T::default()));
+        for (name, v) in map {
+            let Some(f) = by_name(&Fluid::ALL, &name) else {
+                return Err(D::Error::custom(format!("unknown fluid '{name}' (a save from a newer version?)")));
+            };
+            out[f] = v;
+        }
+        Ok(out)
+    }
 }

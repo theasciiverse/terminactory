@@ -57,7 +57,7 @@ fn render_snapshots() {
 
     app.tree = false;
     // A company's letter is a telegram in the sidebar, and the game keeps running.
-    app.mail = Some(crate::mail::letter(Company::Ashgrove, 0));
+    app.mail = Some(crate::mail::letter(Company::Ashgrove, Made::Item(Item::CopperWire), 0));
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
     assert!(t.contains("From Ashgrove") && t.contains("Unlocked for research") && t.contains("HERE"), "{t}");
@@ -118,7 +118,7 @@ fn the_welcome_telegram_fits_the_sidebar_and_a_small_pane() {
 fn telegram_log_lists_newest_first() {
     let mut w = World::new();
     w.receive(crate::mail::parse("from: api-server\nevent: finished\n# Auth retry fixed\n\nAll tests pass.", 0), 1_000);
-    w.deliver(crate::mail::letter(Company::Ashgrove, crate::sim::now_secs()));
+    w.deliver(crate::mail::letter(Company::Ashgrove, Made::Item(Item::CopperWire), crate::sim::now_secs()));
     w.mark_read(1);
     let mut app = App::new(w);
     app.log_open = true;

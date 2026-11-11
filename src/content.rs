@@ -348,6 +348,11 @@ pub enum Company {
     LatticeFinch,
 }
 
+#[cfg(test)]
+thread_local! {
+    pub(crate) static KEYS_OVERRIDE: std::cell::Cell<Option<(Company, &'static [Made])>> = const { std::cell::Cell::new(None) };
+}
+
 impl Company {
     pub const ALL: [Company; COMPANIES] = [
         Company::Hollowmere,
@@ -394,24 +399,31 @@ impl Company {
             Company::Ampleworth | Company::LatticeFinch => "Motors & Chips",
         }
     }
-    /// The item that opens this company when you first make it (starter companies are open already).
-    pub fn key_item(self) -> Option<Item> {
+    /// What opens this company: the first of these to be made. Empty means it is open from
+    /// the start. A company may have two keys; whichever comes first opens it.
+    pub fn key_items(self) -> &'static [Made] {
+        // Tests can give a company other keys (this thread only), to try two keys or a fluid key.
+        #[cfg(test)]
+        if let Some(keys) = KEYS_OVERRIDE.with(|o| o.get()).filter(|(c, _)| *c == self).map(|(_, k)| k) {
+            return keys;
+        }
         match self {
-            Company::Hollowmere | Company::Brannock => None,
-            Company::Ashgrove => Some(Item::CopperWire),
-            Company::Cinderhall => Some(Item::Coke),
-            Company::Wellbourne => Some(Item::CopperPipe),
-            Company::Kettering => Some(Item::CopperCoil),
-            Company::Pillar => Some(Item::SteelGirder),
-            Company::Underhill => Some(Item::Concrete),
-            Company::Gearwright => Some(Item::IronGear),
-            Company::Swiftline => Some(Item::Gearbox),
-            Company::Ampleworth => Some(Item::ElectricMotor),
-            Company::LatticeFinch => Some(Item::ControlBoard),
+            Company::Hollowmere | Company::Brannock => &[],
+            Company::Ashgrove => &[Made::Item(Item::CopperWire)],
+            Company::Cinderhall => &[Made::Item(Item::Coke)],
+            Company::Wellbourne => &[Made::Item(Item::CopperPipe)],
+            Company::Kettering => &[Made::Item(Item::CopperCoil)],
+            Company::Pillar => &[Made::Item(Item::SteelGirder)],
+            Company::Underhill => &[Made::Item(Item::Concrete)],
+            Company::Gearwright => &[Made::Item(Item::IronGear)],
+            Company::Swiftline => &[Made::Item(Item::Gearbox)],
+            Company::Ampleworth => &[Made::Item(Item::ElectricMotor)],
+            Company::LatticeFinch => &[Made::Item(Item::ControlBoard)],
         }
     }
-    /// The letter a company sends when it opens.
-    pub fn letter(self) -> &'static str {
+    /// The letter a company sends when it opens. `key` is the key that opened it, so a company
+    /// with two keys can write a different letter for each (none does yet).
+    pub fn letter(self, _key: Made) -> &'static str {
         match self {
             Company::Hollowmere => "We've dug these hills for four generations. Our drills are cheap, honest, and they don't complain. Neither should you.",
             Company::Brannock => "Furnaces, molders, belts, panels, poles: if it works, the three of us will sell it to you. If it doesn't, one of us will fix it.",
@@ -660,9 +672,9 @@ impl Tech {
             Tech::Warehouses => Category::Misc,
         }
     }
-    /// The key item you must make before this can be unlocked.
-    pub fn requires(self) -> Option<Item> {
-        self.company().key_item()
+    /// The keys, any one of which you must make before this can be unlocked.
+    pub fn requires(self) -> &'static [Made] {
+        self.company().key_items()
     }
     /// Research points: the quick way to unlock. Costs grow the further into the tree you go:
     /// copper and iron under 1,500; steel and stone machines 1,500 to 6,000; motor machines
@@ -790,55 +802,90 @@ pub enum Node {
     Start,
     /// Something to unlock: by research, or free by reaching its milestone.
     Tech(Tech),
-    /// A key item: make it once to unlock what follows.
-    Key(Item),
+    /// A key (an item or a fluid): make it once to unlock what follows.
+    Key(Made),
 }
 
 /// The research tree, read left to right: (node, parent).
 pub const TREE: &[(Node, Option<usize>)] = &[
-    (Node::Start, None),                                  // 0
-    (Node::Tech(Tech::Press), Some(0)),                   // 1
-    (Node::Key(Item::CopperWire), Some(1)),               // 2
-    (Node::Tech(Tech::BasicDrill), Some(2)),              // 3
-    (Node::Tech(Tech::Crusher), Some(2)),                 // 4
-    (Node::Key(Item::CopperCoil), Some(2)),               // 5
-    (Node::Tech(Tech::Steam), Some(5)),                   // 6
-    (Node::Tech(Tech::WireDrawer), Some(5)),              // 7
-    (Node::Tech(Tech::Winder), Some(5)),                  // 8
-    (Node::Key(Item::CopperPipe), Some(1)),               // 9
-    (Node::Tech(Tech::Pumps), Some(9)),                   // 10
-    (Node::Tech(Tech::Mixer), Some(9)),                   // 11
-    (Node::Tech(Tech::AdvancedPump), Some(9)),            // 12
-    (Node::Key(Item::Concrete), Some(11)),                // 13
-    (Node::Tech(Tech::Excavation), Some(13)),             // 14
-    (Node::Tech(Tech::Kiln), Some(13)),                   // 15
-    (Node::Tech(Tech::Coking), Some(0)),                  // 16
-    (Node::Key(Item::Coke), Some(16)),                    // 17
-    (Node::Tech(Tech::BlastFurnace), Some(17)),           // 18
-    (Node::Tech(Tech::CokeOven), Some(17)),               // 19
-    (Node::Key(Item::SteelGirder), Some(18)),             // 20
-    (Node::Tech(Tech::SupportBeams), Some(20)),           // 21
-    (Node::Tech(Tech::RollingMill), Some(20)),            // 22
-    (Node::Tech(Tech::Welder), Some(20)),                 // 23
-    (Node::Key(Item::IronGear), Some(1)),                 // 24: iron plate has a job from the start
-    (Node::Tech(Tech::Lathe), Some(24)),                  // 25
-    (Node::Tech(Tech::Assembler), Some(24)),              // 26
-    (Node::Key(Item::Gearbox), Some(26)),                 // 27
-    (Node::Tech(Tech::FastBelts), Some(27)),              // 28
-    (Node::Tech(Tech::BasicAssembler), Some(27)),         // 29
-    (Node::Key(Item::ElectricMotor), Some(29)),           // 30
-    (Node::Tech(Tech::AdvancedDrill), Some(30)),          // 31
-    (Node::Tech(Tech::LargeBasicDrill), Some(30)),        // 32
-    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),    // 33
-    (Node::Key(Item::ControlBoard), Some(26)),            // 34: hand-wired in the crude assembler
-    (Node::Tech(Tech::AdvancedAssembler), Some(34)),      // 35
-    (Node::Tech(Tech::PrecisionAssembler), Some(34)),     // 36
-    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),     // 37
-    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)), // 38
+    (Node::Start, None),                                    // 0
+    (Node::Tech(Tech::Press), Some(0)),                     // 1
+    (Node::Key(Made::Item(Item::CopperWire)), Some(1)),     // 2
+    (Node::Tech(Tech::BasicDrill), Some(2)),                // 3
+    (Node::Tech(Tech::Crusher), Some(2)),                   // 4
+    (Node::Key(Made::Item(Item::CopperCoil)), Some(2)),     // 5
+    (Node::Tech(Tech::Steam), Some(5)),                     // 6
+    (Node::Tech(Tech::WireDrawer), Some(5)),                // 7
+    (Node::Tech(Tech::Winder), Some(5)),                    // 8
+    (Node::Key(Made::Item(Item::CopperPipe)), Some(1)),     // 9
+    (Node::Tech(Tech::Pumps), Some(9)),                     // 10
+    (Node::Tech(Tech::Mixer), Some(9)),                     // 11
+    (Node::Tech(Tech::AdvancedPump), Some(9)),              // 12
+    (Node::Key(Made::Item(Item::Concrete)), Some(11)),      // 13
+    (Node::Tech(Tech::Excavation), Some(13)),               // 14
+    (Node::Tech(Tech::Kiln), Some(13)),                     // 15
+    (Node::Tech(Tech::Coking), Some(0)),                    // 16
+    (Node::Key(Made::Item(Item::Coke)), Some(16)),          // 17
+    (Node::Tech(Tech::BlastFurnace), Some(17)),             // 18
+    (Node::Tech(Tech::CokeOven), Some(17)),                 // 19
+    (Node::Key(Made::Item(Item::SteelGirder)), Some(18)),   // 20
+    (Node::Tech(Tech::SupportBeams), Some(20)),             // 21
+    (Node::Tech(Tech::RollingMill), Some(20)),              // 22
+    (Node::Tech(Tech::Welder), Some(20)),                   // 23
+    (Node::Key(Made::Item(Item::IronGear)), Some(1)),       // 24: iron plate has a job from the start
+    (Node::Tech(Tech::Lathe), Some(24)),                    // 25
+    (Node::Tech(Tech::Assembler), Some(24)),                // 26
+    (Node::Key(Made::Item(Item::Gearbox)), Some(26)),       // 27
+    (Node::Tech(Tech::FastBelts), Some(27)),                // 28
+    (Node::Tech(Tech::BasicAssembler), Some(27)),           // 29
+    (Node::Key(Made::Item(Item::ElectricMotor)), Some(29)), // 30
+    (Node::Tech(Tech::AdvancedDrill), Some(30)),            // 31
+    (Node::Tech(Tech::LargeBasicDrill), Some(30)),          // 32
+    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),      // 33
+    (Node::Key(Made::Item(Item::ControlBoard)), Some(26)),  // 34: hand-wired in the crude assembler
+    (Node::Tech(Tech::AdvancedAssembler), Some(34)),        // 35
+    (Node::Tech(Tech::PrecisionAssembler), Some(34)),       // 36
+    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),       // 37
+    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),   // 38
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
     TREE.iter().enumerate().filter(|(_, (_, p))| *p == Some(i)).map(|(j, _)| j).collect()
+}
+
+/// How many fluids there are.
+pub const FLUIDS: usize = 5;
+
+/// Something a machine can make that opens a company: an item, or a fluid (crude oil, later).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Made {
+    Item(Item),
+    /// No company opens on a fluid yet (crude oil will).
+    #[allow(dead_code)]
+    Fluid(Fluid),
+}
+
+impl Made {
+    pub fn name(self) -> &'static str {
+        match self {
+            Made::Item(i) => i.name(),
+            Made::Fluid(f) => f.name(),
+        }
+    }
+}
+
+/// Keys joined for text: "X", or "X or Y"; "its key item" when there are none.
+pub fn keys_text(keys: &[Made]) -> String {
+    if keys.is_empty() {
+        return "its key item".into();
+    }
+    keys.iter().map(|k| k.name()).collect::<Vec<_>>().join(" or ")
+}
+
+/// The first of `keys` that has been made (`made` gives how many of each), if any.
+/// This is the rule that opens a company; it needs no content, so it can be tested alone.
+pub fn first_key_made(keys: &[Made], made: impl Fn(Made) -> u64) -> Option<Made> {
+    keys.iter().copied().find(|k| made(*k) > 0)
 }
 
 /// Things that flow through pipes. A pipe network holds one at a time.
@@ -852,6 +899,10 @@ pub enum Fluid {
 }
 
 impl Fluid {
+    pub const ALL: [Fluid; FLUIDS] = [Fluid::Water, Fluid::Steam, Fluid::MoltenCopper, Fluid::MoltenIron, Fluid::MoltenSteel];
+    pub fn idx(self) -> usize {
+        self as usize
+    }
     pub fn name(self) -> &'static str {
         match self {
             Fluid::Water => "water",

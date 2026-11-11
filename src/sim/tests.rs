@@ -2,6 +2,7 @@ use super::*;
 
 mod boiler;
 mod elevators;
+mod keys;
 mod molten;
 mod names;
 mod offline;
@@ -2105,7 +2106,10 @@ fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
         (Kind::LargeAdvancedDrill, Company::LatticeFinch, Tech::LargeAdvancedDrill, Item::ControlBoard),
     ];
     for (kind, company, tech, key) in table {
-        assert_eq!((kind.company(), kind.tech(), tech.company(), company.key_item()), (Some(company), Some(tech), company, Some(key)));
+        assert_eq!(
+            (kind.company(), kind.tech(), tech.company(), company.key_items()),
+            (Some(company), Some(tech), company, &[Made::Item(key)][..])
+        );
         let mut w = World::new();
         assert!(!w.progress.part_unlocked(kind), "{kind:?} locked at the start");
         assert!(w.research(tech).unwrap_err().contains(key.name()), "{tech:?} needs {key:?} first");
@@ -2204,8 +2208,8 @@ fn new_techs_are_priced_by_depth() {
         assert!(parent.map_or(i == 0, |p| p < i), "node {i}");
     }
     for c in Company::ALL {
-        if let Some(key) = c.key_item() {
-            assert!(TREE.iter().any(|(n, _)| *n == Node::Key(key)), "{c:?}'s {key:?} is not in the tree");
+        for key in c.key_items() {
+            assert!(TREE.iter().any(|(n, _)| *n == Node::Key(*key)), "{c:?}'s {key:?} is not in the tree");
         }
     }
 }
@@ -2252,13 +2256,16 @@ fn makeable(open: &[bool; COMPANIES]) -> ([bool; ITEMS], Vec<Fluid>) {
 fn every_key_item_can_be_made_before_its_company_opens() {
     let mut open = [false; COMPANIES];
     for c in Company::ALL {
-        open[c.idx()] = c.key_item().is_none();
+        open[c.idx()] = c.key_items().is_empty();
     }
     let mut order: Vec<Company> = Vec::new();
     loop {
-        let (have, _) = makeable(&open);
-        let next: Vec<Company> =
-            Company::ALL.into_iter().filter(|c| !open[c.idx()] && c.key_item().is_some_and(|k| have[k.idx()])).collect();
+        let (have, fluids) = makeable(&open);
+        let can = |k: &Made| match k {
+            Made::Item(i) => have[i.idx()],
+            Made::Fluid(f) => fluids.contains(f),
+        };
+        let next: Vec<Company> = Company::ALL.into_iter().filter(|c| !open[c.idx()] && c.key_items().iter().any(can)).collect();
         if next.is_empty() {
             break;
         }
@@ -2275,7 +2282,7 @@ fn every_key_item_can_be_made_before_its_company_opens() {
     // them with the two starter companies, no blast furnace.
     let mut starters = [false; COMPANIES];
     for c in Company::ALL {
-        starters[c.idx()] = c.key_item().is_none();
+        starters[c.idx()] = c.key_items().is_empty();
     }
     let (early, _) = makeable(&starters);
     for item in [Item::CopperWire, Item::CopperPipe, Item::CopperCoil, Item::Coke, Item::IronGear] {
@@ -2293,11 +2300,11 @@ fn every_key_item_can_be_made_before_its_company_opens() {
     assert!(at(Company::Gearwright) < at(Company::Swiftline));
     assert!(at(Company::Swiftline) < at(Company::Ampleworth));
     assert!(at(Company::Gearwright) < at(Company::LatticeFinch) && at(Company::Kettering) < at(Company::LatticeFinch));
-    assert_eq!(Company::Gearwright.key_item(), Some(Item::IronGear));
-    assert_eq!(Company::Swiftline.key_item(), Some(Item::Gearbox));
-    assert_eq!(Company::Underhill.key_item(), Some(Item::Concrete));
-    assert_eq!(Company::Ampleworth.key_item(), Some(Item::ElectricMotor));
-    assert_eq!(Company::LatticeFinch.key_item(), Some(Item::ControlBoard));
+    assert_eq!(Company::Gearwright.key_items(), &[Made::Item(Item::IronGear)]);
+    assert_eq!(Company::Swiftline.key_items(), &[Made::Item(Item::Gearbox)]);
+    assert_eq!(Company::Underhill.key_items(), &[Made::Item(Item::Concrete)]);
+    assert_eq!(Company::Ampleworth.key_items(), &[Made::Item(Item::ElectricMotor)]);
+    assert_eq!(Company::LatticeFinch.key_items(), &[Made::Item(Item::ControlBoard)]);
     // With everything open, every item has a way to be made.
     let (have, fluids) = makeable(&open);
     for it in Item::ALL {
@@ -2310,11 +2317,16 @@ fn every_key_item_can_be_made_before_its_company_opens() {
 fn a_company_never_gates_its_own_key_item() {
     // With every other company open, a key item is still makeable without its own company.
     for c in Company::ALL {
-        let Some(key) = c.key_item() else { continue };
         let mut open = [true; COMPANIES];
         open[c.idx()] = false;
-        let (have, _) = makeable(&open);
-        assert!(have[key.idx()], "{key:?} needs {c:?}'s machines");
+        let (have, fluids) = makeable(&open);
+        for key in c.key_items() {
+            let ok = match key {
+                Made::Item(i) => have[i.idx()],
+                Made::Fluid(f) => fluids.contains(f),
+            };
+            assert!(ok, "{key:?} needs {c:?}'s machines");
+        }
     }
 }
 

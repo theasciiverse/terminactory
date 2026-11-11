@@ -216,8 +216,9 @@ pub fn run_cli(args: &[String], data_dir: &Path) -> bool {
 }
 
 /// A company's letter as a telegram: its words, then what it opens for research.
-pub fn letter(c: Company, now: u64) -> Message {
-    let mut md = format!("\"{}\"", c.letter());
+/// `key` is the key that opened the company, which picks the text where a company has two.
+pub fn letter(c: Company, key: crate::content::Made, now: u64) -> Message {
+    let mut md = format!("\"{}\"", c.letter(key));
     let techs: Vec<String> =
         Tech::ALL.iter().filter(|t| t.company() == c).map(|t| format!("- {} ({})", t.name(), t.category().name())).collect();
     if !techs.is_empty() {

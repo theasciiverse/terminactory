@@ -2062,7 +2062,7 @@ fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bo
     let (mark, ns, status) = if w.progress.has(t) {
         ("✓", done, Span::styled("done", dim))
     } else if !w.progress.is_open(t.company()) {
-        let key = t.requires().map_or("its key item", |i| i.name());
+        let key = keys_text(t.requires());
         ("·", dim, Span::styled(if short { format!("needs {key}") } else { format!("make {key} first") }, dim))
     } else if rp + 1e-9 >= t.cost() {
         ("●", Style::new().add_modifier(Modifier::BOLD), Span::styled(format!("{} RP", grouped(t.cost())), ready))
@@ -2090,12 +2090,9 @@ fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     let status = if w.progress.has(t) {
         "Researched.".to_string()
     } else if !w.progress.is_open(t.company()) {
-        let key = t.requires().map_or("its key item", |i| i.name());
-        format!(
-            "Make {key} once: it opens {}, and then this. Made with the {}",
-            t.company().name(),
-            t.requires().map_or(String::new(), recipe_hint)
-        )
+        let key = keys_text(t.requires());
+        let hints: Vec<String> = t.requires().iter().map(|k| key_hint(*k)).filter(|h| !h.is_empty()).collect();
+        format!("Make {key} once: it opens {}, and then this. Made with the {}", t.company().name(), hints.join("; or the "))
     } else {
         format!("Enter: research for {} RP (you have {rp}). Or free once you've made {n} {} ({made}/{n}).", grouped(t.cost()), item.name())
     };
@@ -2584,12 +2581,11 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
 
             let mut first = true;
             let key = Style::new().fg(KEY_ITEM);
-            if let Some(i) = TREE.iter().position(|(n, _)| *n == Node::Key(item)) {
+            if let Some(i) = TREE.iter().position(|(n, _)| *n == Node::Key(Made::Item(item))) {
                 let next: Vec<String> = tree_children(i).iter().map(|&k| node_name(TREE[k].0)).collect();
-                let from: Vec<&str> = Company::ALL.iter().filter(|c| c.key_item() == Some(item)).map(|c| c.name()).collect();
-                let letter = (!from.is_empty()).then(|| format!(" and a letter from {}", from.join(" and ")));
+                let letter = key_letter_text(Made::Item(item));
                 let done = if w.econ.made[item.idx()] > 0 { " (done)" } else { "" };
-                let text = format!("your first one brings {}{}{done}", next.join(", "), letter.unwrap_or_default());
+                let text = format!("your first one brings {}{letter}{done}", next.join(", "));
                 labelled(&mut out, label(&mut first, "Unlocks"), GUTTER, vec![seg(text, key)]);
             }
             for t in Tech::ALL.iter().filter(|t| t.milestone().0 == item && !w.progress.has(**t)) {
@@ -2627,9 +2623,17 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 let mut segs = Vec::new();
                 if let Some(c) = k.company().filter(|c| !w.progress.is_open(*c)) {
                     segs.push(seg("opens when you first make ", warn));
-                    match c.key_item() {
-                        Some(i) => segs.push(link(Entry::Item(i), e)),
-                        None => segs.push(seg("its key item", warn)),
+                    if c.key_items().is_empty() {
+                        segs.push(seg("its key item", warn));
+                    }
+                    for (n, k) in c.key_items().iter().enumerate() {
+                        if n > 0 {
+                            segs.push(seg(" or ", warn));
+                        }
+                        segs.push(match k {
+                            Made::Item(i) => link(Entry::Item(*i), e),
+                            Made::Fluid(f) => seg(f.name(), warn),
+                        });
                     }
                     if k.tech().is_some() {
                         segs.push(seg(", then ", warn));
@@ -2964,11 +2968,29 @@ fn wrap_words(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
+/// " and a letter from X" for the companies a key opens. A company with another key says so:
+/// "a letter from X (opens on A or B)".
+fn key_letter_text(key: Made) -> String {
+    let from: Vec<String> = Company::ALL
+        .iter()
+        .filter(|c| c.key_items().contains(&key))
+        .map(|c| match c.key_items() {
+            [_] => c.name().to_string(),
+            keys => format!("{} (opens on {})", c.name(), keys_text(keys)),
+        })
+        .collect();
+    if from.is_empty() {
+        String::new()
+    } else {
+        format!(" and a letter from {}", from.join(" and "))
+    }
+}
+
 fn node_name(n: Node) -> String {
     match n {
         Node::Start => "Copper Works".into(),
         Node::Tech(t) => t.name().into(),
-        Node::Key(i) => format!("* {}", i.name()),
+        Node::Key(k) => format!("* {}", k.name()),
     }
 }
 
@@ -2978,6 +3000,13 @@ fn capitalise(s: &str) -> String {
 }
 
 /// Where a key item comes from.
+fn key_hint(k: Made) -> String {
+    match k {
+        Made::Item(i) => recipe_hint(i),
+        Made::Fluid(_) => String::new(),
+    }
+}
+
 fn recipe_hint(item: Item) -> String {
     for (machine, list) in [
         ("press", PRESS_RECIPES),

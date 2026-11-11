@@ -630,7 +630,7 @@ impl App {
         if !self.world.progress.part_unlocked(kind) {
             let why = match kind.tech() {
                 Some(t) if !self.world.progress.is_open(t.company()) => {
-                    format!("make {} first, then research it (t)", t.requires().map_or("its key item", |i| i.name()))
+                    format!("make {} first, then research it (t)", crate::content::keys_text(t.requires()))
                 }
                 _ => "research it first (t)".into(),
             };

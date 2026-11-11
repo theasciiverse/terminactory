@@ -5,7 +5,7 @@ version are refused, never deleted.
 
 ## Unreleased
 
-Saves: format version 5 (older saves are refused; start a fresh game with `tfac --new`).
+Saves: format version 6 (older saves are refused; start a fresh game with `tfac --new`).
 
 ### Added
 - Earnings history: a History tab in the production panel, and a compact earnings graph under the build menu.

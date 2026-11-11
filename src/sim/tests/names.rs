@@ -130,7 +130,7 @@ fn a_company_that_is_open_from_the_start_is_open_even_if_the_save_forgot_it() {
     json["progress"]["opened"] = json!([]);
     let l = load_json(&path, &json).unwrap();
     for c in Company::ALL {
-        assert_eq!(l.progress.is_open(c), c.key_item().is_none(), "{c:?}");
+        assert_eq!(l.progress.is_open(c), c.key_items().is_empty(), "{c:?}");
     }
     let _ = std::fs::remove_dir_all(&data);
 }
@@ -280,8 +280,8 @@ fn a_world_with_every_part_round_trips_exactly() {
     w.progress.researched = [false; TECHS];
     w.progress.researched[Tech::ALL[TECHS - 1].idx()] = true;
     // (Companies that are open from the start are always open after a load.)
-    w.progress.opened = Company::ALL.map(|c| c.key_item().is_none());
-    let closed = Company::ALL.into_iter().find(|c| c.key_item().is_some() && *c != Company::ALL[COMPANIES - 1]).unwrap();
+    w.progress.opened = Company::ALL.map(|c| c.key_items().is_empty());
+    let closed = Company::ALL.into_iter().find(|c| !c.key_items().is_empty() && *c != Company::ALL[COMPANIES - 1]).unwrap();
     w.progress.opened[Company::ALL[COMPANIES - 1].idx()] = true;
     let (path, mut first) = save_json(&mut w, &data, "save1");
     let mut l = World::load(&path).unwrap();

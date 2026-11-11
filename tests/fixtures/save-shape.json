@@ -5,6 +5,7 @@
     "made": {
       "Coal": "int"
     },
+    "made_fluid": {},
     "money": "float",
     "research": "float",
     "research_sales": {
