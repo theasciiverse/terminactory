@@ -570,7 +570,9 @@ impl Tech {
             Tech::BasicDrill => "a drill that is faster, and cuts iron twice as fast as a cheap one",
             Tech::Pumps => "pumps that draw water from the ground, and pipes that carry it",
             Tech::Steam => "boilers that turn water and coal into steam, and engines that turn steam into EC",
-            Tech::BlastFurnace => "melts iron fast, makes molten steel and hardened plate from plate and coke or coal (leaving waste)",
+            Tech::BlastFurnace => {
+                "melts iron fast, makes molten steel and hardened plate from plate and coke or coal (leaving waste out the back)"
+            }
             Tech::SupportBeams => "build one floor above the ground, and elevators to reach it",
             Tech::Excavation => "dig one floor below the ground, where ore is richer, and elevators to reach it",
             Tech::Assembler => "the crude assembler, a 4x4 machine that builds valves, gauges, lamps, relays and gearboxes",
@@ -584,7 +586,7 @@ impl Tech {
             Tech::Crusher => "grinds ore into grit (a third more metal when melted) and stone into sand",
             Tech::WireDrawer => "draws plate into three wire, and wire into fine wire",
             Tech::Winder => "winds wire into coils, and iron rods into springs",
-            Tech::CokeOven => "bakes coal into coke on its own, no fire needed (leaving waste)",
+            Tech::CokeOven => "bakes coal into coke on its own, no fire needed (leaving waste out the back)",
             Tech::Lathe => "turns plate into rods and rods into screws, and steel into steel rods and bearings",
             Tech::RollingMill => "rolls copper or iron plate into sheets, and steel into steel sheets and girders",
             Tech::Mixer => "mixes sand, stone and water from a pipe into concrete, and concrete and rod into reinforced concrete",
@@ -1007,7 +1009,7 @@ const fn molten_steel(name: &'static str, inputs: &'static [(Item, u32)], waste:
 
 /// Blast furnaces melt iron ore fast, make molten steel, and harden plate. Coke and coal are
 /// used up as inputs in the steel and plate recipes; every one but the clean coke ones leaves
-/// waste out the front with the product, and the waste has to go somewhere.
+/// waste out the back (products leave the front), and the waste has to go somewhere.
 pub const BLAST_RECIPES: &[Recipe] = &[
     Recipe {
         name: "molten iron",
@@ -1087,7 +1089,7 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
 pub const HAND_WIRED: &str = "control board (hand-wired)";
 
 /// Coke ovens cook their own coal (no fire to feed, no EC): half the coal per coke the
-/// furnace needs, and some waste out the front.
+/// furnace needs, and some waste out the back.
 pub const COKE_OVEN_RECIPES: &[Recipe] =
     &[item_recipe("coke", &[(Item::Coal, 2)], &[(Item::Coke, 1), (Item::Waste, 1)], 120, None, None, 'K')];
 

@@ -1496,7 +1496,14 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                 if let Some((fl, n)) = r.fluid_out {
                     v.push(format!("gives {n} {}  ({}/{} held)", fl.name(), fluid_out, CRAFTER_FLUID_OUT_CAP));
                 }
-                if r.outputs.len() > 1 {
+                let waste = r.outputs.iter().any(|o| o.0 == Item::Waste);
+                if waste {
+                    let products: Vec<&str> = r.outputs.iter().filter(|o| o.0 != Item::Waste).map(|o| o.0.name()).collect();
+                    if !products.is_empty() {
+                        v.push(format!("{} out the front {}", products.join(" + "), b.dir.arrow()));
+                    }
+                    v.push(format!("waste out the back (the {} side)", b.dir.opposite().arrow()));
+                } else if r.outputs.len() > 1 {
                     let outs: Vec<&str> = r.outputs.iter().map(|o| o.0.name()).collect();
                     v.push(format!("gives {} (all out the front)", outs.join(" + ")));
                 }
@@ -1504,7 +1511,17 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                     let lit = if *fuel > 0 { "burning" } else { "no fire" };
                     v.push(format!("{} {}   {}", fuel_item.name(), stock[fuel_item.idx()], lit));
                 }
-                v.push(format!("finished {}/{}   {}", out.len(), b.kind.out_cap(), if *busy { "working" } else { "waiting" }));
+                let held_waste = out.iter().filter(|i| **i == Item::Waste).count();
+                let cap = b.kind.out_cap();
+                let state = if *busy { "working" } else { "waiting" };
+                if waste {
+                    v.push(format!("finished {}/{cap}   waste {held_waste}/{cap}   {state}", out.len() - held_waste));
+                    if held_waste >= cap {
+                        v.push("waste stuck: needs a belt or crate behind it".into());
+                    }
+                } else {
+                    v.push(format!("finished {}/{cap}   {state}", out.len()));
+                }
             }
         }
         St::Crate { items } => {
@@ -2076,8 +2093,10 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Crusher => "grinds ore into grit, which melts further, and stone into sand",
         Kind::Furnace => "melts ore or grit into molten metal, and bakes coal into coke",
         Kind::Molder => "casts molten metal into ingots",
-        Kind::BlastFurnace => "melts iron fast, makes molten steel and hardened plate from plate and coke or coal; most leave waste",
-        Kind::CokeOven => "cooks its own coal into coke: no EC, no fuel, but it leaves waste",
+        Kind::BlastFurnace => {
+            "melts iron fast, makes molten steel and hardened plate from plate and coke or coal; most leave waste out the back"
+        }
+        Kind::CokeOven => "cooks its own coal into coke: no EC, no fuel, but it leaves waste out the back",
         Kind::Press => "presses ingots into plates, and plates and steel into wire, pipe, gears and girders",
         Kind::WireDrawer => "draws plate into wire, and wire into fine wire",
         Kind::Winder => "winds wire into coils, and iron rods into springs",
@@ -2397,6 +2416,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             }
             out.push(vec![]);
             if item == Item::Waste {
+                out.push(vec![seg("Leaves its machine by the back edge, opposite the arrow; products leave the front.", dim)]);
                 out.push(vec![seg("Never earns research. Research and split trade posts won't take it,", dim)]);
                 out.push(vec![seg("and money posts stop when the fees pass what you earn.", dim)]);
             } else {
@@ -2497,6 +2517,10 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                         labelled(&mut out, if std::mem::take(&mut first) { "Makes" } else { "" }, GUTTER, segs);
                     }
                     labelled(&mut out, "", GUTTER, vec![seg(format!("{setup_key} on a placed one picks the recipe"), dim)]);
+                    if k.recipes().iter().any(|r| r.outputs.iter().any(|o| o.0 == Item::Waste)) {
+                        let text = " leaves out the back (opposite the arrow), never the front: belt it away or put a crate there. Blocked, the machine stops (BACK)";
+                        labelled(&mut out, "Waste", GUTTER, vec![link(Entry::Item(Item::Waste), e), seg(text, Style::new())]);
+                    }
                     if k.batch() > 1 {
                         let text = format!("fills up for {} runs, then makes them all at once", k.batch());
                         labelled(&mut out, "Batch", GUTTER, vec![seg(text, Style::new())]);
@@ -2903,7 +2927,9 @@ HOW IT WORKS
     winders, rolling mills and lathes shape plates into wire, coils, sheets,
     rods, screws and springs. Machines make whatever recipe they're set to
     (f changes it). A pipe network holds one fluid. A machine with two
-    outputs waits (FULL) until both have room.
+    outputs waits (FULL) until both have room. Waste always leaves by the
+    back, opposite the arrow; with nothing there to take it the machine
+    stops (BACK).
   Belts, splitters, arms, molders and presses need EC (electric charge).
     Solar panels and poles charge every electric part in range (v shows
     it); overlapping ranges join into one grid that shares only its own
@@ -2912,8 +2938,9 @@ HOW IT WORKS
     Boilers burn coal to turn water into steam (out their front); steam
     engines turn steam into EC, only as much as their grid needs.
   Blast furnaces make molten steel (a molder casts it) and hardened plate
-    from plate and coke or coal. Most recipes leave waste: a trade post set
-    to money takes it for $0.50 each; research posts refuse it and it backs up.
+    from plate and coke or coal. Most recipes leave waste out the back: a
+    trade post set to money takes it for $0.50 each; research posts refuse it
+    and it backs up.
   Assemblers build parts and big goods (crude, basic, advanced, precision,
     then the large ones). A higher one runs the lower recipes faster. Welders
     join steel parts and draw EC only while working. Kilns fire 8 at once and
@@ -2921,7 +2948,7 @@ HOW IT WORKS
   Floors: support beams open +1, excavation opens -1 (ore there is richer).
     Elevators (2x2 to 8x8, +/- to resize) have a door on every open floor;
     f sets each door to load, unload or pass. A car leaves only when full.
-  Idle machines flash a word saying why (FULL, NEED, FLUD, COAL, EC?, LOAD...).
+  Idle machines flash a word saying why (FULL, BACK, NEED, FLUD, COAL, EC?, LOAD...).
   Everything unlocks free once you've made enough of its milestone item;
     research is the shortcut.
   Trade posts sell what they receive: f switches money / 40-40 / research.

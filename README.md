@@ -36,7 +36,7 @@ Phase 1: ore is melted in a furnace into molten metal, a molder casts it into in
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
 - **Steam engines** (after copper coil): boilers burn coal to turn water into steam, out of their front; steam engines turn steam into 100 EC each, only as much as their grid needs beyond solar.
-- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 2.5 s: 24 molten iron a minute, twice a furnace's 12), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which comes out the front too and has to go somewhere (see Waste below).
+- **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 2.5 s: 24 molten iron a minute, twice a furnace's 12), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which leaves by the **back** and has to go somewhere (see Waste below).
 
 Phase 3: floors, elevators and machinery.
 - **Floors**: support beams (after steel girders) open floor +1; excavation (after concrete) opens floor -1. Decking or digging costs $10 a tile (more on later floors), never any waiting. Drills underground mine 1.5x faster (2x and 3x on deeper floors later).
@@ -49,7 +49,7 @@ Phase 3: floors, elevators and machinery.
   - **Warehouse**: a 2×2 crate holding four crates' worth.
   - Pipes moved next to pumps in the build menu (Create 4, press again for pipes) to make room: Transport is now belts / fast belts / tunnels, splitters / filter splitters, arms / long arms, elevators. Misc 1 is crate / warehouse.
 - **Free unlocks**: everything also unlocks free once you've made enough of its milestone item (shown in the tree); research is the shortcut.
-- **Idle machines** flash a word saying why: FULL, NEED, COAL, COKE, EC?, FLUD, WATR, ORE?, STM?. (EC? is no electric charge; FLUD is a molder waiting for molten metal.)
+- **Idle machines** flash a word saying why: FULL, BACK, NEED, COAL, COKE, EC?, FLUD, WATR, ORE?, STM?. (EC? is no electric charge; FLUD is a molder waiting for molten metal; BACK is waste with nowhere to go out the back.)
 - **Offline earnings**: when you come back, you get what your factory earned while the game was closed, with no cap.
 - **Faster early game**: drills run twice as fast, and the first research is cheaper.
 
@@ -80,7 +80,7 @@ Six new machines (all in Create), each from a company that opens when you first 
 
 Everything the earlier steps pointed at is real now. Times are seconds; prices are sell prices.
 
-**Steel.** The blast furnace makes **molten steel** (it leaves the front into a pipe or a molder, which casts it: 1 molten steel → 1 steel, 2.5 s; steel $24). Three ways from plate, each also leaving waste items out the front (give the waste its own belt or crate beside the molder), and a fourth straight from molten iron:
+**Steel.** The blast furnace makes **molten steel** (it leaves the front into a pipe or a molder, which casts it: 1 molten steel → 1 steel, 2.5 s; steel $24). Three ways from plate, each also leaving waste items out the back (a belt or crate behind the furnace takes them), and a fourth straight from molten iron:
 
 | Recipe | Time | Waste |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ Every key item can be made with machines from companies that open before it, so 
 - **Molder** (2 EC, $100, Create 2, next to the furnace): casts molten metal into ingots: copper ingot ($2), iron ingot ($1.50), steel (2.5 s each). `f` picks the recipe; it only takes the metal its recipe uses.
 - **Press**: copper plate and iron plate come from ingots now (2.5 s), then wire, pipe, coil and the rest as before. Copper ingots are the free milestone for the press (make 50).
 - **Fluids in pipes**: a machine that makes a fluid pushes it out of its **front**, into a pipe touching that edge, or straight into a machine that takes it (a furnace right behind a molder needs no pipe). A machine that needs a fluid takes it from pipes on any of its other sides. A pipe network holds one fluid at a time: water blue, steam white, molten copper orange, molten iron red, molten steel pale yellow, grey when empty. Pointing at a pipe or a machine names the fluid.
-- A machine can have two outputs (a fluid out the front and items out the front). It waits, saying FULL, until both have room.
+- A machine can have two outputs (a fluid out the front and items out the front). It waits, saying FULL, until both have room. Waste is its own output, out the back (see Waste below).
 - **Stone** ($0.30): drills can mine it (`f` cycles copper, coal, iron, stone). A cheap drill cuts iron at half the speed of a basic drill.
 
 ## Recipe book
@@ -171,13 +171,13 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or 
 
 ## Rules in one breath
 
-- Buildings take input from **any side** and send output out of their **front** only (the arrow on their edge): onto a belt, or straight into the next building, like a drill directly into a furnace.
+- Buildings take input from **any side** and send their products out of their **front** (the arrow on their edge): onto a belt, or straight into the next building, like a drill directly into a furnace. Waste is the one exception: it leaves by the **back**, the edge opposite the arrow.
 - Sizes follow roles: belts, splitters, arms and crates are 1×1; drills, solar panels and elevators are 2×2; furnaces, lathes and the trade post are 3×3. Presses, wire drawers and winders (2×1) and pumps (1×2) are long machines: the size given is facing east or west, and they swap width and height when turned north or south. The rotate key (`r`) shows the turned shape while placing, and turning a placed one needs the room (it keeps its top-left corner).
 - Drills mine anywhere on the ground (not on decking): press f on one to pick copper, coal, iron or stone. The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
 - Furnaces, molders and presses make the recipe they're set to (`f` changes it). Furnaces burn coal to melt ore; with coking researched they bake coal into coke. Molders cast ingots, presses turn ingots into plates, plates into wire and pipe, and wire into coils. A basic drill cuts iron twice as fast as a cheap one.
 - Research (`t`) brings new parts, in groups (Making, Assembling, Drilling, Moving, EC, Floors; the list scrolls); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, iron gear, gearbox, girders, concrete, electric motor, control board), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
 - Power is called **EC** (electric charge). Belts, splitters, arms, molders, presses and the other shaping machines need it (coke ovens don't). Solar panels (reach 2 tiles) and EC poles (reach 3 tiles) charge every electric part within range; ranges that overlap join into one grid, and each grid shares only its own EC. Solar panels never join each other directly, even side by side: link them with poles. The EC figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little EC slows a grid's parts evenly. Elevators carry EC to the floor below. Belts without EC turn red; `v` shows the area it reaches.- Trade posts sell what they receive: money, a 40/40 split, or research (press `f` on one).
-- **Waste** sells for -$0.50 each and never earns research. Only a trade post set to money takes it (and pays the fee); research and split posts refuse it, so it stays on the belt and backs up (the post flashes `WSTE`). A post also refuses waste when the fee would take your money below zero, or when the last minute's waste fees are more than the last minute's earnings. Removing a crate, warehouse or elevator that holds waste costs the same $0.50 each (refused if you can't afford it); hover it to see the cost. The production panel (`o`) shows waste fees as negative money.
+- **Waste** leaves a machine by its **back** edge, never the front: put a belt (facing away), crate or trade post behind the coke oven or blast furnace, so a row of machines can share a waste alley behind it. A belt facing into the machine doesn't take it. If nothing behind can take waste, the machine fills up on it, stops, and flashes `BACK` (its products leave the front as usual until then). Waste sells for -$0.50 each and never earns research. Only a trade post set to money takes it (and pays the fee); research and split posts refuse it, so it stays on the belt and backs up (the post flashes `WSTE`). A post also refuses waste when the fee would take your money below zero, or when the last minute's waste fees are more than the last minute's earnings. Removing a crate, warehouse or elevator that holds waste costs the same $0.50 each (refused if you can't afford it); hover it to see the cost. The production panel (`o`) shows waste fees as negative money.
 - Research per item fades the more you sell of it, down to a small per-item minimum, so new items are where research comes from. Research earned while the game is closed fades the same way.
 - Nothing breaks or jams at random. Removing a part refunds it in full.
 

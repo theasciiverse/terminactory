@@ -1122,3 +1122,33 @@ fn content_step_screens_fit_every_size() {
     assert!(text(&buf).contains("Production"));
     std::fs::write("target/snapshot-production-all.html", to_html(&buf)).unwrap();
 }
+
+/// A machine that leaves waste says so: in the inspector, and on its recipe book page.
+#[test]
+fn machines_say_waste_leaves_by_the_back() {
+    let mut w = World::blank();
+    w.place(0, 20, 20, Kind::CokeOven, Dir::E).unwrap();
+    let lines = inspect(&w, 0, 20, 20).join("\n");
+    assert!(lines.contains("coke out the front") && lines.contains("waste out the back"), "{lines}");
+    assert!(lines.contains("waste 0/10"), "{lines}");
+    // With a full waste queue and nothing behind, it says what to do.
+    if let Some(Building { st: St::Crafter { out, .. }, .. }) = w.floors[0].tiles[idx(20, 20)].as_mut() {
+        out.extend([Item::Waste; 10]);
+    }
+    assert!(inspect(&w, 0, 20, 20).join("\n").contains("waste stuck"));
+    assert_eq!(w.idle_reason(0, idx(20, 20)), Some("BACK"));
+
+    let mut app = App::new(w);
+    app.book_go(Entry::Part(Kind::CokeOven));
+    app.book = true;
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("out the back") && t.contains("(BACK)"), "{t}");
+    // A machine with no waste has no such line.
+    app.book_go(Entry::Part(Kind::Furnace));
+    let t = text(&render(&mut app, 130, 42));
+    assert!(!t.contains("out the back"), "{t}");
+    // The waste page says where it comes from.
+    app.book_go(Entry::Item(Item::Waste));
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("back edge"), "{t}");
+}
