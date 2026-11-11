@@ -1736,7 +1736,7 @@ mod tests {
     #[test]
     fn research_groups_are_whole() {
         let names: Vec<&str> = UNLOCK_GROUPS.iter().map(|g| g.0).collect();
-        assert_eq!(names, ["Making", "Assembling", "Drilling", "Moving", "Pipes", "EC", "Floors"]);
+        assert_eq!(names, ["Making", "Assembling", "Drilling", "Moving", "Pipes", "EC", "Floors", "Tools"]);
         assert!(UNLOCK_GROUPS.iter().all(|g| !g.1.is_empty()), "no empty group");
         let pipes = UNLOCK_GROUPS.iter().find(|g| g.0 == "Pipes").unwrap().1;
         assert_eq!(pipes, &[Tech::Pumps, Tech::AdvancedPump]);

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub const ITEMS: usize = 51;
 pub const COMPANIES: usize = 12;
-pub const TECHS: usize = 34;
+pub const TECHS: usize = 35;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -504,6 +504,7 @@ pub enum Tech {
     LargeAdvancedDrill,
     LargeKiln,
     BasicSolar,
+    Blueprints,
 }
 
 impl Tech {
@@ -542,6 +543,7 @@ impl Tech {
         Tech::LargeAdvancedDrill,
         Tech::LargeKiln,
         Tech::BasicSolar,
+        Tech::Blueprints,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -582,6 +584,7 @@ impl Tech {
             Tech::LargeAdvancedDrill => "Large adv. drill",
             Tech::LargeKiln => "Large kiln",
             Tech::BasicSolar => "Basic solar panel",
+            Tech::Blueprints => "Blueprints",
         }
     }
     pub fn about(self) -> &'static str {
@@ -623,6 +626,7 @@ impl Tech {
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
             Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
             Tech::BasicSolar => "a 2x2 solar panel that gives 20 EC and reaches 4 tiles, twice the cheap one; it still joins other panels only through poles",
+            Tech::Blueprints => "copy an area to your hand (c, then c again), paste it anywhere, and keep blueprints in a library (l) for every save",
             Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 80 seconds: the kiln's recipes in one big lump",
         }
     }
@@ -637,7 +641,7 @@ impl Tech {
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler => Company::Swiftline,
-            Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses => Company::Brannock,
+            Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints => Company::Brannock,
             Tech::Crusher => Company::Ashgrove,
             Tech::WireDrawer | Tech::Winder => Company::Kettering,
             Tech::CokeOven => Company::Cinderhall,
@@ -678,7 +682,7 @@ impl Tech {
             Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
-            Tech::Warehouses => Category::Misc,
+            Tech::Warehouses | Tech::Blueprints => Category::Misc,
         }
     }
     /// The keys, any one of which you must make before this can be unlocked.
@@ -697,6 +701,7 @@ impl Tech {
             Tech::BlastFurnace => 800.0,
             Tech::Steam => 1000.0,
             Tech::BasicSolar => 1800.0,
+            Tech::Blueprints => 800.0,
             Tech::FastBelts => 2500.0,
             Tech::SupportBeams => 3000.0,
             Tech::Excavation => 3000.0,
@@ -767,6 +772,7 @@ impl Tech {
             Tech::LargeAdvancedAssembler => (Item::ControlBoard, 800),
             Tech::LargeKiln => (Item::Brick, 1000),
             Tech::BasicSolar => (Item::Glass, 60),
+            Tech::Blueprints => (Item::CopperPlate, 1500),
         }
     }
 }
@@ -808,6 +814,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
     ("Pipes", &[Tech::Pumps, Tech::AdvancedPump]),
     ("EC", &[Tech::Steam, Tech::BasicSolar]),
     ("Floors", &[Tech::SupportBeams, Tech::Excavation]),
+    ("Tools", &[Tech::Blueprints]),
 ];
 
 /// A link between key items and what they unlock (the recipe book uses it).

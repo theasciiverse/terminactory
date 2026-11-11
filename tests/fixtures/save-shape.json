@@ -1048,7 +1048,7 @@
       ]
     },
     "researched": {
-      "len": 34,
+      "len": 35,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1058,6 +1058,7 @@
         "\"BasicDrill\"",
         "\"BasicSolar\"",
         "\"BlastFurnace\"",
+        "\"Blueprints\"",
         "\"CokeOven\"",
         "\"Coking\"",
         "\"Crusher\"",
