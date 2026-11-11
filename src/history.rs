@@ -4,7 +4,7 @@
 //!
 //! Nothing here draws. Buckets are keyed by *local* time (the clock plus the zone's offset at
 //! that moment), so a "day" is the player's own day. Only buckets that were touched are
-//! stored, which also tells the heatmap which days were played at all.
+//! stored.
 
 use std::collections::VecDeque;
 
@@ -21,10 +21,8 @@ const SEC_BASE: u64 = 1 << 20;
 pub const MINUTES: u64 = 60;
 /// Hour buckets kept: the last two days.
 pub const HOURS: u64 = 48;
-/// Day buckets kept: 53 whole weeks, the most a heatmap can show.
+/// Day buckets kept: a year (53 weeks).
 pub const DAYS: u64 = 371;
-/// Weeks the heatmap can show (its columns).
-pub const WEEKS: u64 = 53;
 
 /// How much time each bar of the earnings chart covers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -131,11 +129,6 @@ fn local(now: u64, off: i64) -> u64 {
     (now as i64).saturating_add(off).max(0) as u64
 }
 
-/// The day number a local second falls on.
-pub fn day_of(now: u64, off: i64) -> u64 {
-    local(now, off) / 86_400
-}
-
 /// Adds to the bucket for `t`, keeping the list in time order.
 fn upsert(q: &mut VecDeque<Bucket>, t: u64, money: f64, research: f64) {
     let i = q.partition_point(|b| b.t < t);
@@ -237,16 +230,6 @@ impl History {
     }
 }
 
-/// Days since 1970-01-01 are counted from a Thursday. Weeks run Sunday to Saturday, as on GitHub.
-pub fn week_of(day: u64) -> u64 {
-    (day + 4) / 7
-}
-
-/// Which day of the week (0 Sunday to 6 Saturday).
-pub fn weekday(day: u64) -> u64 {
-    (day + 4) % 7
-}
-
 /// (year, month 1-12, day 1-31) of a day number.
 pub fn civil(day: u64) -> (i64, u32, u32) {
     let z = day as i64 + 719_468;
@@ -262,7 +245,6 @@ pub fn civil(day: u64) -> (i64, u32, u32) {
 }
 
 pub const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-pub const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 #[cfg(test)]
 mod tests;
