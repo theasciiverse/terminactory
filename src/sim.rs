@@ -1227,8 +1227,16 @@ pub struct World {
     /// Recent earnings per second (money, research), for offline earnings.
     #[serde(default)]
     pub rate: (f64, f64),
+    /// A slow average of the same rate (about ten minutes), so one jam just before
+    /// quitting doesn't zero a whole night away.
+    #[serde(default)]
+    pub rate_long: (f64, f64),
     #[serde(skip)]
     pub samples: VecDeque<(f64, f64)>,
+    /// Money from company deliveries this session; left out of the rate, since
+    /// deliveries don't keep coming while the game is closed.
+    #[serde(skip)]
+    pub gifted: f64,
     /// Recent research sales per second, per item: research earned while away fades
     /// item by item, just as it does in play.
     #[serde(default)]
@@ -1253,6 +1261,11 @@ pub struct World {
     #[serde(skip)]
     pub active: Vec<Vec<u32>>,
 }
+
+/// Samples (one a second) needed before the earning rate is trusted.
+const RATE_MIN_SAMPLES: usize = 30;
+/// Time constant, in seconds, of the slow earning average used for offline pay.
+const RATE_LONG_SECS: f64 = 600.0;
 
 /// Seconds between company deliveries that come with agent messages.
 pub const GIFT_GAP: u64 = 180;
@@ -1315,6 +1328,8 @@ impl World {
             lifts: Vec::new(),
             saved_at: 0,
             rate: (0.0, 0.0),
+            rate_long: (0.0, 0.0),
+            gifted: 0.0,
             samples: VecDeque::new(),
             sale_rate: Vec::new(),
             sale_samples: VecDeque::new(),
@@ -1347,6 +1362,8 @@ impl World {
             lifts: Vec::new(),
             saved_at: 0,
             rate: (0.0, 0.0),
+            rate_long: (0.0, 0.0),
+            gifted: 0.0,
             samples: VecDeque::new(),
             sale_rate: Vec::new(),
             sale_samples: VecDeque::new(),
@@ -2117,14 +2134,22 @@ impl World {
 
     /// Once a second: remember lifetime earnings, and work out the recent rate.
     fn sample_earnings(&mut self) {
-        self.samples.push_back((self.econ.earned_money, self.econ.earned_research));
+        self.samples.push_back((self.econ.earned_money - self.gifted, self.econ.earned_research));
         while self.samples.len() > 120 {
             self.samples.pop_front();
         }
-        if let (Some(a), Some(b)) = (self.samples.front(), self.samples.back()) {
-            let n = (self.samples.len() - 1) as f64;
-            if n > 0.0 {
+        // Wait for half a minute of samples, so a short session can't replace a good saved rate.
+        if self.samples.len() > RATE_MIN_SAMPLES {
+            if let (Some(a), Some(b)) = (self.samples.front(), self.samples.back()) {
+                let n = (self.samples.len() - 1) as f64;
                 self.rate = ((b.0 - a.0) / n, (b.1 - a.1) / n);
+                let k = 1.0 / RATE_LONG_SECS;
+                let l = &mut self.rate_long;
+                if *l == (0.0, 0.0) {
+                    *l = self.rate;
+                } else {
+                    *l = (l.0 + (self.rate.0 - l.0) * k, l.1 + (self.rate.1 - l.1) * k);
+                }
             }
         }
         let e = &self.econ;
@@ -2186,7 +2211,7 @@ impl World {
         if away < 60 {
             return None;
         }
-        let m = (self.rate.0 * away as f64).max(0.0);
+        let m = (self.rate.0.max(self.rate_long.0) * away as f64).max(0.0);
         let r = self.offline_research(away as f64);
         if m <= 0.0 && r <= 0.0 {
             return None;
@@ -2226,13 +2251,16 @@ impl World {
     pub fn receive(&mut self, mut msg: crate::mail::Message, now: u64) {
         if now >= self.last_gift + GIFT_GAP {
             let open: Vec<Company> = Company::ALL.into_iter().filter(|c| self.progress.is_open(*c)).collect();
-            let c = open[self.gifts as usize % open.len()];
-            let m = (self.rate.0 * 60.0).max(25.0).round();
-            self.econ.money += m;
-            self.econ.earned_money += m;
-            self.last_gift = now;
-            self.gifts += 1;
-            msg.gift = Some((c, m));
+            if !open.is_empty() {
+                let c = open[self.gifts as usize % open.len()];
+                let m = (self.rate.0 * 60.0).max(25.0).round();
+                self.econ.money += m;
+                self.econ.earned_money += m;
+                self.gifted += m;
+                self.last_gift = now;
+                self.gifts += 1;
+                msg.gift = Some((c, m));
+            }
         }
         self.mail.push_back(msg);
         // Only the newest few wait, so a few days away doesn't mean a pile of telegrams.
@@ -4669,6 +4697,42 @@ mod tests {
         assert!((r - by_hand).abs() < 1.0, "{r} vs {by_hand}");
         assert!(r < 36_000.0 * 12.0 * 0.1, "fades: {r}");
         assert_eq!(w.econ.research_sales[plate.idx()], 36_000);
+    }
+
+    #[test]
+    fn deliveries_and_short_sessions_leave_the_offline_rate_alone() {
+        // Earning $1 a second for two minutes.
+        let mut w = World::new();
+        for _ in 0..120 {
+            w.econ.earned_money += 1.0;
+            w.sample_earnings();
+        }
+        assert!((w.rate.0 - 1.0).abs() < 1e-9, "{:?}", w.rate);
+        // A company delivery is not earnings the factory keeps making while closed.
+        w.receive(crate::mail::parse("done", 0), 1_000);
+        assert!(w.gifted > 0.0);
+        w.econ.earned_money += 1.0;
+        w.sample_earnings();
+        assert!((w.rate.0 - 1.0).abs() < 1e-9, "{:?}", w.rate);
+
+        // A fresh session (samples aren't saved) of a few fast seconds keeps the saved rate.
+        let mut w2 = World::new();
+        w2.rate = (1.0, 0.0);
+        for _ in 0..5 {
+            w2.econ.earned_money += 5.0;
+            w2.sample_earnings();
+        }
+        assert_eq!(w2.rate.0, 1.0);
+    }
+
+    #[test]
+    fn offline_pay_uses_the_better_of_recent_and_long_rates() {
+        let mut w = World::new();
+        w.rate = (0.0, 0.0); // a jam right before quitting
+        w.rate_long = (2.0, 0.0);
+        w.saved_at = 1_000;
+        let (_, m, _) = w.apply_offline(1_000 + 3600).unwrap();
+        assert_eq!(m, 7_200.0);
     }
 
     #[test]
