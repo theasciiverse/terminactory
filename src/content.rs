@@ -280,21 +280,21 @@ impl Item {
             Item::Gearbox => c(240.0, 0.997, 0.08),
             // Crown items are only for selling and research. Their floor is high, so they keep paying
             // good research however many you sell (every other item's floor is 0.1 or lower).
-            Item::DrillingRig => c(7000.0, 0.99, 0.3),
+            Item::DrillingRig => c(7000.0, 0.99, 0.2),
             Item::CopperIngot => c(6.0, 0.995, 0.03),
             Item::IronIngot => c(8.0, 0.995, 0.03),
             Item::Stone => c(1.0, 0.99, 0.02),
-            Item::CopperGrit => c(10.0, 0.99, 0.02),
-            Item::IronGrit => c(10.0, 0.99, 0.02),
-            Item::Sand => c(10.0, 0.99, 0.02),
+            Item::CopperGrit => c(10.0, 0.98, 0.02),
+            Item::IronGrit => c(10.0, 0.98, 0.02),
+            Item::Sand => c(10.0, 0.98, 0.02),
             Item::FineWire => c(10.0, 0.995, 0.03),
             Item::CopperSheet => c(24.0, 0.995, 0.04),
             Item::IronRod => c(10.0, 0.995, 0.03),
             Item::Screw => c(10.0, 0.995, 0.03),
             Item::Spring => c(30.0, 0.996, 0.05),
             Item::IronSheet => c(36.0, 0.996, 0.05),
-            Item::Brick => c(10.0, 0.99, 0.02),
-            Item::Glass => c(10.0, 0.99, 0.02),
+            Item::Brick => c(10.0, 0.98, 0.02),
+            Item::Glass => c(10.0, 0.98, 0.02),
             Item::SteelRod => c(32.0, 0.995, 0.04),
             Item::Bearing => c(24.0, 0.995, 0.04),
             Item::SteelSheet => c(72.0, 0.996, 0.05),
@@ -316,7 +316,7 @@ impl Item {
             Item::EngineBlock => c(2300.0, 0.998, 0.08),
             Item::ControlPanel => c(1800.0, 0.998, 0.08),
             // A crown item too: same high floor as the drilling rig.
-            Item::SteamTractor => c(15000.0, 0.99, 0.3),
+            Item::SteamTractor => c(15000.0, 0.99, 0.2),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going.
