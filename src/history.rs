@@ -12,6 +12,11 @@ use serde::{Deserialize, Serialize};
 
 /// Second buckets kept: the last minute.
 pub const SECONDS: u64 = 60;
+/// Each bar of the seconds chart is the average of this many game seconds, so selling whole
+/// items (4 one second, 5 the next) doesn't make a steady line look like a heartbeat.
+pub const SMOOTH_SECS: usize = 5;
+/// Second keys start here, so the first minute of a session still fills in from the right.
+const SEC_BASE: u64 = 1 << 20;
 /// Minute buckets kept: the last hour.
 pub const MINUTES: u64 = 60;
 /// Hour buckets kept: the last two days.
@@ -89,9 +94,14 @@ pub struct Point {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct History {
-    /// The last minute, second by second. Not saved: it only means something while playing.
+    /// The last minute, by game second (one sample each). Not saved: it only means something
+    /// while playing. Keyed by game time, not the wall clock, so game speed and timer drift
+    /// never put two samples in one bar or none in another.
     #[serde(skip)]
     pub seconds: VecDeque<Bucket>,
+    /// Game seconds sampled this session: the key of the newest second bucket.
+    #[serde(skip)]
+    game_secs: u64,
     #[serde(default)]
     pub minutes: VecDeque<Bucket>,
     #[serde(default)]
@@ -159,6 +169,9 @@ impl History {
             Some(b) => (total.0 - b.0, total.1 - b.1),
             None => (0.0, 0.0),
         };
+        self.game_secs += 1;
+        upsert(&mut self.seconds, SEC_BASE + self.game_secs, dm, dr);
+        prune(&mut self.seconds, SEC_BASE + self.game_secs, SECONDS + SMOOTH_SECS as u64);
         self.add(local(now, off), dm, dr, true);
     }
 
@@ -174,10 +187,8 @@ impl History {
 
     fn add(&mut self, ls: u64, money: f64, research: f64, minute: bool) {
         if minute {
-            upsert(&mut self.seconds, ls, money, research);
             upsert(&mut self.minutes, ls / 60, money, research);
         }
-        prune(&mut self.seconds, ls, SECONDS);
         upsert(&mut self.hours, ls / 3600, money, research);
         upsert(&mut self.days, ls / 86_400, money, research);
         prune(&mut self.minutes, ls / 60, MINUTES);
@@ -207,7 +218,24 @@ impl History {
                 .collect()
         };
         match range {
-            Range::Seconds => fill(&self.seconds, ls, SECONDS),
+            Range::Seconds => {
+                // Fetch a few extra seconds so the first bars have a full window to average.
+                let raw = fill(&self.seconds, SEC_BASE + self.game_secs, SECONDS + SMOOTH_SECS as u64);
+                let skip = SMOOTH_SECS;
+                (skip..raw.len())
+                    .map(|i| {
+                        let window: Vec<&Point> = raw[i + 1 - SMOOTH_SECS..=i].iter().filter(|p| p.seen).collect();
+                        let n = window.len().max(1) as f64;
+                        Point {
+                            // Wall-clock seconds, so the axis and labels read as "seconds ago".
+                            t: ls.saturating_sub((raw.len() - 1 - i) as u64),
+                            money: window.iter().map(|p| p.money).sum::<f64>() / n,
+                            research: window.iter().map(|p| p.research).sum::<f64>() / n,
+                            seen: raw[i].seen,
+                        }
+                    })
+                    .collect()
+            }
             Range::Minutes => fill(&self.minutes, ls / 60, MINUTES),
             Range::Hours => fill(&self.hours, ls / 3600, HOURS),
             Range::Days => fill(&self.days, ls / 86_400, DAYS),

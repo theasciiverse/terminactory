@@ -43,8 +43,9 @@ fn earnings_land_in_the_second_minute_hour_and_day_they_came_in() {
     assert_eq!(money(&h, Range::Days, NOON), 15.0);
     let secs = h.series(Range::Seconds, NOON + 2, 0);
     assert_eq!(secs.len(), 60);
-    assert_eq!((secs[58].money, secs[59].money), (10.0, 5.0), "one bar per second");
-    assert_eq!(money(&h, Range::Seconds, NOON + 2), 15.0);
+    // Each bar averages the last few game seconds: (0 + 10 + 5) / 3 sampled seconds.
+    assert_eq!(secs[59].money, 5.0);
+    assert!(secs[59].seen && secs[58].seen && secs[57].seen && !secs[56].seen, "newest at the right");
 }
 
 #[test]
@@ -175,4 +176,35 @@ fn ranges_step_and_stop_at_the_ends() {
     assert_eq!(Range::Seconds.next(), Range::Minutes);
     assert_eq!(Range::Days.next(), Range::Days);
     assert_eq!(Range::Days.prev(), Range::Hours);
+}
+
+#[test]
+fn a_steady_stream_of_whole_sales_reads_as_a_flat_line() {
+    // About 4.4 sales a second at $1: some seconds sell 4, some 5.
+    let mut h = History::default();
+    let mut total = 0.0;
+    h.record(NOON, 0, (total, 0.0));
+    for k in 1..=120u64 {
+        total += if k % 5 == 0 || k % 7 == 0 { 5.0 } else { 4.0 };
+        h.record(NOON + k, 0, (total, 0.0));
+    }
+    let s = h.series(Range::Seconds, NOON + 120, 0);
+    assert_eq!(s.len(), 60);
+    let (lo, hi) = s.iter().fold((f64::MAX, 0.0f64), |(lo, hi), p| (lo.min(p.money), hi.max(p.money)));
+    assert!(hi - lo <= 0.61, "wobble {lo}..{hi}");
+}
+
+#[test]
+fn seconds_follow_game_time_not_the_wall_clock() {
+    // At 8x speed, eight game seconds pass in one wall second: still eight bars, not one tall one.
+    let mut h = History::default();
+    let mut total = 0.0;
+    h.record(NOON, 0, (total, 0.0));
+    for _ in 0..8 {
+        total += 4.0;
+        h.record(NOON + 1, 0, (total, 0.0));
+    }
+    let s = h.series(Range::Seconds, NOON + 1, 0);
+    assert_eq!(s.iter().filter(|p| p.seen).count(), 9);
+    assert!(s.iter().all(|p| p.money <= 4.0), "no doubled bar");
 }

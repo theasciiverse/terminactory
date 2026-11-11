@@ -181,7 +181,10 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
         })
         .unwrap_or_default()
     };
-    let span = format!("last {n} {}s", range.unit());
+    let span = match range {
+        Range::Seconds => format!("last {n} seconds, {}s average", hist::SMOOTH_SECS),
+        _ => format!("last {n} {}s", range.unit()),
+    };
     let candidates = [
         format!("{name} · {span} · total {}{}", amount(total, true), best_of(true, true)),
         format!("{name} · {span} · total {}{}", amount(total, false), best_of(false, false)),
