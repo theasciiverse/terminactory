@@ -98,8 +98,13 @@ impl Entry {
     }
 }
 
+/// Removing waste storage that costs more than this takes a second click.
+const WASTE_CONFIRM: f64 = 20.0;
+
 pub struct App {
     pub world: World,
+    /// Waste storage the player was warned about: removing it again confirms the fee.
+    pub confirm_remove: Option<(usize, i32, i32)>,
     pub cursor: (i32, i32),
     pub floor: usize,
     pub cam: (i32, i32),
@@ -175,6 +180,7 @@ impl App {
     pub fn new(world: World) -> Self {
         App {
             world,
+            confirm_remove: None,
             cursor: SPAWN,
             floor: 0,
             cam: (0, 0),
@@ -370,7 +376,7 @@ impl App {
             }
             Action::Place => self.place_here(),
             Action::Rotate => self.rotate(),
-            Action::Remove => self.remove_here(),
+            Action::Remove => self.remove_here(true),
             Action::Setup => {
                 let (x, y) = self.cursor;
                 match self.world.configure(self.floor, x, y) {
@@ -717,7 +723,8 @@ impl App {
             MouseEventKind::Down(MouseButton::Right) | MouseEventKind::Drag(MouseButton::Right) => {
                 if let Some(t) = tile {
                     self.cursor = t;
-                    self.remove_here();
+                    // Only a fresh click confirms a waste fee, never a drag passing over it.
+                    self.remove_here(matches!(m.kind, MouseEventKind::Down(_)));
                 }
             }
             _ => {}
@@ -837,8 +844,19 @@ impl App {
         self.say(format!("Copied {}{what} · click to place", kind.name()));
     }
 
-    fn remove_here(&mut self) {
+    /// `fresh` is a key press or a new click (not a drag), which may confirm a waste fee.
+    fn remove_here(&mut self, fresh: bool) {
         let (x, y) = self.cursor;
+        let here = (self.floor, x, y);
+        let (n, fee) = self.world.removal_fee(self.floor, x, y);
+        if fee > WASTE_CONFIRM && !(fresh && self.confirm_remove == Some(here)) {
+            if self.confirm_remove != Some(here) {
+                self.confirm_remove = Some(here);
+                self.say(format!("Holds {n} waste: removing it costs {}. Remove again to pay", crate::sim::money_text(fee)));
+            }
+            return;
+        }
+        self.confirm_remove = None;
         match self.world.try_remove(self.floor, x, y) {
             Ok(Some(k)) => self.say(format!("Removed {} (refunded in full)", k.name())),
             Ok(None) => {}
@@ -903,6 +921,24 @@ mod tests {
 
     fn key(app: &mut App, code: KeyCode) {
         app.on_key(KeyEvent::new(code, KeyModifiers::NONE));
+    }
+
+    #[test]
+    fn removing_costly_waste_storage_takes_a_second_press() {
+        let mut w = World::blank();
+        w.place(0, 5, 5, Kind::Crate, Dir::E).unwrap();
+        let a = w.floors[0].anchor_at(5, 5).unwrap();
+        if let Some(crate::sim::Building { st: crate::sim::St::Crate { items }, .. }) = w.floors[0].tiles[a].as_mut() {
+            items.extend([crate::sim::Item::Waste; 100]);
+        }
+        w.econ.money = 1_000.0;
+        let mut app = App::new(w);
+        app.cursor = (5, 5);
+        key(&mut app, KeyCode::Char('x'));
+        assert!(app.world.tile(0, 5, 5).is_some(), "first press only warns");
+        assert!(app.msg.contains("Remove again"), "{}", app.msg);
+        key(&mut app, KeyCode::Char('x'));
+        assert!(app.world.tile(0, 5, 5).is_none(), "second press removes and pays");
     }
 
     #[test]
