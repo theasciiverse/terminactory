@@ -1169,10 +1169,10 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     let specs = [
         (Kind::CrudeAssembler, (4, 4), 0.0, 300.0),
         (Kind::BasicAssembler, (2, 2), 6.0, 600.0),
-        (Kind::AdvancedAssembler, (3, 3), 16.0, 1500.0),
-        (Kind::PrecisionAssembler, (3, 3), 64.0, 4000.0),
-        (Kind::LargeBasicAssembler, (5, 5), 12.0, 2500.0),
-        (Kind::LargeAdvancedAssembler, (5, 5), 48.0, 6000.0),
+        (Kind::AdvancedAssembler, (3, 3), 16.0, 9000.0),
+        (Kind::PrecisionAssembler, (3, 3), 64.0, 20_000.0),
+        (Kind::LargeBasicAssembler, (5, 5), 12.0, 12_000.0),
+        (Kind::LargeAdvancedAssembler, (5, 5), 48.0, 30_000.0),
     ];
     for (k, dims, ec, cost) in specs {
         assert_eq!((k.base_dims(), k.power_draw(), k.cost()), (dims, ec, cost), "{k:?}");
