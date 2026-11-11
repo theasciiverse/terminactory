@@ -4,6 +4,7 @@ mod elevators;
 mod molten;
 mod offline;
 mod others;
+mod perf;
 mod saving;
 mod tunnels;
 mod waste;
