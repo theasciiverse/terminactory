@@ -247,7 +247,7 @@ fn recipe_book() {
     app.book_go(Entry::Part(Kind::BlastFurnace));
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("2 iron plate + coke  ──→  molten steel + waste"), "{t}");
-    assert!(t.contains("2 iron plate + 4 coal  ──→  molten steel + 4 waste"), "{t}");
+    assert!(t.contains("2 iron plate + 4 coal  ──→  molten steel + 5 waste"), "{t}");
     assert!(t.contains("iron plate + coke  ──→  hardened iron plate"), "{t}");
     std::fs::write("target/snapshot-book-blast.html", to_html(&render(&mut app, 130, 42))).unwrap();
 

@@ -2299,9 +2299,9 @@ fn the_blast_furnace_makes_steel_four_ways_each_with_its_waste() {
     // 2 iron plate + 1 coke: 10 s of melting, 2.5 s of casting, 1 waste.
     let route = [
         ("molten steel", vec![plates, (Item::Coke, 1)], 10, 1),
-        ("molten steel (coal)", vec![plates, (Item::Coal, 2)], 10, 2),
+        ("molten steel (coal)", vec![plates, (Item::Coal, 2)], 10, 3),
         ("molten steel (fast)", vec![plates, (Item::Coke, 2)], 5, 2),
-        ("molten steel (fast, coal)", vec![plates, (Item::Coal, 4)], 5, 4),
+        ("molten steel (fast, coal)", vec![plates, (Item::Coal, 4)], 5, 5),
     ];
     for (name, stock, melt, waste) in route {
         let r = Kind::BlastFurnace.recipes().iter().find(|r| r.name == name).unwrap();
@@ -2332,7 +2332,7 @@ fn the_blast_furnace_hardens_plate_with_coke_or_coal() {
     assert_eq!(out, vec![Item::HardenedIronPlate; 2], "5 s each, no waste");
     assert!(run_machine(Kind::BlastFurnace, "hardened iron plate", &[(Item::IronPlate, 1), (Item::Coke, 1)], 4).is_empty());
     let out = run_machine(Kind::BlastFurnace, "hardened iron plate (coal)", &[(Item::IronPlate, 2), (Item::Coal, 4)], 11);
-    assert_eq!((count(&out, Item::HardenedIronPlate), count(&out, Item::Waste)), (2, 2));
+    assert_eq!((count(&out, Item::HardenedIronPlate), count(&out, Item::Waste)), (2, 4));
     let out = run_machine(Kind::BlastFurnace, "hardened iron plate (coal)", &[(Item::IronPlate, 1), (Item::Coal, 1)], 11);
     assert!(out.is_empty(), "2 coal each");
     assert_eq!(Item::HardenedIronPlate.price(), 14.0);

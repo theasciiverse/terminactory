@@ -85,11 +85,11 @@ Everything the earlier steps pointed at is real now. Times are seconds; prices a
 | Recipe | Time | Waste |
 | --- | --- | --- |
 | 2 iron plate + 1 coke | 10 | 1 |
-| 2 iron plate + 2 coal | 10 | 2 |
+| 2 iron plate + 2 coal | 10 | 3 |
 | 2 iron plate + 2 coke | 5 | 2 |
-| 2 iron plate + 4 coal | 5 | 4 |
+| 2 iron plate + 4 coal | 5 | 5 |
 
-The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 1 waste). The press makes **hardened gear** ($50, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
+The blast furnace also makes **hardened iron plate** ($14): 1 iron plate + 1 coke (5 s), or 1 iron plate + 2 coal (5 s, 2 waste). The press makes **hardened gear** ($50, 2 hardened plate, 5 s) and steel girder ($75, 2 steel, 5 s). Lathe: steel rod $16, bearing $12. Rolling mill: steel sheet $36, and 3 steel → 2 steel girder.
 
 **Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), 5 s. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
