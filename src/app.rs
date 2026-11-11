@@ -7,6 +7,7 @@ use ratatui::layout::Rect;
 
 use crate::controls::{Action, Controls};
 use crate::history::Range;
+use crate::settings::{Settings, ROWS};
 use crate::sim::{in_bounds, Category, Dir, Kind, Tech, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W};
 
 /// Something in the production panel a click can reach.
@@ -179,6 +180,12 @@ pub struct App {
     pub clock: Option<(u64, i64)>,
     /// How far the help screen is scrolled (it's taller than a small pane).
     pub help_scroll: u16,
+    /// The settings pane is open over the map (the game keeps running), and the row picked.
+    pub settings_open: bool,
+    pub settings_pick: usize,
+    /// The game's settings (settings.json) and where to save them (none in tests).
+    pub settings: Settings,
+    pub settings_path: Option<std::path::PathBuf>,
     /// The kind last picked in each slot, so a slot's number brings it back.
     pub slot_pick: Vec<Kind>,
     /// Size of the next elevator (2 to 8).
@@ -246,6 +253,10 @@ impl App {
             log_pick: 0,
             mail_area: Rect::default(),
             help_scroll: 0,
+            settings_open: false,
+            settings_pick: 0,
+            settings: Settings::default(),
+            settings_path: None,
             slot_pick: Vec::new(),
             lift_size: 2,
             paste: None,
@@ -296,6 +307,50 @@ impl App {
             KeyCode::Esc => self.log_open = false,
             c if self.controls.action(c) == Some(Action::MailLog) => self.log_open = false,
             _ => {}
+        }
+    }
+
+    /// Keys in the settings pane: pick a row (arrows, j k, w s), change its value (Left and Right,
+    /// Enter), Esc or the settings key closes it. Pause and speed still work.
+    fn settings_key(&mut self, code: KeyCode, action: Option<Action>) {
+        let last = ROWS.len() - 1;
+        self.settings_pick = self.settings_pick.min(last);
+        let change = match (code, action) {
+            (KeyCode::Up | KeyCode::Char('k'), _) | (_, Some(Action::MoveUp)) => {
+                self.settings_pick = if self.settings_pick == 0 { last } else { self.settings_pick - 1 };
+                0
+            }
+            (KeyCode::Down | KeyCode::Char('j'), _) | (_, Some(Action::MoveDown)) => {
+                self.settings_pick = if self.settings_pick == last { 0 } else { self.settings_pick + 1 };
+                0
+            }
+            (KeyCode::Char('h'), _) | (_, Some(Action::MoveLeft)) => -1,
+            (KeyCode::Char('l'), _) | (_, Some(Action::MoveRight | Action::Place)) => 1,
+            (_, Some(Action::Settings | Action::Back)) => {
+                self.settings_open = false;
+                0
+            }
+            (_, Some(Action::Pause)) => {
+                self.paused = !self.paused;
+                0
+            }
+            (_, Some(Action::Faster)) => {
+                self.speed = (self.speed * 2).min(8);
+                0
+            }
+            (_, Some(Action::Slower)) => {
+                self.speed = (self.speed / 2).max(1);
+                0
+            }
+            _ => 0,
+        };
+        if change != 0 {
+            (ROWS[self.settings_pick].change)(&mut self.settings, change);
+            if let Some(path) = &self.settings_path {
+                if let Err(e) = self.settings.save(path) {
+                    self.say(format!("Couldn't save settings.json ({e})"));
+                }
+            }
         }
     }
 
@@ -361,6 +416,11 @@ impl App {
                 KeyCode::PageDown => self.help_scroll += 10,
                 _ => self.help = false,
             }
+            return;
+        }
+        if self.settings_open {
+            let action = self.controls.action(k.code);
+            self.settings_key(k.code, action);
             return;
         }
         // Shifted letters arrive uppercase: match them against their lowercase binding too.
@@ -447,6 +507,7 @@ impl App {
                 self.stats_history = false;
             }
             Action::Book => self.open_book(),
+            Action::Settings => self.settings_open = true,
             Action::MailLog => {
                 self.log_open = true;
                 self.log_pick = 0;
@@ -823,7 +884,7 @@ impl App {
             self.tree_mouse(m);
             return;
         }
-        if self.tree || self.book || self.help || self.away.is_some() {
+        if self.tree || self.book || self.help || self.settings_open || self.away.is_some() {
             return;
         }
         if self.stats {

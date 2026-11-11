@@ -235,7 +235,7 @@ fn overlays_fit_every_pane_size() {
         app.world.mail.push_back(telegram());
         // The History tab needs something to draw, so it gets four months of earnings.
         super::history_tab::fill(&mut app);
-        for scene in 0..10 {
+        for scene in 0..11 {
             app.tree = scene == 0;
             app.book = scene == 1 || scene == 2;
             if scene == 2 {
@@ -252,11 +252,15 @@ fn overlays_fit_every_pane_size() {
             } else if app.world.history.is_empty() {
                 super::history_tab::fill(&mut app);
             }
+            app.settings_open = scene == 10;
             app.mail_open = scene == 5;
             app.log_open = scene == 6;
             app.away = (scene == 7).then(|| "You were away for 1h 2m. Your factory kept going:\n\n  +$5\n  +1.0 research".to_string());
             let t = text(&render(&mut app, w, h));
             assert!(lines(&t).len() == h as usize);
+            if scene == 10 {
+                assert!(t.contains("Settings") && t.contains("Sidebar graph") && t.contains("Esc close"), "settings at {w}x{h}: {t}");
+            }
             if matches!(scene, 0 | 1 | 2 | 3) {
                 assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));
                 assert_no_glued_hints(&t);

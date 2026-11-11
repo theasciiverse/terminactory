@@ -1,0 +1,240 @@
+//! Game settings, kept in settings.json (global, not per save). Like controls.json it is created
+//! with the defaults when missing, and a bad file never stops the game: every field that can't be
+//! read falls back to its default and the player is told.
+//!
+//! To add a setting: a field on `Settings`, a `Choice` enum if it picks from a list, a line in
+//! `Settings::load_or_create`'s field list, and one entry in `ROWS` (that is what the pane shows).
+
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
+
+use crate::history::Range;
+
+/// A setting that cycles through a fixed list of named values.
+pub trait Choice: Copy + PartialEq + 'static {
+    const ALL: &'static [Self];
+    fn name(self) -> &'static str;
+    /// The next value (`step` 1) or the previous one (-1), wrapping round.
+    fn step(self, step: i32) -> Self {
+        let n = Self::ALL.len() as i32;
+        let i = Self::ALL.iter().position(|c| *c == self).unwrap_or(0) as i32;
+        Self::ALL[(i + step).rem_euclid(n) as usize]
+    }
+}
+
+/// Which charts the sidebar shows.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GraphShow {
+    Off,
+    #[default]
+    Money,
+    Research,
+    Both,
+}
+
+impl Choice for GraphShow {
+    const ALL: &'static [Self] = &[GraphShow::Off, GraphShow::Money, GraphShow::Research, GraphShow::Both];
+    fn name(self) -> &'static str {
+        match self {
+            GraphShow::Off => "Off",
+            GraphShow::Money => "Money",
+            GraphShow::Research => "Research",
+            GraphShow::Both => "Both",
+        }
+    }
+}
+
+/// How much time each bar of the sidebar chart covers.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GraphRange {
+    Seconds,
+    #[default]
+    Minutes,
+    Hours,
+}
+
+impl Choice for GraphRange {
+    const ALL: &'static [Self] = &[GraphRange::Seconds, GraphRange::Minutes, GraphRange::Hours];
+    fn name(self) -> &'static str {
+        match self {
+            GraphRange::Seconds => "Seconds",
+            GraphRange::Minutes => "Minutes",
+            GraphRange::Hours => "Hours",
+        }
+    }
+}
+
+impl GraphRange {
+    pub fn range(self) -> Range {
+        match self {
+            GraphRange::Seconds => Range::Seconds,
+            GraphRange::Minutes => Range::Minutes,
+            GraphRange::Hours => Range::Hours,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct Settings {
+    pub sidebar_graph: GraphShow,
+    pub sidebar_graph_range: GraphRange,
+}
+
+/// One line of the settings pane.
+pub struct Row {
+    pub name: &'static str,
+    /// What the row does, for the pane's hint line.
+    pub help: &'static str,
+    /// The current value's name.
+    pub value: fn(&Settings) -> &'static str,
+    /// Moves the value on (1) or back (-1).
+    pub change: fn(&mut Settings, i32),
+}
+
+/// The rows of the settings pane, top to bottom.
+pub const ROWS: &[Row] = &[
+    Row {
+        name: "Sidebar graph",
+        help: "Earnings charts under the build menu (full view only)",
+        value: |s| s.sidebar_graph.name(),
+        change: |s, d| s.sidebar_graph = s.sidebar_graph.step(d),
+    },
+    Row {
+        name: "Graph range",
+        help: "What each bar of the sidebar graph covers",
+        value: |s| s.sidebar_graph_range.name(),
+        change: |s, d| s.sidebar_graph_range = s.sidebar_graph_range.step(d),
+    },
+];
+
+impl Settings {
+    /// Loads settings.json, creating it with the defaults if it doesn't exist. Returns a note for
+    /// the player when something needs their attention.
+    pub fn load_or_create(path: &Path) -> (Self, Option<String>) {
+        let Ok(text) = std::fs::read_to_string(path) else {
+            let s = Settings::default();
+            let note = s.save(path).err().map(|e| format!("Couldn't write settings.json ({e}); using default settings"));
+            return (s, note);
+        };
+        let value: serde_json::Value = match serde_json::from_str(&text) {
+            Ok(v) => v,
+            Err(e) => return (Self::default(), Some(format!("settings.json has a mistake ({e}); using default settings"))),
+        };
+        let Some(map) = value.as_object() else {
+            return (
+                Self::default(),
+                Some("settings.json should be an object like {\"sidebar_graph\": \"money\"}; using default settings".into()),
+            );
+        };
+        // Each field on its own: one bad value costs only that setting. Unknown fields are ignored.
+        let mut s = Settings::default();
+        let mut problems = Vec::new();
+        fn field<T: serde::de::DeserializeOwned + Default>(
+            map: &serde_json::Map<String, serde_json::Value>,
+            name: &str,
+            problems: &mut Vec<String>,
+        ) -> T {
+            match map.get(name) {
+                None => T::default(),
+                Some(v) => serde_json::from_value(v.clone()).unwrap_or_else(|_| {
+                    problems.push(format!("\"{name}\" is {v}"));
+                    T::default()
+                }),
+            }
+        }
+        s.sidebar_graph = field(map, "sidebar_graph", &mut problems);
+        s.sidebar_graph_range = field(map, "sidebar_graph_range", &mut problems);
+        let note = (!problems.is_empty()).then(|| format!("settings.json: {}; using the default there", problems.join(", ")));
+        (s, note)
+    }
+
+    pub fn save(&self, path: &Path) -> std::io::Result<()> {
+        if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+            std::fs::create_dir_all(dir)?;
+        }
+        let text = serde_json::to_string_pretty(self).map_err(std::io::Error::other)?;
+        std::fs::write(path, text + "\n")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp(name: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("terminactory-settings-{name}-{}.json", std::process::id()))
+    }
+
+    #[test]
+    fn defaults_are_money_by_minute() {
+        let s = Settings::default();
+        assert_eq!((s.sidebar_graph, s.sidebar_graph_range), (GraphShow::Money, GraphRange::Minutes));
+    }
+
+    #[test]
+    fn missing_file_is_created_with_defaults() {
+        let path = temp("new");
+        std::fs::remove_file(&path).ok();
+        let (s, note) = Settings::load_or_create(&path);
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::remove_file(&path).ok();
+        assert!(note.is_none());
+        assert_eq!(s, Settings::default());
+        assert!(text.contains("\"sidebar_graph\": \"money\"") && text.contains("\"sidebar_graph_range\": \"minutes\""), "{text}");
+    }
+
+    #[test]
+    fn settings_round_trip() {
+        let path = temp("round");
+        let s = Settings { sidebar_graph: GraphShow::Both, sidebar_graph_range: GraphRange::Hours };
+        s.save(&path).unwrap();
+        let (back, note) = Settings::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        assert!(note.is_none());
+        assert_eq!(back, s);
+    }
+
+    #[test]
+    fn unknown_and_missing_fields_are_fine() {
+        let path = temp("fields");
+        std::fs::write(&path, r#"{ "sidebar_graph": "research", "something_new": [1, 2], "_note": "hi" }"#).unwrap();
+        let (s, note) = Settings::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        assert!(note.is_none(), "{note:?}");
+        assert_eq!(s.sidebar_graph, GraphShow::Research);
+        assert_eq!(s.sidebar_graph_range, GraphRange::Minutes); // missing: the default
+    }
+
+    #[test]
+    fn a_bad_file_gives_defaults_and_a_note() {
+        let path = temp("bad");
+        for text in ["{ nope", "[1, 2]", "", "42"] {
+            std::fs::write(&path, text).unwrap();
+            let (s, note) = Settings::load_or_create(&path);
+            assert_eq!(s, Settings::default(), "{text}");
+            assert!(note.unwrap().contains("settings.json"), "{text}");
+        }
+        // One bad value costs only that setting.
+        std::fs::write(&path, r#"{ "sidebar_graph": "loud", "sidebar_graph_range": "hours" }"#).unwrap();
+        let (s, note) = Settings::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        assert_eq!((s.sidebar_graph, s.sidebar_graph_range), (GraphShow::Money, GraphRange::Hours));
+        assert!(note.unwrap().contains("sidebar_graph"));
+    }
+
+    #[test]
+    fn rows_cycle_both_ways() {
+        let mut s = Settings::default();
+        (ROWS[0].change)(&mut s, 1);
+        assert_eq!(s.sidebar_graph, GraphShow::Research);
+        (ROWS[0].change)(&mut s, -1);
+        (ROWS[0].change)(&mut s, -1);
+        (ROWS[0].change)(&mut s, -1);
+        assert_eq!(s.sidebar_graph, GraphShow::Both); // Money -> Research -> Money -> Off -> Both (wraps)
+        assert_eq!((ROWS[1].value)(&s), "Minutes");
+    }
+}

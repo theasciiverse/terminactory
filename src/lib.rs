@@ -7,6 +7,7 @@ mod controls;
 mod history;
 mod mail;
 mod saves;
+mod settings;
 mod sim;
 mod ui;
 
@@ -48,7 +49,7 @@ Agent telegrams (they show up in the game as you play)
   tfac msg --from NAME TEXT   say who it's from (default: this folder's name)
   tfac hook         for Claude Code's Stop / Notification hooks (reads their JSON)
 
-In the game, ? shows every key. Saves and controls.json live in ~/.terminactory.
+In the game, ? shows every key. Saves, controls.json and settings.json live in ~/.terminactory.
 ";
 
 /// Starts the game. (`--help` mentions that `tfac` is a shortcut, so the first message doesn't.)
@@ -147,6 +148,14 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
     // Key bindings live in controls.json; it's created with the defaults if missing.
     let (controls, problem) = controls::Controls::load_or_create(&dir.join("controls.json"));
     app.controls = controls;
+    if let Some(p) = problem {
+        app.say(p);
+    }
+    // Settings (settings.json) are global, like the controls: created with the defaults if missing.
+    let settings_path = dir.join("settings.json");
+    let (settings, problem) = settings::Settings::load_or_create(&settings_path);
+    app.settings = settings;
+    app.settings_path = Some(settings_path);
     if let Some(p) = problem {
         app.say(p);
     }

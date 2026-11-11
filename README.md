@@ -25,7 +25,7 @@ tfac --new     # start a fresh one as the next number; the others are kept
 tfac --help    # everything tfac can do
 ```
 
-`--demo` starts next to a small working factory with its own save. Saves and key settings (`controls.json`) live in `~/.terminactory` (saves in `saves/`), so the game finds them from any folder; it saves every 2 minutes, when you quit, and on Ctrl+S. A save can only be open in one window at a time: a second `tfac` on the same save says which window has it. Saves carry a format version: one made by an older version of the game isn't opened (and never deleted). `tfac` tells you, `tfac --saves` marks it "(old version)", and `tfac --new` starts a fresh one.
+`--demo` starts next to a small working factory with its own save. Saves, key settings (`controls.json`) and game settings (`settings.json`) live in `~/.terminactory` (saves in `saves/`), so the game finds them from any folder; it saves every 2 minutes, when you quit, and on Ctrl+S. A save can only be open in one window at a time: a second `tfac` on the same save says which window has it. Saves carry a format version: one made by an older version of the game isn't opened (and never deleted). `tfac` tells you, `tfac --saves` marks it "(old version)", and `tfac --new` starts a fresh one.
 
 Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a split next to your agent) it switches to a **small-pane view** by itself: the map fills the pane, one line on top shows money, research, EC, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
 
@@ -200,6 +200,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or 
 | Research | t (arrows pick, Enter researches; click a row, click again to research) |
 | Save | Ctrl+S (it also saves every 2 minutes and on quit) |
 | Production panel | o: the last minute per item (made, used, sold, money, research, what the next sale pays); the game keeps running |
+| Settings | c (arrows or j/k pick a row, Left/Right or Enter change it, Esc closes; the game keeps running). Saved in `~/.terminactory/settings.json` |
 | Show EC range | v |
 | Elevator size | + / - |
 | Pause / speed | p / [ ] |

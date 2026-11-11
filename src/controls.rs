@@ -32,10 +32,11 @@ pub enum Action {
     MailLog,
     Book,
     Stats,
+    Settings,
 }
 
 impl Action {
-    pub const ALL: [Action; 24] = [
+    pub const ALL: [Action; 25] = [
         Action::MoveUp,
         Action::MoveDown,
         Action::MoveLeft,
@@ -60,6 +61,7 @@ impl Action {
         Action::MailLog,
         Action::Book,
         Action::Stats,
+        Action::Settings,
     ];
     /// The name used in controls.json.
     pub fn id(self) -> &'static str {
@@ -88,6 +90,7 @@ impl Action {
             Action::MailLog => "telegram_log",
             Action::Book => "recipe_book",
             Action::Stats => "production",
+            Action::Settings => "settings",
         }
     }
     pub fn defaults(self) -> &'static [&'static str] {
@@ -116,6 +119,8 @@ impl Action {
             Action::MailLog => &["i"],
             Action::Book => &["b"],
             Action::Stats => &["o"],
+            // "," is taken (floor down), so settings use c.
+            Action::Settings => &["c"],
         }
     }
 }

@@ -3,6 +3,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
 mod history_tab;
+mod settings_pane;
 mod small_pane;
 
 fn render(app: &mut App, w: u16, h: u16) -> Buffer {

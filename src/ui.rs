@@ -83,6 +83,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.log_open {
         maillog::draw_log(f, app.map_area, app);
     }
+    if app.settings_open {
+        settings::draw_settings(f, app.map_area, app);
+    }
     if app.tree {
         draw_tree(f, f.area(), app);
     }
@@ -3035,6 +3038,7 @@ CONTROLS
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
   Production ... o (last minute per item; Tab: earnings history)
+  Settings ..... c (sidebar graph; kept in settings.json)
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
   Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,
@@ -3049,13 +3053,14 @@ CONTROLS
     if small {
         let c = &app.controls;
         let keys = format!(
-            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Help {}\n  Ctrl+C quits and saves. {} lists every item and machine.",
+            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Ctrl+C quits and saves. {} lists every item and machine.",
             "WASD/arrows",
             c.key(Action::Place),
             c.key(Action::Back),
             c.key(Action::Tree),
             c.key(Action::Book),
             c.key(Action::Stats),
+            c.key(Action::Settings),
             c.key(Action::Help),
             c.key(Action::Book),
         );
@@ -3119,5 +3124,6 @@ CONTROLS
 
 mod history;
 mod maillog;
+mod settings;
 #[cfg(test)]
 mod tests;
