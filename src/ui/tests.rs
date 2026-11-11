@@ -240,7 +240,9 @@ fn recipe_book() {
     key(&mut app, KeyCode::Char('n'));
     assert!(app.mail_open && app.book);
     key(&mut app, KeyCode::Char('x'));
-    assert!(!app.mail_open && app.book, "closing the telegram goes back to the book");
+    assert!(app.mail_open && app.mail.is_some(), "other keys don't skip a telegram");
+    key(&mut app, KeyCode::Char('n'));
+    assert!(!app.mail_open && app.mail.is_none() && app.book, "n closes the telegram and goes back to the book");
 
     // A small pane: fewer columns, and a scrollable page.
     let buf = render(&mut app, 64, 20);

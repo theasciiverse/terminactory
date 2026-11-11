@@ -2476,7 +2476,7 @@ fn mail_parts(m: &crate::mail::Message, width: u16) -> (Vec<Line<'static>>, Vec<
     (top, body, foot)
 }
 
-/// Draws the current telegram as a box in `r`. `overlay`: open over the map (any key closes it);
+/// Draws the current telegram as a box in `r`. `overlay`: open over the map (n or Esc closes it);
 /// otherwise it sits in the sidebar while the game keeps running.
 fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let Some(m) = &app.mail else { return };
@@ -2491,8 +2491,8 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let max_scroll = (body.len() as u16).saturating_sub(view);
     app.mail_scroll = app.mail_scroll.min(max_scroll);
     let hint = match (overlay, max_scroll > 0) {
-        (true, true) => format!(" ↑↓ scroll {}/{max_scroll} · any other key closes", app.mail_scroll),
-        (true, false) => " press any key".to_string(),
+        (true, true) => format!(" ↑↓ scroll {}/{max_scroll} · {key} or Esc closes", app.mail_scroll),
+        (true, false) => format!(" {key} or Esc closes"),
         (false, true) => format!(" PgUp/PgDn {}/{max_scroll} · {key} {}", app.mail_scroll, if waiting > 0 { "next" } else { "dismiss" }),
         (false, false) => format!(" {key} {}", if waiting > 0 { "next" } else { "dismiss" }),
     };
@@ -2501,8 +2501,7 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let foot_h = foot.len() as u16;
     let title = match (waiting, overlay) {
         (0, _) => " Telegram ".to_string(),
-        (n, true) => format!(" Telegram · {n} more (Esc dismisses all) "),
-        (n, false) => format!(" Telegram · {n} more "),
+        (n, _) => format!(" Telegram · {n} more "),
     };
 
     if overlay {

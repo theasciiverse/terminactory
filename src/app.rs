@@ -229,6 +229,23 @@ impl App {
         self.msg_at = Instant::now();
     }
 
+    /// Closes the telegram being read: it counts as read, and the next waiting one comes up.
+    pub fn dismiss_mail(&mut self) {
+        if let Some(m) = self.mail.take() {
+            self.world.mark_read(m.id);
+        }
+        self.mail_open = false;
+    }
+
+    /// Closes the telegram being read and every one waiting. They all stay in the log, marked read.
+    pub fn dismiss_all_mail(&mut self) {
+        self.dismiss_mail();
+        let ids: Vec<u64> = self.world.mail.drain(..).map(|m| m.id).collect();
+        for id in ids {
+            self.world.mark_read(id);
+        }
+    }
+
     pub fn on_key(&mut self, k: KeyEvent) {
         if k.kind != KeyEventKind::Press {
             return;
@@ -243,21 +260,22 @@ impl App {
             return;
         }
         if self.mail_open {
-            // Arrows / j k / PgUp PgDn scroll a long message; any other key closes (and dismisses) it.
+            // Arrows / j k / PgUp PgDn scroll a long message. Only n or Esc closes it (Shift+N closes
+            // every waiting telegram), so a stray key can't skip one. It stays in the log either way.
+            let lower = match k.code {
+                KeyCode::Char(c) if c.is_uppercase() => Some(KeyCode::Char(c.to_lowercase().next().unwrap_or(c))),
+                _ => None,
+            };
+            let is_mail = self.controls.action(k.code).or_else(|| lower.and_then(|l| self.controls.action(l))) == Some(Action::Mail);
             match k.code {
                 KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('w') => self.mail_scroll = self.mail_scroll.saturating_sub(1),
                 KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('s') => self.mail_scroll += 1,
                 KeyCode::PageUp => self.mail_scroll = self.mail_scroll.saturating_sub(10),
                 KeyCode::PageDown => self.mail_scroll += 10,
-                KeyCode::Esc => {
-                    self.mail = None;
-                    self.mail_open = false;
-                    self.world.mail.clear();
-                }
-                _ => {
-                    self.mail = None;
-                    self.mail_open = false;
-                }
+                KeyCode::Esc => self.dismiss_mail(),
+                _ if is_mail && lower.is_some() => self.dismiss_all_mail(),
+                _ if is_mail => self.dismiss_mail(),
+                _ => {}
             }
             return;
         }
@@ -335,6 +353,10 @@ impl App {
                 }
             }
             Action::Back => {
+                // Esc backs out of a menu or a pick first; with nothing to back out of it closes the telegram.
+                if self.menu.is_none() && self.selected.is_none() && k.code == KeyCode::Esc && self.mail.is_some() {
+                    self.dismiss_mail();
+                }
                 self.menu = None;
                 self.selected = None;
             }
@@ -348,13 +370,12 @@ impl App {
                 if self.mail.is_none() {
                     self.say("No telegrams waiting");
                 } else if shift {
-                    self.mail = None;
-                    self.world.mail.clear();
-                    self.say("All telegrams dismissed");
+                    self.dismiss_all_mail();
+                    self.say("All telegrams dismissed (the log keeps them)");
                 } else if self.compact_now {
                     self.mail_open = true;
                 } else {
-                    self.mail = None;
+                    self.dismiss_mail();
                 }
             }
             Action::Compact => {
@@ -973,6 +994,66 @@ mod tests {
         assert_eq!(app.lift_size, 4);
         key(&mut app, KeyCode::Char('5'));
         assert_eq!(app.menu, None);
+    }
+
+    fn with_telegrams(n: usize) -> App {
+        let mut app = App::new(World::new());
+        for i in 0..n {
+            app.world.receive(crate::mail::parse(&format!("from: t\nmsg {i}"), 0), 1_000);
+        }
+        app.mail = app.world.mail.pop_front();
+        app
+    }
+
+    #[test]
+    fn a_telegram_closes_only_on_n_or_esc() {
+        let mut app = with_telegrams(2);
+        app.compact = Some(true);
+        app.compact_now = true;
+        key(&mut app, KeyCode::Char('n')); // small pane: n opens it
+        assert!(app.mail_open);
+        for c in ['x', 'q', ' ', 'r', 'z'] {
+            key(&mut app, KeyCode::Char(c));
+        }
+        key(&mut app, KeyCode::Enter);
+        assert!(app.mail_open && app.mail.is_some(), "stray keys leave it open");
+        assert_eq!(app.world.unread(), 2);
+        key(&mut app, KeyCode::Char('n'));
+        assert!(!app.mail_open && app.mail.is_none());
+        assert_eq!(app.world.unread(), 1, "closing marks just that one read");
+        assert!(app.world.log[0].read && !app.world.log[1].read);
+        // Esc closes the next one too.
+        app.mail = app.world.mail.pop_front();
+        app.mail_open = true;
+        key(&mut app, KeyCode::Esc);
+        assert!(!app.mail_open && app.mail.is_none());
+        assert_eq!(app.world.unread(), 0);
+    }
+
+    #[test]
+    fn in_the_sidebar_n_dismisses_and_esc_only_when_nothing_else_is_open() {
+        let mut app = with_telegrams(3);
+        app.compact = Some(false);
+        app.compact_now = false;
+        app.menu = Some(Category::Create);
+        key(&mut app, KeyCode::Esc);
+        assert!(app.menu.is_none() && app.mail.is_some(), "the first Esc backs out of the menu");
+        key(&mut app, KeyCode::Esc);
+        assert!(app.mail.is_none(), "the second closes the telegram");
+        assert_eq!(app.world.unread(), 2);
+        app.mail = app.world.mail.pop_front();
+        key(&mut app, KeyCode::Char('n'));
+        assert!(app.mail.is_none());
+        assert_eq!(app.world.unread(), 1);
+    }
+
+    #[test]
+    fn shift_n_dismisses_every_waiting_telegram_but_keeps_them_in_the_log() {
+        let mut app = with_telegrams(4);
+        app.compact_now = false;
+        key(&mut app, KeyCode::Char('N'));
+        assert!(app.mail.is_none() && app.world.mail.is_empty());
+        assert_eq!((app.world.log.len(), app.world.unread()), (4, 0));
     }
 
     #[test]
