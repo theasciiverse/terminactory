@@ -228,7 +228,6 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    #[cfg_attr(not(test), allow(dead_code))]
     pub const ALL: [Kind; 42] = [
         Kind::Drill,
         Kind::BasicDrill,
@@ -301,11 +300,16 @@ impl Kind {
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
             | Kind::AdvancedPump
-            | Kind::Pump
-            | Kind::Pipe => Category::Create,
-            Kind::Belt | Kind::FastBelt | Kind::Tunnel | Kind::Splitter | Kind::Sorter | Kind::Arm | Kind::LongArm | Kind::Elevator => {
-                Category::Transport
-            }
+            | Kind::Pump => Category::Create,
+            Kind::Belt
+            | Kind::FastBelt
+            | Kind::Tunnel
+            | Kind::Splitter
+            | Kind::Sorter
+            | Kind::Arm
+            | Kind::LongArm
+            | Kind::Elevator
+            | Kind::Pipe => Category::Transport,
             Kind::Solar | Kind::Pole | Kind::Boiler | Kind::SteamEngine => Category::Power,
             Kind::Crate | Kind::Warehouse | Kind::TradePost => Category::Misc,
         }
@@ -618,6 +622,23 @@ impl Kind {
     }
     pub fn is_drill(self) -> bool {
         matches!(self, Kind::Drill | Kind::BasicDrill | Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill)
+    }
+    /// The rules of a part that crafts nothing, as the short lines its recipe-book page prints
+    /// (at most 4 lines of 38 columns). A part with rules gets a page even with no recipes.
+    pub fn rules(self) -> Option<&'static [&'static str]> {
+        match self {
+            Kind::Pipe => Some(&[
+                "A joined run of pipes is one pool.",
+                "Each tile holds 20 units of one fluid.",
+                "No flow, no pressure, no direction.",
+                "Pumps and machines beside it join in.",
+            ]),
+            _ => None,
+        }
+    }
+    /// Has a page in the recipe book: it crafts, mines, pumps, or has rules to read.
+    pub fn has_book_page(self) -> bool {
+        !self.recipes().is_empty() || self.is_drill() || self.is_pump() || self.rules().is_some()
     }
     pub fn is_pump(self) -> bool {
         matches!(self, Kind::Pump | Kind::AdvancedPump)

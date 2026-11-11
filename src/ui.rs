@@ -2692,6 +2692,12 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     );
                     labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
                 }
+                _ if k.recipes().is_empty() => {
+                    // A part that crafts nothing: its rules, a few short lines.
+                    for (i, line) in k.rules().unwrap_or(&[]).iter().enumerate() {
+                        labelled(&mut out, if i == 0 { "Rules" } else { "" }, GUTTER, vec![seg(*line, Style::new())]);
+                    }
+                }
                 _ => {
                     let mut first = true;
                     for r in k.recipes() {

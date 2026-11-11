@@ -758,8 +758,9 @@ impl Tech {
     }
 }
 
-/// The research screen, in groups.
-pub const UNLOCK_GROUPS: [(&str, &[Tech]); 6] = [
+/// The research screen, in groups. A slice, so a group can be added (Rail, Tools) without
+/// touching anything that reads it.
+pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
     (
         "Making",
         &[
@@ -790,7 +791,8 @@ pub const UNLOCK_GROUPS: [(&str, &[Tech]); 6] = [
     ),
     ("Drilling", &[Tech::BasicDrill, Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeAdvancedDrill]),
     ("Moving", &[Tech::Tunnels, Tech::LongArms, Tech::Warehouses, Tech::FilterSplitters, Tech::FastBelts]),
-    ("EC", &[Tech::Pumps, Tech::AdvancedPump, Tech::Steam]),
+    ("Pipes", &[Tech::Pumps, Tech::AdvancedPump]),
+    ("EC", &[Tech::Steam]),
     ("Floors", &[Tech::SupportBeams, Tech::Excavation]),
 ];
 

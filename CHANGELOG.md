@@ -20,6 +20,7 @@ Saves: format version 6 (older saves are refused; start a fresh game with `tfac 
 ### Changed
 - Saves name items, companies, techs and recipes instead of counting positions, so new content never breaks a save. A machine whose recipe has gone goes back to its first recipe, with a note. Pipes keep their fluid across a save, and a save records which game version wrote it.
 - Balance pass on prices, research costs and free unlocks, and several recipe routes (see the plan 01 commits).
+- Pipes moved from Create 5 to Transport 5 (the key to press for pipes is now `2` `5`), Misc has room for a third slot, and the research screen has a Pipes group. The build menu layout is temporary until a playtest.
 - Settings moved from `c` to `g`; `c`, `l` and `u` stay free for the building tools.
 - The repo-root sample `controls.json` is gone; the game still writes its own to `~/.terminactory` on first run.
 

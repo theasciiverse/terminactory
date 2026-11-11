@@ -317,3 +317,47 @@ fn overlays_fit_every_pane_size() {
         }
     }
 }
+
+#[test]
+fn build_bar_shows_every_slot_at_every_size() {
+    // Transport has five slots since pipes moved there; the bar must still list them all.
+    for (w, h) in [(36, 24), (44, 60), (50, 20), (64, 12), (64, 16), (80, 24), (99, 29), (120, 30), (220, 60)] {
+        for cat in Category::ALL {
+            let mut app = demo();
+            render(&mut app, w, h);
+            app.menu = Some(cat);
+            let t = text(&render(&mut app, w, h));
+            assert!(lines(&t).iter().all(|l| l.chars().count() <= w as usize), "{cat:?} at {w}x{h}");
+            if app.compact_now {
+                let last = lines(&t).last().unwrap().to_string();
+                for n in 1..=slots(cat).len() {
+                    assert!(last.contains(&n.to_string()), "{cat:?} slot {n} at {w}x{h}: {last}");
+                }
+            } else {
+                for n in 1..=slots(cat).len() {
+                    assert!(t.contains(&format!(" {n} ")), "{cat:?} slot {n} at {w}x{h}: {t}");
+                }
+            }
+        }
+    }
+    // The way the Transport bar reads in a phone-sized pane, with pipes last.
+    let mut app = demo();
+    app.menu = Some(Category::Transport);
+    let buf = render(&mut app, 36, 24);
+    snapshot("phone-transport-36x24", &buf);
+    let t = text(&buf);
+    let last = lines(&t).last().unwrap().to_string();
+    assert!(last.contains("5=="), "{last}");
+}
+
+#[test]
+fn the_pipe_page_prints_its_rules() {
+    let mut app = demo();
+    app.book = true;
+    app.book_go(Entry::Part(Kind::Pipe));
+    for (w, h) in [(44, 60), (50, 40), (130, 42)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Pipe") && t.contains("Rules"), "{w}x{h}: {t}");
+        assert!(t.contains("No flow, no pressure"), "{w}x{h}: {t}");
+    }
+}

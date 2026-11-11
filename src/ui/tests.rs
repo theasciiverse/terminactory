@@ -1150,7 +1150,7 @@ fn content_step_screens_fit_every_size() {
     let buf = render(&mut app, 50, 40);
     std::fs::write("target/snapshot-book-machine-50.html", to_html(&buf)).unwrap();
     // Every machine has a page.
-    for k in BOOK_PARTS {
+    for &k in BOOK_PARTS.iter() {
         assert!(Entry::list("", true).contains(&Entry::Part(k)));
     }
     assert_eq!(Entry::list("", true).len(), BOOK_PARTS.len());

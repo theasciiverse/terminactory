@@ -112,7 +112,7 @@ Phase 3: floors, elevators and machinery.
   - **Long arm**: grabs from 2 tiles behind and drops 2 ahead, over whatever sits in between.
   - **Filter splitter**: `f` picks an item; that item goes out the front and everything else out the sides (with no item picked it shares like a splitter).
   - **Warehouse**: a 2×2 crate holding four crates' worth.
-  - Pipes moved next to pumps in the build menu (Create 4, press again for pipes) to make room: Transport is now belts / fast belts / tunnels, splitters / filter splitters, arms / long arms, elevators. Misc 1 is crate / warehouse.
+  - Pipes have their own slot, Transport 5, after belts / fast belts / tunnels, splitters / filter splitters, arms / long arms and elevators. Misc 1 is crate / warehouse.
 - **Free unlocks**: everything also unlocks free once you've made enough of its milestone item (shown in the tree); research is the shortcut.
 - **Idle machines** flash a word saying why: FULL, BACK, NEED, COAL, COKE, EC?, FLUD, WATR, ORE?, STM?. (EC? is no electric charge; FLUD is a molder waiting for molten metal; BACK is waste with nowhere to go out the back.)
 - **Offline earnings**: when you come back, you get what your factory earned while the game was closed, with no cap.
@@ -188,7 +188,25 @@ Every other item except waste goes into at least one recipe.
 
 Every key item can be made with machines from companies that open before it, so nothing locks: copper and the iron gear first (a press makes both, no blast furnace needed, so Gearwright opens early), then Cinderhall's steel, then Pillar, Underhill, Swiftline and Ampleworth. Lattice & Finch is a second road: a control board can be wired by hand in the crude assembler as soon as you have relays and fine wire, no steel or motors needed.
 
-**Build menu.** Create has five groups now: 1 drills (cheap, basic, advanced, large basic, large advanced), 2 furnace / molder / blast furnace / coke oven / kiln, 3 press / wire drawer / winder / rolling mill / lathe / crusher, 4 assemblers (crude to large advanced) and the welder, 5 pump / advanced pump / pipe / mixer. On a short screen the menu folds each group to one kind (marked `+`) until you pick one; in a small pane the bottom line drops prices and shortens names so all five numbers show.
+**Build menu.** Press a category's number, then a slot's number; press the slot again to switch kinds. A category holds up to 6 (Create), 5 (Transport), 4 (EC) or 3 (Misc) slots, filled in order. This layout is temporary: it will change after a playtest.
+
+| Category | Slot | Kinds |
+| --- | --- | --- |
+| Create (1) | 1 | cheap / basic / advanced / large basic / large advanced drill |
+| | 2 | furnace / molder / blast furnace / coke oven / kiln |
+| | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
+| | 4 | assemblers (crude to large advanced) and the welder |
+| | 5 | water pump / advanced pump / mixer |
+| Transport (2) | 1 | belt / fast belt / tunnel |
+| | 2 | splitter / filter splitter |
+| | 3 | arm / long arm |
+| | 4 | elevator |
+| | 5 | pipe |
+| EC (3) | 1 to 4 | solar, pole, boiler, steam engine |
+| Misc (4) | 1 | crate / warehouse |
+| | 2 | trade post |
+
+Pipes moved from Create 5 to Transport 5. On a short screen the menu folds each group to one kind (marked `+`) until you pick one; in a small pane the bottom line drops prices and shortens names so every number shows.
 
 ## Molten metal
 
@@ -231,7 +249,7 @@ When nothing else is on the bottom line, the game may say one quiet thing about 
 - Sizes follow roles: belts, splitters, arms and crates are 1×1; drills, solar panels and elevators are 2×2; furnaces, lathes and the trade post are 3×3. Presses, wire drawers and winders (2×1) and pumps (1×2) are long machines: the size given is facing east or west, and they swap width and height when turned north or south. The rotate key (`r`) shows the turned shape while placing, and turning a placed one needs the room (it keeps its top-left corner).
 - Drills mine anywhere on the ground (not on decking): press f on one to pick copper, coal, iron or stone. The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
 - Furnaces, molders and presses make the recipe they're set to (`f` changes it). Furnaces burn coal to melt ore; with coking researched they bake coal into coke. Molders cast ingots, presses turn ingots into plates, plates into wire and pipe, and wire into coils. A basic drill cuts iron twice as fast as a cheap one.
-- Research (`t`) brings new parts, in groups (Making, Assembling, Drilling, Moving, EC, Floors; the list scrolls); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, iron gear, gearbox, girders, concrete, electric motor, control board), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
+- Research (`t`) brings new parts, in groups (Making, Assembling, Drilling, Moving, Pipes, EC, Floors; the list scrolls); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, iron gear, gearbox, girders, concrete, electric motor, control board), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
 - Power is called **EC** (electric charge). Belts, splitters, arms, molders, presses and the other shaping machines need it (coke ovens don't). Solar panels (reach 2 tiles) and EC poles (reach 3 tiles) charge every electric part within range; ranges that overlap join into one grid, and each grid shares only its own EC. Solar panels never join each other directly, even side by side: link them with poles. The EC figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little EC slows a grid's parts evenly. Elevators carry EC to the floor below. Belts without EC turn red; `v` shows the area it reaches.- Trade posts sell what they receive: money, a 40/40 split, or research (press `f` on one).
 - **Waste** leaves a machine by its **back** edge, never the front: put a belt (facing away), crate or trade post behind the coke oven or blast furnace, so a row of machines can share a waste alley behind it. A belt facing into the machine doesn't take it. If nothing behind can take waste, the machine fills up on it, stops, and flashes `BACK` (its products leave the front as usual until then). A **boiler** takes waste as fuel (from a belt, or straight from a machine whose back it touches): 4 waste give the fire of 1 coal, mixed freely with coal, and it burns only as much as its grid needs, so a boiler at full load (one engine, 100 EC) eats 15 coal or 60 waste a minute. Whatever it can't burn stays on the belt. Waste sells for -$0.50 each and never earns research. Only a trade post set to money takes it (and pays the fee); research and split posts refuse it, so it stays on the belt and backs up (the post flashes `WSTE`). A post also refuses waste when the fee would take your money below zero, or when the last minute's waste fees are more than the last minute's earnings. Removing a crate, warehouse or elevator that holds waste costs the same $0.50 each (refused if you can't afford it); hover it to see the cost. The production panel (`o`) shows waste fees as negative money.
 - Research per item fades the more you sell of it, down to a small per-item minimum, so new items are where research comes from. Research earned while the game is closed fades the same way.
@@ -243,7 +261,7 @@ When nothing else is on the bottom line, the game may say one quiet thing about 
 | --- | --- |
 | Move | arrows / WASD |
 | Lay belts | Shift+arrows / Shift+WASD, or drag with the mouse |
-| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 EC, 4 Misc); inside it, a number picks a part (Create has 1–5), and pressing the same number again switches kind (the drills, belt / fast belt / tunnel, the assemblers, pump / advanced pump / pipe / mixer...); `` ` ``, `₹`, `~` or Esc goes back |
+| Build menu | 1–4 opens a category (1 Create, 2 Transport, 3 EC, 4 Misc); inside it, a number picks a part (Create has 1–5, Transport 1–5), and pressing the same number again switches kind (the drills, belt / fast belt / tunnel, the assemblers, pump / advanced pump / mixer...); `` ` ``, `₹`, `~` or Esc goes back |
 | Place / remove | Space or click / x or right-click |
 | Copy a part | middle-click it: picks up its kind, facing and setting (recipe, arm filter, trade post mode), so clicks place copies; middle-click empty ground to empty your hand |
 | Rotate (belt direction / output side) | r |

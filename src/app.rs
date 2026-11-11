@@ -1,5 +1,6 @@
 //! Player state and input handling (keyboard + mouse).
 
+use std::sync::LazyLock;
 use std::time::Instant;
 
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
@@ -18,6 +19,17 @@ pub enum StatsHit {
     Range(Range),
 }
 
+/// The most slots each build category may have (the number keys 1-9 allow more; this is what
+/// the menus are made to fit). Slots are filled in order with no gaps, so a category with fewer
+/// than its maximum simply has room: Misc slot 3 waits for rail, Create slot 6 for chemistry.
+/// The layout is temporary: it changes after a playtest.
+pub const MAX_SLOTS: [(Category, usize); 4] = [(Category::Create, 6), (Category::Transport, 5), (Category::Power, 4), (Category::Misc, 3)];
+
+/// The most slots `cat` may have.
+pub fn max_slots(cat: Category) -> usize {
+    MAX_SLOTS.iter().find(|(c, _)| *c == cat).map_or(4, |(_, n)| *n)
+}
+
 /// The numbered slots in a build category. A slot can hold several kinds of the
 /// same part (copper drill, basic drill...); pressing its number again switches between them.
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
@@ -29,10 +41,12 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
             &[Furnace, Molder, BlastFurnace, CokeOven, Kiln],
             &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
             &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
-            &[Pump, AdvancedPump, Pipe, Mixer],
+            &[Pump, AdvancedPump, Mixer],
         ],
-        Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator]],
+        // Pipes carry things, so they sit with the belts, in slot 5.
+        Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
         Category::Power => &[&[Solar], &[Pole], &[Boiler], &[SteamEngine]],
+        // Slot 3 is kept for rail.
         Category::Misc => &[&[Crate, Warehouse], &[TradePost]],
     }
 }
@@ -55,34 +69,9 @@ pub enum Entry {
     Part(Kind),
 }
 
-/// Machines with their own page in the recipe book.
-pub const BOOK_PARTS: [Kind; 25] = [
-    Kind::Drill,
-    Kind::BasicDrill,
-    Kind::Crusher,
-    Kind::Furnace,
-    Kind::Molder,
-    Kind::BlastFurnace,
-    Kind::CokeOven,
-    Kind::Press,
-    Kind::WireDrawer,
-    Kind::Winder,
-    Kind::RollingMill,
-    Kind::Lathe,
-    Kind::Kiln,
-    Kind::Mixer,
-    Kind::Welder,
-    Kind::CrudeAssembler,
-    Kind::BasicAssembler,
-    Kind::AdvancedAssembler,
-    Kind::PrecisionAssembler,
-    Kind::LargeBasicAssembler,
-    Kind::LargeAdvancedAssembler,
-    Kind::AdvancedDrill,
-    Kind::LargeBasicDrill,
-    Kind::LargeAdvancedDrill,
-    Kind::AdvancedPump,
-];
+/// Parts with their own page in the recipe book, in the order of `Kind::ALL`: every machine
+/// that crafts, mines or pumps, and every part with `rules()` to read.
+pub static BOOK_PARTS: LazyLock<Vec<Kind>> = LazyLock::new(|| Kind::ALL.iter().copied().filter(|k| k.has_book_page()).collect());
 
 impl Entry {
     pub fn name(self) -> &'static str {
@@ -588,6 +577,7 @@ impl App {
                 };
                 self.menu = Some(cat);
                 let count = slots(cat).len();
+                debug_assert!(count <= max_slots(cat), "{cat:?} has more slots than the menus are made for");
                 // The small-pane status line already lists the slots, so it needs no message.
                 if !self.compact_now {
                     let back = self.controls.label(Action::Back);
@@ -1338,9 +1328,97 @@ mod tests {
             assert_eq!(homes, vec![k.category()], "{k:?}");
         }
         for c in Category::ALL {
-            let most = if c == Category::Create { 5 } else { 4 };
+            let most = max_slots(c);
             assert!(slots(c).len() <= most, "{c:?} has more than {most} slots");
+            assert!(slots(c).iter().all(|s| !s.is_empty()), "{c:?} has an empty slot");
         }
+    }
+
+    #[test]
+    fn max_slots_is_a_table_for_every_category() {
+        let got: Vec<usize> = Category::ALL.iter().map(|c| max_slots(*c)).collect();
+        assert_eq!(got, vec![6, 5, 4, 3], "Create, Transport, EC, Misc");
+        // Every category is in the table once.
+        for c in Category::ALL {
+            assert_eq!(MAX_SLOTS.iter().filter(|(k, _)| *k == c).count(), 1, "{c:?}");
+        }
+    }
+
+    #[test]
+    fn pipes_have_transport_slot_five_and_pumps_keep_create_five() {
+        assert_eq!(slots(Category::Transport)[4], &[Kind::Pipe]);
+        assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer]);
+        assert_eq!(Kind::Pipe.category(), Category::Transport);
+        assert!(!parts_in(Category::Create).contains(&Kind::Pipe));
+        assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost][..]]);
+        let mut app = App::new(World::new());
+        app.world.progress.researched[Tech::Pumps.idx()] = true;
+        app.world.progress.opened[Company::Wellbourne.idx()] = true;
+        key(&mut app, KeyCode::Char('2'));
+        key(&mut app, KeyCode::Char('5'));
+        assert_eq!((app.menu, app.selected), (Some(Category::Transport), Some(Kind::Pipe)));
+        key(&mut app, KeyCode::Char('`'));
+        key(&mut app, KeyCode::Char('1'));
+        key(&mut app, KeyCode::Char('5'));
+        assert_eq!((app.menu, app.selected), (Some(Category::Create), Some(Kind::Pump)));
+        // Slot 6 and Misc slot 3 are not there yet: the key does nothing.
+        let before = app.selected;
+        key(&mut app, KeyCode::Char('6'));
+        assert_eq!(app.selected, before);
+    }
+
+    #[test]
+    fn number_keys_one_to_five_pick_each_slot_in_every_category() {
+        for cat in Category::ALL {
+            for (n, slot) in slots(cat).iter().enumerate().take(5) {
+                let mut app = App::new(World::new());
+                // Everything is bought, so the first kind of the slot is what the key picks.
+                app.world.progress.opened = [true; crate::sim::COMPANIES];
+                app.world.progress.researched = [true; crate::sim::TECHS];
+                app.menu = Some(cat);
+                key(&mut app, KeyCode::Char(char::from_digit(n as u32 + 1, 10).unwrap()));
+                assert_eq!(app.selected, Some(slot[0]), "{cat:?} slot {}", n + 1);
+            }
+        }
+    }
+
+    #[test]
+    fn book_parts_come_from_what_each_part_can_show() {
+        // Every crafter, drill and pump has a page, and so does every part with rules.
+        for k in Kind::ALL {
+            let wants = !k.recipes().is_empty() || k.is_drill() || k.is_pump() || k.rules().is_some();
+            assert_eq!(BOOK_PARTS.contains(&k), wants, "{k:?}");
+        }
+        for k in [Kind::Kiln, Kind::Welder, Kind::AdvancedPump, Kind::LargeAdvancedDrill, Kind::Pipe] {
+            assert!(BOOK_PARTS.contains(&k), "{k:?}");
+        }
+        for k in [Kind::Belt, Kind::Splitter, Kind::Crate, Kind::Pole] {
+            assert!(!BOOK_PARTS.contains(&k), "{k:?}");
+        }
+        let mut seen = BOOK_PARTS.clone();
+        seen.dedup();
+        assert_eq!(seen.len(), BOOK_PARTS.len());
+    }
+
+    #[test]
+    fn rules_are_short_lines() {
+        for k in Kind::ALL {
+            let Some(lines) = k.rules() else { continue };
+            assert!((1..=4).contains(&lines.len()), "{k:?}: {} lines", lines.len());
+            for l in lines {
+                assert!(l.chars().count() <= 38, "{k:?}: {l}");
+            }
+        }
+    }
+
+    #[test]
+    fn research_groups_are_whole() {
+        let names: Vec<&str> = UNLOCK_GROUPS.iter().map(|g| g.0).collect();
+        assert_eq!(names, ["Making", "Assembling", "Drilling", "Moving", "Pipes", "EC", "Floors"]);
+        assert!(UNLOCK_GROUPS.iter().all(|g| !g.1.is_empty()), "no empty group");
+        let pipes = UNLOCK_GROUPS.iter().find(|g| g.0 == "Pipes").unwrap().1;
+        assert_eq!(pipes, &[Tech::Pumps, Tech::AdvancedPump]);
+        assert_eq!(tree_rows().len(), Tech::ALL.len());
     }
 
     #[test]
