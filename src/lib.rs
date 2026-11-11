@@ -173,7 +173,18 @@ pub fn start(as_full_name: bool) -> io::Result<()> {
 }
 
 /// How often the game saves by itself.
-const AUTOSAVE: Duration = Duration::from_secs(120);
+const AUTOSAVE: Duration = Duration::from_secs(30);
+
+/// Set when the terminal closes (SIGHUP) or the game is asked to stop (SIGTERM), so the
+/// main loop ends normally and the game saves instead of dying mid-play.
+fn stop_signal() -> std::sync::Arc<std::sync::atomic::AtomicBool> {
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    #[cfg(unix)]
+    for sig in [signal_hook::consts::SIGHUP, signal_hook::consts::SIGTERM] {
+        let _ = signal_hook::flag::register(sig, flag.clone());
+    }
+    flag
+}
 
 /// Fixed 60 ticks per second for the simulation, about 30 frames per second for drawing.
 /// `inbox` is the data folder whose agent mail to pick up (none in the demo).
@@ -185,8 +196,12 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
     let mut last_draw = Instant::now() - frame;
     let mut last_mail_check = Instant::now() - Duration::from_secs(5);
     let mut last_autosave = Instant::now();
+    let stop = stop_signal();
 
     while !app.quit {
+        if stop.load(std::sync::atomic::Ordering::Relaxed) {
+            break;
+        }
         let now = Instant::now();
         acc += now - last;
         last = now;

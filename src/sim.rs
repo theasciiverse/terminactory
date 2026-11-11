@@ -7,7 +7,7 @@
 //! Buildings take input from any side and send output out of their front only.
 
 use std::collections::VecDeque;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -1368,7 +1368,18 @@ impl World {
         }
         self.saved_at = now_secs();
         let json = serde_json::to_string(self).map_err(std::io::Error::other)?;
-        std::fs::write(path, json)
+        // Write a temp file next to the save, flush it to disk, then swap it in, so a crash
+        // mid-write never leaves a half-written save behind.
+        let mut tmp = path.as_os_str().to_owned();
+        tmp.push(".tmp");
+        let tmp = PathBuf::from(tmp);
+        {
+            use std::io::Write;
+            let mut file = std::fs::File::create(&tmp)?;
+            file.write_all(json.as_bytes())?;
+            file.sync_all()?;
+        }
+        std::fs::rename(&tmp, path)
     }
 
     /// The format version a save file says it has (0 if it says nothing), if it's JSON at all.

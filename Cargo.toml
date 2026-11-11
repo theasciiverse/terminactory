@@ -10,5 +10,8 @@ ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 
+[target.'cfg(unix)'.dependencies]
+signal-hook = "0.3"
+
 [profile.release]
 opt-level = 3
