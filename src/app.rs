@@ -278,6 +278,12 @@ impl App {
         self.msg_at = Instant::now();
     }
 
+    /// Whether `n` opens the waiting telegram over the map (the small pane, or a Note or Ticker
+    /// style) instead of it sitting in the sidebar.
+    pub fn telegram_over_map(&self) -> bool {
+        self.compact_now || self.settings.telegram_style != crate::settings::TelegramStyle::Sidebar
+    }
+
     /// Closes the telegram being read: it counts as read, and the next waiting one comes up.
     pub fn dismiss_mail(&mut self) {
         if let Some(m) = self.mail.take() {
@@ -371,7 +377,7 @@ impl App {
         self.world.mail.retain(|m| m.id != msg.id);
         self.mail = Some(msg);
         self.mail_scroll = 0;
-        self.mail_open = self.compact_now;
+        self.mail_open = self.telegram_over_map();
     }
 
     pub fn on_key(&mut self, k: KeyEvent) {
@@ -527,7 +533,7 @@ impl App {
                 } else if shift {
                     self.dismiss_all_mail();
                     self.say("All telegrams dismissed (the log keeps them)");
-                } else if self.compact_now {
+                } else if self.telegram_over_map() {
                     self.mail_open = true;
                 } else {
                     self.dismiss_mail();

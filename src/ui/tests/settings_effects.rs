@@ -1,7 +1,7 @@
 //! What the small-pane, telegram and hint settings change on screen.
 
 use super::*;
-use crate::settings::{Cols, SmallView, ROWS};
+use crate::settings::{Cols, SmallView, TelegramStyle, ROWS};
 
 fn key(app: &mut App, code: KeyCode) {
     app.on_key(KeyEvent::from(code));
@@ -145,4 +145,121 @@ fn changing_the_view_in_the_pane_takes_effect_at_once() {
     key(&mut app, KeyCode::Right); // Never
     render(&mut app, 130, 40);
     assert!(!app.compact_now);
+}
+
+fn telegram() -> crate::mail::Message {
+    crate::mail::Message {
+        from: "my-project".into(),
+        event: "finished".into(),
+        md: "Tests pass. Ready for review.".into(),
+        at: 0,
+        gift: None,
+        id: 1,
+    }
+}
+
+fn app_with_mail(style: TelegramStyle) -> App {
+    let mut app = app();
+    app.settings.telegram_style = style;
+    app.mail = Some(telegram());
+    app
+}
+
+fn last_line(t: &str) -> String {
+    lines(t).last().unwrap().to_string()
+}
+
+#[test]
+fn telegram_style_sidebar_is_today() {
+    let mut app = app_with_mail(TelegramStyle::Sidebar);
+    // Full view: a box in the sidebar, no note, and n dismisses it.
+    let t = text(&render(&mut app, 130, 40));
+    assert!(t.contains("From my-project") && t.contains("n dismiss"), "{t}");
+    assert!(!last_line(&t).contains("to view"), "{t}");
+    // Small pane: the corner note, and n opens it over the map.
+    let t = text(&render(&mut app, 64, 16));
+    assert!(last_line(&t).trim_end().ends_with("agent finished · n to view"), "{t}");
+    assert!(!lines(&t)[0].contains("opens"), "{t}"); // the small ticker already counts mail; only Ticker adds the key
+    press(&mut app, 'n');
+    assert!(app.mail_open);
+    // And in the full view n closes it.
+    let mut app = app_with_mail(TelegramStyle::Sidebar);
+    render(&mut app, 130, 40);
+    press(&mut app, 'n');
+    assert!(app.mail.is_none() && !app.mail_open);
+}
+
+#[test]
+fn telegram_style_note_is_only_the_note_in_both_views() {
+    for (w, h) in [(130, 40), (200, 60), (64, 16), (36, 24)] {
+        let mut app = app_with_mail(TelegramStyle::Note);
+        let t = text(&render(&mut app, w, h));
+        let last = last_line(&t);
+        assert!(last.contains("to view") || last.contains("mail"), "{w}x{h}: {last}");
+        if w >= 130 {
+            // The full view: no box in the sidebar, and the sidebar keeps its build menu.
+            assert!(!t.contains("From my-project") && !t.contains("n dismiss") && t.contains("BUILD"), "{w}x{h}: {t}");
+            assert!(last.trim_end().ends_with("agent finished · n to view"), "{w}x{h}: {last}");
+        }
+        // The top line has no count: that is the Ticker's.
+        assert!(!lines(&t)[0].contains("opens"), "{w}x{h}: {t}");
+        // n opens it over the map, even in the full view, and n or Esc closes it.
+        press(&mut app, 'n');
+        assert!(app.mail_open && app.mail.is_some(), "{w}x{h}");
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("From my-project") && t.contains("Tests pass"), "{w}x{h}: {t}");
+        key(&mut app, KeyCode::Esc);
+        assert!(!app.mail_open && app.mail.is_none(), "{w}x{h}");
+        let t = text(&render(&mut app, w, h));
+        assert!(!last_line(&t).contains("to view"), "{w}x{h}: {t}");
+    }
+}
+
+#[test]
+fn telegram_style_ticker_is_only_the_count_in_the_top_line() {
+    for (w, h) in [(130, 40), (200, 60), (64, 16), (36, 24)] {
+        let mut app = app_with_mail(TelegramStyle::Ticker);
+        app.world.mail.push_back(telegram());
+        let t = text(&render(&mut app, w, h));
+        let top = lines(&t)[0].to_string();
+        assert!(top.contains("2 mail"), "{w}x{h}: {top}");
+        if w >= 64 {
+            assert!(top.contains("n opens"), "{w}x{h}: {top}");
+        }
+        // No box and no note anywhere.
+        assert!(!t.contains("From my-project") && !t.contains("to view") && !t.contains("n dismiss"), "{w}x{h}: {t}");
+        assert!(lines(&t).iter().all(|l| l.chars().count() <= w as usize));
+        press(&mut app, 'n');
+        assert!(app.mail_open, "{w}x{h}");
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("From my-project"), "{w}x{h}: {t}");
+        key(&mut app, KeyCode::Esc);
+        assert!(!app.mail_open, "{w}x{h}");
+    }
+    // With nothing waiting there is no count.
+    let mut app = app();
+    app.settings.telegram_style = TelegramStyle::Ticker;
+    let t = text(&render(&mut app, 130, 40));
+    assert!(!lines(&t)[0].contains("mail"), "{t}");
+}
+
+#[test]
+fn the_log_and_the_saved_log_do_not_depend_on_the_style() {
+    for style in [TelegramStyle::Sidebar, TelegramStyle::Note, TelegramStyle::Ticker] {
+        let mut app = app();
+        app.settings.telegram_style = style;
+        app.world.receive(crate::mail::parse("from: api\nevent: finished\n# Done\n\nAll tests pass.", 0), 1_000);
+        app.mail = app.world.mail.pop_front();
+        press(&mut app, 'i');
+        let t = text(&render(&mut app, 130, 40));
+        assert!(app.log_open && t.contains("api"), "{style:?}: {t}");
+        key(&mut app, KeyCode::Esc);
+        // Reading it marks it read, in every style.
+        press(&mut app, 'n');
+        if app.mail_open {
+            press(&mut app, 'n');
+        }
+        assert_eq!(app.world.unread(), 0, "{style:?}");
+        assert_eq!(app.world.log.len(), 1, "{style:?}");
+    }
 }

@@ -7,6 +7,7 @@ use ratatui::widgets::{Block, Clear, Paragraph, Scrollbar, ScrollbarOrientation,
 
 use crate::app::{slots, tree_rows, App, Entry, StatsHit, BOOK_PARTS};
 use crate::controls::Action;
+use crate::settings::TelegramStyle;
 use crate::sim::*;
 
 const SIDE_W: u16 = 36;
@@ -69,7 +70,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         // what's under the cursor, and the game keeps running.
         app.mail_area = Rect::default();
         app.graph_areas.clear();
-        let side = if app.mail.is_some() {
+        let side = if app.mail.is_some() && app.settings.telegram_style == TelegramStyle::Sidebar {
             let room = side.height.saturating_sub(12).max(side.height / 2);
             let h = mail_height(app, side.width).min(room).max(8.min(side.height));
             let [panel, mail] = Layout::vertical([Constraint::Min(1), Constraint::Length(h)]).areas(side);
@@ -202,6 +203,11 @@ fn draw_top(f: &mut Frame, area: Rect, app: &App) {
     } else if app.speed > 1 {
         spans.push(Span::styled(format!("{}x speed", app.speed), Style::new().fg(Color::Yellow)));
     }
+    // The Ticker telegram style: just the count, here.
+    if let Some(m) = mail_count(app) {
+        spans.push(Span::raw("   "));
+        spans.push(Span::styled(m, Style::new().fg(KEY_ITEM)));
+    }
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
@@ -226,7 +232,8 @@ fn draw_ticker(f: &mut Frame, area: Rect, app: &App) {
     }
     let mail = w.mail.len() + app.mail.is_some() as usize;
     if mail > 0 {
-        parts.push((2, vec![Span::styled(format!(" {mail} mail"), Style::new().fg(KEY_ITEM))]));
+        let text = mail_count(app).map_or_else(|| format!(" {mail} mail"), |m| format!(" {m}"));
+        parts.push((2, vec![Span::styled(text, Style::new().fg(KEY_ITEM))]));
     }
     parts.push((3, vec![Span::styled(format!(" {}", short_money(w.econ.money)), Style::new().fg(Color::Green).add_modifier(bold))]));
     let (power, place, unused) = power_parts(app, " EC ", true);
@@ -510,7 +517,7 @@ fn inspect_short(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
 fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     let dim = Style::new().fg(Color::DarkGray);
     let c = &app.controls;
-    let note = mail_note(app, area.width);
+    let note = if app.settings.telegram_style == TelegramStyle::Ticker { None } else { mail_note(app, area.width) };
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
     let fresh = app.msg_at.elapsed().as_secs() < 6;
     let spans_width = |s: &[Span<'static>]| s.iter().map(|s| s.content.chars().count()).sum::<usize>();
@@ -551,6 +558,16 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
         }
     };
     line_with_note(f, area, line, note);
+}
+
+/// "2 mail · n opens" for the top line, only in the Ticker telegram style (the other styles
+/// show the telegram themselves). Counts the one waiting to be read and the ones behind it.
+fn mail_count(app: &App) -> Option<String> {
+    if app.settings.telegram_style != TelegramStyle::Ticker {
+        return None;
+    }
+    let n = app.world.mail.len() + app.mail.is_some() as usize;
+    (n > 0).then(|| format!("{n} mail · {} opens", app.controls.key(Action::Mail)))
 }
 
 /// A waiting telegram as a short note for the right end of the bottom line:
@@ -1654,7 +1671,12 @@ fn item_counts(items: impl Iterator<Item = Item>) -> Vec<String> {
 
 fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
     let fresh = app.msg_at.elapsed().as_secs() < 6;
-    let note = if app.tree || app.book { mail_note(app, area.width) } else { None };
+    // The Note style shows the note always; the sidebar style only while the tree or book covers the sidebar.
+    let note = match app.settings.telegram_style {
+        TelegramStyle::Note => mail_note(app, area.width),
+        TelegramStyle::Sidebar if app.tree || app.book => mail_note(app, area.width),
+        _ => None,
+    };
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
     let line = if fresh {
         Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow))
