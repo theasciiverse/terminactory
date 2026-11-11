@@ -1194,3 +1194,33 @@ fn machines_say_waste_leaves_by_the_back() {
     w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();
     assert!(inspect(&w, 0, 20, 20).join("\n").contains("burns waste too: 4 = 1 coal"));
 }
+
+/// A long telegram has a thin scrollbar beside its text; a short one has none.
+#[test]
+fn long_telegrams_show_a_scrollbar() {
+    let body: String = (1..=60).map(|i| format!("Line {i} of a long agent report.\n")).collect();
+    for (w, h) in [(130u16, 42u16), (64, 20)] {
+        let mut app = App::new(World::blank());
+        app.mail = Some(crate::mail::parse(&format!("from: api\nevent: finished\n{body}"), 0));
+        app.mail_scroll = 0;
+        app.mail_open = true; // in a small pane it opens over the map; the sidebar ignores this
+        let buf = render(&mut app, w, h);
+        let thumbs = |b: &Buffer| b.content.iter().filter(|c| c.symbol() == "┃").count();
+        let top = thumbs(&buf);
+        assert!(top >= 1, "{w}x{h}: a thumb at the top:\n{}", text(&buf));
+        let first_thumb_row = |b: &Buffer| (0..b.area.height).find(|&y| (0..b.area.width).any(|x| b[(x, y)].symbol() == "┃")).unwrap();
+        let at_top = first_thumb_row(&buf);
+        app.mail_scroll = u16::MAX; // clamped to the end when drawn
+        let buf = render(&mut app, w, h);
+        let at_end = first_thumb_row(&buf);
+        assert!(at_end > at_top, "{w}x{h}: the thumb moves down as it scrolls ({at_top} -> {at_end})");
+        // The thumb's last row is at the bottom of the track: nothing of the track below it.
+        let x = (0..buf.area.width).find(|&x| buf[(x, at_end)].symbol() == "┃").unwrap();
+        let below: Vec<&str> = (at_end..buf.area.height).map(|y| buf[(x, y)].symbol()).take_while(|s| *s == "┃" || *s == "│").collect();
+        assert_eq!(below.last(), Some(&"┃"), "{w}x{h}: thumb reaches the end: {below:?}");
+    }
+    let mut app = App::new(World::blank());
+    app.mail = Some(crate::mail::parse("from: api\nevent: finished\nDone", 0));
+    let buf = render(&mut app, 130, 42);
+    assert!(!buf.content.iter().any(|c| c.symbol() == "┃"), "no scrollbar for a short telegram");
+}

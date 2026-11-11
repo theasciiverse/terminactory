@@ -3,7 +3,7 @@
 //! Every map tile is two terminal cells wide so the grid looks square.
 
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
+use ratatui::widgets::{Block, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
 use crate::app::{slots, tree_rows, App, Entry, StatsHit, BOOK_PARTS};
 use crate::controls::Action;
@@ -2973,6 +2973,21 @@ fn draw_mail_in(f: &mut Frame, r: Rect, app: &mut App, overlay: bool) {
     let [a, b, c] = Layout::vertical([Constraint::Length(top.len() as u16), Constraint::Min(1), Constraint::Length(foot_h)]).areas(inner);
     f.render_widget(Paragraph::new(top), a);
     f.render_widget(Paragraph::new(body).scroll((app.mail_scroll, 0)), b);
+    // A thin scrollbar in the spare right column (the body is wrapped one column narrower),
+    // so a long telegram shows how much is left.
+    if max_scroll > 0 && b.width > 1 && b.height > 1 {
+        let bar = Rect { x: b.x + b.width - 1, width: 1, ..b };
+        let mut state =
+            ScrollbarState::new(max_scroll as usize).position(app.mail_scroll as usize).viewport_content_length(b.height as usize);
+        let sb = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_symbol(Some("│"))
+            .track_style(Style::new().fg(Color::DarkGray))
+            .thumb_symbol("┃")
+            .thumb_style(Style::new().fg(KEY_ITEM));
+        f.render_stateful_widget(sb, bar, &mut state);
+    }
     f.render_widget(Paragraph::new(foot), c);
 }
 
