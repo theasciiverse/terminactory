@@ -218,7 +218,11 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
             let v = val(p, research);
             let eighths = if v <= 0.0 { 0 } else { ((v / top * rows as f64).round() as usize).clamp(1, rows) };
             let fill = eighths.saturating_sub(from_bottom * 8).min(8);
-            let (c, st) = if fill > 0 {
+            let (c, st) = if fill == 8 {
+                // A full cell is painted, not drawn: terminals leave thin seams between block
+                // glyphs, but a background fills the whole cell.
+                (' ', Style::new().bg(colour))
+            } else if fill > 0 {
                 (BARS[fill - 1], Style::new().fg(colour))
             } else if v <= 0.0 && from_bottom == 0 {
                 ('▁', Style::new().fg(FAINT))

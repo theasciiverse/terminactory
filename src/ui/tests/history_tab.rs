@@ -320,3 +320,13 @@ fn a_zoomed_out_pane_centres_the_heatmap() {
     let wed = row[..row.find("Wed ").unwrap()].chars().count();
     assert!(wed <= 4, "a pane it just fits keeps it at the left: {wed}\n{t}");
 }
+
+#[test]
+fn full_bar_cells_are_painted_so_terminals_show_no_seams() {
+    let mut app = app_with_history();
+    press(&mut app, '3');
+    let buf = render(&mut app, 100, 36);
+    let painted = buf.content.iter().filter(|c| c.bg == Color::Green && c.symbol() == " ").count();
+    let drawn = buf.content.iter().filter(|c| c.symbol() == "█").count();
+    assert!(painted > 20 && drawn == 0, "painted {painted}, block glyphs {drawn}");
+}
