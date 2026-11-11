@@ -502,7 +502,7 @@ impl Kind {
             Kind::AdvancedAssembler => 16.0,
             Kind::LargeAdvancedAssembler => 48.0,
             Kind::PrecisionAssembler => 64.0,
-            Kind::LargeAdvancedDrill => 128.0,
+            Kind::LargeAdvancedDrill => 40.0,
             _ => 0.0,
         }
     }
@@ -657,13 +657,14 @@ impl Kind {
         }
     }
     /// (work per tick, fuel burned per tick) of a drill, in units of a basic drill's.
-    /// An advanced drill is 2x a basic one and runs on EC. A large basic drill mines 16x
-    /// and burns 32x the coal; a large advanced drill is 16x an advanced one.
+    /// An advanced drill is 2x a basic one and runs on EC. A large basic drill mines 5x
+    /// (7.5 ore a second: one belt) and burns 10x the coal; a large advanced drill is 5x an
+    /// advanced one (15 a second: one fast belt).
     pub fn drill_rates(self) -> (u32, u32) {
         match self {
             Kind::AdvancedDrill => (2, 0),
-            Kind::LargeBasicDrill => (16, 32),
-            Kind::LargeAdvancedDrill => (32, 0),
+            Kind::LargeBasicDrill => (5, 10),
+            Kind::LargeAdvancedDrill => (10, 0),
             _ => (1, 1),
         }
     }

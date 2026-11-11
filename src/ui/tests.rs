@@ -684,7 +684,7 @@ fn later_machines_snapshot() {
     // The big drill's and the welder's inspector text.
     app.cursor = (x + 3, y + 3);
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("16x a basic drill's ore") && t.contains("burns 32x the coal"), "{t}");
+    assert!(t.contains("5x a basic drill's ore") && t.contains("burns 10x the coal"), "{t}");
     app.cursor = (x + 23, y3 + 1);
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("30 EC only while working") && t.contains("drawing 0 EC now"), "{t}");
@@ -719,8 +719,8 @@ fn later_machines_have_book_pages() {
         (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
         (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
         (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
-        (Kind::LargeBasicDrill, vec!["16x a basic drill's ore, burns 32x the coal", "8x8", "front edge"]),
-        (Kind::LargeAdvancedDrill, vec!["16x an advanced drill's ore", "128 EC, no coal"]),
+        (Kind::LargeBasicDrill, vec!["5x a basic drill's ore, burns 10x the coal", "8x8", "front edge"]),
+        (Kind::LargeAdvancedDrill, vec!["5x an advanced drill's ore", "40 EC, no coal"]),
         (Kind::AdvancedDrill, vec!["2x a basic drill's ore", "EC, no coal", "4x4"]),
         (Kind::AdvancedPump, vec!["80 water a second", "4 EC"]),
     ] {

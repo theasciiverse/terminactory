@@ -1757,8 +1757,8 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
         Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",
         Kind::AdvancedDrill => "a drill on EC: twice a basic drill's ore, no coal",
-        Kind::LargeBasicDrill => "an 8x8 drill: 16x a basic drill's ore, burns 32x the coal",
-        Kind::LargeAdvancedDrill => "an 8x8 drill on EC: 16x an advanced drill's ore",
+        Kind::LargeBasicDrill => "an 8x8 drill: 5x a basic drill's ore, burns 10x the coal",
+        Kind::LargeAdvancedDrill => "an 8x8 drill on EC: 5x an advanced drill's ore",
         Kind::AdvancedPump => "a pump that gives four times the water",
         _ => return None,
     })

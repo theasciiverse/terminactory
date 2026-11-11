@@ -595,10 +595,10 @@ impl Tech {
             Tech::AdvancedDrill => "a 4x4 drill that runs on EC and mines twice as fast as a basic drill",
             Tech::AdvancedAssembler => "a 3x3 assembler, four times the crude speed, that also builds control boards",
             Tech::LargeBasicAssembler => "a 5x5 assembler for the big goods: pump units and engine blocks",
-            Tech::LargeBasicDrill => "an 8x8 drill that mines 16 times a basic drill, and burns 32 times the coal",
+            Tech::LargeBasicDrill => "an 8x8 drill that mines 5 times a basic drill (one belt's worth), and burns 10 times the coal",
             Tech::PrecisionAssembler => "a 3x3 assembler that builds control boards fastest, and later chips",
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
-            Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 16 times an advanced drill",
+            Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
         }
     }
     pub fn company(self) -> Company {

@@ -1514,7 +1514,7 @@ fn an_advanced_drill_without_power_waits_and_slows_with_the_grid() {
 }
 
 #[test]
-fn a_large_basic_drill_mines_16x_and_burns_32x_the_coal() {
+fn a_large_basic_drill_mines_5x_and_burns_10x_the_coal() {
     let mut w = World::blank();
     assert_eq!((Kind::LargeBasicDrill.base_dims(), Kind::LargeBasicDrill.cost()), ((8, 8), 1000.0));
     // A basic drill and a large one, each fed all the coal they can hold.
@@ -1527,19 +1527,19 @@ fn a_large_basic_drill_mines_16x_and_burns_32x_the_coal() {
             *coal = b.kind.drill_coal_cap();
         }
     }
-    assert_eq!(Kind::LargeBasicDrill.drill_coal_cap(), 320);
+    assert_eq!(Kind::LargeBasicDrill.drill_coal_cap(), 100);
     run(&mut w, 20);
     let basic = crate_items(&w, 0, 7, 5).len();
     let large = crates_total(&w, 13, 20, 8);
     assert_eq!(basic, 30, "1200 ticks at 40");
-    assert_eq!(large, 16 * basic, "16 times the ore");
-    // 32 times the coal: the basic drill burns 1 unit a tick (3 coal in 1200 ticks, one of
-    // them the starter), the big one 32 a tick (96).
+    assert_eq!(large, 5 * basic, "5 times the ore: 7.5 a second, one belt");
+    // 10 times the coal: the basic drill burns 1 unit a tick (3 coal in 1200 ticks, one of
+    // them the starter), the big one 10 a tick (30).
     let used = w.econ.used[Item::Coal.idx()] as f64;
-    assert!((used - 98.0).abs() <= 2.0, "coal used {used}");
+    assert!((used - 33.0).abs() <= 3.0, "coal used {used}");
     // It pushes into everything along its front edge, in turn.
     for i in 0..8 {
-        assert!(crate_items(&w, 0, 13, 20 + i).len() >= 50, "crate {i}");
+        assert!(crate_items(&w, 0, 13, 20 + i).len() >= 15, "crate {i}");
     }
 }
 
@@ -1556,11 +1556,11 @@ fn a_large_basic_drill_runs_dry_without_coal() {
 }
 
 #[test]
-fn a_large_advanced_drill_mines_16x_an_advanced_drill() {
+fn a_large_advanced_drill_mines_5x_an_advanced_drill() {
     let mut w = World::blank();
     assert_eq!(
         (Kind::LargeAdvancedDrill.base_dims(), Kind::LargeAdvancedDrill.cost(), Kind::LargeAdvancedDrill.power_draw()),
-        ((8, 8), 2000.0, 128.0)
+        ((8, 8), 2000.0, 40.0)
     );
     // 130 EC of panels for the big one, 10 for the advanced one.
     big_grid(&mut w, 32, 0, 13);
@@ -1574,7 +1574,7 @@ fn a_large_advanced_drill_mines_16x_an_advanced_drill() {
     let adv = crate_items(&w, 0, 9, 40).len();
     let large = crates_total(&w, 42, 6, 8);
     assert_eq!(adv, 30);
-    assert_eq!(large, 16 * adv, "16 times an advanced drill");
+    assert_eq!(large, 5 * adv, "5 times an advanced drill: 15 a second, one fast belt");
     assert_eq!(w.econ.used[Item::Coal.idx()], 0, "no coal anywhere");
 }
 
