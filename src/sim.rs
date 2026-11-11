@@ -1112,9 +1112,6 @@ pub struct Progress {
     pub opened: [bool; COMPANIES],
     #[serde(serialize_with = "ser_arr", deserialize_with = "pad")]
     pub researched: [bool; TECHS],
-    /// Companies that opened since the player last looked (shown as letters).
-    #[serde(skip)]
-    pub events: VecDeque<Company>,
     /// Short messages for the player (free unlocks).
     #[serde(skip)]
     pub notes: VecDeque<String>,
@@ -1126,7 +1123,7 @@ impl Default for Progress {
         for c in Company::ALL {
             opened[c.idx()] = c.key_item().is_none();
         }
-        Progress { opened, researched: [false; TECHS], events: VecDeque::new(), notes: VecDeque::new() }
+        Progress { opened, researched: [false; TECHS], notes: VecDeque::new() }
     }
 }
 
@@ -1407,7 +1404,7 @@ impl World {
             version: SAVE_VERSION,
             floors: LEVELS.iter().map(|&l| Floor::new(l, true)).collect(),
             econ: Econ { money: 1e6, ..Default::default() },
-            progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], events: VecDeque::new(), notes: VecDeque::new() },
+            progress: Progress { opened: [true; COMPANIES], researched: [true; TECHS], notes: VecDeque::new() },
             tick: 0,
             lifts: Vec::new(),
             saved_at: 0,
@@ -2409,7 +2406,7 @@ impl World {
             if let Some(key) = c.key_item() {
                 if !self.progress.is_open(c) && self.econ.made[key.idx()] > 0 {
                     self.progress.opened[c.idx()] = true;
-                    self.progress.events.push_back(c);
+                    self.deliver(crate::mail::letter(c, now_secs()));
                 }
             }
         }

@@ -208,18 +208,14 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
         if acc > Duration::from_millis(250) {
             acc = tick; // don't try to catch up after a stall
         }
-        // The game pauses while a letter, the tree or help is open.
-        let overlay = app.letter.is_some() || app.tree || app.book || app.help || app.away.is_some() || app.mail_open;
+        // Nothing but the pause key stops the game: the tree, book, help and telegrams are read while it runs.
         while acc >= tick {
-            if !app.paused && !overlay {
+            if !app.paused {
                 for _ in 0..app.speed {
                     app.world.tick();
                 }
             }
             acc -= tick;
-        }
-        if app.letter.is_none() {
-            app.letter = app.world.progress.events.pop_front();
         }
         // Agent mail: check the inbox about once a second; show one message at a time.
         if let Some(dir) = inbox {

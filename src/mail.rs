@@ -12,7 +12,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use serde::{Deserialize, Serialize};
 
-use crate::content::Company;
+use crate::content::{Company, Tech};
 
 /// Longest message kept, in characters (an agent's final reply can be long).
 const MAX_CHARS: usize = 6000;
@@ -213,6 +213,18 @@ pub fn run_cli(args: &[String], data_dir: &Path) -> bool {
         }
         _ => false,
     }
+}
+
+/// A company's letter as a telegram: its words, then what it opens for research.
+pub fn letter(c: Company, now: u64) -> Message {
+    let mut md = format!("\"{}\"", c.letter());
+    let techs: Vec<String> =
+        Tech::ALL.iter().filter(|t| t.company() == c).map(|t| format!("- {} ({})", t.name(), t.category().name())).collect();
+    if !techs.is_empty() {
+        md.push_str("\n\n**Unlocked for research**\n");
+        md.push_str(&techs.join("\n"));
+    }
+    Message { from: c.name().to_string(), event: "letter".into(), md, at: now, gift: None, id: 0 }
 }
 
 /// A delivery's note, in the sending company's voice.

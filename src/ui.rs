@@ -88,9 +88,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.mail_open && app.mail.is_some() {
         draw_mail(f, f.area(), app);
     }
-    if let Some(c) = app.letter {
-        draw_letter(f, f.area(), c);
-    }
     if let Some(text) = &app.away {
         let r = centered(f.area(), 62, 9);
         f.render_widget(Clear, r);
@@ -2526,25 +2523,6 @@ fn draw_mail(f: &mut Frame, area: Rect, app: &mut App) {
     let h = mail_height(app, w).min(area.height.saturating_sub(2)).max(8);
     let r = centered(area, w, h);
     draw_mail_in(f, r, app, true);
-}
-
-/// A letter from a company that just opened.
-fn draw_letter(f: &mut Frame, area: Rect, c: Company) {
-    let head = Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD);
-    let mut lines = vec![
-        Line::styled(format!(" A letter from {}", c.name()), head),
-        Line::raw(""),
-        Line::raw(format!(" \"{}\"", c.letter())),
-        Line::raw(""),
-    ];
-    for t in Tech::ALL.iter().filter(|t| t.company() == c) {
-        lines.push(Line::raw(format!(" Unlocked for research: {} ({})", t.name(), t.category().name())));
-    }
-    lines.push(Line::raw(""));
-    lines.push(Line::styled(" press any key", Style::new().fg(Color::DarkGray)));
-    let r = centered(area, 70, 12);
-    f.render_widget(Clear, r);
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(" A letter ").title_style(head)), r);
 }
 
 fn draw_help(f: &mut Frame, area: Rect, app: &mut App) {

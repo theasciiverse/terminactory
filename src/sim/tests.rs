@@ -659,7 +659,11 @@ fn making_wire_opens_ashgrove() {
     run(&mut w, 5);
     assert!(w.econ.made[Item::CopperWire.idx()] >= 2);
     assert!(w.progress.is_open(Company::Ashgrove));
-    assert_eq!(w.progress.events.pop_front(), Some(Company::Ashgrove));
+    // Its letter arrives as a telegram, with what it unlocks.
+    let m = w.mail.pop_front().expect("a letter");
+    assert_eq!((m.from.as_str(), m.event.as_str()), ("Ashgrove Ironstone", "letter"));
+    assert!(m.md.contains("ironstone") && m.md.contains("Basic drill"), "{}", m.md);
+    assert!(m.gift.is_none() && w.unread() == 1);
 }
 
 #[test]

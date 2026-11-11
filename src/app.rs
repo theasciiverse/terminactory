@@ -6,7 +6,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, M
 use ratatui::layout::Rect;
 
 use crate::controls::{Action, Controls};
-use crate::sim::{in_bounds, Category, Company, Dir, Kind, Tech, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W};
+use crate::sim::{in_bounds, Category, Dir, Kind, Tech, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W};
 
 /// The numbered slots in a build category. A slot can hold several kinds of the
 /// same part (copper drill, basic drill...); pressing its number again switches between them.
@@ -138,8 +138,6 @@ pub struct App {
     pub book_back: Vec<Entry>,
     /// The last item and the last machine looked at, so Tab goes back to them.
     pub book_last: [Entry; 2],
-    /// A company's letter waiting to be read.
-    pub letter: Option<Company>,
     /// "While you were away" summary waiting to be read.
     pub away: Option<String>,
     /// An agent message being read, and how far it's scrolled.
@@ -207,7 +205,6 @@ impl App {
             book_cells: Vec::new(),
             book_back: Vec::new(),
             book_last: [Entry::Item(crate::sim::Item::CopperOre), Entry::Part(Kind::Drill)],
-            letter: None,
             away: None,
             mail: None,
             mail_scroll: 0,
@@ -239,10 +236,6 @@ impl App {
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
         if ctrl && k.code == KeyCode::Char('c') {
             self.quit = true;
-            return;
-        }
-        if self.letter.is_some() {
-            self.letter = None;
             return;
         }
         if self.away.is_some() {
@@ -657,7 +650,7 @@ impl App {
     pub fn on_mouse(&mut self, m: MouseEvent) {
         let over_mail =
             self.mail.is_some() && !self.compact_now && self.mail_area.contains(ratatui::layout::Position::new(m.column, m.row));
-        if (self.mail_open || over_mail) && self.letter.is_none() && self.away.is_none() {
+        if (self.mail_open || over_mail) && self.away.is_none() {
             match m.kind {
                 MouseEventKind::ScrollUp => self.mail_scroll = self.mail_scroll.saturating_sub(2),
                 MouseEventKind::ScrollDown => self.mail_scroll += 2,
@@ -665,15 +658,15 @@ impl App {
             }
             return;
         }
-        if self.book && !self.mail_open && self.letter.is_none() && self.away.is_none() && !self.help {
+        if self.book && !self.mail_open && self.away.is_none() && !self.help {
             self.book_mouse(m);
             return;
         }
-        if self.tree && !self.mail_open && self.letter.is_none() && self.away.is_none() && !self.help {
+        if self.tree && !self.mail_open && self.away.is_none() && !self.help {
             self.tree_mouse(m);
             return;
         }
-        if self.tree || self.book || self.help || self.letter.is_some() || self.away.is_some() {
+        if self.tree || self.book || self.help || self.away.is_some() {
             return;
         }
         if self.stats {
@@ -930,6 +923,7 @@ fn copied_recipe(kind: Kind, set: Option<crate::sim::Setting>) -> Option<&'stati
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::Company;
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     fn key(app: &mut App, code: KeyCode) {

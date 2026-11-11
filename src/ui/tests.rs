@@ -49,12 +49,14 @@ fn render_snapshots() {
     assert!(text(&buf).contains("Press") && text(&buf).contains("make copper wire first"));
 
     app.tree = false;
-    app.letter = Some(Company::Ashgrove);
+    // A company's letter is a telegram in the sidebar, and the game keeps running.
+    app.mail = Some(crate::mail::letter(Company::Ashgrove, 0));
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("A letter from"));
+    let t = text(&buf);
+    assert!(t.contains("From Ashgrove") && t.contains("Unlocked for research") && t.contains("HERE"), "{t}");
     std::fs::write("target/snapshot-letter.html", to_html(&buf)).unwrap();
 
-    app.letter = None;
+    app.mail = None;
     let mut m = crate::mail::parse(
         "from: api-server\nevent: finished\n# Auth retry fixed\n\nAll **42 tests** pass. Changed `src/auth.rs`:\n\n- retry on 503, up to 3 times, with a short backoff between tries so a flaky upstream does not get hammered while it recovers\n- [x] lint clean\n- [ ] needs your review\n\n> Didn't touch the session cache.",
         0,
