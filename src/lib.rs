@@ -21,8 +21,17 @@ use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::SetTitle;
 
 /// Where saves and key settings live: ~/.terminactory, so the game finds them from any folder.
+/// `HOME` first; on Windows it is usually unset, so then `USERPROFILE`, then `APPDATA`.
 fn data_dir() -> PathBuf {
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".terminactory")).unwrap_or_else(|| PathBuf::from("."))
+    data_dir_from(|name| std::env::var_os(name))
+}
+
+fn data_dir_from(var: impl Fn(&str) -> Option<std::ffi::OsString>) -> PathBuf {
+    ["HOME", "USERPROFILE", "APPDATA"]
+        .iter()
+        .find_map(|name| var(name).filter(|v| !v.is_empty()))
+        .map(|h| PathBuf::from(h).join(".terminactory"))
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 /// Copies the key settings from the old place (the folder the game was run from) the first time.
@@ -43,6 +52,7 @@ Playing
   tfac --saves      list your saves: money, research, time played, last played
   tfac --new        start a fresh save as the next number (the others are kept)
   tfac --demo       start next to a small working factory (its own save)
+  tfac --version    print the version (also -V)
 
 Agent telegrams (they show up in the game as you play)
   tfac msg TEXT     send Markdown to the game; \\n is a line break
@@ -58,6 +68,10 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     // `tfac msg` and `tfac hook` post agent mail and return without starting the game.
     if mail::run_cli(&args, &data_dir()) {
+        return Ok(());
+    }
+    if args.get(1).is_some_and(|a| matches!(a.as_str(), "--version" | "-V")) {
+        println!("terminactory {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
     if args.iter().skip(1).any(|a| matches!(a.as_str(), "--help" | "-h" | "help")) {
@@ -203,6 +217,20 @@ mod tests {
         // With other saves around, the saves note replaces it, as it must only when they exist.
         let second = new_game_note(true);
         assert!(second.contains("other saves are safe") && !second.contains("build menu"), "{second}");
+    }
+
+    #[test]
+    fn data_dir_falls_back_from_home_to_the_windows_variables() {
+        fn env<'a>(pairs: &'a [(&str, &str)]) -> impl Fn(&str) -> Option<std::ffi::OsString> + 'a {
+            move |name| pairs.iter().find(|p| p.0 == name).map(|p| std::ffi::OsString::from(p.1))
+        }
+        let both = [("HOME", "/h"), ("USERPROFILE", "C:/u")];
+        assert_eq!(data_dir_from(env(&both)), Path::new("/h").join(".terminactory"));
+        let windows = [("USERPROFILE", "C:/u"), ("APPDATA", "C:/a")];
+        assert_eq!(data_dir_from(env(&windows)), Path::new("C:/u").join(".terminactory"));
+        let empty_home = [("HOME", ""), ("APPDATA", "C:/a")];
+        assert_eq!(data_dir_from(env(&empty_home)), Path::new("C:/a").join(".terminactory"));
+        assert_eq!(data_dir_from(env(&[])), Path::new("."));
     }
 
     #[test]
