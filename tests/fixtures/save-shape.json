@@ -1048,7 +1048,7 @@
       ]
     },
     "researched": {
-      "len": 35,
+      "len": 36,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1081,6 +1081,7 @@
         "\"Steam\"",
         "\"SupportBeams\"",
         "\"Tunnels\"",
+        "\"UpgradePlanner\"",
         "\"Warehouses\"",
         "\"Welder\"",
         "\"Winder\"",

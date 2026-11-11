@@ -2293,10 +2293,9 @@ fn new_techs_are_priced_by_depth() {
         assert_eq!(n, 1, "{t:?}");
         assert!(t.milestone().1 > 0 && !t.about().is_empty());
     }
-    for t in Tech::ALL
-        .into_iter()
-        .filter(|t| !matches!(t, Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints))
-    {
+    for t in Tech::ALL.into_iter().filter(|t| {
+        !matches!(t, Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints | Tech::UpgradePlanner)
+    }) {
         assert!(TREE.iter().any(|(node, _)| *node == Node::Tech(t)), "{t:?} is missing from the tree");
     }
     // The tree's links point backwards, and every company's key item is a node.

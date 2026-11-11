@@ -162,16 +162,19 @@ fn research_tree_fits_the_window() {
     assert!(t.contains("Making        ● Press"), "{t}");
     assert!(t.contains("make copper wire first") && t.contains("Belt tunnels") && t.contains("Large adv. drill"), "{t}");
     assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
-    // 35 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
+    // 36 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
     assert!(t.contains("more ▼") && !t.contains("Blueprints"), "{t}");
     let tall = text(&render(&mut app, 130, 60));
-    assert!(!tall.contains("more ") && tall.contains("Floors") && tall.contains("Excavation") && tall.contains("Blueprints"), "{tall}");
+    assert!(
+        !tall.contains("more ") && tall.contains("Floors") && tall.contains("Excavation") && tall.contains("Upgrade planner"),
+        "{tall}"
+    );
     std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
     // Going to the last row scrolls it into view, and the top-of-list marker shows.
     app.tree_pick = tree_rows().len() - 1;
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("more ▲") && t.contains("Blueprints") && t.contains("Blueprints · Misc"), "{t}");
+    assert!(t.contains("more ▲") && t.contains("Upgrade planner") && t.contains("Upgrade planner · Misc"), "{t}");
     std::fs::write("target/snapshot-tree-scrolled.html", to_html(&buf)).unwrap();
     app.tree_pick = 0;
     // Narrow: group names on their own lines; small: it scrolls, with markers.
@@ -907,7 +910,7 @@ fn render_phase3_snapshots() {
     app.tree = true;
     app.tree_pick = tree_rows().len() - 1;
     let buf = render(&mut app, 120, 42);
-    assert!(text(&buf).contains("Blueprints · "), "{}", text(&buf));
+    assert!(text(&buf).contains("Upgrade planner · "), "{}", text(&buf));
     std::fs::write("target/snapshot-tree-end.html", to_html(&buf)).unwrap();
 }
 
