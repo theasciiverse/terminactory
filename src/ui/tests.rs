@@ -4,6 +4,7 @@ use ratatui::{backend::TestBackend, Terminal};
 
 mod hints_line;
 mod history_tab;
+mod keys;
 mod settings_effects;
 mod settings_pane;
 mod sidebar_graph;
