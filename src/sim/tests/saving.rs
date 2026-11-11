@@ -117,10 +117,14 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
     let path = crate::saves::path_of(&data, "save1");
     w.save(&path).unwrap();
     let text = std::fs::read_to_string(&path).unwrap();
-    assert!(!text.contains("LargeKiln") && !text.contains("BasicSolar"), "an older save has neither name");
+    assert!(
+        !text.contains("LargeKiln") && !text.contains("BasicSolar") && !text.contains("Blueprints"),
+        "an older save has none of the names"
+    );
     assert!(text.contains(&format!("\"version\": {SAVE_VERSION}")) || text.contains(&format!("\"version\":{SAVE_VERSION}")));
     let l = World::load(&path).unwrap();
     assert!(l.progress.has(Tech::Kiln) && !l.progress.has(Tech::LargeKiln) && !l.progress.has(Tech::BasicSolar));
+    assert!(!l.progress.has(Tech::Blueprints));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }

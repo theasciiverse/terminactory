@@ -3496,6 +3496,15 @@ CONTROLS
   Area ......... c marks a rectangle (Space at two corners, or drag);
                  then x removes everything in it, full refund. Esc
                  cancels, z puts back what the last area remove took.
+  Blueprints ... (research Blueprints, t) with a rectangle marked, c or
+                 Space copies it to your hand; a ghost follows the cursor
+                 (yellow fits, xx can't, .. can't afford). r turns it,
+                 Shift+r turns back, Space or a click pastes what fits
+                 and what you can afford, in reading order; press again
+                 at the same spot for the rest, nothing is charged twice.
+                 Esc empties the hand. l opens the library: Enter takes
+                 one, f saves your hand under a name, x twice deletes.
+                 Files live in ~/.terminactory/blueprints, for every save.
   EC range ..... v                   Floors ....... < >
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
@@ -3513,7 +3522,8 @@ CONTROLS
                  is there: what is stuck, and now and then a company's
                  aside (full view only, rare). g turns them off.
   Mouse ........ click places, drag lays belts, right-click removes,
-                 middle-click copies a part (facing and settings too)
+                 middle-click copies a part (facing and settings too),
+                 middle-drag copies a rectangle to your hand
   Quit ......... Ctrl+C (saves first)
   These are the default keys. Change any of them in controls.json.";
     // A small pane gets the keys first and no item table (the recipe book has it).
