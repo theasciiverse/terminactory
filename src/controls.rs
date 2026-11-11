@@ -35,10 +35,11 @@ pub enum Action {
     Settings,
     Area,
     Restore,
+    Library,
 }
 
 impl Action {
-    pub const ALL: [Action; 27] = [
+    pub const ALL: [Action; 28] = [
         Action::MoveUp,
         Action::MoveDown,
         Action::MoveLeft,
@@ -66,6 +67,7 @@ impl Action {
         Action::Settings,
         Action::Area,
         Action::Restore,
+        Action::Library,
     ];
     /// The name used in controls.json.
     pub fn id(self) -> &'static str {
@@ -97,6 +99,7 @@ impl Action {
             Action::Settings => "settings",
             Action::Area => "area_select",
             Action::Restore => "restore_removed",
+            Action::Library => "blueprints",
         }
     }
     pub fn defaults(self) -> &'static [&'static str] {
@@ -131,6 +134,8 @@ impl Action {
             Action::Area => &["c"],
             // Puts back what the last area deconstruct took.
             Action::Restore => &["z"],
+            // The blueprint library: saved blueprints, shared by every save.
+            Action::Library => &["l"],
         }
     }
 }
@@ -319,6 +324,7 @@ mod tests {
         let c = Controls::defaults();
         assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
         assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
+        assert_eq!(c.action(KeyCode::Char('l')), Some(Action::Library));
         assert_eq!(c.action(KeyCode::Char('g')), Some(Action::Settings));
         for a in Action::ALL {
             assert!(!a.defaults().is_empty(), "{} has a default", a.id());
@@ -334,6 +340,18 @@ mod tests {
         assert!(note.is_none(), "{note:?}");
         assert_eq!(c.action(KeyCode::Char('c')), Some(Action::Area));
         assert_eq!(c.action(KeyCode::Char('z')), Some(Action::Restore));
+        assert_eq!(c.action(KeyCode::Char('l')), Some(Action::Library));
+    }
+
+    #[test]
+    fn a_file_that_binds_l_elsewhere_gets_a_note() {
+        let path = std::env::temp_dir().join(format!("factory-controls-clash-l-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{ "settings": ["l"] }"#).unwrap();
+        let (c, note) = Controls::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        let note = note.expect("a clash is reported");
+        assert!(note.contains("key l is on both settings and blueprints"), "{note}");
+        assert_eq!(c.action(KeyCode::Char('l')), Some(Action::Settings));
     }
 
     #[test]

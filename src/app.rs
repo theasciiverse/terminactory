@@ -67,6 +67,29 @@ impl AreaVerb {
     }
 }
 
+/// The blueprint library (`l`): the files in the library folder, and where the player is in them.
+/// It sits over the map and the game keeps running.
+#[derive(Clone, Debug, Default)]
+pub struct Library {
+    pub entries: Vec<crate::library::Entry>,
+    pub pick: usize,
+    /// Typing a name to save the blueprint in the hand (or the last copy) under.
+    pub typing: Option<String>,
+    /// The picked row was asked to be deleted: pressing delete again does it.
+    pub armed: bool,
+    /// Where each row was drawn, for the mouse.
+    pub rows: Vec<(Rect, usize)>,
+}
+
+impl Library {
+    pub fn new(entries: Vec<crate::library::Entry>) -> Library {
+        Library { entries, ..Default::default() }
+    }
+}
+
+/// The longest name a saved blueprint may have.
+const NAME_MAX: usize = 40;
+
 /// Something in the production panel a click can reach.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StatsHit {
@@ -172,6 +195,10 @@ pub struct App {
     /// Where a middle-button press started, and whether a middle-drag is marking a rectangle to copy.
     pub middle_from: Option<(i32, i32)>,
     pub quick_area: bool,
+    /// The blueprint library, when open (`l`), and the data folder it reads and writes (none in
+    /// the demo and in most tests, which say the library isn't available).
+    pub library: Option<Library>,
+    pub data_dir: Option<std::path::PathBuf>,
     pub cursor: (i32, i32),
     pub floor: usize,
     pub cam: (i32, i32),
@@ -275,6 +302,8 @@ impl App {
             last_copy: None,
             middle_from: None,
             quick_area: false,
+            library: None,
+            data_dir: None,
             cursor: SPAWN,
             floor: 0,
             cam: (0, 0),
@@ -502,6 +531,10 @@ impl App {
             self.settings_key(k.code, action);
             return;
         }
+        if self.library.is_some() {
+            self.library_key(k.code);
+            return;
+        }
         // Shifted letters arrive uppercase: match them against their lowercase binding too.
         let lower = match k.code {
             KeyCode::Char(c) if c.is_uppercase() => Some(KeyCode::Char(c.to_lowercase().next().unwrap_or(c))),
@@ -593,6 +626,7 @@ impl App {
             Action::Settings => self.settings_open = true,
             Action::Area => self.start_area(),
             Action::Restore => self.restore_removed(),
+            Action::Library => self.open_library(),
             Action::MailLog => {
                 self.log_open = true;
                 self.log_pick = 0;
@@ -957,6 +991,10 @@ impl App {
         }
         if self.tree && !self.mail_open && self.away.is_none() && !self.help {
             self.tree_mouse(m);
+            return;
+        }
+        if self.library.is_some() && !self.help && self.away.is_none() && !self.tree && !self.book {
+            self.library_mouse(m);
             return;
         }
         if self.tree || self.book || self.help || self.settings_open || self.away.is_some() {
@@ -1335,6 +1373,215 @@ impl App {
         }
     }
 
+    /// `l`: opens the library over the map. It reads the folder each time, so files dropped in by
+    /// hand show up.
+    fn open_library(&mut self) {
+        if !self.world.progress.has(Tech::Blueprints) {
+            self.say_blueprints_locked();
+            return;
+        }
+        let Some(data) = self.data_dir.clone() else {
+            self.say("The blueprint library needs the game's data folder: it isn't available here");
+            return;
+        };
+        self.library = Some(Library::new(crate::library::list(&data)));
+    }
+
+    /// What `f` in the library would save: the blueprint in the hand, or else the last one copied.
+    pub fn savable(&self) -> Option<(&Blueprint, bool)> {
+        self.held.as_ref().map(|b| (b, true)).or_else(|| self.last_copy.as_ref().map(|b| (b, false)))
+    }
+
+    /// Reads the folder again, keeping the pick on the same file when it is still there.
+    fn library_refresh(&mut self, keep: Option<std::path::PathBuf>) {
+        let Some(data) = self.data_dir.clone() else { return };
+        let Some(lib) = self.library.as_mut() else { return };
+        let was = keep.or_else(|| lib.entries.get(lib.pick).map(|e| e.path.clone()));
+        lib.entries = crate::library::list(&data);
+        lib.pick =
+            was.and_then(|p| lib.entries.iter().position(|e| e.path == p)).unwrap_or(lib.pick.min(lib.entries.len().saturating_sub(1)));
+        lib.armed = false;
+    }
+
+    /// Keys in the library: pick (arrows, w s, j k), Enter takes the picked blueprint into the hand,
+    /// `f` saves the hand under a name you type, delete removes the picked file after asking twice,
+    /// Esc or `l` closes. Pause and speed work; the game keeps running.
+    fn library_key(&mut self, code: KeyCode) {
+        let action = self.controls.action(code);
+        // Typing a name: letters append, Backspace removes one, Enter saves, Esc stops.
+        if let Some(buf) = self.library.as_mut().and_then(|l| l.typing.as_mut()) {
+            match code {
+                KeyCode::Char(c) if !c.is_control() => {
+                    if buf.chars().count() < NAME_MAX {
+                        buf.push(c);
+                    }
+                }
+                KeyCode::Backspace => {
+                    buf.pop();
+                }
+                KeyCode::Enter => self.library_save(),
+                KeyCode::Esc => {
+                    if let Some(l) = self.library.as_mut() {
+                        l.typing = None;
+                    }
+                }
+                _ => {}
+            }
+            return;
+        }
+        let Some(lib) = self.library.as_mut() else { return };
+        let last = lib.entries.len().saturating_sub(1);
+        let was_armed = std::mem::take(&mut lib.armed);
+        match (code, action) {
+            (KeyCode::Up | KeyCode::Char('k'), _) | (_, Some(Action::MoveUp)) => lib.pick = lib.pick.saturating_sub(1),
+            (KeyCode::Down | KeyCode::Char('j'), _) | (_, Some(Action::MoveDown)) => lib.pick = (lib.pick + 1).min(last),
+            (KeyCode::PageUp, _) => lib.pick = lib.pick.saturating_sub(8),
+            (KeyCode::PageDown, _) => lib.pick = (lib.pick + 8).min(last),
+            (KeyCode::Home, _) => lib.pick = 0,
+            (KeyCode::End, _) => lib.pick = last,
+            (_, Some(Action::Place)) => self.library_take(),
+            (_, Some(Action::Setup)) => self.library_start_save(),
+            (_, Some(Action::Remove)) => self.library_delete(was_armed),
+            (_, Some(Action::Library | Action::Back)) => self.library = None,
+            (_, Some(Action::Pause)) => self.paused = !self.paused,
+            (_, Some(Action::Faster)) => self.speed = (self.speed * 2).min(8),
+            (_, Some(Action::Slower)) => self.speed = (self.speed / 2).max(1),
+            _ => {}
+        }
+    }
+
+    /// Enter on a row: a readable blueprint goes into the hand and the library closes; one that
+    /// can't be used says why and stays.
+    fn library_take(&mut self) {
+        let Some(entry) = self.library.as_ref().and_then(|l| l.entries.get(l.pick)).cloned() else {
+            self.say("No blueprints saved yet");
+            return;
+        };
+        match entry.content {
+            crate::library::Content::Ok(mut bp) => {
+                bp.name = entry.name.clone();
+                self.library = None;
+                let mut msg = format!(
+                    "Took {} ({}x{}, {} part{}, {}) · {} pastes, {} turns",
+                    bp.name,
+                    bp.w,
+                    bp.h,
+                    bp.part_count(),
+                    plural(bp.part_count()),
+                    money_text(bp.cost()),
+                    self.controls.key(Action::Place),
+                    self.controls.key(Action::Rotate)
+                );
+                if let Some(k) = bp.first_locked(&self.world.progress) {
+                    msg += &format!(" · {} is still locked", k.name());
+                }
+                self.take_into_hand(bp);
+                self.say(msg);
+            }
+            crate::library::Content::Newer(f) => {
+                self.say(format!("{} is from a newer game (format {f}): update the game to use it", entry.name));
+            }
+            crate::library::Content::Broken(why) => {
+                self.say(format!(
+                    "Can't read {}: {why}",
+                    entry.path.file_name().map_or(entry.name.clone(), |n| n.to_string_lossy().into_owned())
+                ));
+            }
+        }
+    }
+
+    /// `f`: starts typing a name for the blueprint in the hand (or the last copy).
+    fn library_start_save(&mut self) {
+        let Some((bp, _)) = self.savable() else {
+            let key = self.controls.key(Action::Area);
+            self.say(format!("Nothing to save: copy an area first ({key}, then {key} again)"));
+            return;
+        };
+        let n = self.library.as_ref().map_or(0, |l| l.entries.len());
+        let name = if bp.name.is_empty() || bp.name == "Blueprint" { format!("Blueprint {}", n + 1) } else { bp.name.clone() };
+        if let Some(l) = self.library.as_mut() {
+            l.typing = Some(name);
+        }
+    }
+
+    /// Enter after typing a name: writes the file, then shows it picked.
+    fn library_save(&mut self) {
+        let Some(name) = self.library.as_mut().and_then(|l| l.typing.take()) else { return };
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            return;
+        }
+        let (Some(data), Some((bp, in_hand))) = (self.data_dir.clone(), self.savable().map(|(b, h)| (b.clone(), h))) else { return };
+        let mut bp = bp;
+        bp.name = name.clone();
+        match crate::library::save(&data, &bp) {
+            Ok(path) => {
+                if in_hand {
+                    if let Some(h) = self.held.as_mut() {
+                        h.name = name.clone();
+                    }
+                }
+                self.library_refresh(Some(path.clone()));
+                let file = path.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned());
+                self.say(format!("Saved {name} to the library ({file})"));
+            }
+            Err(e) => self.say(format!("Couldn't save the blueprint ({e})")),
+        }
+    }
+
+    /// Delete on a row: the first press asks, the second removes the file. Files that can't be read
+    /// are left alone (they may be from a newer game, or mid-edit).
+    fn library_delete(&mut self, armed: bool) {
+        let Some(entry) = self.library.as_ref().and_then(|l| l.entries.get(l.pick)).cloned() else { return };
+        if !matches!(entry.content, crate::library::Content::Ok(_)) {
+            let file = entry.path.display();
+            self.say(format!("This file can't be read, so it is left alone: delete {file} yourself if you don't want it"));
+            return;
+        }
+        if !armed {
+            if let Some(l) = self.library.as_mut() {
+                l.armed = true;
+            }
+            self.say(format!("{} again deletes {} for good", self.controls.key(Action::Remove), entry.name));
+            return;
+        }
+        match crate::library::delete(&entry.path) {
+            Ok(()) => {
+                self.library_refresh(None);
+                self.say(format!("Deleted {}", entry.name));
+            }
+            Err(e) => self.say(format!("Couldn't delete {} ({e})", entry.name)),
+        }
+    }
+
+    /// The mouse in the library: a click picks a row and a second click takes it; the wheel scrolls.
+    fn library_mouse(&mut self, m: MouseEvent) {
+        let at = ratatui::layout::Position::new(m.column, m.row);
+        let Some(lib) = self.library.as_mut() else { return };
+        let last = lib.entries.len().saturating_sub(1);
+        match m.kind {
+            MouseEventKind::ScrollUp => {
+                lib.pick = lib.pick.saturating_sub(1);
+                lib.armed = false;
+            }
+            MouseEventKind::ScrollDown => {
+                lib.pick = (lib.pick + 1).min(last);
+                lib.armed = false;
+            }
+            MouseEventKind::Down(MouseButton::Left) if lib.typing.is_none() => {
+                if let Some(&(_, i)) = lib.rows.iter().find(|(r, _)| r.contains(at)) {
+                    let again = lib.pick == i;
+                    lib.pick = i;
+                    lib.armed = false;
+                    if again {
+                        self.library_take();
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Says what unlocks blueprints.
     fn say_blueprints_locked(&mut self) {
         let t = Tech::Blueprints;
@@ -1373,7 +1620,7 @@ impl App {
         }
         let bp = cap.bp;
         let mut msg = format!(
-            "Copied {} part{} ({}x{}, {}) · {} pastes, {} turns",
+            "Copied {} part{} ({}x{}, {}) · {} pastes, {} turns, {} saves it",
             bp.part_count(),
             plural(bp.part_count()),
             bp.w,
@@ -1381,6 +1628,7 @@ impl App {
             money_text(bp.cost()),
             self.controls.key(Action::Place),
             self.controls.key(Action::Rotate),
+            self.controls.key(Action::Library),
         );
         if cap.orphan_tunnels > 0 {
             let n = cap.orphan_tunnels;

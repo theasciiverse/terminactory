@@ -7,6 +7,7 @@ mod blueprints;
 mod hints_line;
 mod history_tab;
 mod keys;
+mod library;
 mod settings_effects;
 mod settings_pane;
 mod sidebar_graph;

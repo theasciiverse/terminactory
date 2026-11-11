@@ -6,6 +6,7 @@ mod content;
 mod controls;
 mod hints;
 mod history;
+mod library;
 mod mail;
 mod saves;
 mod settings;
@@ -150,6 +151,10 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
         (new_world(), Some(new_game_note(!saves::list(&dir).is_empty())))
     };
     let mut app = app::App::new(world);
+    // Blueprints are kept in the data folder, for every save (the demo has no library).
+    if !demo {
+        app.data_dir = Some(dir.clone());
+    }
     if let Some(n) = note {
         app.say(n);
     }

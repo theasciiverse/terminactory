@@ -226,6 +226,27 @@ fn edge_of_the_small_pane_view() {
     }
 }
 
+/// A library with the kinds of row it can show, built in memory.
+fn library_rows(app: &App) -> crate::app::Library {
+    use crate::library::{Content, Entry};
+    let mut kiln_world = World::blank();
+    kiln_world.place(0, 10, 10, Kind::Kiln, crate::sim::Dir::E).unwrap();
+    let kiln = kiln_world.capture(0, (0, 0, 30, 30)).bp;
+    let demo = app.world.capture(0, (0, 0, crate::sim::W - 1, crate::sim::H - 1)).bp;
+    let mut entries = vec![
+        Entry { path: "a.json".into(), name: "Copper smelter row with a very long name".into(), content: Content::Ok(demo) },
+        Entry { path: "b.json".into(), name: "Big kiln hall".into(), content: Content::Ok(kiln.clone()) },
+        Entry { path: "c.json".into(), name: "junk".into(), content: Content::Broken("not JSON".into()) },
+        Entry { path: "d.json".into(), name: "From tomorrow".into(), content: Content::Newer(9) },
+    ];
+    for i in 0..20 {
+        entries.push(Entry { path: format!("e{i}.json").into(), name: format!("Extra {i}"), content: Content::Ok(kiln.clone()) });
+    }
+    let mut lib = crate::app::Library::new(entries);
+    lib.pick = 1;
+    lib
+}
+
 #[test]
 fn overlays_fit_every_pane_size() {
     // The last two are a zoomed-out terminal (Cmd -): far more cells than a normal window.
@@ -241,7 +262,7 @@ fn overlays_fit_every_pane_size() {
             .flat_map(|x| (0..crate::sim::H).map(move |y| (x, y)))
             .find(|(x, y)| app.world.tile(0, *x, *y).is_none() && app.world.floors[0].dug[idx(*x, *y)])
             .unwrap();
-        for scene in 0..21 {
+        for scene in 0..22 {
             app.settings.telegram_style = match scene {
                 13 => crate::settings::TelegramStyle::Note,
                 14 => crate::settings::TelegramStyle::Ticker,
@@ -293,6 +314,9 @@ fn overlays_fit_every_pane_size() {
                 _ => None,
             };
             app.confirm_area = (scene == 20).then_some((0, whole, 50.0));
+            // Scene 21 is the blueprint library: a readable one, one with a locked part, a long name, a
+            // file that can't be read and one from a newer game, and enough more to scroll.
+            app.library = (scene == 21).then(|| library_rows(&app));
             app.mail_open = scene == 5;
             app.log_open = scene == 6;
             app.away = (scene == 7).then(|| "You were away for 1h 2m. Your factory kept going:\n\n  +$5\n  +1.0 research".to_string());
@@ -323,6 +347,9 @@ fn overlays_fit_every_pane_size() {
                 } else {
                     assert!(t.contains("AREA") && t.contains("HERE") && t.contains("Esc cancel"), "area scene {scene} at {w}x{h}: {t}");
                 }
+            }
+            if scene == 21 && app.map_area.width >= 14 && app.map_area.height >= 4 {
+                assert!(t.contains("Library") && t.contains("Esc"), "library at {w}x{h}: {t}");
             }
             if scene == 15 {
                 // Never: the full view wherever it fits (46x12 and up), else the small pane.

@@ -96,6 +96,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if app.settings_open {
         settings::draw_settings(f, app.map_area, app);
     }
+    if app.library.is_some() {
+        library::draw_library(f, app.map_area, app);
+    }
     if app.tree {
         draw_tree(f, f.area(), app);
     }
@@ -3593,6 +3596,7 @@ CONTROLS
 
 mod graph;
 mod history;
+mod library;
 mod maillog;
 mod settings;
 #[cfg(test)]
