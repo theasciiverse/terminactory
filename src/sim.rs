@@ -2599,6 +2599,21 @@ impl World {
         }
     }
 
+    /// True when nothing at all stands along the building's output edge: no belt and no
+    /// machine to take what it makes. (A full building with something there is just backed up.)
+    pub fn front_open(&self, f: usize, a: usize) -> bool {
+        let Some(b) = self.floors[f].tiles[a].as_ref() else {
+            return false;
+        };
+        let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
+        let dims = b.dims();
+        let edge = Port::Front.edge(b.dir);
+        (0..edge_len(dims, edge)).all(|j| {
+            let (tx, ty) = front_tile(ax, ay, dims, edge, j);
+            !in_bounds(tx, ty) || self.floors[f].owner[idx(tx, ty)].is_none()
+        })
+    }
+
     /// How many buildings are idle across every floor, and the most common reason.
     pub fn idle_summary(&self) -> (usize, Option<&'static str>) {
         let mut counts: Vec<(&'static str, usize)> = Vec::new();

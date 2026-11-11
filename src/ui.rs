@@ -9,6 +9,7 @@ use crate::app::{slots, tree_rows, App, Entry, StatsHit, BOOK_PARTS};
 use crate::controls::Action;
 use crate::settings::TelegramStyle;
 use crate::sim::*;
+use std::time::Instant;
 
 const SIDE_W: u16 = 36;
 
@@ -519,9 +520,10 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     let c = &app.controls;
     let note = if app.settings.telegram_style == TelegramStyle::Ticker { None } else { mail_note(app, area.width) };
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
-    let fresh = app.msg_at.elapsed().as_secs() < 6;
     let spans_width = |s: &[Span<'static>]| s.iter().map(|s| s.content.chars().count()).sum::<usize>();
-    let line = if let Some(cat) = app.menu {
+    let slot = status_slot(app, Instant::now());
+    let line = if slot == Slot::Menu {
+        let cat = app.menu.unwrap_or(Category::Create);
         // The part list or the picked part always shows: a message gets what is left.
         let tightest = match app.selected {
             Some(k) => spans_width(&part_spans(app, cat, k, 0)),
@@ -534,30 +536,101 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
         };
         spans.extend(msg);
         Line::from(spans)
-    } else if fresh {
-        Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow))
     } else {
-        let (x, y) = app.cursor;
-        let here = inspect_short(&app.world, app.floor, x, y);
-        if here.first().is_some_and(|h| h != "Empty ground") {
-            Line::raw(fit(&format!(" {}", here.iter().take(3).cloned().collect::<Vec<_>>().join(" · ")), avail))
-        } else {
-            let (help, tree, book, stats) = (c.key(Action::Help), c.key(Action::Tree), c.key(Action::Book), c.key(Action::Stats));
-            let hints = [
-                (0, format!("{help} help")),
-                (1, "1-4 build".to_string()),
-                (2, format!("{tree} research")),
-                (3, format!("{book} recipes")),
-                (4, format!("{stats} production")),
-                (5, "Ctrl+C quit".to_string()),
-            ];
-            let refs: Vec<(u8, &str)> = hints.iter().map(|h| (h.0, h.1.as_str())).collect();
-            let mut spans = vec![Span::styled(" ", dim)];
-            spans.extend(footer_line(avail.saturating_sub(1) as u16, &refs, None).spans);
-            Line::from(spans)
+        match slot {
+            Slot::Message => Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow)),
+            Slot::Here => {
+                let (x, y) = app.cursor;
+                let here = inspect_short(&app.world, app.floor, x, y);
+                Line::raw(fit(&format!(" {}", here.iter().take(3).cloned().collect::<Vec<_>>().join(" · ")), avail))
+            }
+            Slot::Hint(t) | Slot::Aside(t) => hint_line(&t, avail),
+            _ => {
+                let (help, tree, book, stats) = (c.key(Action::Help), c.key(Action::Tree), c.key(Action::Book), c.key(Action::Stats));
+                let hints = [
+                    (0, format!("{help} help")),
+                    (1, "1-4 build".to_string()),
+                    (2, format!("{tree} research")),
+                    (3, format!("{book} recipes")),
+                    (4, format!("{stats} production")),
+                    (5, "Ctrl+C quit".to_string()),
+                ];
+                let refs: Vec<(u8, &str)> = hints.iter().map(|h| (h.0, h.1.as_str())).collect();
+                let mut spans = vec![Span::styled(" ", dim)];
+                spans.extend(footer_line(avail.saturating_sub(1) as u16, &refs, None).spans);
+                Line::from(spans)
+            }
         }
     };
     line_with_note(f, area, line, note);
+}
+
+/// What holds the status line's one slot, most important first. A hint or aside never takes
+/// the place of anything above it, and the key list is what shows when none of them has it.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Slot {
+    /// The small pane's open build menu (a message shows beside it).
+    Menu,
+    /// A message from something the player did (6 seconds).
+    Message,
+    /// A stuck-machine reason or other what's-under-the-cursor text: in the small pane, whatever
+    /// the cursor is on (the stuck reason comes first in it); in the full view, a machine that is
+    /// stuck (the sidebar says why, and the slot stays the key list).
+    Here,
+    /// A quiet diagnosis (plan 06).
+    Hint(String),
+    /// A company's remark, large layout only, rare (plan 08).
+    Aside(String),
+    /// Nothing else to say: the key list.
+    Keys,
+}
+
+fn message_fresh(app: &App, now: Instant) -> bool {
+    now.saturating_duration_since(app.msg_at).as_secs() < 6
+}
+
+/// Whether the cursor is on something the status line would describe, and in the full view only
+/// when that is a machine that has stopped.
+fn cursor_holds_slot(app: &App) -> bool {
+    let (x, y) = app.cursor;
+    let w = &app.world;
+    let Some(a) = w.floors[app.floor].anchor_at(x, y) else {
+        // Not a building: the small pane still says "Solid rock" or "Open air" there.
+        return app.compact_now && !w.floors[app.floor].dug[idx(x, y)];
+    };
+    app.compact_now || w.idle_reason(app.floor, a).is_some()
+}
+
+/// True when something the player did or is looking at holds the slot, so a hint or aside
+/// must not start. Cheap: the main loop asks every frame.
+pub fn slot_taken(app: &App, now: Instant) -> bool {
+    (app.compact_now && app.menu.is_some()) || message_fresh(app, now) || cursor_holds_slot(app)
+}
+
+/// The one rule for the status line's slot: messages from actions first, then a stuck-machine
+/// reason (what is under the cursor), then hints, then asides, then the key list.
+pub fn status_slot(app: &App, now: Instant) -> Slot {
+    if app.compact_now && app.menu.is_some() {
+        Slot::Menu
+    } else if message_fresh(app, now) {
+        Slot::Message
+    } else if cursor_holds_slot(app) {
+        Slot::Here
+    } else {
+        match app.hints.current.as_ref() {
+            Some(c) => match (c.what, app.hints.line(!app.compact_now)) {
+                (crate::hints::What::Hint(_), Some(t)) => Slot::Hint(t.to_string()),
+                (crate::hints::What::Aside(_), Some(t)) => Slot::Aside(t.to_string()),
+                _ => Slot::Keys,
+            },
+            None => Slot::Keys,
+        }
+    }
+}
+
+/// A hint or aside as a dim line: quiet next to the yellow messages.
+fn hint_line(text: &str, avail: usize) -> Line<'static> {
+    Line::styled(fit(&format!(" {text}"), avail), Style::new().fg(Color::Gray).add_modifier(Modifier::ITALIC))
 }
 
 /// "2 mail · n opens" for the top line, only in the Ticker telegram style (the other styles
@@ -1670,7 +1743,6 @@ fn item_counts(items: impl Iterator<Item = Item>) -> Vec<String> {
 }
 
 fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
-    let fresh = app.msg_at.elapsed().as_secs() < 6;
     // The Note style shows the note always; the sidebar style only while the tree or book covers the sidebar.
     let note = match app.settings.telegram_style {
         TelegramStyle::Note => mail_note(app, area.width),
@@ -1678,10 +1750,11 @@ fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
         _ => None,
     };
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
-    let line = if fresh {
-        Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow))
-    } else {
-        {
+    // The sidebar already says why a machine under the cursor is stuck, so that slot shows the keys.
+    let line = match status_slot(app, Instant::now()) {
+        Slot::Message => Line::styled(fit(&format!(" {}", app.msg), avail), Style::new().fg(Color::Yellow)),
+        Slot::Hint(t) | Slot::Aside(t) => hint_line(&t, avail),
+        _ => {
             let c = &app.controls;
             Line::styled(
                 format!(

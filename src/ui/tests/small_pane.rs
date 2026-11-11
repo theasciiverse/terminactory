@@ -235,7 +235,36 @@ fn overlays_fit_every_pane_size() {
         app.world.mail.push_back(telegram());
         // The History tab needs something to draw, so it gets four months of earnings.
         super::history_tab::fill(&mut app);
-        for scene in 0..11 {
+        // Scenes 11 to 16 are states rather than overlays: a hint and an aside on the status line,
+        // the Note and Ticker telegram styles, and the small-pane view forced Never and Always.
+        let empty = (0..crate::sim::W)
+            .flat_map(|x| (0..crate::sim::H).map(move |y| (x, y)))
+            .find(|(x, y)| app.world.tile(0, *x, *y).is_none() && app.world.floors[0].dug[idx(*x, *y)])
+            .unwrap();
+        for scene in 0..17 {
+            app.settings.telegram_style = match scene {
+                13 => crate::settings::TelegramStyle::Note,
+                14 => crate::settings::TelegramStyle::Ticker,
+                _ => crate::settings::TelegramStyle::Sidebar,
+            };
+            app.settings.small_view = match scene {
+                15 => crate::settings::SmallView::Never,
+                16 => crate::settings::SmallView::Always,
+                _ => crate::settings::SmallView::Auto,
+            };
+            app.hints.current = None;
+            app.cursor = empty;
+            app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+            let now = std::time::Instant::now();
+            if scene == 11 {
+                app.hints.force(
+                    crate::hints::What::Hint(crate::hints::Hint::OutOfCoal),
+                    "Your drill is out of coal: put a drill on coal next to it",
+                    now,
+                );
+            } else if scene == 12 {
+                app.hints.force(crate::hints::What::Aside(crate::hints::Aside::A3), "Hollowmere: Good coal. Dad would have wept.", now);
+            }
             app.tree = scene == 0;
             app.book = scene == 1 || scene == 2;
             if scene == 2 {
@@ -260,6 +289,26 @@ fn overlays_fit_every_pane_size() {
             assert!(lines(&t).len() == h as usize);
             if scene == 10 {
                 assert!(t.contains("Settings") && t.contains("Sidebar graph") && t.contains("Esc close"), "settings at {w}x{h}: {t}");
+            }
+            let last = lines(&t).last().unwrap().to_string();
+            let top = lines(&t)[0].to_string();
+            assert!(lines(&t).iter().all(|l| l.chars().count() <= w as usize), "scene {scene} at {w}x{h}");
+            match scene {
+                // The hint is on the bottom line, cut to fit beside the corner note; the aside only in the full view.
+                11 => assert!(last.contains("Your drill"), "hint at {w}x{h}: {last}"),
+                12 => assert_eq!(last.contains("Hollowmere"), !app.compact_now, "aside at {w}x{h}: {last}"),
+                // Note: the note shows in both views, and nothing in the top line.
+                13 => assert!(last.contains("to view") || last.contains("mail"), "note at {w}x{h}: {last}"),
+                // Ticker: the count in the top line, no note.
+                14 => assert!(top.contains("mail") && !last.contains("to view"), "ticker at {w}x{h}: {t}"),
+                _ => {}
+            }
+            if scene == 15 {
+                // Never: the full view wherever it fits (46x12 and up), else the small pane.
+                assert_eq!(app.compact_now, w < crate::ui::FULL_MIN_W || h < crate::ui::FULL_MIN_H, "Never at {w}x{h}");
+            }
+            if scene == 16 {
+                assert!(app.compact_now, "Always at {w}x{h}");
             }
             if matches!(scene, 0 | 1 | 2 | 3) {
                 assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));

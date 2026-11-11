@@ -2,6 +2,7 @@ use super::*;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
+mod hints_line;
 mod history_tab;
 mod settings_effects;
 mod settings_pane;

@@ -4,6 +4,7 @@
 mod app;
 mod content;
 mod controls;
+mod hints;
 mod history;
 mod mail;
 mod saves;
@@ -291,6 +292,7 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
             }
         }
 
+        app.tick_hints(Instant::now());
         if last_draw.elapsed() >= frame {
             terminal.draw(|f| ui::draw(f, app))?;
             last_draw = Instant::now();

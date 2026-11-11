@@ -182,6 +182,8 @@ pub struct App {
     pub clock: Option<(u64, i64)>,
     /// How far the help screen is scrolled (it's taller than a small pane).
     pub help_scroll: u16,
+    /// Hints and asides for the idle status line (session only).
+    pub hints: crate::hints::Hints,
     /// The settings pane is open over the map (the game keeps running), and the row picked.
     pub settings_open: bool,
     pub settings_pick: usize,
@@ -256,6 +258,7 @@ impl App {
             mail_area: Rect::default(),
             graph_areas: Vec::new(),
             help_scroll: 0,
+            hints: crate::hints::Hints::new(Instant::now()),
             settings_open: false,
             settings_pick: 0,
             settings: Settings::default(),
@@ -271,6 +274,14 @@ impl App {
             compact_now: false,
             map_area: Rect::default(),
         }
+    }
+
+    /// Lets the hints and asides move on. Called every loop with the current time (tests pass
+    /// their own). A new one only starts when nothing of the player's holds the status slot.
+    pub fn tick_hints(&mut self, now: Instant) {
+        let free = !crate::ui::slot_taken(self, now);
+        let on = self.settings.hints == crate::settings::OnOff::On;
+        self.hints.update(&self.world, &self.controls, now, on, !self.compact_now, free);
     }
 
     pub fn say(&mut self, s: impl Into<String>) {
