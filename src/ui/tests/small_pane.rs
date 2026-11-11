@@ -232,7 +232,9 @@ fn overlays_fit_every_pane_size() {
         let mut app = demo();
         app.mail = Some(telegram());
         app.world.mail.push_back(telegram());
-        for scene in 0..8 {
+        // The History tab needs something to draw, so it gets four months of earnings.
+        super::history_tab::fill(&mut app);
+        for scene in 0..10 {
             app.tree = scene == 0;
             app.book = scene == 1 || scene == 2;
             if scene == 2 {
@@ -241,7 +243,14 @@ fn overlays_fit_every_pane_size() {
                 app.book_go(Entry::Item(Item::CopperOre));
             }
             app.help = scene == 3;
-            app.stats = scene == 4;
+            app.stats = matches!(scene, 4 | 8 | 9);
+            app.stats_history = matches!(scene, 8 | 9);
+            // Scene 9 has no earnings at all: the empty state.
+            if scene == 9 {
+                app.world.history = Default::default();
+            } else if app.world.history.is_empty() {
+                super::history_tab::fill(&mut app);
+            }
             app.mail_open = scene == 5;
             app.log_open = scene == 6;
             app.away = (scene == 7).then(|| "You were away for 1h 2m. Your factory kept going:\n\n  +$5\n  +1.0 research".to_string());

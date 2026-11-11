@@ -178,6 +178,7 @@ impl History {
     }
 
     /// True until anything has been recorded.
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.days.is_empty()
     }

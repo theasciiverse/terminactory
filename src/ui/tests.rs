@@ -2,6 +2,7 @@ use super::*;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
+mod history_tab;
 mod small_pane;
 
 fn render(app: &mut App, w: u16, h: u16) -> Buffer {
@@ -315,7 +316,7 @@ fn production_panel() {
     assert!(app.stats);
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("Production · last minute") && t.contains("research/min"), "{t}");
+    assert!(t.contains(" Production ") && t.contains(" History ") && t.contains("last minute") && t.contains("research/min"), "{t}");
     assert!(t.contains("copper plate") && t.contains("next sale") && t.contains("Factory"), "beside the sidebar: {t}");
     std::fs::write("target/snapshot-production.html", to_html(&buf)).unwrap();
     // Small pane: fewer columns, still readable.

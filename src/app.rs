@@ -6,7 +6,21 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, M
 use ratatui::layout::Rect;
 
 use crate::controls::{Action, Controls};
+use crate::history::Range;
 use crate::sim::{in_bounds, Category, Dir, Kind, Tech, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W};
+
+/// Something in the production panel a click can reach.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StatsHit {
+    /// A tab: true for History.
+    Tab(bool),
+    Range(Range),
+    /// A heatmap day, this many days back from today.
+    Day(u16),
+}
+
+/// The most days back the History tab can pick (53 weeks, today included).
+pub const HIST_BACK: u16 = crate::history::DAYS as u16 - 1;
 
 /// The numbered slots in a build category. A slot can hold several kinds of the
 /// same part (copper drill, basic drill...); pressing its number again switches between them.
@@ -153,6 +167,16 @@ pub struct App {
     /// The production panel is open (over the map; the game keeps running), and its scroll.
     pub stats: bool,
     pub stats_scroll: u16,
+    /// The panel's History tab is showing (Tab switches), with its chart range, whether the chart
+    /// shows research instead of money, and the heatmap's picked day (how many days back from today).
+    pub stats_history: bool,
+    pub hist_range: Range,
+    pub hist_research: bool,
+    pub hist_day: u16,
+    /// What a click does where the panel was last drawn.
+    pub stats_hits: Vec<(Rect, StatsHit)>,
+    /// A fixed (seconds since 1970, zone offset) for the History tab, so tests can draw a known date.
+    pub clock: Option<(u64, i64)>,
     /// How far the help screen is scrolled (it's taller than a small pane).
     pub help_scroll: u16,
     /// The kind last picked in each slot, so a slot's number brings it back.
@@ -197,6 +221,12 @@ impl App {
             tree_pick: 0,
             stats: false,
             stats_scroll: 0,
+            stats_history: false,
+            hist_range: Range::Hours,
+            hist_research: false,
+            hist_day: 0,
+            stats_hits: Vec::new(),
+            clock: None,
             tree_rows: Vec::new(),
             book: false,
             book_entry: Entry::Item(crate::sim::Item::CopperOre),
@@ -352,6 +382,8 @@ impl App {
         if self.stats && !self.book {
             // Arrows scroll it, o or Esc closes it; any other key closes it and goes on to the game.
             match (k.code, action) {
+                (KeyCode::Tab | KeyCode::BackTab, _) => self.stats_tab(!self.stats_history),
+                _ if self.stats_history && self.history_key(k.code, action, shift) => {}
                 (KeyCode::PageUp, _) => self.stats_scroll = self.stats_scroll.saturating_sub(5),
                 (KeyCode::PageDown, _) => self.stats_scroll += 5,
                 (_, Some(Action::MoveUp)) if !shift => self.stats_scroll = self.stats_scroll.saturating_sub(1),
@@ -408,6 +440,7 @@ impl App {
             Action::Stats => {
                 self.stats = true;
                 self.stats_scroll = 0;
+                self.stats_history = false;
             }
             Action::Book => self.open_book(),
             Action::MailLog => {
@@ -578,6 +611,39 @@ impl App {
     }
 
     /// Switches between the items tab and the machines tab.
+    /// Switches the production panel between its Production and History tabs.
+    pub fn stats_tab(&mut self, history: bool) {
+        self.stats_history = history;
+        self.stats_scroll = 0;
+    }
+
+    /// Keys on the History tab: `[` `]` or 1 to 4 pick the chart's range, r swaps money and
+    /// research, the arrows pick a day on the heatmap. True when the key was used.
+    fn history_key(&mut self, code: KeyCode, action: Option<Action>, shift: bool) -> bool {
+        match code {
+            KeyCode::Char('[') => self.hist_range = self.hist_range.prev(),
+            KeyCode::Char(']') => self.hist_range = self.hist_range.next(),
+            KeyCode::Char(c @ '1'..='4') => self.hist_range = Range::ALL[c as usize - '1' as usize],
+            KeyCode::Char('r') => self.hist_research = !self.hist_research,
+            _ => {
+                // Left and right step a week (a column), up and down a day; the heatmap reads
+                // oldest first, so up and left go back in time.
+                let day = self.hist_day;
+                self.hist_day = match action {
+                    Some(Action::MoveLeft) if !shift => (day + 7).min(HIST_BACK),
+                    Some(Action::MoveRight) if !shift => day.saturating_sub(7),
+                    Some(Action::MoveUp) if !shift => (day + 1).min(HIST_BACK),
+                    Some(Action::MoveDown) if !shift => day.saturating_sub(1),
+                    _ => return false,
+                };
+                // The heatmap is the lower part of the page: bring it into view.
+                self.stats_scroll = u16::MAX;
+                return true;
+            }
+        }
+        true
+    }
+
     fn book_switch_tab(&mut self) {
         let parts = !self.book_entry.is_part();
         let list = Entry::list(&self.book_query, parts);
@@ -763,7 +829,12 @@ impl App {
             match m.kind {
                 MouseEventKind::ScrollUp => self.stats_scroll = self.stats_scroll.saturating_sub(1),
                 MouseEventKind::ScrollDown => self.stats_scroll += 1,
-                MouseEventKind::Down(_) => self.stats = false,
+                MouseEventKind::Down(_) => match self.stats_hits.iter().find(|(r, _)| r.contains((m.column, m.row).into())) {
+                    Some((_, StatsHit::Tab(h))) => self.stats_tab(*h),
+                    Some((_, StatsHit::Range(r))) => self.hist_range = *r,
+                    Some((_, StatsHit::Day(d))) => self.hist_day = *d,
+                    None => self.stats = false,
+                },
                 _ => {}
             }
             return;

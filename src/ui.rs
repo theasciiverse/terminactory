@@ -5,7 +5,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 
-use crate::app::{slots, tree_rows, App, Entry, BOOK_PARTS};
+use crate::app::{slots, tree_rows, App, Entry, StatsHit, BOOK_PARTS};
 use crate::controls::Action;
 use crate::sim::*;
 
@@ -30,6 +30,8 @@ const OFF: Color = Color::Indexed(243);
 const INK: Color = Color::Indexed(16);
 const PAPER: Color = Color::Indexed(231);
 const KEY_ITEM: Color = Color::Indexed(220);
+/// Research, wherever it's shown: a sky blue that reads on dark and light terminals alike.
+const RESEARCH: Color = Color::Indexed(75);
 
 /// Below this size the game switches to the small-pane view on its own.
 pub const SMALL_W: u16 = 120;
@@ -1748,20 +1750,87 @@ fn rate(v: f64) -> String {
 /// The production panel: what each item did over the last minute. It sits over the map
 /// and the game keeps running underneath.
 fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
-    let w = &app.world;
-    let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let dim = Style::new().fg(Color::DarkGray);
     f.render_widget(Clear, area);
-    let (mut rows, secs) = w.flow();
-    let title = if secs >= 60 || secs == 0 { " Production · last minute ".to_string() } else { format!(" Production · last {secs} s ") };
-    // No border of its own: it sits inside the map's.
-    let block = Block::new().title(title).title_style(head);
+    app.stats_hits.clear();
+    let (mut rows, secs) = app.world.flow();
+    // No border of its own: it sits inside the map's. The tabs are its title.
+    let mut title: Vec<Span> = Vec::new();
+    let mut x = area.x;
+    for (name, history) in [("Production", false), ("History", true)] {
+        let label = format!(" {name} ");
+        let st = if history == app.stats_history {
+            Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(Color::Gray)
+        };
+        let w = label.chars().count() as u16;
+        app.stats_hits.push((Rect::new(x, area.y, w, 1), StatsHit::Tab(history)));
+        x += w + 1;
+        title.push(Span::styled(label, st));
+        title.push(Span::raw(" "));
+    }
+    if !app.stats_history {
+        title.push(Span::styled(if secs >= 60 || secs == 0 { "· last minute".to_string() } else { format!("· last {secs} s") }, dim));
+    }
+    let block = Block::new().title(Line::from(title));
     let inner = block.inner(area);
     f.render_widget(block, area);
     if inner.width < 10 || inner.height < 3 {
         return;
     }
     let width = inner.width.saturating_sub(2) as usize;
+    let body_h = inner.height.saturating_sub(1);
+    let body = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), body_h);
+    let mut hits = Vec::new();
+    let lines: Vec<Line> = if app.stats_history {
+        let page = history::page(app, width, body_h as usize);
+        hits = page.hits;
+        page.lines
+    } else {
+        production_lines(&app.world, &mut rows, width)
+    };
+    let max_scroll = (lines.len() as u16).saturating_sub(body_h);
+    app.stats_scroll = app.stats_scroll.min(max_scroll);
+    for (row, col, w, hit) in hits {
+        let y = (row as u16 + body.y).checked_sub(app.stats_scroll);
+        if let Some(y) = y.filter(|y| *y >= body.y && *y < body.y + body_h) {
+            app.stats_hits.push((Rect::new(body.x + col as u16, y, w as u16, 1), hit));
+        }
+    }
+    // The Production text wraps; the History page is laid out to the width and never does.
+    let text = Paragraph::new(lines).scroll((app.stats_scroll, 0));
+    f.render_widget(if app.stats_history { text } else { text.wrap(Wrap { trim: false }) }, body);
+    let foot = Rect::new(inner.x + 1, inner.y + inner.height - 1, inner.width.saturating_sub(2), 1);
+    let close = format!("{}/Esc close", app.controls.key(Action::Stats));
+    let more = match (app.stats_scroll > 0, app.stats_scroll < max_scroll) {
+        (true, true) => Some("more ▲▼"),
+        (true, false) => Some("more ▲"),
+        (false, true) => Some("more ▼"),
+        _ => None,
+    };
+    let line = if app.stats_history {
+        let narrow = foot.width < 44;
+        let hints = [
+            (0, if narrow { "Tab switch" } else { "Tab production" }),
+            (0, "1-4 range"),
+            (0, if narrow { "Esc close" } else { close.as_str() }),
+            (1, "r research/money"),
+            (2, "←→↑↓ pick a day"),
+            (3, "PgUp/PgDn scroll"),
+            (4, "the game keeps running"),
+        ];
+        footer_line(foot.width, &hints, more)
+    } else {
+        let hints = [(1, "↑↓ scroll"), (0, close.as_str()), (1, "Tab history"), (2, "the game keeps running")];
+        footer_line(foot.width, &hints, more)
+    };
+    f.render_widget(Paragraph::new(line), foot);
+}
+
+/// The Production tab's text: the headline and a table of what each item did over the last minute.
+fn production_lines(w: &World, rows: &mut [Flow], width: usize) -> Vec<Line<'static>> {
+    let dim = Style::new().fg(Color::DarkGray);
     let money: f64 = rows.iter().map(|r| r.money).sum();
     let research: f64 = rows.iter().map(|r| r.research).sum();
     let mut lines: Vec<Line> = vec![Line::from(vec![
@@ -1789,7 +1858,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
         header.extend(cols.iter().map(|(n, cw)| Span::styled(format!("{n:>cw$}"), dim)));
         lines.push(Line::from(header));
         rows.sort_by(|a, b| b.research.total_cmp(&a.research).then(b.made.total_cmp(&a.made)));
-        for r in &rows {
+        for r in rows.iter() {
             let (ch, st) = item_cell(r.item, GROUND);
             let name: String = r.item.name().chars().take(name_w).collect();
             let mut spans = vec![Span::styled(format!("{ch}"), st), Span::raw(format!("  {name:<name_w$}"))];
@@ -1832,21 +1901,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
             lines.push(Line::styled("Waste costs money to sell (shown negative) and earns no research.", dim));
         }
     }
-    let body_h = inner.height.saturating_sub(1);
-    let max_scroll = (lines.len() as u16).saturating_sub(body_h);
-    app.stats_scroll = app.stats_scroll.min(max_scroll);
-    let body = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), body_h);
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).scroll((app.stats_scroll, 0)), body);
-    let foot = Rect::new(inner.x + 1, inner.y + inner.height - 1, inner.width.saturating_sub(2), 1);
-    let close = format!("{}/Esc close", app.controls.key(Action::Stats));
-    let more = match (app.stats_scroll > 0, app.stats_scroll < max_scroll) {
-        (true, true) => Some("more ▲▼"),
-        (true, false) => Some("more ▲"),
-        (false, true) => Some("more ▼"),
-        _ => None,
-    };
-    let hints = [(1, "↑↓ scroll"), (0, close.as_str()), (2, "the game keeps running")];
-    f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
+    lines
 }
 
 /// A whole number with thousands marks: 17,687.
@@ -3055,6 +3110,7 @@ CONTROLS
     f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
 }
 
+mod history;
 mod maillog;
 #[cfg(test)]
 mod tests;
