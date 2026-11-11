@@ -974,6 +974,38 @@
     ]
   },
   "gifts": "int",
+  "history": {
+    "days": {
+      "len": 1,
+      "of": [
+        {
+          "money": "float",
+          "research": "float",
+          "t": "int"
+        }
+      ]
+    },
+    "hours": {
+      "len": 1,
+      "of": [
+        {
+          "money": "float",
+          "research": "float",
+          "t": "int"
+        }
+      ]
+    },
+    "minutes": {
+      "len": 1,
+      "of": [
+        {
+          "money": "float",
+          "research": "float",
+          "t": "int"
+        }
+      ]
+    }
+  },
   "last_gift": "int",
   "lifts": {
     "len": 1,

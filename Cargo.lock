@@ -498,6 +498,7 @@ dependencies = [
 name = "terminactory"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "ratatui",
  "serde",
  "serde_json",

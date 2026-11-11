@@ -12,6 +12,7 @@ serde_json = { version = "1", features = ["float_roundtrip"] }
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"
+libc = "0.2"
 
 [profile.release]
 opt-level = 3

@@ -1293,6 +1293,9 @@ pub struct World {
     /// The last minute of production, one sample a second, for the production panel.
     #[serde(skip)]
     pub flow_samples: VecDeque<FlowSample>,
+    /// Money and research earned per minute, hour and day, for the History tab.
+    #[serde(default)]
+    pub history: crate::history::History,
     /// Agent messages waiting to be read.
     #[serde(default)]
     pub mail: crate::mail::Queue,
@@ -1394,6 +1397,7 @@ impl World {
             sale_rate: Vec::new(),
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
+            history: Default::default(),
             mail: VecDeque::new(),
             log: VecDeque::new(),
             mail_seq: 0,
@@ -1425,6 +1429,7 @@ impl World {
             sale_rate: Vec::new(),
             sale_samples: VecDeque::new(),
             flow_samples: VecDeque::new(),
+            history: Default::default(),
             mail: VecDeque::new(),
             log: VecDeque::new(),
             mail_seq: 0,
@@ -2236,7 +2241,16 @@ impl World {
         self.check_discoveries();
         if self.tick.is_multiple_of(TPS) {
             self.sample_earnings();
+            let now = now_secs();
+            self.sample_history(now, crate::history::local_offset(now));
         }
+    }
+
+    /// Once a second: adds what was earned since the last sample to the history. Company
+    /// deliveries aren't earnings, so they're left out (the offline rate leaves them out too).
+    pub fn sample_history(&mut self, now: u64, off: i64) {
+        let total = (self.econ.earned_money - self.gifted, self.econ.earned_research);
+        self.history.record(now, off, total);
     }
 
     /// Once a second: remember lifetime earnings, and work out the recent rate.
@@ -2335,6 +2349,7 @@ impl World {
         self.econ.research += r;
         self.econ.earned_money += m;
         self.econ.earned_research += r;
+        self.history.record_offline(now, crate::history::local_offset(now), m, r);
         Some((away, m, r))
     }
 

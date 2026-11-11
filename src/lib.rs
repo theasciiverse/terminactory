@@ -4,6 +4,7 @@
 mod app;
 mod content;
 mod controls;
+mod history;
 mod mail;
 mod saves;
 mod sim;

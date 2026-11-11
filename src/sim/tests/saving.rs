@@ -141,6 +141,9 @@ fn everything() -> World {
     w.lifts[0].load.push_back(Item::Coal);
     w.receive(crate::mail::parse("from: tests\nevent: finished\nhello", 0), 1_000);
     w.saved_at = 1_000;
+    w.sample_history(1_000, 0);
+    w.econ.earned_money += 5.0;
+    w.sample_history(1_001, 0);
     w
 }
 
@@ -164,4 +167,87 @@ fn save_format_matches_the_golden_shape() {
         old == now,
         "the save format changed while SAVE_VERSION is {version}. If that is on purpose, bump SAVE_VERSION and run: UPDATE_GOLDEN=1 cargo test save_format"
     );
+}
+
+const DAY0: u64 = 1_794_398_400; // 2026-11-11 12:00 UTC
+
+fn history_days(w: &World, now: u64) -> f64 {
+    w.history.series(crate::history::Range::Days, now, 0).iter().map(|p| p.money).sum()
+}
+
+#[test]
+fn company_deliveries_are_left_out_of_the_history() {
+    let mut w = World::blank();
+    w.sample_history(DAY0, 0);
+    w.receive(crate::mail::parse("from: tests\nevent: finished\nhello", 0), DAY0);
+    assert!(w.gifted > 0.0, "a delivery came with it");
+    w.sample_history(DAY0 + 1, 0);
+    assert_eq!(history_days(&w, DAY0 + 1), 0.0);
+    // Real earnings still count, whatever the delivery did to the lifetime total.
+    w.econ.earned_money += 12.0;
+    w.sample_history(DAY0 + 2, 0);
+    assert_eq!(history_days(&w, DAY0 + 2), 12.0);
+    // A delivery in the same second as a sale doesn't hide it, or add to it.
+    w.econ.earned_money += 3.0;
+    w.gifted += 40.0;
+    w.econ.earned_money += 40.0;
+    w.sample_history(DAY0 + 3, 0);
+    assert_eq!(history_days(&w, DAY0 + 3), 15.0);
+}
+
+#[test]
+fn selling_shows_up_in_the_history() {
+    let mut w = World::blank();
+    w.sample_history(DAY0, 0);
+    w.econ.sell(Item::CopperPlate, SellMode::Money);
+    w.econ.sell(Item::CopperPlate, SellMode::Research);
+    w.sample_history(DAY0 + 1, 0);
+    let today = *w.history.series(crate::history::Range::Days, DAY0 + 1, 0).last().unwrap();
+    assert_eq!(today.money, Item::CopperPlate.price());
+    assert!(today.research > 0.0);
+}
+
+#[test]
+fn offline_earnings_go_in_the_history_when_applied() {
+    let mut w = World::new();
+    w.rate = (2.0, 0.0);
+    w.rate_long = (2.0, 0.0);
+    w.saved_at = DAY0 - 3600;
+    let (_, m, _) = w.apply_offline(DAY0).unwrap();
+    assert_eq!(m, 7200.0);
+    // (It is applied on the local clock, whatever zone the machine is in.)
+    let off = crate::history::local_offset(DAY0);
+    let at = |r| w.history.series(r, DAY0, off);
+    assert_eq!(at(crate::history::Range::Days).iter().map(|p| p.money).sum::<f64>(), 7200.0);
+    assert_eq!(at(crate::history::Range::Hours)[47].money, 7200.0);
+    assert_eq!(at(crate::history::Range::Minutes)[59].money, 0.0);
+}
+
+#[test]
+fn history_survives_a_save_and_load() {
+    let data = temp("history");
+    let path = crate::saves::path_of(&data, "save1");
+    let mut w = everything();
+    w.save(&path).unwrap();
+    let back = World::load(&path).unwrap();
+    assert_eq!((&back.history.minutes, &back.history.hours, &back.history.days), (&w.history.minutes, &w.history.hours, &w.history.days));
+    assert_eq!(history_days(&back, 1_001), 5.0);
+    assert!(!back.history.is_empty());
+    let _ = std::fs::remove_dir_all(&data);
+}
+
+#[test]
+fn a_version_4_save_without_history_still_loads() {
+    let data = temp("no-history");
+    let path = crate::saves::path_of(&data, "save1");
+    let mut w = everything();
+    w.save(&path).unwrap();
+    let mut json: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert!(json.as_object_mut().unwrap().remove("history").is_some(), "the save has the field");
+    assert_eq!(json["version"], 4, "the save format has not changed version");
+    std::fs::write(&path, json.to_string()).unwrap();
+    let back = World::load(&path).unwrap();
+    assert!(back.history.is_empty());
+    assert_eq!(back.econ.earned_money, w.econ.earned_money);
+    let _ = std::fs::remove_dir_all(&data);
 }
