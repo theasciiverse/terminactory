@@ -3062,7 +3062,7 @@ CONTROLS
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
   Production ... o (last minute per item; Tab: earnings history)
-  Settings ..... c (sidebar graph; kept in settings.json)
+  Settings ..... g (sidebar graph; kept in settings.json)
   Recipes ...... b (opens on what's under the cursor)
   Small pane ... m (switches on by itself in a small terminal)
   Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,

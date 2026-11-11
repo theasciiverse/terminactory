@@ -28,22 +28,22 @@ fn app() -> App {
 }
 
 #[test]
-fn c_opens_and_closes_the_pane_and_nothing_pauses() {
+fn g_opens_and_closes_the_pane_and_nothing_pauses() {
     let mut app = app();
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     assert!(app.settings_open && !app.paused);
     let t = text(&render(&mut app, 120, 30));
     assert!(t.contains(" Settings ") && t.contains("Sidebar graph") && t.contains("‹ Money ›"), "{t}");
-    assert!(t.contains("Graph range") && t.contains("‹ Minutes ›") && t.contains("c/Esc close"), "{t}");
+    assert!(t.contains("Graph range") && t.contains("‹ Minutes ›") && t.contains("g/Esc close"), "{t}");
     // The sidebar stays in view beside it.
     assert!(t.contains("BUILD"), "{t}");
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     assert!(!app.settings_open);
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     key(&mut app, KeyCode::Esc);
     assert!(!app.settings_open);
     // The game keeps its pause and speed keys while the pane is open.
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     press(&mut app, 'p');
     assert!(app.paused && app.settings_open);
     press(&mut app, ']');
@@ -53,7 +53,7 @@ fn c_opens_and_closes_the_pane_and_nothing_pauses() {
 #[test]
 fn keys_move_between_rows_and_change_values() {
     let mut app = app();
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     assert_eq!(app.settings_pick, 0);
     // Enter and Right go on, Left goes back, and both wrap.
     key(&mut app, KeyCode::Enter);
@@ -90,7 +90,7 @@ fn changes_are_saved_when_there_is_a_file() {
     std::fs::remove_file(&path).ok();
     let mut app = app();
     app.settings_path = Some(path.clone());
-    press(&mut app, 'c');
+    press(&mut app, 'g');
     key(&mut app, KeyCode::Right);
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -101,7 +101,7 @@ fn changes_are_saved_when_there_is_a_file() {
 fn the_pane_fits_small_panes() {
     for (w, h) in [(36, 24), (44, 60), (64, 12), (80, 24), (120, 30)] {
         let mut app = app();
-        press(&mut app, 'c');
+        press(&mut app, 'g');
         let buf = render(&mut app, w, h);
         if (w, h) == (120, 30) {
             snapshot("settings", &buf);

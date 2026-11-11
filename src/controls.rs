@@ -120,7 +120,7 @@ impl Action {
             Action::Book => &["b"],
             Action::Stats => &["o"],
             // "," is taken (floor down), so settings use c.
-            Action::Settings => &["c"],
+            Action::Settings => &["g"],
         }
     }
 }
