@@ -10,8 +10,8 @@ use crate::controls::{Action, Controls};
 use crate::history::Range;
 use crate::settings::{Settings, ROWS};
 use crate::sim::{
-    in_bounds, money_text, rect_of, rect_size, Category, Dir, Kind, Removed, Tech, TileRect, World, H, MAX_LIFT, MIN_LIFT, SPAWN,
-    UNLOCK_GROUPS, W,
+    in_bounds, money_text, rect_of, rect_size, Blueprint, Category, Dir, Kind, PasteReport, Removed, Tech, TileRect, World, H, MAX_LIFT,
+    MIN_LIFT, SPAWN, UNLOCK_GROUPS, W,
 };
 
 /// Where the area tool is. It marks a rectangle on one floor; the verb comes after.
@@ -40,24 +40,28 @@ impl Area {
     }
 }
 
-/// What can be done with a chosen rectangle. Copy and upgrade will be added here: each one is a
-/// key (`action`), a word for the hints (`label`) and an arm in `App::area_verb`.
+/// What can be done with a chosen rectangle. Upgrade will be added here: each one is a key
+/// (`action`), a word for the hints (`label`) and an arm in `App::area_verb`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AreaVerb {
+    /// Copy it to the hand as a blueprint (Space and Enter do it too).
+    Copy,
     Remove,
 }
 
 impl AreaVerb {
-    pub const ALL: [AreaVerb; 1] = [AreaVerb::Remove];
+    pub const ALL: [AreaVerb; 2] = [AreaVerb::Copy, AreaVerb::Remove];
 
     pub fn action(self) -> Action {
         match self {
+            AreaVerb::Copy => Action::Area,
             AreaVerb::Remove => Action::Remove,
         }
     }
 
     pub fn label(self) -> &'static str {
         match self {
+            AreaVerb::Copy => "copy",
             AreaVerb::Remove => "remove",
         }
     }
@@ -161,6 +165,13 @@ pub struct App {
     pub confirm_area: Option<(usize, TileRect, f64)>,
     /// What the last area deconstruct took, so `z` can put it back (not saved).
     pub last_removed: Option<Removed>,
+    /// A blueprint in the hand (it and `selected` exclude each other): its ghost follows the cursor.
+    pub held: Option<Blueprint>,
+    /// The last area copied, kept in memory so the library can save it after the hand is emptied.
+    pub last_copy: Option<Blueprint>,
+    /// Where a middle-button press started, and whether a middle-drag is marking a rectangle to copy.
+    pub middle_from: Option<(i32, i32)>,
+    pub quick_area: bool,
     pub cursor: (i32, i32),
     pub floor: usize,
     pub cam: (i32, i32),
@@ -260,6 +271,10 @@ impl App {
             area: None,
             confirm_area: None,
             last_removed: None,
+            held: None,
+            last_copy: None,
+            middle_from: None,
+            quick_area: false,
             cursor: SPAWN,
             floor: 0,
             cam: (0, 0),
@@ -561,11 +576,12 @@ impl App {
             }
             Action::Back => {
                 // Esc backs out of a menu or a pick first; with nothing to back out of it closes the telegram.
-                if self.menu.is_none() && self.selected.is_none() && k.code == KeyCode::Esc && self.mail.is_some() {
+                if self.menu.is_none() && self.selected.is_none() && self.held.is_none() && k.code == KeyCode::Esc && self.mail.is_some() {
                     self.dismiss_mail();
                 }
                 self.menu = None;
                 self.selected = None;
+                self.held = None;
             }
             Action::Tree => self.tree = true,
             Action::Stats => {
@@ -608,7 +624,7 @@ impl App {
                 self.say(if self.power_view { "Showing EC range (blue)" } else { "EC range hidden" });
             }
             Action::Place => self.place_here(),
-            Action::Rotate => self.rotate(),
+            Action::Rotate => self.rotate(shift),
             Action::Remove => self.remove_here(true),
             Action::Setup => {
                 let (x, y) = self.cursor;
@@ -642,6 +658,7 @@ impl App {
                 let Some(&cat) = Category::ALL.get(n - 1) else {
                     return;
                 };
+                self.held = None;
                 self.menu = Some(cat);
                 let count = slots(cat).len();
                 debug_assert!(count <= max_slots(cat), "{cat:?} has more slots than the menus are made for");
@@ -695,6 +712,7 @@ impl App {
             return;
         }
         self.selected = Some(kind);
+        self.held = None;
         self.cancel_area();
         self.paste = None;
         let note = if kind.preview() { " (preview: not in the base tier)" } else { "" };
@@ -972,7 +990,7 @@ impl App {
                     self.cursor = t;
                     if self.area.is_some() {
                         self.area_click(t);
-                    } else if self.selected.is_some() {
+                    } else if self.selected.is_some() || self.held.is_some() {
                         self.place_here();
                     }
                     self.drag_last = Some(t);
@@ -1006,7 +1024,39 @@ impl App {
             MouseEventKind::Down(MouseButton::Middle) => {
                 if let Some(t) = tile {
                     self.cursor = t;
+                    self.middle_from = Some(t);
                     self.copy_here();
+                }
+            }
+            MouseEventKind::Drag(MouseButton::Middle) => {
+                // Dragging with the middle button marks a rectangle to copy straight to the hand.
+                if let (Some(t), Some(from)) = (tile, self.middle_from) {
+                    if t != from && !self.quick_area && self.world.progress.has(Tech::Blueprints) {
+                        self.selected = None;
+                        self.menu = None;
+                        self.paste = None;
+                        self.held = None;
+                        self.confirm_area = None;
+                        self.quick_area = true;
+                        self.area = Some(Area { floor: self.floor, stage: AreaStage::Picking { corner: Some(from) } });
+                    }
+                    if self.quick_area {
+                        self.cursor = t;
+                    }
+                }
+            }
+            MouseEventKind::Up(MouseButton::Middle) => {
+                let from = self.middle_from.take();
+                let t = tile.unwrap_or(self.cursor);
+                if self.quick_area {
+                    if let Some(Area { floor, stage: AreaStage::Picking { corner: Some(c) } }) = self.area {
+                        self.cancel_area();
+                        self.cursor = t;
+                        self.copy_rect(floor, rect_of(c, t));
+                    }
+                    self.quick_area = false;
+                } else if from.is_some_and(|f| f != t) && !self.world.progress.has(Tech::Blueprints) {
+                    self.say_blueprints_locked();
                 }
             }
             MouseEventKind::Down(MouseButton::Right) | MouseEventKind::Drag(MouseButton::Right) if self.area.is_some() => {
@@ -1091,6 +1141,12 @@ impl App {
     }
 
     fn place_here(&mut self) {
+        if let Some(bp) = self.held.clone() {
+            let (x, y) = self.cursor;
+            let rep = self.world.paste(self.floor, x, y, &bp);
+            self.say(paste_message(&rep));
+            return;
+        }
         let Some(kind) = self.selected else {
             self.say("Pick a part from the build list first");
             return;
@@ -1110,8 +1166,9 @@ impl App {
     /// so clicks place copies of it. On an empty tile it empties your hand.
     fn copy_here(&mut self) {
         let (x, y) = self.cursor;
+        let had_blueprint = self.held.take().is_some();
         let Some(b) = self.world.tile(self.floor, x, y) else {
-            if self.selected.take().is_some() {
+            if self.selected.take().is_some() || had_blueprint {
                 self.menu = None;
                 self.say("Hand empty");
             }
@@ -1163,6 +1220,7 @@ impl App {
     /// `c`: starts marking a rectangle. The hand is emptied (the tool and a held part exclude each other).
     fn start_area(&mut self) {
         self.selected = None;
+        self.held = None;
         self.menu = None;
         self.paste = None;
         self.confirm_area = None;
@@ -1176,6 +1234,7 @@ impl App {
         if self.area.take().is_some() {
             self.confirm_area = None;
         }
+        self.quick_area = false;
     }
 
     /// The area's rectangle right now (the cursor is the second corner while picking).
@@ -1247,20 +1306,15 @@ impl App {
                 self.cancel_area();
                 self.say("Area cancelled");
             }
+            // Space and Enter set corners, and once the rectangle is chosen they copy it, like c.
             Action::Place => match self.area.map(|a| a.stage) {
-                Some(AreaStage::Chosen { .. }) => {
-                    let verbs = self.area_verb_hints();
-                    self.say(format!("Pick what to do with the area: {verbs}"));
-                }
+                Some(AreaStage::Chosen { rect }) => self.area_verb(AreaVerb::Copy, rect),
                 _ => self.area_set_corner(),
             },
-            Action::Area => {
-                let verbs = self.area_verb_hints();
-                match self.area.map(|a| a.stage) {
-                    Some(AreaStage::Chosen { .. }) => self.say(format!("Pick what to do with the area: {verbs}")),
-                    _ => self.say("Mark the rectangle first"),
-                }
-            }
+            Action::Area => match self.area.map(|a| a.stage) {
+                Some(AreaStage::Chosen { rect }) => self.area_verb(AreaVerb::Copy, rect),
+                _ => self.say("Mark the rectangle first"),
+            },
             Action::Rotate | Action::Setup | Action::Bigger | Action::Smaller => {}
             a => {
                 let Some(verb) = AreaVerb::ALL.iter().copied().find(|v| v.action() == a) else { return false };
@@ -1276,8 +1330,73 @@ impl App {
     /// Does `verb` to the chosen rectangle.
     fn area_verb(&mut self, verb: AreaVerb, rect: TileRect) {
         match verb {
+            AreaVerb::Copy => self.area_copy(rect),
             AreaVerb::Remove => self.area_remove(rect),
         }
+    }
+
+    /// Says what unlocks blueprints.
+    fn say_blueprints_locked(&mut self) {
+        let t = Tech::Blueprints;
+        let (item, n) = t.milestone();
+        self.say(format!(
+            "Blueprints are locked: research them first ({}) · {:.0} RP, or make {} {}",
+            self.controls.key(Action::Tree),
+            t.cost(),
+            thousands(n),
+            item.name().to_lowercase()
+        ));
+    }
+
+    /// Copies the chosen rectangle into the hand. Needs the Blueprints tech: without it the
+    /// rectangle stays chosen (x still removes) and the message says what unlocks copying.
+    fn area_copy(&mut self, rect: TileRect) {
+        let Some(floor) = self.area.map(|a| a.floor) else { return };
+        if !self.world.progress.has(Tech::Blueprints) {
+            self.say_blueprints_locked();
+            return;
+        }
+        if self.world.area_info(floor, rect).parts == 0 {
+            self.say(format!("Nothing in the area to copy · {} cancels", self.controls.key(Action::Back)));
+            return;
+        }
+        self.cancel_area();
+        self.copy_rect(floor, rect);
+    }
+
+    /// Makes a blueprint of the rectangle and puts it in the hand (the tech is already checked).
+    fn copy_rect(&mut self, floor: usize, rect: TileRect) {
+        let cap = self.world.capture(floor, rect);
+        if cap.bp.parts.is_empty() {
+            self.say("Nothing in that area to copy");
+            return;
+        }
+        let bp = cap.bp;
+        let mut msg = format!(
+            "Copied {} part{} ({}x{}, {}) · {} pastes, {} turns",
+            bp.part_count(),
+            plural(bp.part_count()),
+            bp.w,
+            bp.h,
+            money_text(bp.cost()),
+            self.controls.key(Action::Place),
+            self.controls.key(Action::Rotate),
+        );
+        if cap.orphan_tunnels > 0 {
+            let n = cap.orphan_tunnels;
+            msg += &format!(" · {n} tunnel end{} no partner here", if n == 1 { " has" } else { "s have" });
+        }
+        self.last_copy = Some(bp.clone());
+        self.take_into_hand(bp);
+        self.say(msg);
+    }
+
+    /// Puts a blueprint in the hand, which empties any part held.
+    pub fn take_into_hand(&mut self, bp: Blueprint) {
+        self.selected = None;
+        self.menu = None;
+        self.paste = None;
+        self.held = Some(bp);
     }
 
     /// Deconstructs everything in the rectangle: full refund, one fee for any waste held (after a
@@ -1346,7 +1465,13 @@ impl App {
         self.say(msg);
     }
 
-    fn rotate(&mut self) {
+    /// Turns what is in the hand a quarter (a blueprint: counter-clockwise with Shift), or the
+    /// part under the cursor.
+    fn rotate(&mut self, counter_clockwise: bool) {
+        if let Some(bp) = self.held.as_ref() {
+            self.held = Some(bp.rotated(if counter_clockwise { 3 } else { 1 }));
+            return;
+        }
         if self.selected.is_some_and(|k| k.directional()) {
             self.dir = self.dir.cw();
             return;
@@ -1392,6 +1517,62 @@ impl App {
             None => {}
         }
     }
+}
+
+/// 1500 as "1,500".
+fn thousands(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// What the status line says after a paste.
+fn paste_message(rep: &PasteReport) -> String {
+    if let Some(e) = &rep.refused {
+        return e.to_string();
+    }
+    let left = rep.total - rep.present;
+    let mut msg = if rep.placed == 0 && rep.present == rep.total {
+        "Already all here: nothing to place".to_string()
+    } else if rep.placed == 0 {
+        "Nothing fits here".to_string()
+    } else if rep.placed == left {
+        format!("Pasted {} part{} for {}", rep.placed, plural(rep.placed), money_text(rep.cost))
+    } else {
+        format!("Placed {} of {}", rep.placed, left)
+    };
+    if rep.short > 0 {
+        msg += &format!(", {} short", money_text(rep.short_by));
+    }
+    if rep.present > 0 && rep.present < rep.total {
+        msg += &format!(" · {} already there", rep.present);
+    }
+    if rep.blocked > 0 {
+        msg += &format!(" · {} blocked", rep.blocked);
+    }
+    if rep.locked > 0 {
+        let what = rep.locked_kind.map_or(String::new(), |k| format!(" ({})", k.name()));
+        msg += &format!(" · {} locked{what}", rep.locked);
+    }
+    if rep.wrong_floor > 0 {
+        msg += &format!(" · {} not on this floor", rep.wrong_floor);
+    }
+    if rep.recipes_skipped > 0 {
+        msg += &format!(" · {} recipe{} not unlocked yet", rep.recipes_skipped, plural(rep.recipes_skipped));
+    }
+    if rep.elevators > 0 {
+        msg += &format!(" · {} elevator{}: other floors' doors reset to unload", rep.elevators, plural(rep.elevators));
+    }
+    if rep.short > 0 {
+        msg += " · the rest waits in your hand";
+    }
+    msg
 }
 
 fn plural(n: usize) -> &'static str {

@@ -7,8 +7,6 @@
 //! Pasting places every part that fits and that the money covers, in reading order. Parts that
 //! are already there cost nothing, so pasting again at the same spot fills in the rest.
 
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::*;
@@ -17,6 +15,7 @@ use super::*;
 pub const BP_FORMAT: u32 = 1;
 
 /// The most parts a blueprint file may hold (a whole map is far fewer).
+#[allow(dead_code)] // until the library reads files
 pub const BP_MAX_PARTS: usize = (W * H) as usize;
 
 fn is_zero(n: &u8) -> bool {
@@ -104,6 +103,7 @@ impl Blueprint {
         self.parts.iter().map(|p| p.kind.price(p.dims().0)).sum()
     }
 
+    #[allow(dead_code)]
     /// Each kind used once, in the order they first appear.
     pub fn kinds(&self) -> Vec<Kind> {
         let mut out: Vec<Kind> = Vec::new();
@@ -113,10 +113,6 @@ impl Blueprint {
             }
         }
         out
-    }
-
-    pub fn elevators(&self) -> usize {
-        self.parts.iter().filter(|p| p.kind == Kind::Elevator).count()
     }
 
     /// Turned `turns` quarter turns clockwise. A part with footprint (pw, ph) at (dx, dy) moves to
@@ -144,6 +140,7 @@ impl Blueprint {
         Blueprint { format: self.format, name: self.name.clone(), level: self.level, w: self.h, h: self.w, parts }
     }
 
+    #[allow(dead_code)]
     /// Whether a file's contents make sense: a sane box, parts inside it, none on top of another.
     /// A hand-edited file can break all of these.
     pub fn check(&self) -> Result<(), String> {
@@ -171,6 +168,7 @@ impl Blueprint {
         Ok(())
     }
 
+    #[allow(dead_code)]
     /// The first kind that isn't unlocked yet, if any (the library greys such a blueprint).
     pub fn first_locked(&self, progress: &Progress) -> Option<Kind> {
         self.kinds().into_iter().find(|k| !progress.part_unlocked(*k))
@@ -183,7 +181,6 @@ pub struct Capture {
     pub bp: Blueprint,
     /// Tunnel ends whose partner is outside the copy.
     pub orphan_tunnels: usize,
-    pub elevators: usize,
 }
 
 /// Where a part would go, and why not if it can't.
@@ -327,9 +324,8 @@ impl World {
                 }
             })
             .count();
-        let elevators = parts.iter().filter(|p| p.kind == Kind::Elevator).count();
         let bp = Blueprint::from_parts("Blueprint", self.floors[f].level, parts);
-        Capture { bp, orphan_tunnels, elevators }
+        Capture { bp, orphan_tunnels }
     }
 
     /// Whether the very part `p` is already standing with its top-left at (x, y).

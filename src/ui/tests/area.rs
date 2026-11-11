@@ -65,12 +65,12 @@ fn two_corners_with_the_keyboard() {
     assert_eq!(app.area_rect(), Some((x, y, x + 3, y + 2)));
     press_code(&mut app, KeyCode::Enter);
     assert_eq!(chosen(&app), Some((x, y, x + 3, y + 2)));
-    // Space, Enter and c do nothing more for now but say what the keys are.
+    // Space, Enter and c copy the area; an empty one says so and stays chosen.
     press_code(&mut app, KeyCode::Enter);
     assert_eq!(chosen(&app), Some((x, y, x + 3, y + 2)));
-    assert!(app.msg.contains("x remove"), "{}", app.msg);
+    assert!(app.msg.contains("Nothing in the area to copy"), "{}", app.msg);
     press(&mut app, 'c');
-    assert!(chosen(&app).is_some());
+    assert!(chosen(&app).is_some() && app.held.is_none());
     // The cursor can walk off after choosing without changing the rectangle.
     press(&mut app, 'a');
     assert_eq!(chosen(&app), Some((x, y, x + 3, y + 2)));
@@ -128,6 +128,7 @@ fn two_clicks_also_choose_and_a_new_press_starts_over() {
     drag(&mut app, (cx + 5, cy + 5), (cx + 8, cy + 6));
     assert_eq!(chosen(&app), Some((cx + 5, cy + 5, cx + 8, cy + 6)));
     // A drag that ends where it began is just a first corner.
+    press_code(&mut app, KeyCode::Esc);
     press(&mut app, 'c');
     mouse(&mut app, MouseEventKind::Down(MouseButton::Left), (cx, cy));
     mouse(&mut app, MouseEventKind::Up(MouseButton::Left), (cx, cy));

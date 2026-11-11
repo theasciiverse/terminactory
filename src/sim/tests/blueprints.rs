@@ -2,6 +2,7 @@
 //! tunnel pairs, elevators and floors.
 
 use super::*;
+use crate::sim::blueprint::{BpPart, PartSetting};
 use std::collections::HashSet;
 
 fn rebuilds() -> u32 {
@@ -75,7 +76,7 @@ fn capture_then_paste_round_trips() {
     assert_eq!(bp.part_count(), 17);
     assert_eq!((bp.w, bp.h), (21, 12));
     assert_eq!(bp.level, 0);
-    assert_eq!((cap.elevators, cap.orphan_tunnels), (1, 0));
+    assert_eq!(cap.orphan_tunnels, 0);
     assert!(bp.check().is_ok());
     // Reading order.
     assert!(bp.parts.windows(2).all(|p| (p[0].dy, p[0].dx) < (p[1].dy, p[1].dx)));
@@ -410,7 +411,7 @@ fn an_elevator_is_copied_with_its_size_and_door_whole_even_when_the_area_touches
     let mut w = World::blank();
     w.place_sized(0, 20, 20, Kind::Elevator, Dir::E, 5).unwrap();
     let cap = w.capture(0, (24, 24, 30, 30));
-    assert_eq!((cap.bp.part_count(), cap.bp.w, cap.bp.h, cap.elevators), (1, 5, 5, 1));
+    assert_eq!((cap.bp.part_count(), cap.bp.w, cap.bp.h), (1, 5, 5));
     assert_eq!(cap.bp.parts[0].size, 5);
 }
 

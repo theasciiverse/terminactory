@@ -526,6 +526,8 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     let slot = status_slot(app, Instant::now());
     let line = if slot == Slot::Area {
         area_line(app, avail)
+    } else if slot == Slot::Hand {
+        hand_line(app, avail)
     } else if slot == Slot::Menu {
         let cat = app.menu.unwrap_or(Category::Create);
         // The part list or the picked part always shows: a message gets what is left.
@@ -622,6 +624,27 @@ fn area_line(app: &App, avail: usize) -> Line<'static> {
     Line::styled(fit(&text, avail), cyan)
 }
 
+/// The small pane's line while a blueprint is in the hand:
+/// ` Hand › Smelter row 12x5 · $4,310 · 11/23 fit · r turn  Space paste  Esc`. Too wide, it
+/// drops the hint words first, then the name, then the size. The cost, the count and the way
+/// out always show.
+fn hand_line(app: &App, avail: usize) -> Line<'static> {
+    let Some(t) = held_text(app) else { return Line::raw("") };
+    let c = &app.controls;
+    let (rot, place, back) = (c.key(Action::Rotate), c.key(Action::Place), c.key(Action::Back));
+    let (cost, name) = (money_text(t.cost), fit(&t.name, 16));
+    let (w, h, n, fits) = (t.w, t.h, t.n, t.fits);
+    let options = [
+        format!(" Hand › {name} {w}x{h} · {cost} · {fits}/{n} fit · {rot} turn  {place} paste  {back}"),
+        format!(" Hand › {name} {w}x{h} · {cost} · {fits}/{n} fit · {rot} {place} {back}"),
+        format!(" Hand › {w}x{h} · {cost} · {fits}/{n} fit  {back}"),
+        format!(" {cost} · {fits}/{n} fit {back}"),
+        format!(" {fits}/{n} {back}"),
+    ];
+    let text = options.iter().find(|o| o.chars().count() <= avail).unwrap_or(&options[4]).clone();
+    Line::styled(fit(&text, avail), Style::new().fg(Color::Cyan))
+}
+
 /// What holds the status line's one slot, most important first. A hint or aside never takes
 /// the place of anything above it, and the key list is what shows when none of them has it.
 #[derive(Clone, Debug, PartialEq)]
@@ -629,6 +652,9 @@ pub enum Slot {
     /// The small pane's area tool: the rectangle, and the keys. It says everything a message
     /// would (the waste warning included), so it never gives the line up.
     Area,
+    /// The small pane's blueprint in the hand: the size, the cost and how much fits. A fresh
+    /// message (the result of a paste) takes the line for its six seconds.
+    Hand,
     /// The small pane's open build menu (a message shows beside it).
     Menu,
     /// A message from something the player did (6 seconds).
@@ -664,7 +690,9 @@ fn cursor_holds_slot(app: &App) -> bool {
 /// True when something the player did or is looking at holds the slot, so a hint or aside
 /// must not start. Cheap: the main loop asks every frame.
 pub fn slot_taken(app: &App, now: Instant) -> bool {
-    (app.compact_now && (app.menu.is_some() || app.area.is_some())) || message_fresh(app, now) || cursor_holds_slot(app)
+    (app.compact_now && (app.menu.is_some() || app.area.is_some() || app.held.is_some()))
+        || message_fresh(app, now)
+        || cursor_holds_slot(app)
 }
 
 /// The one rule for the status line's slot: messages from actions first, then a stuck-machine
@@ -672,6 +700,8 @@ pub fn slot_taken(app: &App, now: Instant) -> bool {
 pub fn status_slot(app: &App, now: Instant) -> Slot {
     if app.compact_now && app.area.is_some() {
         Slot::Area
+    } else if app.compact_now && app.held.is_some() && !message_fresh(app, now) {
+        Slot::Hand
     } else if app.compact_now && app.menu.is_some() {
         Slot::Menu
     } else if message_fresh(app, now) {
@@ -785,7 +815,7 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
     let ghost_dims = |k: Kind| dims_of(k, app.dir, app.lift_size);
     let ghost = app.selected.map(|k| (k, app.world.check_place_sized(app.floor, cx, cy, k, app.dir, app.lift_size).is_ok()));
     let hover = match app.selected {
-        None if app.area.is_none() => {
+        None if app.area.is_none() && app.held.is_none() => {
             app.world.tile(app.floor, cx, cy).zip(app.world.anchor_of(app.floor, cx, cy)).map(|(b, a)| (a, b.dims()))
         }
         _ => None,
@@ -799,6 +829,7 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
         Some(AreaStage::Picking { corner }) => corner,
         _ => None,
     };
+    let held_cells = app.held.as_ref().map(|bp| held_ghost(app, bp, yellow, vw, vh));
     let mut lit = vec![false; (vw.max(0) * vh.max(0)) as usize];
     if let Some(r) = area_rect {
         for (x, y) in app.world.parts_in(app.floor, r) {
@@ -853,7 +884,14 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
                     cells[0] = ('+', Style::new().fg(PAPER).bg(tint).add_modifier(Modifier::BOLD));
                 }
             }
-            if let Some((kind, ok)) = ghost {
+            if let Some(cells_here) = held_cells.as_ref() {
+                // A blueprint in the hand: its parts where they would go, or xx / .. where they can't.
+                if let Some(g) = cells_here[(sy * vw + sx) as usize] {
+                    cells = g;
+                } else if (tx, ty) == app.cursor {
+                    cells = cells.map(|(c, _)| (if c == ' ' { '+' } else { c }, yellow));
+                }
+            } else if let Some((kind, ok)) = ghost {
                 let dims = ghost_dims(kind);
                 if inside(tx, ty, (cx, cy), dims) {
                     let st = if ok { yellow } else { yellow.bg(Color::Indexed(196)) };
@@ -879,6 +917,40 @@ fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {
             }
         }
     }
+}
+
+/// The ghost of the blueprint in the hand, for each visible tile (row by row): yellow sprites where
+/// a part will go, `..` on orange where the money stops, `xx` on red where it can't go. Parts that
+/// are already there are not drawn over.
+fn held_ghost(app: &App, bp: &Blueprint, yellow: Style, vw: i32, vh: i32) -> Vec<Option<Cells>> {
+    let mut out: Vec<Option<Cells>> = vec![None; (vw.max(0) * vh.max(0)) as usize];
+    let (cx, cy) = app.cursor;
+    let plan = app.world.plan_paste(app.floor, cx, cy, bp);
+    let orange = yellow.bg(Color::Indexed(208));
+    let red = yellow.bg(Color::Indexed(196));
+    for (p, pp) in bp.parts.iter().zip(&plan.parts) {
+        let (st, mark) = match pp.state {
+            PlanState::Present => continue,
+            PlanState::Fits => (yellow, None),
+            PlanState::Short => (orange, Some('.')),
+            _ => (red, Some('x')),
+        };
+        let (w, h) = p.dims();
+        for (tx, ty) in footprint(pp.x, pp.y, w, h) {
+            let (sx, sy) = (tx - app.cam.0, ty - app.cam.1);
+            if sx < 0 || sy < 0 || sx >= vw || sy >= vh {
+                continue;
+            }
+            let (lx, ly) = (tx - pp.x, ty - pp.y);
+            let chars = match mark {
+                Some(m) => [m, m],
+                None if p.kind == Kind::Elevator => lift_chars(w, p.dir, &[], lx, ly),
+                None => sprite_chars(p.kind, p.dir, None, ' ', lx, ly),
+            };
+            out[(sy * vw + sx) as usize] = Some(chars.map(|c| (c, st)));
+        }
+    }
+    out
 }
 
 fn item_cell(item: Item, bg: Color) -> (char, Style) {
@@ -1499,12 +1571,15 @@ fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
     let w = &app.world;
     let mut lines: Vec<Line> = Vec::new();
     // The area tool takes the place of the build list (HERE stays below it).
-    let menu = if app.area.is_some() { None } else { app.menu };
+    let menu = if app.area.is_some() || app.held.is_some() { None } else { app.menu };
     if app.area.is_some() {
         lines.extend(area_side(app));
     }
+    if app.held.is_some() {
+        lines.extend(held_side(app));
+    }
     match menu {
-        None if app.area.is_some() => {}
+        None if app.area.is_some() || app.held.is_some() => {}
         None => {
             lines.push(Line::styled("BUILD", head));
             for (n, cat) in Category::ALL.iter().enumerate() {
@@ -1629,6 +1704,72 @@ fn area_side(app: &App) -> Vec<Line<'static>> {
         lines.push(Line::styled(format!(" {place} or click: first corner"), dim));
         lines.push(Line::styled(" or drag a rectangle", dim));
     }
+    lines
+}
+
+/// What the blueprint in the hand would do at the cursor, as the sidebar's short lines.
+fn held_text(app: &App) -> Option<HeldText> {
+    let bp = app.held.as_ref()?;
+    let (cx, cy) = app.cursor;
+    let plan = app.world.plan_paste(app.floor, cx, cy, bp);
+    let n = bp.part_count();
+    let cost = if plan.total > 0.0 { plan.total } else { bp.cost() };
+    let fit = if plan.refused.is_some() {
+        "this floor isn't open yet".to_string()
+    } else if plan.fits == 0 && plan.short == 0 && plan.present < n {
+        "nothing fits here".to_string()
+    } else if plan.fits == n {
+        format!("all {n} fit your money")
+    } else {
+        format!("{} of {n} fit your money", plan.fits)
+    };
+    let mut problems: Vec<String> = Vec::new();
+    if plan.short > 0 {
+        problems.push(format!("{} short {}", plan.short, money_text(plan.short_by)));
+    }
+    if plan.present > 0 {
+        problems.push(format!("{} there", plan.present));
+    }
+    if plan.blocked > 0 && plan.refused.is_none() {
+        problems.push(format!("{} blocked", plan.blocked));
+    }
+    if plan.locked > 0 {
+        let what = plan.locked_kind.map_or(String::new(), |k| format!(" ({})", k.name()));
+        problems.push(format!("{} locked{what}", plan.locked));
+    }
+    if plan.wrong_floor > 0 {
+        problems.push(format!("{} not this floor", plan.wrong_floor));
+    }
+    Some(HeldText { name: bp.name.clone(), w: bp.w, h: bp.h, n, cost, fit, fits: plan.fits, problems })
+}
+
+struct HeldText {
+    name: String,
+    w: i32,
+    h: i32,
+    n: usize,
+    cost: f64,
+    fit: String,
+    fits: usize,
+    problems: Vec<String>,
+}
+
+/// The sidebar's BLUEPRINT section. Every line fits the sidebar's 34 columns.
+fn held_side(app: &App) -> Vec<Line<'static>> {
+    let Some(t) = held_text(app) else { return Vec::new() };
+    let head = Style::new().add_modifier(Modifier::BOLD).fg(Color::Cyan);
+    let dim = Style::new().fg(Color::DarkGray);
+    let c = &app.controls;
+    let mut lines = vec![Line::from(vec![Span::styled("BLUEPRINT", head), Span::styled(format!("  {}", fit(&t.name, 23)), Style::new())])];
+    lines.push(Line::raw(fit(&format!(" {}x{} · {} part{} · {}", t.w, t.h, t.n, if t.n == 1 { "" } else { "s" }, money_text(t.cost)), 34)));
+    lines.push(Line::raw(fit(&format!(" {}", t.fit), 34)));
+    if !t.problems.is_empty() {
+        lines.push(Line::styled(fit(&format!(" {}", t.problems.join(" · ")), 34), Style::new().fg(Color::Yellow)));
+    }
+    lines.push(Line::styled(
+        fit(&format!(" {} turn · {} paste · {} drop", c.key(Action::Rotate), c.key(Action::Place), c.key(Action::Back)), 34),
+        dim,
+    ));
     lines
 }
 

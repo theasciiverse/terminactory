@@ -3,6 +3,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{backend::TestBackend, Terminal};
 
 mod area;
+mod blueprints;
 mod hints_line;
 mod history_tab;
 mod keys;
