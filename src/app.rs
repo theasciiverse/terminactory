@@ -165,6 +165,8 @@ pub struct App {
     pub log_pick: usize,
     /// Where the sidebar telegram was drawn, so the mouse wheel can scroll it.
     pub mail_area: Rect,
+    /// Where the sidebar's earnings charts were drawn (none when hidden or in the small-pane view).
+    pub graph_areas: Vec<Rect>,
     /// The production panel is open (over the map; the game keeps running), and its scroll.
     pub stats: bool,
     pub stats_scroll: u16,
@@ -252,6 +254,7 @@ impl App {
             log_open: false,
             log_pick: 0,
             mail_area: Rect::default(),
+            graph_areas: Vec::new(),
             help_scroll: 0,
             settings_open: false,
             settings_pick: 0,

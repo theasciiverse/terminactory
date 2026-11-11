@@ -64,6 +64,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         // A telegram takes the bottom of the sidebar, leaving 12 rows for the build menu and
         // what's under the cursor, and the game keeps running.
         app.mail_area = Rect::default();
+        app.graph_areas.clear();
         let side = if app.mail.is_some() {
             let room = side.height.saturating_sub(12).max(side.height / 2);
             let h = mail_height(app, side.width).min(room).max(8.min(side.height));
@@ -74,7 +75,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         } else {
             side
         };
-        draw_side(f, side, app);
+        // Charts go under the build menu with whatever room it leaves; they never take any of it.
+        let (panel, graphs) = graph::split(app, side);
+        draw_side(f, panel, app, side.height);
+        graph::draw(f, &graphs, app);
         draw_bottom(f, bottom, app);
     }
     if app.stats {
@@ -1289,7 +1293,10 @@ fn swatch(cells: Cells) -> Vec<Span<'static>> {
     cells.iter().map(|(c, s)| Span::styled(c.to_string(), *s)).collect()
 }
 
-fn draw_side(f: &mut Frame, area: Rect, app: &App) {
+/// The sidebar's text: the build menu, then what's under the cursor. `full_h` is the sidebar's
+/// height before the graph took any (a crowded menu collapses to fit it). Also returns how many
+/// of the lines are the HERE details.
+fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
     let head = Style::new().add_modifier(Modifier::BOLD).fg(Color::Cyan);
     let dim = Style::new().fg(Color::DarkGray);
     let w = &app.world;
@@ -1313,7 +1320,7 @@ fn draw_side(f: &mut Frame, area: Rect, app: &App) {
             // A crowded menu (Create) would push "HERE" off a short sidebar: then only the slot
             // being used lists all its kinds, and the others show one kind with a "+".
             let all_kinds: usize = slots(cat).iter().map(|s| s.len()).sum();
-            let collapse = all_kinds + 9 > area.height.saturating_sub(2) as usize;
+            let collapse = all_kinds + 9 > full_h.saturating_sub(2) as usize;
             for (n, slot) in slots(cat).iter().enumerate() {
                 many |= slot.len() > 1;
                 let open = !collapse || app.selected.is_some_and(|s| slot.contains(&s));
@@ -1376,9 +1383,26 @@ fn draw_side(f: &mut Frame, area: Rect, app: &App) {
     lines.push(Line::raw(""));
     let (x, y) = app.cursor;
     lines.push(Line::styled("HERE", head));
-    for s in inspect(w, app.floor, x, y) {
+    let here = inspect(w, app.floor, x, y);
+    let here_rows = here.len();
+    for s in here {
         lines.push(Line::raw(format!(" {}", s)));
     }
+    (lines, here_rows)
+}
+
+/// Rows the sidebar's text needs in a panel `width` wide (borders included), so the graph only
+/// takes what's left. What's under the cursor counts for at least 6 rows, so the graph doesn't
+/// jump about as the cursor moves over small and big things.
+fn side_need(app: &App, width: u16, full_h: u16) -> u16 {
+    let (lines, here) = side_lines(app, full_h);
+    let inner = width.saturating_sub(2).max(1) as usize;
+    let rows: usize = lines.iter().map(|l| l.width().div_ceil(inner).max(1)).sum();
+    (rows + 6usize.saturating_sub(here) + 2) as u16
+}
+
+fn draw_side(f: &mut Frame, area: Rect, app: &App, full_h: u16) {
+    let (lines, _) = side_lines(app, full_h);
     let p = Paragraph::new(lines).block(Block::bordered().title(" Factory ")).wrap(Wrap { trim: false });
     f.render_widget(p, area);
 }
@@ -3122,6 +3146,7 @@ CONTROLS
     f.render_widget(Paragraph::new(footer_line(foot.width, &hints, more)), foot);
 }
 
+mod graph;
 mod history;
 mod maillog;
 mod settings;

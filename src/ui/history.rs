@@ -22,10 +22,7 @@ pub(super) struct Page {
 /// The History tab for a body `width` columns by `height` rows (taller pages scroll).
 pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
     let dim = Style::new().fg(Color::DarkGray);
-    let (now, off) = app.clock.unwrap_or_else(|| {
-        let now = now_secs();
-        (now, hist::local_offset(now))
-    });
+    let (now, off) = clock(app);
     let h = &app.world.history;
     // No earnings anywhere yet: a friendly note instead of an empty chart.
     if h.days.iter().all(|b| b.money <= 0.0 && b.research <= 0.0) {
@@ -71,6 +68,32 @@ pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
     let days = h.series(Range::Days, now, off);
     heatmap(&mut page, app, &days, now, off, width);
     page
+}
+
+/// The time to draw at: the app's fixed clock in tests, otherwise now (seconds, zone offset).
+fn clock(app: &App) -> (u64, i64) {
+    app.clock.unwrap_or_else(|| {
+        let now = now_secs();
+        (now, hist::local_offset(now))
+    })
+}
+
+/// The sidebar's compact chart: a title and `ch` rows of bars with the time axis under them,
+/// `width` columns wide, over the range in the settings. Shows the most recent bars that fit.
+pub(super) fn sidebar_chart(app: &App, research: bool, width: usize, ch: usize) -> (String, Vec<Line<'static>>) {
+    let (now, off) = clock(app);
+    let range = app.settings.sidebar_graph_range.range();
+    let pts = app.world.history.series(range, now, off);
+    let fr = frame(&pts, range, research, width);
+    let shown = &pts[pts.len() - fr.n..];
+    let unit = match range {
+        Range::Seconds => "sec",
+        Range::Minutes => "min",
+        Range::Hours => "h",
+        Range::Days => "days",
+    };
+    let name = if research { "Research" } else { "Earnings" };
+    (format!("{name} · last {} {unit}", fr.n), bars(shown, range, research, &fr, ch))
 }
 
 /// A bar's value: money or research.
@@ -144,22 +167,31 @@ fn when(range: Range, t: u64) -> String {
     }
 }
 
-/// The summary line and the chart rows (labelled y axis, bars, time axis).
-fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -> (Vec<Line<'static>>, Line<'static>) {
-    let dim = Style::new().fg(Color::DarkGray);
-    let colour = if research { RESEARCH } else { Color::Green };
-    // How many bars fit; the most recent ones if not all.
+/// How the bars sit in a width: the axis scale and label width, the columns left for bars, and how
+/// many bars that holds (the most recent ones if not all).
+#[derive(Clone, Copy)]
+struct Frame {
+    top: f64,
+    lw: usize,
+    avail: usize,
+    n: usize,
+}
+
+fn frame(pts: &[Point], range: Range, research: bool, width: usize) -> Frame {
     let max_v = pts.iter().map(|p| val(p, research)).fold(0.0, f64::max);
     let top = nice(max_v);
     let lw = [top, top / 2.0, 0.0].iter().map(|v| axis_label(*v, research).chars().count()).max().unwrap_or(2);
     let avail = width.saturating_sub(lw + 1);
     let n = range.count().min(avail.max(1));
-    let shown = &pts[pts.len() - n..];
-    // Spread the bars over the whole width: bar i covers columns xs[i]..xs[i + 1]. With two or
-    // more columns a bar, the last one is a gap; with fewer, the bars touch.
-    let xs: Vec<usize> = (0..=n).map(|i| i * avail.max(n) / n.max(1)).collect();
-    // A gap only once a bar has three columns: at two, half the chart would be gaps (a barcode).
-    let gaps = avail >= n * 3;
+    Frame { top, lw, avail, n }
+}
+
+/// The summary line and the chart rows (labelled y axis, bars, time axis).
+fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -> (Vec<Line<'static>>, Line<'static>) {
+    let colour = if research { RESEARCH } else { Color::Green };
+    let fr = frame(pts, range, research, width);
+    let shown = &pts[pts.len() - fr.n..];
+    let n = fr.n;
 
     // Summary: what's shown, the total and the best bar.
     let total: f64 = shown.iter().map(|p| val(p, research)).sum();
@@ -200,6 +232,19 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
     let summary =
         Line::from(vec![Span::styled(head.to_string(), Style::new().fg(colour).add_modifier(Modifier::BOLD)), Span::raw(rest.to_string())]);
 
+    (bars(shown, range, research, &fr, ch), summary)
+}
+
+/// The painted bars with the y axis beside them and the time axis under them: `ch` rows of bars.
+fn bars(shown: &[Point], range: Range, research: bool, fr: &Frame, ch: usize) -> Vec<Line<'static>> {
+    let dim = Style::new().fg(Color::DarkGray);
+    let colour = if research { RESEARCH } else { Color::Green };
+    let Frame { top, lw, avail, n } = *fr;
+    // Spread the bars over the whole width: bar i covers columns xs[i]..xs[i + 1]. With two or
+    // more columns a bar, the last one is a gap; with fewer, the bars touch.
+    let xs: Vec<usize> = (0..=n).map(|i| i * avail.max(n) / n.max(1)).collect();
+    // A gap only once a bar has three columns: at two, half the chart would be gaps (a barcode).
+    let gaps = avail >= n * 3;
     let mut lines = Vec::new();
     let rows = ch * 8;
     for r in 0..ch {
@@ -239,7 +284,7 @@ fn chart(pts: &[Point], range: Range, research: bool, width: usize, ch: usize) -
         lines.push(Line::from(spans));
     }
     lines.push(time_axis(shown, range, lw, &xs));
-    (lines, summary)
+    lines
 }
 
 /// The labels under the bars: how long ago, or the months.
