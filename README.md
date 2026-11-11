@@ -108,18 +108,18 @@ Every other item except waste goes into at least one recipe.
 | Company (key item) | Machine | Research | Free once you've made |
 | --- | --- | --- | --- |
 | Wellbourne (copper pipe) | Mixer | 1,500 | 1,000 stone |
-| | Advanced pump (2×2, 4× the water) | 2,500 | 150 copper pipe |
-| Underhill (concrete) | Excavation (floor -1) | 3,000 | 50 concrete |
-| | Kiln | 2,000 | 150 concrete |
-| Pillar (steel girder) | Welder | 4,000 | 100 steel girder |
-| Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 40 gearbox |
-| **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 6,000 | 10 motor |
-| | Advanced assembler (3×3) | 10,000 | 25 motor |
-| | Large basic drill (8×8, coal) | 15,000 | 50 motor |
-| | Large basic assembler (5×5) | 25,000 | 100 motor |
-| **Lattice & Finch** (control board) | Precision assembler (3×3) | 25,000 | 40 control board |
-| | Large advanced drill (8×8, EC) | 50,000 | 120 control board |
-| | Large advanced assembler (5×5) | 100,000 | 250 control board |
+| | Advanced pump (2×2, 4× the water) | 2,500 | 250 copper pipe |
+| Underhill (concrete) | Excavation (floor -1) | 3,000 | 150 concrete |
+| | Kiln | 2,000 | 250 concrete |
+| Pillar (steel girder) | Welder | 4,000 | 150 steel girder |
+| Swiftline (gearbox) | Basic assembler (2×2) | 6,000 | 100 gearbox |
+| **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 8,000 | 40 motor |
+| | Advanced assembler (3×3) | 14,000 | 80 motor |
+| | Large basic drill (8×8, coal) | 20,000 | 150 motor |
+| | Large basic assembler (5×5) | 25,000 | 300 motor |
+| **Lattice & Finch** (control board) | Precision assembler (3×3) | 30,000 | 120 control board |
+| | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
+| | Large advanced assembler (5×5) | 100,000 | 800 control board |
 
 Every key item can be made with machines from companies that open before it, so nothing locks: copper first, then Cinderhall's steel, then Pillar, Gearwright, Underhill, Swiftline, Ampleworth and last Lattice & Finch.
 
