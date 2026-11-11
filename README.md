@@ -27,7 +27,7 @@ tfac --help    # everything tfac can do
 
 `--demo` starts next to a small working factory with its own save. Saves, key settings (`controls.json`) and game settings (`settings.json`) live in `~/.terminactory` (saves in `saves/`), so the game finds them from any folder; it saves every 30 seconds, when you quit or close the terminal, and on Ctrl+S. A save can only be open in one window at a time: a second `tfac` on the same save says which window has it. Saves carry a format version: one made by an older version of the game isn't opened (and never deleted). `tfac` tells you, `tfac --saves` marks it "(old version)", and `tfac --new` starts a fresh one.
 
-Best in a terminal at least 120×40. In anything smaller than 100×30 (say, a split next to your agent) it switches to a **small-pane view** by itself: the map fills the pane, one line on top shows money, research, EC, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
+Best in a terminal at least 120×40. In anything narrower than 120 columns or shorter than 30 rows (say, a split next to your agent) it switches to a **small-pane view** by itself (the settings pane, `g`, can make that Always or Never, and change the width from 120 to 80, 100, 140 or 160; below 46×12 even Never gives way, since the full view cannot draw there): the map fills the pane, one line on top shows money, research, EC, idle machines and waiting mail, and the bottom line shows the build menu, what's under the cursor, or messages. `m` switches views by hand. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty).
 
 ## What's in it
 
@@ -171,7 +171,11 @@ tfac msg "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
 }
 ```
 
-Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Every telegram and company letter is also kept in a log (the last 50, saved with the game): `i` opens it, newest first with unread ones marked, and Enter reads one again.
+Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or Esc closes one and shows the next, Shift+N dismisses all, PgUp/PgDn or the mouse wheel scroll a long one. In the small-pane view a note in the bottom-right corner ("agent finished · n to view") says one is waiting, and `n` opens it. Messages wait while the game is closed (only the newest 8 are kept waiting). Two quieter styles are in the settings pane (`g`, Telegram style): **Note** shows only the short "agent finished · n to view" note in both views, and **Ticker** only a mail count in the top line; with either, `n` opens the telegram over the map. Every telegram and company letter is also kept in a log (the last 50, saved with the game): `i` opens it, newest first with unread ones marked, and Enter reads one again.
+
+## Hints
+
+When nothing else is on the bottom line, the game may say one quiet thing about what you have already built, worded as a diagnosis and never an order: "Your drill is out of coal: put a drill on coal next to it", "No trade post yet: items have nowhere to go", belts and molders with no EC, a full output, a machine waiting for inputs, "Research comes from selling: f on a trade post", or "You can afford a new part: t". A state has to hold for 20 seconds first; a hint stays 12 seconds, waits 3 minutes before it can return, and shows at most 3 times a session. In the full view, at most one company aside every 10 minutes (the first after 8 minutes, each line at most twice) says something about what you built, in that company's voice. The line is ranked: a message from something you just did comes first, then what is stuck under the cursor, then hints, then asides, then the key list. Settings (`g`) has one switch, Hints, that turns hints and asides off. Nothing is saved.
 
 ## Rules in one breath
 
@@ -200,12 +204,12 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or 
 | Research | t (arrows pick, Enter researches; click a row, click again to research) |
 | Save | Ctrl+S (it also saves every 2 minutes and on quit) |
 | Production panel | o: the last minute per item (made, used, sold, money, research, what the next sale pays); the game keeps running |
-| Settings | g: the sidebar earnings graph (Off / Money / Research / Both) and its range (Seconds / Minutes / Hours); arrows or j/k pick a row, Left/Right or Enter change it, Esc closes; the game keeps running. Saved in `~/.terminactory/settings.json` |
+| Settings | g: the sidebar earnings graph (Off / Money / Research / Both) and its range (Seconds / Minutes / Hours), the small-pane view (Auto / Always / Never) and the width Auto switches at (80 / 100 / 120 / 140 / 160 columns), the telegram style (Sidebar / Note / Ticker) and Hints (On / Off); arrows or j/k pick a row, Left/Right or Enter change it, Esc closes; the game keeps running. Saved in `~/.terminactory/settings.json`; a file from an older version, or with fields missing, still loads |
 | Show EC range | v |
 | Elevator size | + / - |
 | Pause / speed | p / [ ] |
 | Recipe book (opens on what's under the cursor) | b |
-| Small-pane view on/off | m |
+| Small-pane view on/off (for this session) | m |
 | Next telegram / dismiss all | n / Shift+N (PgUp/PgDn scroll; Esc also closes) |
 | Telegram log | i (Enter reads one again) |
 | Help | ? (arrows scroll it in a small pane) |
@@ -260,5 +264,6 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 - `src/app.rs`: keyboard and mouse.
 - `src/content.rs`: items, companies, research and recipes (data, kept apart from mechanics).
 - Saves are format version 3 (the item and tech lists grew); older saves aren't opened.
+- `src/hints.rs`: the hints and asides for the bottom line, their triggers and pacing (`ui::status_slot` ranks the slot).
 - `src/mail.rs`: agent telegrams: the inbox, `tfac msg` / `tfac hook`, and the Markdown renderer.
 - `cargo test`: simulation tests plus screen snapshots (`target/snapshot*.html` show the map, tree and a letter in colour).

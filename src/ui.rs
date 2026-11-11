@@ -3176,11 +3176,18 @@ CONTROLS
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)
   Production ... o (last minute per item; Tab: earnings history)
-  Settings ..... g (sidebar graph; kept in settings.json)
+  Settings ..... g (sidebar graph, small-pane view and width, telegram
+                 style, hints; kept in settings.json)
   Recipes ...... b (opens on what's under the cursor)
-  Small pane ... m (switches on by itself in a small terminal)
+  Small pane ... m (it switches on by itself in a small terminal; g sets
+                 Auto, Always or Never, and the width Auto uses)
   Telegrams .... n next (Shift+N dismisses all), PgUp/PgDn scroll,
-                 i log of past telegrams (Enter reads one again)
+                 i log of past telegrams (Enter reads one again).
+                 g sets where they show: Sidebar, a Note, or a Ticker
+                 (mail count on top); with Note or Ticker n opens one.
+  Hints ........ quiet one-line notes on the bottom line when nothing else
+                 is there: what is stuck, and now and then a company's
+                 aside (full view only, rare). g turns them off.
   Mouse ........ click places, drag lays belts, right-click removes,
                  middle-click copies a part (facing and settings too)
   Quit ......... Ctrl+C (saves first)

@@ -3,7 +3,8 @@
 //! read falls back to its default and the player is told.
 //!
 //! To add a setting: a field on `Settings`, a `Choice` enum if it picks from a list, a line in
-//! `Settings::load_or_create`'s field list, and one entry in `ROWS` (that is what the pane shows).
+//! `Settings::load_or_create`'s field list, and one entry in `ROWS` (that is what the pane shows;
+//! its `enabled` says when the setting has an effect, and the pane greys the row out when it has none).
 
 use std::path::Path;
 
