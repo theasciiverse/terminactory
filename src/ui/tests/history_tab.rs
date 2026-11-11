@@ -45,6 +45,8 @@ fn app_with_history() -> App {
     let mut app = App::new(w);
     fill(&mut app);
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    // These tests count the tab's own glyphs, so the sidebar graph stays out of the way.
+    app.settings.sidebar_graph = crate::settings::GraphShow::Off;
     app.stats = true;
     app.stats_history = true;
     app
@@ -329,4 +331,87 @@ fn full_bar_cells_are_painted_so_terminals_show_no_seams() {
     let painted = buf.content.iter().filter(|c| c.bg == Color::Green && c.symbol() == " ").count();
     let drawn = buf.content.iter().filter(|c| c.symbol() == "█").count();
     assert!(painted > 20 && drawn == 0, "painted {painted}, block glyphs {drawn}");
+}
+
+/// How many chart blocks (a summary line starting "Money ·" or "Research ·") a render shows.
+fn charts(t: &str) -> (usize, usize) {
+    let sum = |name: &str| rows(t).iter().filter(|l| l.contains(&format!("{name} · "))).count();
+    (sum("Money"), sum("Research"))
+}
+
+#[test]
+fn a_tall_pane_stacks_money_and_research() {
+    for (w, h) in [(150, 42), (80, 60), (44, 60), (300, 90)] {
+        let mut app = app_with_history();
+        app.settings.sidebar_graph = crate::settings::GraphShow::Off;
+        let buf = render(&mut app, w, h);
+        let t = text(&buf);
+        assert_eq!(charts(&t), (1, 1), "{w}x{h}: {t}");
+        // Research bars use the research colour, money the green ones.
+        let (mut green, mut blue) = (false, false);
+        for y in 0..buf.area.height {
+            for x in 0..buf.area.width {
+                let bg = buf.cell((x, y)).unwrap().bg;
+                green |= bg == Color::Green;
+                blue |= bg == RESEARCH;
+            }
+        }
+        assert!(green && blue, "{w}x{h}: green {green} research {blue}");
+        // Both charts and the heatmap fit without scrolling.
+        assert!(t.contains("less") && t.contains("Wed Nov 11") && !t.contains("more ▼"), "{w}x{h}: {t}");
+        if (w, h) == (150, 42) {
+            snapshot_tall(&buf);
+        }
+    }
+}
+
+fn snapshot_tall(buf: &Buffer) {
+    std::fs::write("target/snapshot-history-stacked.html", to_html(buf)).unwrap();
+}
+
+#[test]
+fn a_short_pane_keeps_the_money_research_toggle() {
+    let mut app = app_with_history();
+    // 100x24: the pane is too short for two charts.
+    let t = text(&render(&mut app, 100, 24));
+    assert_eq!(charts(&t), (1, 0), "{t}");
+    press(&mut app, 'r');
+    let t = text(&render(&mut app, 100, 24));
+    assert_eq!(charts(&t), (0, 1), "{t}");
+    // The same pane taller shows both whatever r says.
+    let t = text(&render(&mut app, 100, 42));
+    assert_eq!(charts(&t), (1, 1), "{t}");
+}
+
+#[test]
+fn r_shades_the_heatmap_by_research() {
+    // The fill earns money every played day but research (0, 3, 6, 9, 12) only on some.
+    let mut app = app_with_history();
+    let shades = |app: &mut App| {
+        let buf = render(app, 150, 42);
+        let mut played = Vec::new();
+        // The legend squares are the shades themselves, not days.
+        let legend = text(&buf).lines().position(|l| l.contains("less")).unwrap() as u16;
+        for y in (0..buf.area.height).filter(|y| *y != legend) {
+            for x in 0..buf.area.width {
+                let c = buf.cell((x, y)).unwrap();
+                if c.symbol() == "■" && x < 110 {
+                    played.push(c.fg);
+                }
+            }
+        }
+        (played, text(&buf))
+    };
+    let (money, t) = shades(&mut app);
+    assert!(!money.contains(&Color::Indexed(238)) && !t.contains("· research"), "money shading never leaves a played day blank");
+    press(&mut app, 'r');
+    let (research, t) = shades(&mut app);
+    assert!(research.contains(&Color::Indexed(238)), "days without research are the empty shade");
+    assert!(research.contains(&Color::Indexed(46)) && t.contains("more · research"), "{t}");
+    assert_ne!(money, research);
+    press(&mut app, 'r');
+    let (again, _) = shades(&mut app);
+    assert_eq!(again, money);
+    // The picked day still tells both.
+    assert!(text(&render(&mut app, 150, 42)).contains("Wed Nov 11: $1,234"));
 }

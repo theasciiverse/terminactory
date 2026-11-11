@@ -1844,7 +1844,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
             (0, if narrow { "Tab switch" } else { "Tab production" }),
             (0, "1-4 range"),
             (0, if narrow { "Esc close" } else { close.as_str() }),
-            (1, "r research/money"),
+            (1, if history::stacked(body_h as usize) { "r heatmap: research/money" } else { "r research/money" }),
             (2, "←→↑↓ pick a day"),
             (3, "PgUp/PgDn scroll"),
             (4, "the game keeps running"),

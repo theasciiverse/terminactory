@@ -686,7 +686,7 @@ impl App {
     }
 
     /// Keys on the History tab: 1 to 4 pick the chart's range, r swaps money and
-    /// research, the arrows pick a day on the heatmap. True when the key was used.
+    /// research (the chart in a short pane, and always the heatmap's shading), the arrows pick a day on the heatmap. True when the key was used.
     fn history_key(&mut self, code: KeyCode, action: Option<Action>, shift: bool) -> bool {
         match code {
             KeyCode::Char(c @ '1'..='4') => self.hist_range = Range::ALL[c as usize - '1' as usize],

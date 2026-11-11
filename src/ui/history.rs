@@ -19,6 +19,22 @@ pub(super) struct Page {
     pub hits: Vec<(usize, usize, usize, StatsHit)>,
 }
 
+/// Rows of bars in each chart on a page `height` rows tall: one chart takes what the heatmap
+/// leaves, two stacked share it.
+fn chart_rows(height: usize) -> usize {
+    if stacked(height) {
+        (height.saturating_sub(17) / 2).clamp(4, 10)
+    } else {
+        height.saturating_sub(14).clamp(4, 12)
+    }
+}
+
+/// Whether a page `height` rows tall shows money and research stacked: both charts (a summary,
+/// four bars and an axis each) and the heatmap fit without scrolling.
+pub(super) fn stacked(height: usize) -> bool {
+    height >= 25
+}
+
 /// The History tab for a body `width` columns by `height` rows (taller pages scroll).
 pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
     let dim = Style::new().fg(Color::DarkGray);
@@ -56,17 +72,23 @@ pub(super) fn page(app: &mut App, width: usize, height: usize) -> Page {
     }
     page.lines.push(Line::from(spans));
 
-    // The chart.
-    let ch = height.saturating_sub(14).clamp(4, 12);
+    // The chart: money and research stacked when the pane is tall, else the one `r` picked.
     let pts = h.series(range, now, off);
-    let (chart_lines, summary) = chart(&pts, range, research, width, ch);
-    page.lines.push(summary);
-    page.lines.extend(chart_lines);
+    let ch = chart_rows(height);
+    let stacked = stacked(height);
+    for research in if stacked { vec![false, true] } else { vec![research] } {
+        let (chart_lines, summary) = chart(&pts, range, research, width, ch);
+        page.lines.push(summary);
+        page.lines.extend(chart_lines);
+        if stacked && !research {
+            page.lines.push(Line::raw(""));
+        }
+    }
     page.lines.push(Line::raw(""));
 
     // The heatmap.
     let days = h.series(Range::Days, now, off);
-    heatmap(&mut page, app, &days, now, off, width);
+    heatmap(&mut page, app, &days, now, off, width, research);
     page
 }
 
@@ -333,7 +355,7 @@ fn time_axis(shown: &[Point], range: Range, lw: usize, xs: &[usize]) -> Line<'st
 }
 
 /// The weekday rows by week columns, with month labels, a legend and the picked day.
-fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, width: usize) {
+fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, width: usize, research: bool) {
     let dim = Style::new().fg(Color::DarkGray);
     let today = hist::day_of(now, off);
     let margin = if width >= 36 { 4 } else { 2 };
@@ -355,12 +377,12 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
 
     // Shades by how a day compares with the best one shown (square root, so one great day
     // doesn't wash out the rest).
-    let best = (first_day..=today).filter_map(of).map(|p| p.money).fold(0.0, f64::max);
+    let best = (first_day..=today).filter_map(of).map(|p| val(p, research)).fold(0.0, f64::max);
     let level = |p: &Point| -> usize {
-        if p.money <= 0.0 || best <= 0.0 {
+        if val(p, research) <= 0.0 || best <= 0.0 {
             0
         } else {
-            ((4.0 * (p.money / best).sqrt()).ceil() as usize).clamp(1, 4)
+            ((4.0 * (val(p, research) / best).sqrt()).ceil() as usize).clamp(1, 4)
         }
     };
 
@@ -430,6 +452,9 @@ fn heatmap(page: &mut Page, app: &mut App, days: &[Point], now: u64, off: i64, w
     let mut legend = vec![Span::raw(" ".repeat(lead + margin)), Span::styled("less ", dim)];
     legend.extend(SHADES.iter().map(|c| Span::styled("■ ", Style::new().fg(*c))));
     legend.push(Span::styled("more", dim));
+    if research {
+        legend.push(Span::styled(" · research", Style::new().fg(RESEARCH)));
+    }
     page.lines.push(Line::from(legend));
 
     // The picked day.

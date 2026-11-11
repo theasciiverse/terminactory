@@ -200,7 +200,7 @@ Telegrams sit at the bottom of the sidebar while the game keeps running: `n` or 
 | Research | t (arrows pick, Enter researches; click a row, click again to research) |
 | Save | Ctrl+S (it also saves every 2 minutes and on quit) |
 | Production panel | o: the last minute per item (made, used, sold, money, research, what the next sale pays); the game keeps running |
-| Settings | c: the sidebar earnings graph (Off / Money / Research / Both) and its range (Seconds / Minutes / Hours); arrows or j/k pick a row, Left/Right or Enter change it, Esc closes; the game keeps running). Saved in `~/.terminactory/settings.json` |
+| Settings | c: the sidebar earnings graph (Off / Money / Research / Both) and its range (Seconds / Minutes / Hours); arrows or j/k pick a row, Left/Right or Enter change it, Esc closes; the game keeps running. Saved in `~/.terminactory/settings.json` |
 | Show EC range | v |
 | Elevator size | + / - |
 | Pause / speed | p / [ ] |
