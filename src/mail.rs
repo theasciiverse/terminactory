@@ -233,7 +233,7 @@ pub fn gift_note(c: Company) -> &'static str {
         Company::Hollowmere => "Hollowmere left a cart of coal money at the gate. \"Thought you'd been waiting.\"",
         Company::Brannock => "The Brannock sisters dropped off a little something. \"Don't spend it on Swiftline.\"",
         Company::Ashgrove => "Ashgrove sent a cheque, on very good paper.",
-        Company::Cinderhall => "Cinderhall sent cash and, unasked, a sack of slag. The cash is what counts.",
+        Company::Cinderhall => "Cinderhall sent cash and, unasked, a sack of waste. The cash is what counts.",
         Company::Wellbourne => "Wellbourne sent payment by pipe. It arrived quietly, and slightly damp.",
         Company::Kettering => "Kettering & Vane sent two cheques, then argued about which one to send. You kept both halves.",
         Company::Pillar => "Pillar & Sons sent a payment rated for twice its load.",

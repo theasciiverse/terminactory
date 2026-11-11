@@ -92,14 +92,22 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_mail(f, f.area(), app);
     }
     if let Some(text) = &app.away {
-        let r = centered(f.area(), 62, 9);
+        // Wrapped to the pane, and sized from the wrapped text.
+        let width = 62.min(f.area().width);
+        let inner_w = width.saturating_sub(4).max(10) as usize;
+        let mut lines: Vec<String> = vec![String::new()];
+        for l in text.lines() {
+            let indent = l.len() - l.trim_start().len();
+            for (i, part) in wrap_words(l.trim_start(), inner_w.saturating_sub(indent).max(8)).into_iter().enumerate() {
+                lines.push(format!(" {}{part}", " ".repeat(if i == 0 { indent } else { indent + 1 })));
+            }
+        }
+        lines.push(String::new());
+        lines.push(" press any key".to_string());
+        let r = centered(f.area(), width, lines.len() as u16 + 2);
         f.render_widget(Clear, r);
         let head = Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD);
-        f.render_widget(
-            Paragraph::new(format!("\n {}\n\n press any key", text.replace('\n', "\n ")))
-                .block(Block::bordered().title(" While you were away ").title_style(head)),
-            r,
-        );
+        f.render_widget(Paragraph::new(lines.join("\n")).block(Block::bordered().title(" While you were away ").title_style(head)), r);
     }
 }
 
