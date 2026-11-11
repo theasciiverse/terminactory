@@ -202,7 +202,7 @@ impl Facts {
                     Kind::FastBelt => f.fast_belts += 1,
                     Kind::BlastFurnace => f.blast_furnaces += 1,
                     Kind::SteamEngine => f.engines += 1,
-                    Kind::Solar => f.solars += 1,
+                    Kind::Solar | Kind::BasicSolar => f.solars += 1,
                     Kind::CrudeAssembler
                     | Kind::BasicAssembler
                     | Kind::AdvancedAssembler

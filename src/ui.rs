@@ -307,6 +307,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::Pipe => "PIPE",
         Kind::Mixer => "MIXR",
         Kind::Solar => "SOLR",
+        Kind::BasicSolar => "SOL2",
         Kind::Pole => "POLE",
         Kind::Boiler => "BOIL",
         Kind::SteamEngine => "ENGN",
@@ -863,6 +864,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
             SellMode::Research => (INK, 75),
         },
         Kind::Solar => (PAPER, 27),
+        Kind::BasicSolar => (PAPER, 33),
         Kind::Pole => (Color::Indexed(186), 234),
         Kind::Elevator => (INK, 141),
         Kind::Pipe => (Color::Indexed(244), 234),
@@ -922,6 +924,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Crate => ('C', a),
         Kind::TradePost => ('$', '$'),
         Kind::Solar => ('S', 'O'),
+        Kind::BasicSolar => ('S', '2'),
         Kind::Pole => ('P', 'W'),
         Kind::Elevator => ('L', 'I'),
         Kind::Pipe => ('=', '='),
@@ -1016,6 +1019,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Lathe => labelled("LATHE"),
         Kind::Elevator => labelled("LIFT"),
         Kind::Solar => vec!["SOLR".into(), "    ".into()],
+        Kind::BasicSolar => vec!["SOL2".into(), "    ".into()],
         // A small pylon, not a block.
         Kind::Pole => vec!["/\\".into()],
         Kind::Pipe => vec!["==".into()],
@@ -1676,7 +1680,7 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                 }
             }
         }
-        St::Solar => v.push(format!("+{:.0} EC, reaches {} tiles around it", SOLAR_OUTPUT, SOLAR_REACH)),
+        St::Solar => v.push(format!("+{:.0} EC, reaches {} tiles around it", b.kind.solar_output(), b.kind.reach().unwrap_or(0))),
         St::Pole => v.push(format!("carries EC {} tiles around it", POLE_REACH)),
         St::Elevator { inbox, outbox, mode } => {
             let s = b.dims().0;

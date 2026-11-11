@@ -44,8 +44,11 @@ const LIFT_RATE: f64 = 30.0 / TPS as f64; // items per tick
 pub const MIN_LIFT: i32 = 2;
 pub const MAX_LIFT: i32 = 8;
 pub const SOLAR_OUTPUT: f64 = 10.0;
+/// The basic solar panel (solar mk2): twice the EC, twice the reach.
+pub const SOLAR2_OUTPUT: f64 = 20.0;
 /// How far beyond its own edge each power source reaches.
 pub const SOLAR_REACH: i32 = 2;
+pub const SOLAR2_REACH: i32 = 4;
 pub const POLE_REACH: i32 = 3;
 pub const ELEVATOR_REACH: i32 = 1;
 
@@ -206,6 +209,7 @@ pub enum Kind {
     LargeAdvancedDrill,
     AdvancedPump,
     LargeKiln,
+    BasicSolar,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -232,7 +236,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 43] = [
+    pub const ALL: [Kind; 44] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -276,6 +280,7 @@ impl Kind {
         Kind::LargeAdvancedDrill,
         Kind::AdvancedPump,
         Kind::LargeKiln,
+        Kind::BasicSolar,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -316,7 +321,7 @@ impl Kind {
             | Kind::LongArm
             | Kind::Elevator
             | Kind::Pipe => Category::Transport,
-            Kind::Solar | Kind::Pole | Kind::Boiler | Kind::SteamEngine => Category::Power,
+            Kind::Solar | Kind::BasicSolar | Kind::Pole | Kind::Boiler | Kind::SteamEngine => Category::Power,
             Kind::Crate | Kind::Warehouse | Kind::TradePost => Category::Misc,
         }
     }
@@ -348,6 +353,7 @@ impl Kind {
             Kind::Crate => "Crate",
             Kind::TradePost => "Trade post",
             Kind::Solar => "Cheap solar panel",
+            Kind::BasicSolar => "Basic solar panel",
             Kind::Pole => "EC pole",
             Kind::Elevator => "Elevator",
             Kind::Pipe => "Pipe",
@@ -397,6 +403,8 @@ impl Kind {
             Kind::Crate => 50.0,
             Kind::TradePost => 0.0,
             Kind::Solar => 100.0,
+            // $15 an EC against the cheap panel's $10: you pay for reach (fewer poles), not for raw power.
+            Kind::BasicSolar => 300.0,
             Kind::Pole => 10.0,
             Kind::Elevator => 300.0,
             Kind::Pipe => 5.0,
@@ -448,6 +456,7 @@ impl Kind {
             | Kind::Crusher
             | Kind::RollingMill
             | Kind::Solar
+            | Kind::BasicSolar
             | Kind::Elevator
             | Kind::Boiler
             | Kind::SteamEngine
@@ -522,7 +531,7 @@ impl Kind {
     }
     /// Has a front that can be rotated (belts and arms move that way; buildings output there).
     pub fn directional(self) -> bool {
-        !matches!(self, Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::Pole | Kind::Pipe | Kind::SteamEngine)
+        !matches!(self, Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::BasicSolar | Kind::Pole | Kind::Pipe | Kind::SteamEngine)
     }
     pub fn is_belt(self) -> bool {
         matches!(self, Kind::Belt | Kind::FastBelt)
@@ -553,7 +562,7 @@ impl Kind {
             Kind::BasicDrill => Some(Company::Ashgrove),
             Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
-            Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder => Some(Company::Kettering),
+            Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
             Kind::Crusher => Some(Company::Ashgrove),
             Kind::Lathe | Kind::CrudeAssembler => Some(Company::Gearwright),
             Kind::RollingMill | Kind::Welder => Some(Company::Pillar),
@@ -577,6 +586,7 @@ impl Kind {
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
+            Kind::BasicSolar => Some(Tech::BasicSolar),
             Kind::BasicAssembler => Some(Tech::BasicAssembler),
             Kind::AdvancedAssembler => Some(Tech::AdvancedAssembler),
             Kind::PrecisionAssembler => Some(Tech::PrecisionAssembler),
@@ -651,6 +661,29 @@ impl Kind {
     /// Has a page in the recipe book: it crafts, mines, pumps, or has rules to read.
     pub fn has_book_page(self) -> bool {
         !self.recipes().is_empty() || self.is_drill() || self.is_pump() || self.rules().is_some()
+    }
+    /// A solar panel (never joins another panel directly: poles go between them).
+    pub fn is_solar(self) -> bool {
+        matches!(self, Kind::Solar | Kind::BasicSolar)
+    }
+    /// EC a solar panel gives (zero for anything else).
+    pub fn solar_output(self) -> f64 {
+        match self {
+            Kind::Solar => SOLAR_OUTPUT,
+            Kind::BasicSolar => SOLAR2_OUTPUT,
+            _ => 0.0,
+        }
+    }
+    /// How far beyond its own edge a power source reaches.
+    pub fn reach(self) -> Option<i32> {
+        match self {
+            Kind::Solar => Some(SOLAR_REACH),
+            Kind::BasicSolar => Some(SOLAR2_REACH),
+            Kind::Pole => Some(POLE_REACH),
+            Kind::Elevator => Some(ELEVATOR_REACH),
+            Kind::SteamEngine => Some(ENGINE_REACH),
+            _ => None,
+        }
     }
     pub fn is_pump(self) -> bool {
         matches!(self, Kind::Pump | Kind::AdvancedPump)
@@ -943,7 +976,7 @@ impl Building {
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
             Kind::TradePost => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0, stuck: 0 },
-            Kind::Solar => St::Solar,
+            Kind::Solar | Kind::BasicSolar => St::Solar,
             Kind::Pole => St::Pole,
             Kind::Elevator => St::Elevator { inbox: VecDeque::new(), outbox: VecDeque::new(), mode: DoorMode::Load },
             Kind::Pipe => St::Pipe,
@@ -1292,13 +1325,7 @@ fn grid_of(cover: &[i32], x: i32, y: i32, (w, h): (i32, i32)) -> i32 {
 
 /// The tiles a power source reaches: (x0, y0, x1, y1), inclusive.
 pub fn coverage(kind: Kind, (w, h): (i32, i32), ax: i32, ay: i32) -> Option<(i32, i32, i32, i32)> {
-    let r = match kind {
-        Kind::Solar => SOLAR_REACH,
-        Kind::Pole => POLE_REACH,
-        Kind::Elevator => ELEVATOR_REACH,
-        Kind::SteamEngine => ENGINE_REACH,
-        _ => return None,
-    };
+    let r = kind.reach()?;
     Some((ax - r, ay - r, ax + w - 1 + r, ay + h - 1 + r))
 }
 
@@ -1775,7 +1802,7 @@ impl World {
         if (kind.is_drill() || kind.is_pump()) && self.floors[f].level > 0 {
             return Err(format!("{}s need ground under them: build them on the surface or below", kind.name()));
         }
-        if kind == Kind::Solar && self.floors[f].level < 0 {
+        if kind.is_solar() && self.floors[f].level < 0 {
             return Err("Solar panels need sunlight".into());
         }
         if self.econ.money + 1e-9 < cost {
@@ -2106,7 +2133,7 @@ impl World {
             for b in a + 1..n {
                 let (fa, ia, ra, ka) = nodes[a];
                 let (fb, ib, rb, kb) = nodes[b];
-                let both_solar = ka == Kind::Solar && kb == Kind::Solar;
+                let both_solar = ka.is_solar() && kb.is_solar();
                 let linked = (fa == fb && !both_solar && overlaps(ra, rb)) || (ka == Kind::Elevator && kb == Kind::Elevator && ia == ib);
                 if linked {
                     let (x, y) = (find(&mut parent, a), find(&mut parent, b));
@@ -2136,8 +2163,8 @@ impl World {
                     cover[f][idx(x, y)] = id as i32;
                 }
             }
-            if kind == Kind::Solar && self.floors[f].level >= 0 {
-                nets[id].solar += SOLAR_OUTPUT;
+            if kind.is_solar() && self.floors[f].level >= 0 {
+                nets[id].solar += kind.solar_output();
             }
         }
         let engines = nodes.iter().enumerate().filter(|(_, n)| n.3 == Kind::SteamEngine).map(|(k, n)| (n.0, n.1, node_net[k])).collect();

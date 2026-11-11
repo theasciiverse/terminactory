@@ -106,6 +106,25 @@ fn shape(v: &Value) -> Value {
     }
 }
 
+/// New parts and techs only add names to the lists a save already writes, so a save made before the
+/// large kiln and the basic solar panel (which names neither) opens in a build that has them.
+#[test]
+fn a_save_that_names_none_of_the_newest_parts_still_opens() {
+    let mut w = World::new();
+    w.place(0, 60, 50, Kind::Solar, Dir::E).unwrap();
+    w.progress.researched[Tech::Kiln.idx()] = true;
+    let data = temp("older-content");
+    let path = crate::saves::path_of(&data, "save1");
+    w.save(&path).unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(!text.contains("LargeKiln") && !text.contains("BasicSolar"), "an older save has neither name");
+    assert!(text.contains(&format!("\"version\": {SAVE_VERSION}")) || text.contains(&format!("\"version\":{SAVE_VERSION}")));
+    let l = World::load(&path).unwrap();
+    assert!(l.progress.has(Tech::Kiln) && !l.progress.has(Tech::LargeKiln) && !l.progress.has(Tech::BasicSolar));
+    assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
+    let _ = std::fs::remove_dir_all(&data);
+}
+
 /// A world with one of every part, an elevator car, mail and some goods in transit.
 pub(super) fn everything() -> World {
     let mut w = World::blank();

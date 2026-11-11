@@ -16,6 +16,7 @@ Saves: format version 6 (older saves are refused; start a fresh game with `tfac 
 - Boilers burn waste (4 waste give the fire of 1 coal); waste leaves a machine by its back edge.
 - `tfac --version` / `-V`.
 - Apache-2.0 license and package metadata.
+- Basic solar panel (2×2, 20 EC, reach 4, $300, Kettering & Vane; research 1,800 RP or make 60 glass): the second version in the solar slot. Panels still link only through poles.
 - Large kiln (5×7, batch of 32, an 80 s firing, $7,500, Underhill; research 10,000 RP or make 1,000 brick): the kiln's recipes in one bigger lump. It is the second version in the kiln's build slot (press the slot's number again).
 
 ### Changed

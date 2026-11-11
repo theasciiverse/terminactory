@@ -45,7 +45,7 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
         ],
         // Pipes carry things, so they sit with the belts, in slot 5.
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
-        Category::Power => &[&[Solar], &[Pole], &[Boiler], &[SteamEngine]],
+        Category::Power => &[&[Solar, BasicSolar], &[Pole], &[Boiler], &[SteamEngine]],
         // Slot 3 is kept for rail.
         Category::Misc => &[&[Crate, Warehouse], &[TradePost]],
     }
@@ -1355,6 +1355,26 @@ mod tests {
         assert_eq!(app.selected, Some(Kind::LargeKiln));
         key(&mut app, KeyCode::Char('2'));
         assert_eq!(app.selected, Some(Kind::Furnace));
+    }
+
+    #[test]
+    fn basic_solar_is_a_second_version_in_the_solar_slot() {
+        assert_eq!(slots(Category::Power)[0], &[Kind::Solar, Kind::BasicSolar]);
+        let mut app = App::new(World::new());
+        app.world.progress.opened[Company::Kettering.idx()] = true;
+        // Locked: the key picks the cheap panel and again says the other is locked.
+        key(&mut app, KeyCode::Char('3'));
+        key(&mut app, KeyCode::Char('1'));
+        assert_eq!(app.selected, Some(Kind::Solar));
+        key(&mut app, KeyCode::Char('1'));
+        assert_eq!(app.selected, Some(Kind::Solar));
+        assert!(app.msg.contains("Basic solar panel is still locked"), "{}", app.msg);
+        // Researched: pressing the slot again switches versions, and back.
+        app.world.progress.researched[Tech::BasicSolar.idx()] = true;
+        key(&mut app, KeyCode::Char('1'));
+        assert_eq!(app.selected, Some(Kind::BasicSolar));
+        key(&mut app, KeyCode::Char('1'));
+        assert_eq!(app.selected, Some(Kind::Solar));
     }
 
     #[test]

@@ -10,6 +10,7 @@ mod others;
 mod perf;
 mod ports;
 mod saving;
+mod solar;
 mod tunnels;
 mod waste;
 
@@ -2173,6 +2174,7 @@ fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
         (Kind::Crusher, Company::Ashgrove, Tech::Crusher, Item::CopperWire),
         (Kind::CokeOven, Company::Cinderhall, Tech::CokeOven, Item::Coke),
         (Kind::WireDrawer, Company::Kettering, Tech::WireDrawer, Item::CopperCoil),
+        (Kind::BasicSolar, Company::Kettering, Tech::BasicSolar, Item::CopperCoil),
         (Kind::Winder, Company::Kettering, Tech::Winder, Item::CopperCoil),
         (Kind::Lathe, Company::Gearwright, Tech::Lathe, Item::IronGear),
         (Kind::RollingMill, Company::Pillar, Tech::RollingMill, Item::SteelGirder),

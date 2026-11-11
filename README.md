@@ -100,6 +100,7 @@ Phase 1: ore is melted in a furnace into molten metal, a molder casts it into in
 
 Phase 2: what those key items unlock.
 - **Pumps & pipes** (after copper pipe): pumps draw water anywhere on the ground; pipes join into networks that each hold one fluid.
+- **Basic solar panel** (Kettering & Vane, after copper coil; 1,800 RP or make 60 glass): the second version in the solar slot (press `3` `1` again). 2×2 like the cheap panel, but 20 EC and reach 4 for $300, against 10 EC, reach 2 and $100: $15 an EC instead of $10, you pay for fewer poles. A pole links it from up to 7 tiles away (5 for the cheap one). Panels still never link to each other, only through poles.
 - **Steam engines** (after copper coil): boilers burn coal, or **waste** (4 waste burn like 1 coal), to turn water into steam, out of their front; steam engines turn steam into 100 EC each, only as much as their grid needs beyond solar, and a boiler burns only what its engines call for.
 - **Blast furnace** (after coke): melts iron ore into molten iron fast (1 ore a go, 2.5 s: 24 molten iron a minute, twice a furnace's 12), or iron grit even better, makes molten steel from iron plate, and hardens plate (see Steel, below). Most of its recipes leave **waste**, which leaves by the **back** and has to go somewhere (see Waste below).
 
@@ -203,7 +204,8 @@ Every key item can be made with machines from companies that open before it, so 
 | | 3 | arm / long arm |
 | | 4 | elevator |
 | | 5 | pipe |
-| EC (3) | 1 to 4 | solar, pole, boiler, steam engine |
+| EC (3) | 1 | cheap solar panel / basic solar panel |
+| | 2 to 4 | pole, boiler, steam engine |
 | Misc (4) | 1 | crate / warehouse |
 | | 2 | trade post |
 
@@ -251,7 +253,7 @@ When nothing else is on the bottom line, the game may say one quiet thing about 
 - Drills mine anywhere on the ground (not on decking): press f on one to pick copper, coal, iron or stone. The letter on a drill shows its ore (C copper, * coal, I iron). Drills burn coal; a drill on coal fuels itself. Middle click copies a drill's ore to the next one you place.
 - Furnaces, molders and presses make the recipe they're set to (`f` changes it). Furnaces burn coal to melt ore; with coking researched they bake coal into coke. Molders cast ingots, presses turn ingots into plates, plates into wire and pipe, and wire into coils. A basic drill cuts iron twice as fast as a cheap one.
 - Research (`t`) brings new parts, in groups (Making, Assembling, Drilling, Moving, Pipes, EC, Floors; the list scrolls); some open only once you've made a key item (copper wire, coke, copper pipe, copper coil, iron gear, gearbox, girders, concrete, electric motor, control board), and everything also unlocks free once you've made enough of its milestone item. Enter researches the picked row; clicking a row picks it and clicking it again researches it.
-- Power is called **EC** (electric charge). Belts, splitters, arms, molders, presses and the other shaping machines need it (coke ovens don't). Solar panels (reach 2 tiles) and EC poles (reach 3 tiles) charge every electric part within range; ranges that overlap join into one grid, and each grid shares only its own EC. Solar panels never join each other directly, even side by side: link them with poles. The EC figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little EC slows a grid's parts evenly. Elevators carry EC to the floor below. Belts without EC turn red; `v` shows the area it reaches.- Trade posts sell what they receive: money, a 40/40 split, or research (press `f` on one).
+- Power is called **EC** (electric charge). Belts, splitters, arms, molders, presses and the other shaping machines need it (coke ovens don't). Solar panels (reach 2 tiles; the basic panel 4) and EC poles (reach 3 tiles) charge every electric part within range; ranges that overlap join into one grid, and each grid shares only its own EC. Solar panels never join each other directly, even side by side: link them with poles. The EC figure at the top is **regional** (the grid of the pole, panel or machine under the cursor, and hovering a pole or panel shades just that grid) or **global** (all grids together, with any supply that powers nothing shown as unused). Too little EC slows a grid's parts evenly. Elevators carry EC to the floor below. Belts without EC turn red; `v` shows the area it reaches.- Trade posts sell what they receive: money, a 40/40 split, or research (press `f` on one).
 - **Waste** leaves a machine by its **back** edge, never the front: put a belt (facing away), crate or trade post behind the coke oven or blast furnace, so a row of machines can share a waste alley behind it. A belt facing into the machine doesn't take it. If nothing behind can take waste, the machine fills up on it, stops, and flashes `BACK` (its products leave the front as usual until then). A **boiler** takes waste as fuel (from a belt, or straight from a machine whose back it touches): 4 waste give the fire of 1 coal, mixed freely with coal, and it burns only as much as its grid needs, so a boiler at full load (one engine, 100 EC) eats 15 coal or 60 waste a minute. Whatever it can't burn stays on the belt. Waste sells for -$0.50 each and never earns research. Only a trade post set to money takes it (and pays the fee); research and split posts refuse it, so it stays on the belt and backs up (the post flashes `WSTE`). A post also refuses waste when the fee would take your money below zero, or when the last minute's waste fees are more than the last minute's earnings. Removing a crate, warehouse or elevator that holds waste costs the same $0.50 each (refused if you can't afford it); hover it to see the cost. The production panel (`o`) shows waste fees as negative money.
 - Research per item fades the more you sell of it, down to a small per-item minimum, so new items are where research comes from. Research earned while the game is closed fades the same way.
 - Nothing breaks or jams at random. Removing a part refunds it in full.
@@ -303,7 +305,8 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `DRL2` | Basic drill (iron twice as fast) | 2×2 | `o` (blue) iron ore, `o` (grey) stone |
 | `C>` | Crate | 1×1 | |
 | `TRADE` | Trade post (`$ $ $` money, `$ / R` split, `R R R` research) | 3×3 | |
-| `SOLR` | Cheap solar panel | 2×2 | |
+| `SOLR` | Cheap solar panel (10 EC) | 2×2 | |
+| `SOL2` | Basic solar panel (20 EC, reach 4) | 2×2 | |
 | `/\` | EC pole | 1×1 | |
 | `┌ LIFT ┐` | Elevator: a box, 2×2 to 8×8 | 2×2–8×8 | |
 | `==` `\|\|` `++` | Pipe (blue water, white steam, orange copper, red iron, pale steel, grey empty) | 1×1 | `=` (pale) iron plate |

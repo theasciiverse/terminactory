@@ -145,6 +145,13 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"BasicSolar\"",
+              "rr": "int",
+              "size": "int",
+              "st": "\"Solar\""
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Belt\"",
               "rr": "int",
               "size": "int",
@@ -1041,7 +1048,7 @@
       ]
     },
     "researched": {
-      "len": 33,
+      "len": 34,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1049,6 +1056,7 @@
         "\"Assembler\"",
         "\"BasicAssembler\"",
         "\"BasicDrill\"",
+        "\"BasicSolar\"",
         "\"BlastFurnace\"",
         "\"CokeOven\"",
         "\"Coking\"",

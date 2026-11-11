@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub const ITEMS: usize = 51;
 pub const COMPANIES: usize = 12;
-pub const TECHS: usize = 33;
+pub const TECHS: usize = 34;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -503,6 +503,7 @@ pub enum Tech {
     LargeAdvancedAssembler,
     LargeAdvancedDrill,
     LargeKiln,
+    BasicSolar,
 }
 
 impl Tech {
@@ -540,6 +541,7 @@ impl Tech {
         Tech::LargeAdvancedAssembler,
         Tech::LargeAdvancedDrill,
         Tech::LargeKiln,
+        Tech::BasicSolar,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -579,6 +581,7 @@ impl Tech {
             Tech::LargeAdvancedAssembler => "Large adv. assembler",
             Tech::LargeAdvancedDrill => "Large adv. drill",
             Tech::LargeKiln => "Large kiln",
+            Tech::BasicSolar => "Basic solar panel",
         }
     }
     pub fn about(self) -> &'static str {
@@ -619,6 +622,7 @@ impl Tech {
             Tech::PrecisionAssembler => "a 3x3 assembler that builds control boards fastest, and later chips",
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
             Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
+            Tech::BasicSolar => "a 2x2 solar panel that gives 20 EC and reaches 4 tiles, twice the cheap one; it still joins other panels only through poles",
             Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 80 seconds: the kiln's recipes in one big lump",
         }
     }
@@ -627,7 +631,7 @@ impl Tech {
             Tech::Press | Tech::Coking => Company::Brannock,
             Tech::BasicDrill => Company::Ashgrove,
             Tech::Pumps | Tech::Mixer | Tech::AdvancedPump => Company::Wellbourne,
-            Tech::Steam => Company::Kettering,
+            Tech::Steam | Tech::BasicSolar => Company::Kettering,
             Tech::BlastFurnace => Company::Cinderhall,
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
@@ -671,7 +675,7 @@ impl Tech {
             | Tech::LargeAdvancedAssembler
             | Tech::LargeAdvancedDrill
             | Tech::LargeKiln => Category::Create,
-            Tech::Steam => Category::Power,
+            Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
             Tech::Warehouses => Category::Misc,
@@ -692,6 +696,7 @@ impl Tech {
             Tech::Pumps => 600.0,
             Tech::BlastFurnace => 800.0,
             Tech::Steam => 1000.0,
+            Tech::BasicSolar => 1800.0,
             Tech::FastBelts => 2500.0,
             Tech::SupportBeams => 3000.0,
             Tech::Excavation => 3000.0,
@@ -761,6 +766,7 @@ impl Tech {
             Tech::LargeAdvancedDrill => (Item::ControlBoard, 300),
             Tech::LargeAdvancedAssembler => (Item::ControlBoard, 800),
             Tech::LargeKiln => (Item::Brick, 1000),
+            Tech::BasicSolar => (Item::Glass, 60),
         }
     }
 }
@@ -800,7 +806,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
     ("Drilling", &[Tech::BasicDrill, Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeAdvancedDrill]),
     ("Moving", &[Tech::Tunnels, Tech::LongArms, Tech::Warehouses, Tech::FilterSplitters, Tech::FastBelts]),
     ("Pipes", &[Tech::Pumps, Tech::AdvancedPump]),
-    ("EC", &[Tech::Steam]),
+    ("EC", &[Tech::Steam, Tech::BasicSolar]),
     ("Floors", &[Tech::SupportBeams, Tech::Excavation]),
 ];
 
@@ -858,6 +864,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),       // 37
     (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),   // 38
     (Node::Tech(Tech::LargeKiln), Some(15)),                // 39: beside the kiln it grows from
+    (Node::Tech(Tech::BasicSolar), Some(5)),                // 40: under the copper coil, with the steam engine
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {

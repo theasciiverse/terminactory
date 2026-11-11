@@ -439,6 +439,37 @@ fn toys_snapshot() {
     std::fs::write("target/snapshot-toys.html", to_html(&buf)).unwrap();
 }
 
+/// The basic solar panel beside the cheap one: the Power menu, the map and the inspector.
+#[test]
+fn solar_mk2_snapshot() {
+    let mut w = World::blank();
+    let (x, y) = (55, 38);
+    w.place(0, x, y, Kind::Solar, Dir::E).unwrap();
+    w.place(0, x + 3, y, Kind::BasicSolar, Dir::E).unwrap();
+    w.place(0, x + 6, y + 1, Kind::Pole, Dir::E).unwrap();
+    w.progress.opened[Company::Kettering.idx()] = true;
+    w.progress.researched[Tech::BasicSolar.idx()] = true;
+    let mut app = App::new(w);
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    app.cursor = (x + 3, y);
+    app.menu = Some(Category::Power);
+    let buf = render(&mut app, 130, 42);
+    std::fs::write("target/snapshot-solar-mk2.html", to_html(&buf)).unwrap();
+    let t = text(&buf);
+    assert!(t.contains("Basic solar panel") && t.contains("Cheap solar panel"), "both versions list in the Power menu: {t}");
+    assert!(t.contains("SOL2") && t.contains("SOLR"), "{t}");
+    assert!(t.contains("+20 EC, reaches 4 tiles around it"), "{t}");
+    app.cursor = (x, y);
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("+10 EC, reaches 2 tiles around it"), "{t}");
+    // Picked in the hand, the status line shows its price and size; a narrow pane still names it.
+    app.selected = Some(Kind::BasicSolar);
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains("$300"), "{t}");
+    let t = text(&render(&mut app, 44, 34));
+    assert!(t.contains("Basic solar panel") || t.contains("SOL2"), "{t}");
+}
+
 /// Long machines on the map in every facing, and the placement ghost turning with the rotate key.
 #[test]
 fn long_machines_snapshot() {
