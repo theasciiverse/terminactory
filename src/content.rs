@@ -935,8 +935,6 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         needs: None,
         tag: 'I',
     },
-    // Fast and dirty: more coke per coal's time, and a lot of waste.
-    item_recipe("coke (fast)", &[(Item::Coal, 7)], &[(Item::Coke, 2), (Item::Waste, 3)], 150, None, Some(Tech::Coking), 'K'),
 ];
 
 /// Molders cast molten metal into ingots. The metal comes from pipes, or straight from a furnace.
@@ -986,7 +984,6 @@ pub const PRESS_RECIPES: &[Recipe] = &[
     item_recipe("iron gear", &[(Item::IronPlate, 2)], &[(Item::IronGear, 1)], 150, None, None, 'G'),
     item_recipe("steel girder", &[(Item::Steel, 2)], &[(Item::SteelGirder, 1)], 300, None, Some(Tech::BlastFurnace), 'R'),
     item_recipe("hardened gear", &[(Item::HardenedIronPlate, 2)], &[(Item::HardenedGear, 1)], 300, None, Some(Tech::BlastFurnace), 'H'),
-    item_recipe("copper coil (fine wire)", &[(Item::FineWire, 5)], &[(Item::CopperCoil, 1)], 150, None, None, 'C'),
     // Crude sheets: a third more plate than the rolling mill takes, but no company to wait for.
     item_recipe("copper sheet (pressed)", &[(Item::CopperPlate, 3)], &[(Item::CopperSheet, 1)], 300, None, None, 'S'),
     item_recipe("iron sheet (pressed)", &[(Item::IronPlate, 3)], &[(Item::IronSheet, 1)], 300, None, None, 'I'),
@@ -1037,7 +1034,6 @@ pub const BLAST_RECIPES: &[Recipe] = &[
     molten_steel("molten steel", &[(Item::IronPlate, 2), (Item::Coke, 1)], &[(Item::Waste, 1)], 600),
     molten_steel("molten steel (coal)", &[(Item::IronPlate, 2), (Item::Coal, 2)], &[(Item::Waste, 3)], 600),
     molten_steel("molten steel (fast)", &[(Item::IronPlate, 2), (Item::Coke, 2)], &[(Item::Waste, 2)], 300),
-    molten_steel("molten steel (fast, coal)", &[(Item::IronPlate, 2), (Item::Coal, 4)], &[(Item::Waste, 5)], 300),
     item_recipe("hardened iron plate", &[(Item::IronPlate, 1), (Item::Coke, 1)], &[(Item::HardenedIronPlate, 1)], 300, None, None, 'H'),
     item_recipe(
         "hardened iron plate (coal)",
@@ -1048,6 +1044,19 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         None,
         'H',
     ),
+    // Straight from molten iron: no cast, press or second melt. An iron blast furnace can sit
+    // against this one and push its metal in with no pipe between them.
+    Recipe {
+        name: "molten steel (direct)",
+        inputs: &[(Item::Coke, 1)],
+        outputs: &[(Item::Waste, 2)],
+        fluid_in: Some((Fluid::MoltenIron, 3)),
+        fluid_out: Some((Fluid::MoltenSteel, 1)),
+        ticks: 600,
+        fuel: None,
+        needs: None,
+        tag: 'S',
+    },
 ];
 
 /// Assemblers come in tiers. Each recipe table below lists its tier's recipes, with the time
@@ -1114,6 +1123,8 @@ pub const LATHE_RECIPES: &[Recipe] = &[
 /// Winders wind wire into coils, and rods into springs.
 pub const WINDER_RECIPES: &[Recipe] = &[
     item_recipe("copper coil", &[(Item::CopperWire, 3)], &[(Item::CopperCoil, 1)], 240, None, None, 'C'),
+    // Fine wire goes further: 3 fine wire a coil, but it takes a drawer to make it.
+    item_recipe("copper coil (fine wire)", &[(Item::FineWire, 6)], &[(Item::CopperCoil, 2)], 240, None, None, 'C'),
     item_recipe("spring", &[(Item::IronRod, 2)], &[(Item::Spring, 1)], 300, None, None, 'S'),
 ];
 

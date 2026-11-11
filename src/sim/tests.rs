@@ -1167,7 +1167,7 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(scaled(75, 2), 38);
     // Sizes, power and prices.
     let specs = [
-        (Kind::CrudeAssembler, (4, 4), 4.0, 300.0),
+        (Kind::CrudeAssembler, (4, 4), 0.0, 300.0),
         (Kind::BasicAssembler, (2, 2), 6.0, 600.0),
         (Kind::AdvancedAssembler, (3, 3), 16.0, 1500.0),
         (Kind::PrecisionAssembler, (3, 3), 64.0, 4000.0),
@@ -2001,10 +2001,10 @@ fn coke_oven_makes_coke_and_waste_with_no_fuel_or_ec() {
 }
 
 #[test]
-fn furnace_can_cook_fast_and_dirty_coke() {
-    let out = run_machine(Kind::Furnace, "coke (fast)", &[(Item::Coal, 14)], 6);
-    assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (4, 6));
-    // The slow recipe stays: 3 coal, 1 coke, no waste.
+fn the_furnace_cooks_coke_one_slow_clean_way() {
+    // The fast and dirty recipe is gone: it lost to a second furnace, or to a coke oven.
+    assert!(!recipe_names(Kind::Furnace).contains(&"coke (fast)"));
+    // 3 coal, 1 coke, no waste.
     let out = run_machine(Kind::Furnace, "coke", &[(Item::Coal, 6)], 11);
     assert_eq!((count(&out, Item::Coke), count(&out, Item::Waste)), (2, 0));
 }
@@ -2025,10 +2025,8 @@ fn press_wire_pipe_coil_and_gear_times() {
     assert_eq!(run_machine(Kind::Press, "copper pipe", &[(Item::CopperPlate, 4)], 6), vec![Item::CopperPipe; 2]);
     assert_eq!(run_machine(Kind::Press, "iron gear", &[(Item::IronPlate, 4)], 6), vec![Item::IronGear; 2]);
     assert_eq!(run_machine(Kind::Press, "copper coil", &[(Item::CopperWire, 4)], 6), vec![Item::CopperCoil]);
-    // Five fine wire wind into a coil in half the time.
-    let fine = "copper coil (fine wire)";
-    assert_eq!(run_machine(Kind::Press, fine, &[(Item::FineWire, 5)], 3), vec![Item::CopperCoil]);
-    assert!(run_machine(Kind::Press, fine, &[(Item::FineWire, 5)], 2).is_empty());
+    // The fine-wire coil moved to the winder.
+    assert!(!recipe_names(Kind::Press).contains(&"copper coil (fine wire)"));
 }
 
 #[test]
@@ -2072,6 +2070,11 @@ fn lathe_turns_steel_into_rods_then_bearings() {
 fn winder_winds_coils_and_springs() {
     assert_eq!(run_machine(Kind::Winder, "copper coil", &[(Item::CopperWire, 6)], 9), vec![Item::CopperCoil; 2]);
     assert_eq!(run_machine(Kind::Winder, "spring", &[(Item::IronRod, 4)], 11), vec![Item::Spring; 2]);
+    // Fine wire goes further: 6 fine wire make 2 coils in 4 s, 3 fine wire a coil against 3 plain wire.
+    let fine = "copper coil (fine wire)";
+    assert_eq!(run_machine(Kind::Winder, fine, &[(Item::FineWire, 6)], 5), vec![Item::CopperCoil; 2]);
+    assert!(run_machine(Kind::Winder, fine, &[(Item::FineWire, 6)], 3).is_empty());
+    assert!(run_machine(Kind::Winder, fine, &[(Item::FineWire, 5)], 9).is_empty(), "needs all 6 fine wire");
 }
 
 #[test]
@@ -2350,14 +2353,13 @@ fn steel_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize)
 }
 
 #[test]
-fn the_blast_furnace_makes_steel_four_ways_each_with_its_waste() {
+fn the_blast_furnace_makes_steel_from_plate_three_ways_each_with_its_waste() {
     let plates = (Item::IronPlate, 2);
     // 2 iron plate + 1 coke: 10 s of melting, 2.5 s of casting, 1 waste.
     let route = [
         ("molten steel", vec![plates, (Item::Coke, 1)], 10, 1),
         ("molten steel (coal)", vec![plates, (Item::Coal, 2)], 10, 3),
         ("molten steel (fast)", vec![plates, (Item::Coke, 2)], 5, 2),
-        ("molten steel (fast, coal)", vec![plates, (Item::Coal, 4)], 5, 5),
     ];
     for (name, stock, melt, waste) in route {
         let r = Kind::BlastFurnace.recipes().iter().find(|r| r.name == name).unwrap();
@@ -2375,11 +2377,39 @@ fn the_blast_furnace_makes_steel_four_ways_each_with_its_waste() {
     // Without the coke or coal, it waits.
     assert_eq!(steel_route("molten steel", &[plates], 30), (0, 0));
     assert_eq!(steel_route("molten steel (fast)", &[plates, (Item::Coke, 1)], 30), (0, 0), "the fast way needs 2 coke");
+    // The fast coal route is gone: it lost to one more furnace, or to the oven.
+    assert!(!recipe_names(Kind::BlastFurnace).contains(&"molten steel (fast, coal)"));
     // The old steel recipe is gone.
     assert!(!recipe_names(Kind::BlastFurnace).contains(&"steel"));
     // A molder casts 1 molten steel into 1 steel in 2.5 s.
     assert_eq!(recipe_ticks(Kind::Molder, "steel"), 150);
     assert_eq!(Item::Steel.price(), 24.0);
+}
+
+/// Direct steel takes molten iron in and puts molten steel out (the first recipe to do both): an
+/// iron blast furnace right against a steel one feeds it with no pipe between them.
+#[test]
+fn direct_steel_turns_molten_iron_and_coke_into_molten_steel_with_no_pipe() {
+    let r = Kind::BlastFurnace.recipes().iter().find(|r| r.name == "molten steel (direct)").unwrap();
+    assert_eq!((r.fluid_in, r.fluid_out), (Some((Fluid::MoltenIron, 3)), Some((Fluid::MoltenSteel, 1))));
+    assert_eq!((r.inputs, r.outputs, r.ticks as u64), (&[(Item::Coke, 1)][..], &[(Item::Waste, 2)][..], 10 * TPS));
+    let mut w = World::blank();
+    // The iron furnace (5-6, 5-6) faces east into the steel furnace (7-8, 5-6), which faces east into a molder.
+    w.place(0, 5, 5, Kind::BlastFurnace, Dir::E).unwrap();
+    pick_recipe(&mut w, 5, 5, "molten iron");
+    w.place(0, 7, 5, Kind::BlastFurnace, Dir::E).unwrap();
+    pick_recipe(&mut w, 7, 5, "molten steel (direct)");
+    w.place(0, 9, 5, Kind::Molder, Dir::E).unwrap();
+    pick_recipe(&mut w, 9, 5, "steel");
+    w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+    w.place(0, 9, 8, Kind::Solar, Dir::E).unwrap();
+    set_stock(&mut w, 5, 5, Item::IronOre, 6);
+    set_stock(&mut w, 5, 5, Item::Coke, 6);
+    set_stock(&mut w, 7, 5, Item::Coke, 2);
+    run(&mut w, 40);
+    let steel = crate_items(&w, 0, 11, 5).iter().filter(|i| **i == Item::Steel).count();
+    assert_eq!(steel, 2, "3 molten iron each, no pipe, no cast and re-melt");
+    assert_eq!(w.econ.made[Item::Waste.idx()], 4, "2 waste a steel");
 }
 
 /// Molten metal a minute from a recipe.

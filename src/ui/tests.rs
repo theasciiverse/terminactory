@@ -247,7 +247,7 @@ fn recipe_book() {
     app.book_go(Entry::Part(Kind::BlastFurnace));
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("2 iron plate + coke  ──→  molten steel + waste"), "{t}");
-    assert!(t.contains("2 iron plate + 4 coal  ──→  molten steel + 5 waste"), "{t}");
+    assert!(t.contains("2 iron plate + 2 coal  ──→  molten steel + 3 waste"), "{t}");
     assert!(t.contains("iron plate + coke  ──→  hardened iron plate"), "{t}");
     std::fs::write("target/snapshot-book-blast.html", to_html(&render(&mut app, 130, 42))).unwrap();
 
@@ -1004,7 +1004,7 @@ fn book_pages_for_the_new_machines_and_items() {
     assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $2"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("7 coal  ──→  2 coke + 3 waste") && t.contains("2 coal  ──→  coke + waste"), "{t}");
+    assert!(t.contains("2 coal  ──→  coke + waste"), "{t}");
     // Furnace and blast furnace melt iron differently: both show on the iron ore page.
     app.book_go(Entry::Item(Item::IronOre));
     let t = text(&render(&mut app, 130, 42));
