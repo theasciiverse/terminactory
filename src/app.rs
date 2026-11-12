@@ -269,6 +269,10 @@ pub struct App {
     pub book_history: Vec<String>,
     pub book_forward: Vec<String>,
     pub book_selected: usize,
+    /// How far the current page can scroll, set while drawing it (u16::MAX when unknown).
+    pub book_max_scroll: u16,
+    /// How far one scroll step moves the current page (a whole row of tiles on the index grids).
+    pub book_scroll_step: u16,
     pub book_seed: usize,
     pub book_results: Vec<String>,
     pub book_result_capacity: usize,
@@ -383,6 +387,8 @@ impl App {
             book_forward: Vec::new(),
             book_selected: 0,
             book_seed: 0,
+            book_max_scroll: u16::MAX,
+            book_scroll_step: 1,
             book_results: Vec::new(),
             book_result_capacity: 1,
             away: None,
@@ -1025,7 +1031,16 @@ impl App {
                         .enumerate()
                         .filter(|(_, (r, _))| r.y == cur.y && if right { r.x > cur.x } else { r.x < cur.x })
                         .min_by_key(|(_, (r, _))| r.x.abs_diff(cur.x));
-                    if let Some((i, _)) = next {
+                    // At the end of the line, roll over to its other end.
+                    let wrap = || {
+                        let same = self.book_urls.iter().enumerate().filter(|(_, (r, _))| r.y == cur.y);
+                        if right {
+                            same.min_by_key(|(_, (r, _))| r.x)
+                        } else {
+                            same.max_by_key(|(_, (r, _))| r.x)
+                        }
+                    };
+                    if let Some((i, _)) = next.or_else(wrap) {
                         self.book_selected = i;
                     }
                 }
@@ -1033,29 +1048,50 @@ impl App {
             }
             (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
                 if !self.book_query.is_empty() {
-                    self.book_selected = self.book_selected.saturating_sub(1);
+                    if self.book_selected == 0 {
+                        // Roll over to the last result.
+                        self.book_selected = self.book_results.len().saturating_sub(1);
+                        self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
+                    } else {
+                        self.book_selected -= 1;
+                    }
                     if self.book_selected < self.book_scroll as usize {
                         self.book_scroll = self.book_selected as u16;
                     }
                 } else if let Some(i) = self.book_link_line(false) {
                     self.book_selected = i;
+                } else if self.book_scroll > 0 {
+                    self.book_scroll = self.book_scroll.saturating_sub(self.book_scroll_step);
+                    self.book_selected = 0;
                 } else {
-                    self.book_scroll = self.book_scroll.saturating_sub(1);
+                    // At the top of the page: roll over to the bottom and its last link.
+                    self.book_scroll = self.book_max_scroll;
+                    self.book_selected = usize::MAX;
                 }
                 return;
             }
             (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
                 if !self.book_query.is_empty() {
-                    self.book_selected = (self.book_selected + 1).min(self.book_results.len().saturating_sub(1));
+                    if self.book_selected + 1 >= self.book_results.len() {
+                        // Roll over to the first result.
+                        self.book_selected = 0;
+                        self.book_scroll = 0;
+                    } else {
+                        self.book_selected += 1;
+                    }
                     if self.book_selected >= self.book_scroll as usize + self.book_result_capacity {
                         self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
                     }
                 } else if let Some(i) = self.book_link_line(true) {
                     self.book_selected = i;
-                } else {
+                } else if self.book_scroll < self.book_max_scroll {
                     // No link further down on screen: scroll, keeping the cursor near the bottom.
-                    self.book_scroll = self.book_scroll.saturating_add(1);
+                    self.book_scroll = self.book_scroll.saturating_add(self.book_scroll_step);
                     self.book_selected = self.book_urls.len().saturating_sub(1);
+                } else {
+                    // At the bottom of the page: roll over to the top and its first link.
+                    self.book_scroll = 0;
+                    self.book_selected = 0;
                 }
                 return;
             }

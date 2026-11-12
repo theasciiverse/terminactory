@@ -3700,6 +3700,8 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     );
     app.book_links.clear();
     app.book_urls.clear();
+    app.book_max_scroll = u16::MAX;
+    app.book_scroll_step = 1;
     if app.book_slug == "items" || app.book_slug == "machines" {
         draw_book_index(f, content, app, app.book_slug == "machines");
     } else if app.book_slug == "topics" {
@@ -3782,6 +3784,10 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
                 draw_wiki_contents(f, Rect::new(content.right().saturating_sub(16), content.y, 16, content.height), &page_md, app);
             }
         }
+    }
+    // A roll-over to the bottom asks for the last link: keep the pick on a real link.
+    if !app.book_urls.is_empty() && app.book_query.is_empty() {
+        app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
     }
     let foot = Rect::new(inner.x, inner.bottom().saturating_sub(1), inner.width, 1);
     let footer = if app.book_typing {
@@ -4094,8 +4100,14 @@ fn draw_book_index(f: &mut Frame, area: Rect, app: &mut App, machines: bool) {
     f.buffer_mut().set_string(area.x, area.y, &hint, Style::new().fg(Color::Indexed(117)).bg(Color::Indexed(236)));
     let cols = (area.width / 18).max(1) as usize;
     let card_w = (area.width as usize / cols).max(1);
+    // Scroll by whole rows of tiles, and never past the last row.
+    let fits = (area.height as usize).saturating_sub(5) / 4 + 1;
+    let rows = entries.len().div_ceil(cols);
+    app.book_max_scroll = (rows.saturating_sub(fits) * cols) as u16;
+    app.book_scroll_step = cols as u16;
+    app.book_scroll = app.book_scroll.min(app.book_max_scroll) / cols as u16 * cols as u16;
     let mut idx = 0usize;
-    for (n, e) in entries.iter().enumerate().skip(app.book_scroll as usize) {
+    for e in entries.iter().skip(app.book_scroll as usize) {
         let row = idx / cols;
         let col = idx % cols;
         let y = area.y + 2 + (row * 4) as u16;
@@ -4108,7 +4120,7 @@ fn draw_book_index(f: &mut Frame, area: Rect, app: &mut App, machines: bool) {
             Entry::Item(i) => capitalise(i.name()),
             Entry::Part(k) => k.name().to_string(),
         };
-        let style = if n == app.book_selected {
+        let style = if idx == app.book_selected {
             Style::new().fg(Color::White).bg(Color::Indexed(24))
         } else {
             Style::new().fg(Color::Indexed(238))
@@ -4218,7 +4230,8 @@ fn render_wiki_text(f: &mut Frame, area: Rect, md: &str, app: &mut App, info_are
     }
     let info_total = entry.map_or(0, |_| if narrow { 14 } else { 11 });
     let total_rows = rows.len().max(info_total);
-    app.book_scroll = app.book_scroll.min(total_rows.saturating_sub(area.height as usize) as u16);
+    app.book_max_scroll = total_rows.saturating_sub(area.height as usize) as u16;
+    app.book_scroll = app.book_scroll.min(app.book_max_scroll);
     let mut start = app.book_scroll as usize;
     let mut card_ranges = Vec::new();
     let mut open_card = None;

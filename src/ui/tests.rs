@@ -1668,7 +1668,8 @@ fn wiki_arrows_move_along_a_line_and_between_lines() {
     app.on_key(KeyEvent::from(KeyCode::Left));
     assert_eq!(app.book_urls[app.book_selected].1, "machines");
     app.on_key(KeyEvent::from(KeyCode::Left));
-    assert_eq!(app.book_urls[app.book_selected].1, "machines", "nothing further left on the line");
+    assert_eq!(app.book_urls[app.book_selected].1, "companies", "left at the start of the line rolls over");
+    app.on_key(KeyEvent::from(KeyCode::Right));
     // Up and down change lines: up from the tiles reaches the line above them.
     let tiles_y = app.book_urls[app.book_selected].0.y;
     app.on_key(KeyEvent::from(KeyCode::Up));
@@ -1821,4 +1822,66 @@ fn home_navigation_tiles_open_their_pages() {
         app.on_key(KeyEvent::from(KeyCode::Backspace));
         assert_eq!(app.book_slug, "home");
     }
+}
+
+/// Every arrow rolls over at its edge: along a line, and from the top of a page to the bottom.
+#[test]
+fn wiki_arrows_roll_over_at_the_edges() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "home".into();
+    render(&mut app, 140, 45);
+    let at = |app: &App, slug: &str| app.book_urls.iter().position(|(_, s)| s == slug).unwrap();
+    app.book_selected = at(&app, "companies");
+    app.on_key(KeyEvent::from(KeyCode::Right));
+    assert_eq!(app.book_urls[app.book_selected].1, "machines", "right at the end of the line rolls to its start");
+    app.on_key(KeyEvent::from(KeyCode::Left));
+    assert_eq!(app.book_urls[app.book_selected].1, "companies", "left at the start rolls to its end");
+    // Up from the first link rolls to the last one; down from there rolls back to the first.
+    app.book_selected = 0;
+    app.on_key(KeyEvent::from(KeyCode::Up));
+    render(&mut app, 140, 45);
+    assert_eq!(app.book_selected, app.book_urls.len() - 1);
+    assert_eq!(app.book_urls[app.book_selected].1, "close-book");
+    app.on_key(KeyEvent::from(KeyCode::Down));
+    render(&mut app, 140, 45);
+    assert_eq!((app.book_selected, app.book_scroll), (0, 0));
+    // A long page in a small window: up at the very top lands at the bottom of the page.
+    app.book_slug = "copper-coil".into();
+    app.book_scroll = 0;
+    app.book_selected = 0;
+    render(&mut app, 60, 30);
+    app.on_key(KeyEvent::from(KeyCode::Up));
+    let t = text(&render(&mut app, 60, 30));
+    assert!(app.book_scroll > 0 && t.contains("Category: Items"), "{t}");
+    // The item index rolls over without breaking either.
+    app.book_slug = "items".into();
+    app.book_scroll = 0;
+    app.book_selected = 0;
+    render(&mut app, 60, 30);
+    app.on_key(KeyEvent::from(KeyCode::Up));
+    render(&mut app, 60, 30);
+    assert!(app.book_selected < app.book_urls.len());
+}
+
+/// Down past the last visible tile on the item index scrolls a whole row, then rolls over at the end.
+#[test]
+fn wiki_item_grid_scrolls_by_rows_and_rolls_over() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "items".into();
+    render(&mut app, 60, 30);
+    let mut seen_scroll = false;
+    for _ in 0..200 {
+        app.on_key(KeyEvent::from(KeyCode::Down));
+        render(&mut app, 60, 30);
+        seen_scroll |= app.book_scroll > 0;
+        if seen_scroll && app.book_scroll == 0 {
+            break;
+        }
+    }
+    assert!(seen_scroll, "the grid never scrolled");
+    assert_eq!((app.book_scroll, app.book_selected), (0, 0), "it rolled over to the top");
 }
