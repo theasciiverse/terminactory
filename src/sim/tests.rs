@@ -3391,7 +3391,7 @@ fn a_small_factory_makes_electric_motors_from_ore() {
 #[test]
 fn no_machine_shows_two_recipes_with_one_letter() {
     // Two routes to one product may share a letter; different products may not.
-    let made = |r: &Recipe| r.outputs.first().map(|o| o.0.name()).or(r.fluid_out.map(|f| f.0.name()));
+    let made = |r: &Recipe| r.fluid_out.map(|f| f.0.name()).or(r.outputs.iter().find(|o| o.0 != Item::Waste).map(|o| o.0.name()));
     for kind in Kind::ALL {
         let mut seen: Vec<(char, Option<&str>, &str)> = Vec::new();
         for r in kind.recipes() {
@@ -3401,4 +3401,53 @@ fn no_machine_shows_two_recipes_with_one_letter() {
             seen.push((r.tag, made(r), r.name));
         }
     }
+}
+
+// ---------- the better silicon machines (computers phase 2b) ----------
+
+/// An arc furnace on `recipe` at (12, 12), on power only, with a waste crate behind it and a
+/// molder casting its silicon into a crate. Returns (silicon ingots, waste) after `secs`.
+fn arc_route(recipe: &str, stock: &[(Item, u32)], secs: u64) -> (usize, usize) {
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 20);
+    w.place(0, 12, 12, Kind::ArcFurnace, Dir::E).unwrap(); // covers 12-14: front is x=15
+    assert_eq!(w.ratio_at(0, 12, 12), 1.0, "the arc furnace is fully powered");
+    pick_recipe(&mut w, 12, 12, recipe);
+    for (item, n) in stock {
+        set_stock(&mut w, 12, 12, *item, *n);
+    }
+    w.place(0, 11, 12, Kind::Crate, Dir::W).unwrap(); // the waste, out the back
+    w.place(0, 15, 13, Kind::Molder, Dir::E).unwrap();
+    pick_recipe(&mut w, 15, 13, "silicon ingot");
+    w.place(0, 15, 15, Kind::Solar, Dir::E).unwrap(); // the molder's own power
+    w.place(0, 17, 13, Kind::Crate, Dir::E).unwrap(); // the ingots
+    run(&mut w, secs);
+    (
+        crate_items(&w, 0, 17, 13).iter().filter(|i| **i == Item::SiliconIngot).count(),
+        crate_items(&w, 0, 11, 12).iter().filter(|i| **i == Item::Waste).count(),
+    )
+}
+
+#[test]
+fn an_arc_furnace_melts_silicon_on_power_alone_and_remelts_scrap() {
+    for r in Kind::ArcFurnace.recipes() {
+        assert_eq!(r.fuel, None, "{} burns nothing", r.name);
+    }
+    // On coke: 2 silicon and 1 waste, where the blast furnace gives 1 and 2.
+    assert_eq!(arc_route("molten silicon", &[(Item::Sand, 3), (Item::Coke, 1)], 20), (2, 1));
+    // On coal: 1 silicon and 2 waste.
+    assert_eq!(arc_route("molten silicon (coal)", &[(Item::Sand, 3), (Item::Coal, 2)], 20), (1, 2));
+    // Scrap back to silicon: 3 scrap give 2, with no waste.
+    assert_eq!(arc_route("molten silicon (remelt)", &[(Item::SiliconScrap, 3)], 15), (2, 0));
+    // The old routes stay.
+    assert!(Kind::BlastFurnace.recipes().iter().any(|r| r.name == "molten silicon"));
+    assert!(Kind::Lathe.recipes().iter().any(|r| r.name == "wafer (rough)"));
+}
+
+#[test]
+fn a_grower_and_saw_make_six_wafers_from_three_ingots() {
+    assert!(run_powered(Kind::CrystalGrower, "silicon crystal", &[(Item::SiliconIngot, 3)], 19).is_empty());
+    assert_eq!(run_powered(Kind::CrystalGrower, "silicon crystal", &[(Item::SiliconIngot, 3)], 21), [Item::SiliconCrystal]);
+    let out = run_powered(Kind::WaferSaw, "wafer", &[(Item::SiliconCrystal, 1), (Item::FineWire, 1)], 11);
+    assert_eq!((count(&out, Item::Wafer), out.len()), (6, 6), "no scrap");
 }
