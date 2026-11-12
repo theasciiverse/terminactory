@@ -413,7 +413,7 @@ fn waste_shows_up() {
     // Its recipe book page: no research chart.
     app.book_go(Entry::Item(Item::Waste));
     app.book = true;
-    let buf = render(&mut app, 130, 42);
+    let buf = render(&mut app, 130, 60);
     let t = text(&buf);
     assert!(t.contains("costs $0.50 to sell") && t.contains("Never earns research") && t.contains("Made by"), "{t}");
     std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
@@ -1100,7 +1100,7 @@ fn new_machines_snapshot() {
     assert!(t.lines().last().unwrap().contains("Create › Lathe  $200  3x3  facing"), "{t}");
     app.selected = None;
     let buf = render(&mut app, 60, 20);
-    assert!(text(&buf).lines().last().unwrap().contains("Create › 1 DRIL+  2 FURN+"), "{}", text(&buf));
+    assert!(text(&buf).lines().last().unwrap().contains("Create › 1 DRIL  2 FURN  3 PRES  4 CRUD  5 PUMP  6 ETCH"), "{}", text(&buf));
     std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
 }
 
@@ -1133,6 +1133,47 @@ fn silicon_book_pages_fit_every_size() {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
         }
+    }
+}
+
+/// The chip pages (etcher, mixer, precision assembler, the new items) fit narrow, tall and zoomed-out panes.
+#[test]
+fn chip_book_pages_fit_every_size() {
+    let mut app = App::new(World::blank());
+    app.book = true;
+    let pages = [
+        (Entry::Part(Kind::Mixer), vec!["coal + sand + water  ──→  2 etchant + waste", "out the back"]),
+        (Entry::Part(Kind::Etcher), vec!["doped wafer + mask + etchant  ──→  2 die + 2 silicon scrap", "etches dies"]),
+        (Entry::Part(Kind::AdvancedAssembler), vec!["glass + copper sheet + 2 fine wire  ──→  mask"]),
+        (
+            Entry::Part(Kind::PrecisionAssembler),
+            vec!["die + ceramic + 4 fine wire  ──→  microprocessor (x4x1)", "die + ceramic + 2 fine wire  ──→  RAM chip"],
+        ),
+        (Entry::Item(Item::Etchant), vec!["Made by", "sells $2"]),
+        (Entry::Item(Item::Die), vec!["Made by", "Used in", "sells $68"]),
+        (Entry::Item(Item::Microprocessor), vec!["Made by", "sells $200"]),
+        (Entry::Item(Item::RamChip), vec!["Made by", "sells $150"]),
+    ];
+    for (entry, wants) in pages {
+        app.book_go(entry);
+        let wide = text(&render(&mut app, 130, 60));
+        for want in wants {
+            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
+        }
+        for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
+            let buf = render(&mut app, w, h);
+            assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
+        }
+    }
+    // The long item name keeps its code in the grid, and the research list and tree show the etcher.
+    let t = text(&render(&mut app, 130, 60));
+    assert!(t.contains("microprocessor x4x1"), "{t}");
+    app.book = false;
+    app.tree = true;
+    app.tree_pick = tree_rows().iter().position(|t| t.name() == "Etcher").unwrap();
+    for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Etcher"), "{w}x{h}: {t}");
     }
 }
 
@@ -1198,9 +1239,17 @@ fn content_step_screens_fit_every_size() {
     // A tall sidebar lists every machine, five numbered groups.
     let buf = render(&mut app, 130, 46);
     let t = text(&buf);
-    for name in
-        ["Large basic drill", "Mixer", "Evacuator", "Kiln", "Welder", "Large adv. assembler", "Advanced pump", "Precision assembler"]
-    {
+    for name in [
+        "Large basic drill",
+        "Mixer",
+        "Evacuator",
+        "Kiln",
+        "Welder",
+        "Large adv. assembler",
+        "Advanced pump",
+        "Precision assembler",
+        "Etcher",
+    ] {
         assert!(t.contains(name), "{name}: {t}");
     }
     assert!(t.contains(" 5 ") && t.contains("HERE"), "{t}");
@@ -1217,12 +1266,15 @@ fn content_step_screens_fit_every_size() {
     let t = text(&render(&mut app, 130, 32));
     assert!(t.contains("Precision assembler") && t.contains("Welder") && t.contains("HERE"), "{t}");
     app.selected = None;
-    // Small panes: the bottom line keeps all five numbers.
+    // Small panes: the bottom line keeps all six numbers.
     for width in [50, 64, 90] {
         let buf = render(&mut app, width, 20);
         let t = text(&buf);
         let last = t.lines().last().unwrap();
-        assert!(last.contains(if width < 70 { "5 PUMP" } else { "5 Water" }), "{width}: {last}");
+        // Six slots: the codes at 50 columns, map labels from 64, and the way out when it fits.
+        let (five, six) = if width < 60 { ("5PU", "6ET") } else { ("5 PUMP", "6 ETCH") };
+        assert!(last.contains(five) && last.contains(six), "{width}: {last}");
+
         std::fs::write(format!("target/snapshot-create-menu-{width}.html"), to_html(&buf)).unwrap();
     }
     app.menu = None;
@@ -1299,8 +1351,9 @@ fn machines_say_waste_leaves_by_the_back() {
     let t = text(&render(&mut app, 130, 42));
     assert!(!t.contains("out the back"), "{t}");
     // The waste page says where it comes from.
+    // (A tall pane: the page of waste has grown with every machine that leaves some.)
     app.book_go(Entry::Item(Item::Waste));
-    let t = text(&render(&mut app, 130, 42));
+    let t = text(&render(&mut app, 130, 60));
     assert!(t.contains("back edge"), "{t}");
     assert!(t.contains("fuel for boiler") && t.contains("4 waste burn like 1 coal"), "{t}");
     // And a placed boiler says it burns waste too.

@@ -311,6 +311,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::Pipe => "PIPE",
         Kind::Mixer => "MIXR",
         Kind::Evacuator => "EVAC",
+        Kind::Etcher => "ETCH",
         Kind::Solar => "SOLR",
         Kind::BasicSolar => "SOL2",
         Kind::Pole => "POLE",
@@ -385,9 +386,14 @@ fn category_spans(app: &App, cat: Category, room: usize) -> Vec<Span<'static>> {
         }
         spans.push(Span::styled(text, *st));
     }
-    let back = format!("  {} back", app.controls.key(Action::Back));
+    // The way out stays on the line: "Esc back" when there is room, else just the key.
+    let key = app.controls.key(Action::Back);
+    let back = format!("  {key} back");
+    let bare = format!(" {key}");
     if room >= width(lvl) + back.chars().count() {
         spans.push(Span::styled(back, dim));
+    } else if room >= width(lvl) + bare.chars().count() {
+        spans.push(Span::styled(bare, dim));
     }
     spans
 }
@@ -1055,6 +1061,12 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::CircuitBoard => ('J', 71),
         Item::Transistor => ('q', 80),
         Item::TransistorBoard => ('Z', 82),
+        // Chip making: etchant is pale green, masks and dies are silver and blue, the chips pink.
+        Item::Etchant => ('h', 150),
+        Item::Mask => ('m', 250),
+        Item::Die => ('k', 111),
+        Item::Microprocessor => ('H', 207),
+        Item::RamChip => ('R', 213),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1097,6 +1109,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::LargeKiln => (PAPER, 202),
         Kind::Mixer => (INK, 152),
         Kind::Evacuator => (INK, 158),
+        Kind::Etcher => (INK, 183),
         Kind::AdvancedDrill => (INK, 74),
         Kind::LargeBasicDrill => (INK, 111),
         Kind::LargeAdvancedDrill => (INK, 38),
@@ -1158,6 +1171,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::LargeKiln => ('K', '2'),
         Kind::Mixer => ('M', 'X'),
         Kind::Evacuator => ('E', 'V'),
+        Kind::Etcher => ('E', 'T'),
         Kind::AdvancedDrill => ('D', '3'),
         Kind::LargeBasicDrill => ('D', '4'),
         Kind::LargeAdvancedDrill => ('D', '5'),
@@ -1262,6 +1276,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::LargeKiln => labelled("LRG KILN"),
         Kind::Mixer => labelled("MIXR"),
         Kind::Evacuator => labelled("EVAC"),
+        Kind::Etcher => labelled("ETCH"),
         Kind::AdvancedDrill => labelled("ADV DRL"),
         Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
         Kind::LargeAdvancedDrill => labelled("LRG ADV DRILL"),
@@ -2629,7 +2644,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 21] = [
+const CRAFTERS: [Kind; 22] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
@@ -2649,6 +2664,7 @@ const CRAFTERS: [Kind; 21] = [
     Kind::BasicAssembler,
     Kind::AdvancedAssembler,
     Kind::PrecisionAssembler,
+    Kind::Etcher,
     Kind::LargeBasicAssembler,
     Kind::LargeAdvancedAssembler,
 ];
@@ -2670,15 +2686,16 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Lathe => "turns plate into rods and screws, steel into steel rods and bearings, and silicon ingots into wafers (and scrap)",
         Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass, tubes (leaving waste), dopant, doped wafers and ceramic",
         Kind::LargeKiln => "fires 32 at once, every 20 seconds: four kilns in one, burning four kilns' coal",
-        Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
+        Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete, and etchant from coal and sand (leaving waste)",
         Kind::Evacuator => "pulls the air out of glass with a water jet from a pipe: 2 tubes a run, no waste",
+        Kind::Etcher => "etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays, gearboxes, transformers and lamp matrices",
         Kind::BasicAssembler => "builds electric motors, pistons and terminals, and the crude parts twice as fast",
         Kind::AdvancedAssembler => {
-            "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), circuit boards, transistors and transistor boards (x3x1), and everything below faster"
+            "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), circuit boards, transistors, transistor boards (x3x1) and masks, and everything below faster"
         }
-        Kind::PrecisionAssembler => "builds control boards twice as fast as an advanced one, and takes later chips; nothing below",
+        Kind::PrecisionAssembler => "builds microprocessors (x4x1) and RAM chips, and control boards twice as fast as an advanced one; nothing below",
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
         Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",
         Kind::AdvancedDrill => "a drill on EC: twice a basic drill's ore, no coal",
@@ -3289,7 +3306,10 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
                 st = Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD);
             }
             buf.set_string(x, y, glyph.to_string(), gst);
-            buf.set_stringn(x + 1, y, format!(" {:<w$}", fit(e.name(), CELL - 3), w = CELL - 3), CELL - 2, st);
+            // "microprocessor (x4x1)" is too long for a cell: drop the brackets, keep the code.
+            let name = e.name();
+            let name = if name.chars().count() > CELL - 3 { name.replace(" (", " ").replace(')', "") } else { name.to_string() };
+            buf.set_stringn(x + 1, y, format!(" {:<w$}", fit(&name, CELL - 3), w = CELL - 3), CELL - 2, st);
             app.book_cells.push((Rect::new(x, y, CELL as u16 - 1, 1), e));
             x += CELL as u16;
         }

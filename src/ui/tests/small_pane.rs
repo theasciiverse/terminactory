@@ -72,13 +72,13 @@ fn tech_row(name: &str) -> usize {
 fn phone_36x24() {
     let mut app = demo();
     render(&mut app, 36, 24);
-    // The menu opens with no message in the way and all five slots and the way out show.
+    // The menu opens with no message in the way and all six slots and the way out show.
     key(&mut app, '1');
     let buf = render(&mut app, 36, 24);
     snapshot("phone-36x24", &buf);
     let t = text(&buf);
     let last = lines(&t).last().unwrap().to_string();
-    for want in ["1DR", "2FU", "3PR", "4A1", "5PU", "Esc"] {
+    for want in ["1DR", "2FU", "3PR", "4A1", "5PU", "6ET", "Esc"] {
         assert!(last.contains(want), "{want}: {last}");
     }
     // A paused ticker still says so, with money in short form.
@@ -119,10 +119,11 @@ fn a_message_never_hides_the_build_line() {
         app.say("Researched Large advanced assembler: A 5x5 assembler for the biggest goods");
         let t = text(&render(&mut app, w, h));
         let last = lines(&t).last().unwrap().to_string();
-        for n in 1..=5 {
+        for n in 1..=6 {
             assert!(last.contains(&n.to_string()), "{w}x{h} slot {n}: {last}");
         }
-        assert!(last.contains('…') || last.contains("│"), "{w}x{h}: {last}");
+        // Six slots fill a phone's line: the message gives way there, the slots never do.
+        assert!(w < 40 || last.contains('…') || last.contains("│"), "{w}x{h}: {last}");
         // And with a part picked, its price stays.
         key(&mut app, '2');
         app.say("Furnace needs EC to run, and coal or ore beside it for the fire");
