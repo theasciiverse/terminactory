@@ -1126,6 +1126,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::UpgradePlanner), Some(27)), // 56: gearbox unlocks upgrade planning
 ];
 
+#[allow(dead_code)]
 pub fn tree_children(i: usize) -> Vec<usize> {
     TREE.iter().enumerate().filter(|(_, (_, p))| *p == Some(i)).map(|(j, _)| j).collect()
 }

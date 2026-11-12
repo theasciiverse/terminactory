@@ -306,7 +306,7 @@ fn recipe_book() {
     assert_eq!(app.book_slug, "home");
     let t = text(&render(&mut app, 80, 40));
     assert!(t.contains("https://terminactory.wiki/home"), "{t}");
-    assert!(t.contains("Getting started") && t.contains("Raw materials"), "{t}");
+    assert!(t.contains("New here? Start with Getting started") && !t.contains("Raw materials:"), "{t}");
     let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
     app.on_mouse(MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
@@ -375,7 +375,7 @@ fn wiki_floating_window_behavior() {
 }
 
 #[test]
-fn wiki_infobox_scroll_reaches_last_row_in_narrow_and_wide_panes() {
+fn wiki_infobox_and_page_sections_render_in_narrow_and_wide_panes() {
     let mut app = App::new(World::new());
     app.on_key(KeyEvent::from(KeyCode::Char('b')));
     app.on_key(KeyEvent::from(KeyCode::Char('/')));
@@ -385,12 +385,12 @@ fn wiki_infobox_scroll_reaches_last_row_in_narrow_and_wide_panes() {
     app.book_selected = app.book_results.iter().position(|s| s == "copper-coil").unwrap();
     app.on_key(KeyEvent::from(KeyCode::Enter));
     let top = text(&render(&mut app, 50, 34));
-    assert!(top.find("Copper coil").unwrap() < top.find("@ Copper coil").unwrap(), "{top}");
+    assert!(top.find("Copper coil").unwrap() < top.find("Money").unwrap(), "{top}");
     for _ in 0..30 {
         app.on_key(KeyEvent::from(KeyCode::PageDown));
     }
     let narrow_end = text(&render(&mut app, 50, 34));
-    assert!(narrow_end.contains("1005 sales"), "{narrow_end}");
+    assert!(narrow_end.contains("Category: Items"), "{narrow_end}");
     app.book_scroll = 0;
     let wide_top = text(&render(&mut app, 100, 40));
     assert!(wide_top.contains("https://terminactory.wiki/copper-coil"), "{wide_top}");
@@ -398,7 +398,7 @@ fn wiki_infobox_scroll_reaches_last_row_in_narrow_and_wide_panes() {
         app.on_key(KeyEvent::from(KeyCode::PageDown));
     }
     let wide_end = text(&render(&mut app, 100, 40));
-    assert!(wide_end.contains("1005 sales"), "{wide_end}");
+    assert!(wide_end.contains("Category: Items"), "{wide_end}");
 }
 
 /// In a small terminal the map fills the pane between a ticker and a status line.
@@ -1650,4 +1650,140 @@ fn research_rows_show_progress_toward_a_free_unlock() {
     // Affordable still reads as ready, whatever the progress.
     app.world.econ.research = Tech::Press.cost();
     assert!(row(&app).starts_with("● "), "{}", row(&app));
+}
+
+#[test]
+fn wiki_links_follow_reading_order_and_both_arrow_pairs_move_linearly() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "home".into();
+    render(&mut app, 80, 40);
+    let links: Vec<_> = app.book_urls.iter().map(|(_, slug)| slug.as_str()).collect();
+    let getting = links.iter().position(|s| *s == "getting-started").unwrap();
+    let first_nav = links.iter().position(|s| *s == "machines").unwrap();
+    assert!(getting < first_nav, "reading order: {links:?}");
+    app.book_selected = first_nav;
+    app.on_key(KeyEvent::from(KeyCode::Left));
+    assert_eq!(app.book_selected, first_nav - 1);
+    app.on_key(KeyEvent::from(KeyCode::Right));
+    assert_eq!(app.book_selected, first_nav);
+    app.on_key(KeyEvent::from(KeyCode::Up));
+    assert_eq!(app.book_selected, first_nav - 1);
+    app.on_key(KeyEvent::from(KeyCode::Down));
+    assert_eq!(app.book_selected, first_nav);
+}
+
+#[test]
+fn wiki_item_grid_search_and_recipe_ingredients_are_links() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "items".into();
+    app.on_key(KeyEvent::from(KeyCode::Char('/')));
+    app.on_key(KeyEvent::from(KeyCode::Char('c')));
+    app.on_key(KeyEvent::from(KeyCode::Char('o')));
+    let filtered = render(&mut app, 140, 45);
+    assert!(text(&filtered).contains("Copper ore"));
+    assert!(!text(&filtered).contains("Iron gear"));
+    app.book_typing = false;
+    app.book_slug = "copper-coil".into();
+    render(&mut app, 140, 45);
+    assert!(app.book_urls.iter().any(|(_, slug)| slug == "copper-wire"));
+}
+
+#[test]
+fn wiki_home_has_four_navigation_destinations_and_generated_facts_link_to_pages() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "home".into();
+    let rendered = text(&render(&mut app, 140, 45));
+    assert!(rendered.contains("╭ Terminactory Wiki ╮"));
+    assert!(!rendered.contains("Terminactory Wiki — Terminactory Wiki"));
+    assert!(rendered.contains("Machines") && rendered.contains("Items") && rendered.contains("Topics") && rendered.contains("Companies"));
+    assert!(app.book_urls.iter().any(|(_, slug)| slug == "machines"));
+    assert!(app.book_urls.iter().any(|(_, slug)| slug == "items"));
+    assert!(app.book_urls.iter().any(|(_, slug)| slug == "topics"));
+    assert!(app.book_urls.iter().any(|(_, slug)| slug == "companies"));
+    for (_, slug) in app.book_urls.iter().filter(|(_, slug)| !["items", "machines", "topics", "close-book"].contains(&slug.as_str())) {
+        assert!(crate::wiki::page(slug).is_some(), "generated home link has a page: {slug}");
+    }
+}
+
+#[test]
+fn wiki_contents_sidebar_only_appears_at_110_inner_columns() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "copper-coil".into();
+    assert!(text(&render(&mut app, 140, 45)).contains("Contents"));
+    assert!(!text(&render(&mut app, 120, 45)).contains("Contents"));
+}
+
+#[test]
+fn wiki_recipe_cards_close_contents_cover_sections_and_home_tiles_keep_borders() {
+    let world = World::new();
+    let md = crate::wiki::page("copper-coil").unwrap();
+    let page = super::book_page_markdown(&world, Entry::Item(Item::CopperCoil), md, 94);
+    assert_eq!(page.matches('╭').count(), page.matches('╰').count(), "every recipe card has a bottom border");
+
+    let expected = ["Information", "Recipes", "Sources", "Uses", "Unlock", "Tips", "See also"];
+    for section in expected {
+        assert!(page.contains(&format!("## {section}")) || page.contains(&format!("### {section}")), "missing section {section}");
+    }
+
+    let mut page_app = App::new(World::new());
+    page_app.book = true;
+    page_app.book_slug = "copper-coil".into();
+    let _ = render(&mut page_app, 140, 45);
+    for section in expected {
+        assert!(
+            page_app.book_urls.iter().any(|(_, target)| target == &format!("#{}", section.to_lowercase().replace(' ', "-"))),
+            "Contents links to {section}"
+        );
+    }
+
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "home".into();
+    let rendered = text(&render(&mut app, 140, 45));
+    let tiles = rendered.lines().find(|line| line.contains("Machines") && line.contains("Companies")).unwrap();
+    for label in ["│ Machines │", "│  Items   │", "│  Topics  │", "│ Companies │"] {
+        assert!(tiles.contains(label), "tile has both side borders ({label}): {tiles}");
+    }
+    let back = rendered.lines().find(|line| line.contains("BACK TO THE FACTORY")).unwrap();
+    assert!(back.contains("│     BACK TO THE FACTORY     │"), "the return tile has both side borders: {back}");
+}
+
+#[test]
+fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
+    let mut wide = App::new(World::new());
+    wide.book = true;
+    wide.book_slug = "copper-coil".into();
+    let wide_top = text(&render(&mut wide, 140, 45));
+    assert!(wide_top.contains("Recipes"), "{wide_top}");
+    wide.book_scroll = u16::MAX;
+    let wide_end = text(&render(&mut wide, 140, 45));
+    for heading in ["Unlock", "Tips", "See also"] {
+        assert!(wide_end.contains(heading), "missing {heading}: {wide_end}");
+    }
+    assert!(wide.book_scroll > 0);
+
+    let mut narrow = App::new(World::new());
+    narrow.book = true;
+    narrow.book_slug = "copper-coil".into();
+    let narrow_top = text(&render(&mut narrow, 60, 30));
+    assert!(narrow_top.contains("Recipes"), "{narrow_top}");
+    narrow.book_scroll = u16::MAX;
+    let narrow_end = text(&render(&mut narrow, 60, 30));
+    assert!(narrow_end.contains("See also") && narrow_end.contains("Category: Items"), "{narrow_end}");
+    assert!(!narrow_end.contains("Money"), "infobox should scroll away: {narrow_end}");
+
+    let machine_pages = crate::sim::Kind::ALL.iter().filter(|k| crate::wiki::page(&crate::wiki::slug(k.name())).is_some()).count();
+    assert_eq!(machine_pages, 51);
+    let mut home = App::new(World::new());
+    home.book = true;
+    home.book_slug = "home".into();
+    let home_text = text(&render(&mut home, 140, 45));
+    assert!(home_text.contains(&format!("{machine_pages} machines")), "{home_text}");
+    assert!(!home_text.contains("Raw materials:"), "{home_text}");
 }

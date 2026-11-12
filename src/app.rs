@@ -269,6 +269,7 @@ pub struct App {
     pub book_history: Vec<String>,
     pub book_forward: Vec<String>,
     pub book_selected: usize,
+    pub book_seed: usize,
     pub book_results: Vec<String>,
     pub book_result_capacity: usize,
     /// "While you were away" summary waiting to be read.
@@ -381,6 +382,7 @@ impl App {
             book_history: Vec::new(),
             book_forward: Vec::new(),
             book_selected: 0,
+            book_seed: 0,
             book_results: Vec::new(),
             book_result_capacity: 1,
             away: None,
@@ -808,6 +810,7 @@ impl App {
     /// Opens the recipe book on what's under the cursor: a machine's recipe, what a drill
     /// mines, or the machine itself.
     fn open_book(&mut self) {
+        self.book_seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.subsec_nanos() as usize);
         let (x, y) = self.cursor;
         let here = self.world.tile(self.floor, x, y).and_then(|b| match &b.st {
             crate::sim::St::Drill { mines: Some(m), .. } => Some(Entry::Item(*m)),
@@ -846,6 +849,15 @@ impl App {
     }
 
     fn book_go_slug(&mut self, slug: &str) {
+        if let Some(anchor) = slug.strip_prefix('#') {
+            if let Some(page) = crate::wiki::page(&self.book_slug) {
+                let label = anchor.replace('-', " ");
+                if let Some(line) = page.lines().position(|line| line.eq_ignore_ascii_case(&format!("## {label}"))) {
+                    self.book_scroll = line as u16;
+                }
+            }
+            return;
+        }
         if crate::wiki::page(slug).is_none() || slug == self.book_slug {
             return;
         }
@@ -875,6 +887,8 @@ impl App {
         let q = self.book_query.to_lowercase();
         self.book_results = if q.is_empty() {
             Vec::new()
+        } else if self.book_slug == "items" || self.book_slug == "machines" {
+            Entry::list(&q, self.book_slug == "machines").into_iter().map(|e| crate::wiki::slug(e.name())).collect()
         } else {
             crate::wiki::PAGES
                 .iter()
@@ -980,7 +994,7 @@ impl App {
                 }
                 return;
             }
-            (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
+            (KeyCode::Up | KeyCode::Left, _) | (_, Some(Action::MoveUp)) => {
                 if !self.book_query.is_empty() {
                     self.book_selected = self.book_selected.saturating_sub(1);
                     if self.book_selected < self.book_scroll as usize {
@@ -995,18 +1009,18 @@ impl App {
                 }
                 return;
             }
-            (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
+            (KeyCode::Down | KeyCode::Right, _) | (_, Some(Action::MoveDown)) => {
                 if !self.book_query.is_empty() {
                     self.book_selected = (self.book_selected + 1).min(self.book_results.len().saturating_sub(1));
                     if self.book_selected >= self.book_scroll as usize + self.book_result_capacity {
                         self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
                     }
                 } else if !self.book_urls.is_empty() {
-                    if self.book_selected + 1 >= self.book_urls.len() && self.book_results.is_empty() {
-                        self.book_scroll += 1;
+                    if self.book_selected + 1 >= self.book_urls.len() {
+                        self.book_scroll = self.book_scroll.saturating_add(1);
                         self.book_selected = 0;
                     } else {
-                        self.book_selected = (self.book_selected + 1).min(self.book_urls.len().saturating_sub(1));
+                        self.book_selected += 1;
                     }
                 } else {
                     self.book_scroll += 1;
@@ -1022,7 +1036,11 @@ impl App {
                     }
                 } else if let Some((_, slug)) = self.book_urls.get(self.book_selected) {
                     let slug = slug.clone();
-                    self.book_go_slug(&slug);
+                    if slug == "close-book" {
+                        self.book = false;
+                    } else {
+                        self.book_go_slug(&slug);
+                    }
                 }
                 return;
             }

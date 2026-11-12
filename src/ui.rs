@@ -3104,6 +3104,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         _ => return None,
     })
 }
+#[allow(dead_code)]
 const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
@@ -3131,6 +3132,7 @@ fn num(v: f64) -> String {
 
 /// A piece of text on a book page; some pieces are links to another page.
 #[derive(Clone)]
+#[allow(dead_code)]
 struct Seg {
     text: String,
     style: Style,
@@ -3138,11 +3140,13 @@ struct Seg {
     link: Option<Entry>,
 }
 
+#[allow(dead_code)]
 fn seg(text: impl Into<String>, style: Style) -> Seg {
     Seg { text: text.into(), style, link: None }
 }
 
 /// A link to a page; the page you're on isn't a link to itself.
+#[allow(dead_code)]
 fn link(e: Entry, here: Entry) -> Seg {
     if e == here {
         seg(e.name(), Style::new().add_modifier(Modifier::BOLD))
@@ -3154,6 +3158,7 @@ fn link(e: Entry, here: Entry) -> Seg {
 type Row = Vec<Seg>;
 
 /// Word-wraps pieces to `width`; rows after the first start at `hang`. Links stay links.
+#[allow(dead_code)]
 fn lay_out(segs: Vec<Seg>, width: usize, hang: usize) -> Vec<Row> {
     // Split into words and runs of spaces, each keeping its piece's style and link.
     let mut toks: Vec<Seg> = Vec::new();
@@ -3199,6 +3204,7 @@ fn lay_out(segs: Vec<Seg>, width: usize, hang: usize) -> Vec<Row> {
 }
 
 /// A recipe as a word equation: "2 iron gear + steel ─coal─→ gearbox", with the fuel over the arrow.
+#[allow(dead_code)]
 fn equation(r: &Recipe, here: Entry) -> Vec<Seg> {
     let side = |list: &[(Item, u32)]| {
         let mut out = Vec::new();
@@ -3243,6 +3249,7 @@ fn equation(r: &Recipe, here: Entry) -> Vec<Seg> {
 }
 
 /// Why a recipe can't be used yet, if it can't.
+#[allow(dead_code)]
 fn recipe_lock(w: &World, k: Kind, r: &Recipe) -> Option<String> {
     if !w.progress.part_unlocked(k) {
         Some(format!("needs the {}", k.name().to_lowercase()))
@@ -3256,12 +3263,14 @@ fn same_recipe(a: &Recipe, b: &Recipe) -> bool {
     a.name == b.name && a.inputs == b.inputs && a.outputs == b.outputs && a.fluid_in == b.fluid_in && a.fluid_out == b.fluid_out
 }
 
+#[allow(dead_code)]
 fn timing(r: &Recipe, made: u32) -> String {
     let per_min = made as f64 * 60.0 * TPS as f64 / r.ticks as f64;
     format!("{:.1}s · {per_min:.0}/min", r.ticks as f64 / TPS as f64)
 }
 
 /// A book page as rows: a title, then labelled rows (no headings), then (for items) the research chart.
+#[allow(dead_code)]
 fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
     let width = width as usize;
     let dim = Style::new().fg(Color::DarkGray);
@@ -3311,7 +3320,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     segs.push(link(Entry::Part(*d), e));
                 }
                 segs.push(seg(format!(" {how}"), Style::new()));
-                labelled(&mut out, label(&mut first, "Made by"), GUTTER, segs);
+                labelled(&mut out, label(&mut first, "Sources"), GUTTER, segs);
             }
             // Machines that share a recipe (the assembler ladder) are listed together, with its times.
             let mut makers: Vec<Vec<(Kind, &'static Recipe)>> = Vec::new();
@@ -3333,12 +3342,12 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     if i + 1 < group.len() {
                         segs.push(seg(",", dim));
                     }
-                    labelled(&mut out, label(&mut first, "Made by"), GUTTER, segs);
+                    labelled(&mut out, label(&mut first, "Sources"), GUTTER, segs);
                 }
                 labelled(&mut out, "", EQ, equation(group[0].1, e));
             }
             if first {
-                labelled(&mut out, "Made by", GUTTER, vec![seg("nothing yet", dim)]);
+                labelled(&mut out, "Sources", GUTTER, vec![seg("nothing yet", dim)]);
             }
 
             // Uses: one equation per recipe, then the machines that run it.
@@ -3364,7 +3373,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     }
                     segs.push(link(Entry::Part(*k), e));
                 }
-                labelled(&mut out, label(&mut first, "Used in"), GUTTER, segs);
+                labelled(&mut out, label(&mut first, "Uses"), GUTTER, segs);
             }
             let fuel: Option<(Vec<Kind>, &str)> = match item {
                 Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln, Kind::LargeKiln], "")),
@@ -3381,12 +3390,12 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     segs.push(if BOOK_PARTS.contains(k) { link(Entry::Part(*k), e) } else { seg(k.name().to_lowercase(), Style::new()) });
                 }
                 segs.push(seg(note, dim));
-                labelled(&mut out, label(&mut first, "Used in"), GUTTER, segs);
+                labelled(&mut out, label(&mut first, "Uses"), GUTTER, segs);
             }
             if first && item == Item::Waste {
-                labelled(&mut out, "Used in", GUTTER, vec![seg("nothing: a trade post set to money takes it, for a fee", dim)]);
+                labelled(&mut out, "Uses", GUTTER, vec![seg("nothing: a trade post set to money takes it, for a fee", dim)]);
             } else if first {
-                labelled(&mut out, "Used in", GUTTER, vec![seg("nothing yet: sell it at a trade post", dim)]);
+                labelled(&mut out, "Uses", GUTTER, vec![seg("nothing yet: sell it at a trade post", dim)]);
             }
 
             let mut first = true;
@@ -3517,7 +3526,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                         if let Some(l) = r.needs.filter(|t| !w.progress.has(*t)).map(|t| format!("needs {}", t.name())) {
                             segs.push(seg(format!("  ({l})"), warn));
                         }
-                        labelled(&mut out, if std::mem::take(&mut first) { "Makes" } else { "" }, GUTTER, segs);
+                        labelled(&mut out, if std::mem::take(&mut first) { "Recipes" } else { "" }, GUTTER, segs);
                     }
                     labelled(&mut out, "", GUTTER, vec![seg(format!("{setup_key} on a placed one picks the recipe"), dim)]);
                     if k.recipes().iter().any(|r| r.outputs.iter().any(|o| o.0 == Item::Waste)) {
@@ -3544,6 +3553,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
 /// How much research each sale of an item gives, as a bar chart: it starts at the item's
 /// worth and fades with every sale down to a floor. Sales already made are grey, the ones
 /// ahead in colour; the y axis marks the start and the floor, and a marker shows where you are.
+#[allow(dead_code)]
 fn research_chart(w: &World, item: Item, width: u16) -> Vec<Line<'static>> {
     let dim = Style::new().fg(Color::DarkGray);
     let axis = Style::new().fg(Color::Indexed(240));
@@ -3640,15 +3650,24 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     }
     f.render_widget(Clear, frame);
     f.render_widget(Block::bordered(), frame);
-    let page_title =
-        crate::wiki::page(&app.book_slug).and_then(|md| md.lines().next()).unwrap_or("Page missing").trim_start_matches('#').trim();
+    let page_title = match app.book_slug.as_str() {
+        "home" => "Terminactory Wiki",
+        "items" => "Items",
+        "machines" => "Machines",
+        "topics" => "Topics",
+        _ => crate::wiki::page(&app.book_slug).and_then(|md| md.lines().next()).unwrap_or("Page missing").trim_start_matches('#').trim(),
+    };
     for (i, color) in [Color::Indexed(167), Color::Indexed(221), Color::Indexed(114)].into_iter().enumerate() {
         f.buffer_mut().set_string(frame.x + 2 + i as u16 * 2, frame.y, "●", Style::new().fg(color));
     }
     for x in [frame.x + 3, frame.x + 5, frame.x + 7, frame.x + 8] {
         f.buffer_mut().set_string(x, frame.y, " ", Style::default());
     }
-    let tab = format!("╭ {page_title} — Terminactory Wiki ╮");
+    let tab = if app.book_slug == "home" {
+        "╭ Terminactory Wiki ╮".to_string()
+    } else {
+        format!("╭ {page_title} — Terminactory Wiki ╮")
+    };
     let tab_width = frame.width.saturating_sub(12) as usize;
     let tab: String = if tab.chars().count() > tab_width {
         tab.chars().take(tab_width.saturating_sub(1)).chain(std::iter::once('…')).collect()
@@ -3681,67 +3700,164 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     );
     app.book_links.clear();
     app.book_urls.clear();
-    let md = crate::wiki::page(&app.book_slug).unwrap_or("# Page missing");
-    if !app.book_query.is_empty() {
-        app.book_result_capacity = content.height.saturating_sub(2).max(1) as usize;
-        app.book_scroll = app.book_scroll.min(app.book_results.len().saturating_sub(app.book_result_capacity) as u16);
+    if app.book_slug == "items" || app.book_slug == "machines" {
+        draw_book_index(f, content, app, app.book_slug == "machines");
+    } else if app.book_slug == "topics" {
+        let topics = [
+            "getting-started",
+            "power",
+            "waste",
+            "floors-and-elevators",
+            "research",
+            "companies",
+            "belts-and-logistics",
+            "fluids-and-pipes",
+            "tools-and-blueprints",
+        ];
         let mut y = content.y;
-        f.buffer_mut().set_string(content.x, y, "Search results", Style::new().bold());
-        y += 2;
-        if app.book_results.is_empty() {
-            f.buffer_mut().set_string(content.x, y, "No pages match this search.", Style::new().fg(Color::DarkGray));
-        }
-        for (i, slug) in app.book_results.iter().enumerate().skip(app.book_scroll as usize).take(content.height.saturating_sub(2) as usize)
-        {
-            let label = crate::wiki::page(slug).and_then(|p| p.lines().next()).unwrap_or(slug).trim_start_matches('#').trim();
-            let style = if i == app.book_selected {
-                Style::new().add_modifier(Modifier::REVERSED)
-            } else {
-                Style::new().fg(Color::Cyan).underlined()
-            };
-            f.buffer_mut().set_string(content.x, y, format!("› {label}"), style);
-            app.book_urls.push((Rect::new(content.x, y, content.width, 1), slug.clone()));
+        for slug in topics {
+            let title = crate::wiki::page(slug).and_then(|p| p.lines().next()).unwrap_or(slug).trim_start_matches('#').trim();
+            f.buffer_mut().set_string(content.x, y, format!("› {title}"), Style::new().fg(Color::Cyan).underlined());
+            app.book_urls.push((Rect::new(content.x, y, content.width, 1), slug.to_string()));
             y += 1;
         }
     } else {
-        let narrow = content.width < 90;
-        let (prose, info) = if app.book_slug == "home"
-            || Entry::list("", false).iter().chain(Entry::list("", true).iter()).all(|e| crate::wiki::slug(e.name()) != app.book_slug)
-        {
-            (content, None)
-        } else if narrow {
-            (content, Some(content))
+        let home = book_home_markdown(&app.world, app.book_seed);
+        let md = if app.book_slug == "home" { home.as_str() } else { crate::wiki::page(&app.book_slug).unwrap_or("# Page missing") };
+        if !app.book_query.is_empty() {
+            app.book_result_capacity = content.height.saturating_sub(2).max(1) as usize;
+            app.book_scroll = app.book_scroll.min(app.book_results.len().saturating_sub(app.book_result_capacity) as u16);
+            let mut y = content.y;
+            f.buffer_mut().set_string(content.x, y, "Search results", Style::new().bold());
+            y += 2;
+            if app.book_results.is_empty() {
+                f.buffer_mut().set_string(content.x, y, "No pages match this search.", Style::new().fg(Color::DarkGray));
+            }
+            for (i, slug) in
+                app.book_results.iter().enumerate().skip(app.book_scroll as usize).take(content.height.saturating_sub(2) as usize)
+            {
+                let label = crate::wiki::page(slug).and_then(|p| p.lines().next()).unwrap_or(slug).trim_start_matches('#').trim();
+                let style = if i == app.book_selected {
+                    Style::new().add_modifier(Modifier::REVERSED)
+                } else {
+                    Style::new().fg(Color::Cyan).underlined()
+                };
+                f.buffer_mut().set_string(content.x, y, format!("› {label}"), style);
+                app.book_urls.push((Rect::new(content.x, y, content.width, 1), slug.clone()));
+                y += 1;
+            }
         } else {
-            let info_width = if area.width >= 120 { 46 } else { 40 };
-            let [left, right] = Layout::horizontal([Constraint::Min(36), Constraint::Length(info_width)]).areas(content);
-            (left, Some(right))
-        };
-        let info_rows = info.and_then(|ir| {
-            Entry::list("", false).into_iter().chain(Entry::list("", true)).find(|e| crate::wiki::slug(e.name()) == app.book_slug).map(
-                |e| {
-                    book_page(&app.world, e, ir.width, &app.controls.key(Action::Setup))
-                        .into_iter()
-                        .map(|row| {
-                            row.into_iter()
-                                .flat_map(|seg| {
-                                    let style = seg.style;
-                                    seg.text.chars().map(move |c| (c, None, false, style)).collect::<Vec<_>>()
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                        .collect::<Vec<_>>()
-                },
-            )
-        });
-        render_wiki_text(f, prose, md, app, info_rows.as_deref(), info, narrow);
+            let narrow = content.width < 90;
+            let has_contents = content.width >= 110 && app.book_slug != "home";
+            let (prose, info) = if app.book_slug == "home"
+                || Entry::list("", false).iter().chain(Entry::list("", true).iter()).all(|e| crate::wiki::slug(e.name()) != app.book_slug)
+            {
+                (content, None)
+            } else if narrow {
+                (content, Some(content))
+            } else {
+                let info_width = if has_contents {
+                    30
+                } else if area.width >= 120 {
+                    46
+                } else {
+                    40
+                };
+                let usable = if has_contents { Rect { width: content.width.saturating_sub(16), ..content } } else { content };
+                let [left, right] = Layout::horizontal([Constraint::Min(36), Constraint::Length(info_width)]).areas(usable);
+                let _ = left;
+                (usable, Some(right))
+            };
+            let info = info;
+            let entry =
+                Entry::list("", false).into_iter().chain(Entry::list("", true)).find(|e| crate::wiki::slug(e.name()) == app.book_slug);
+            let page_md = entry.map_or_else(|| md.to_string(), |e| book_page_markdown(&app.world, e, md, prose.width as usize));
+            let page_area = prose;
+            if narrow {
+                render_wiki_text(f, page_area, &page_md, app, None, entry, true);
+            } else {
+                render_wiki_text(f, page_area, &page_md, app, info, entry, false);
+            }
+            if has_contents {
+                draw_wiki_contents(f, Rect::new(content.right().saturating_sub(16), content.y, 16, content.height), &page_md, app);
+            }
+        }
     }
     let foot = Rect::new(inner.x, inner.bottom().saturating_sub(1), inner.width, 1);
     let footer = if app.book_typing {
         "Type to search · Enter opens result · Esc stops"
     } else {
-        "↑↓ select links · Enter open · Backspace back · ] forward · PgUp/PgDn scroll · b/Esc close"
+        "↑← prev · ↓→ next · Enter · Backspace · ] · PgUp/PgDn · b/Esc close"
     };
     f.render_widget(Paragraph::new(footer).style(Style::new().fg(Color::DarkGray)), foot);
+}
+
+fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
+    if area.width < 12 || area.height < 6 {
+        return;
+    }
+    f.render_widget(Block::bordered().border_style(Style::new().fg(Color::Indexed(240))), area);
+    let title = match entry {
+        Entry::Item(i) => capitalise(i.name()),
+        Entry::Part(k) => k.name().to_string(),
+    };
+    f.buffer_mut().set_stringn(
+        area.x + 1,
+        area.y,
+        &title,
+        area.width.saturating_sub(2) as usize,
+        Style::new().fg(Color::Indexed(229)).bold(),
+    );
+    let (glyph, style) = match entry {
+        Entry::Item(i) => item_cell(i, Color::Reset),
+        Entry::Part(k) => {
+            let c = kind_cells(k, Dir::E, true);
+            (c[0].0, c[0].1)
+        }
+    };
+    let gx = area.x + area.width / 2;
+    for dy in 0..3 {
+        let count = if dy == 1 { 5 } else { 3 };
+        let start = gx.saturating_sub((count / 2) as u16);
+        for dx in 0..count {
+            f.buffer_mut().set_string(start + dx, area.y + 1 + dy, &glyph.to_string(), style);
+        }
+    }
+    f.buffer_mut().set_stringn(
+        area.x + 1,
+        area.y + 4,
+        &"┄".repeat(area.width.saturating_sub(2) as usize),
+        area.width.saturating_sub(2) as usize,
+        Style::new().fg(Color::DarkGray),
+    );
+    f.buffer_mut().set_stringn(
+        area.x + 1,
+        area.y + 5,
+        "Value",
+        area.width.saturating_sub(2) as usize,
+        Style::new().fg(Color::Indexed(229)).bold(),
+    );
+    let rows: Vec<(String, String)> = match entry {
+        Entry::Item(i) => vec![("Money".into(), format!("${}", i.price())), ("RP".into(), format!("RP {:.1}x", i.curve().worth))],
+        Entry::Part(k) => {
+            let (w, h) = k.base_dims();
+            vec![
+                ("Price".into(), format!("${}", grouped(k.cost()))),
+                ("Size".into(), format!("{w}×{h}")),
+                ("Power".into(), format!("{:.0} EC", k.power_draw())),
+                ("Unlocked by".into(), k.tech().map_or("Available".into(), |t| t.name().into())),
+            ]
+        }
+    };
+    for (i, (label, value)) in rows.iter().enumerate() {
+        let y = area.y + 6 + i as u16;
+        if y >= area.bottom() {
+            break;
+        }
+        f.buffer_mut().set_string(area.x + 1, y, label, Style::new().fg(Color::Gray).bold());
+        let val_x = area.x + area.width.saturating_sub(value.len() as u16).saturating_sub(1);
+        f.buffer_mut().set_string(val_x, y, value, Style::new().fg(if label == "Money" { Color::Yellow } else { Color::Gray }));
+    }
 }
 
 fn fit_left(s: &str, width: usize) -> String {
@@ -3749,21 +3865,293 @@ fn fit_left(s: &str, width: usize) -> String {
     chars.into_iter().rev().take(width).collect::<Vec<_>>().into_iter().rev().collect()
 }
 
-fn render_wiki_text(
-    f: &mut Frame,
-    area: Rect,
-    md: &str,
-    app: &mut App,
-    info: Option<&[Vec<(char, Option<String>, bool, Style)>]>,
-    info_area: Option<Rect>,
-    narrow: bool,
-) {
+fn recipe_item(item: Item, count: u32) -> String {
+    let slug = crate::wiki::slug(item.name());
+    let glyph = item_cell(item, Color::Reset).0;
+    format!("{}[[{slug}|{glyph}]] [[{slug}]]", if count > 1 { format!("{count}x ") } else { String::new() })
+}
+
+fn wiki_visible_width(text: &str) -> usize {
+    let mut width = 0;
+    let mut rest = text;
+    while !rest.is_empty() {
+        if let Some(after) = rest.strip_prefix("[[") {
+            if let Some(end) = after.find("]]") {
+                let spec = &after[..end];
+                let label = spec.split_once('|').map_or_else(|| crate::wiki::link_label(spec), |(_, label)| label.to_string());
+                width += label.chars().count();
+                rest = &after[end + 2..];
+                continue;
+            }
+        }
+        let c = rest.chars().next().unwrap();
+        width += 1;
+        rest = &rest[c.len_utf8()..];
+    }
+    width
+}
+
+fn recipe_equation(r: &Recipe, machine: Option<Kind>, width: usize) -> Vec<String> {
+    let side = |items: &[(Item, u32)]| items.iter().map(|(i, n)| recipe_item(*i, *n)).collect::<Vec<_>>().join(" + ");
+    let inputs = side(r.inputs);
+    let outputs = side(r.outputs);
+    let batch = machine.map_or(1, Kind::batch);
+    let machine_label = machine
+        .map(|_| {
+            let makers: Vec<_> = CRAFTERS
+                .iter()
+                .copied()
+                .filter(|k| k.recipes().iter().any(|candidate| same_recipe(candidate, r)))
+                .map(|k| format!("[[{}|{}]]", crate::wiki::slug(k.name()), k.name()))
+                .collect();
+            if makers.is_empty() {
+                String::new()
+            } else {
+                format!(" ({})", makers.join(", "))
+            }
+        })
+        .unwrap_or_default();
+    let secs = r.ticks as f64 / TPS as f64;
+    let count = r.outputs.first().map_or(1, |o| o.1) * batch;
+    let rate = count as f64 * 60.0 / secs;
+    let arrow = format!("──── {:.1}s ────▶", secs);
+    let one_line = format!("│  {inputs}  {arrow}  {outputs}{machine_label}│");
+    if wiki_visible_width(&one_line) <= width.saturating_sub(2) {
+        vec![
+            one_line,
+            format!(
+                "│{} {:.0}/min{}│",
+                " ".repeat(width.saturating_sub(12) / 2),
+                rate,
+                " ".repeat(width.saturating_sub(12) - width.saturating_sub(12) / 2)
+            ),
+        ]
+    } else {
+        let mut lines = vec![format!("│  {inputs}"), format!("│  {arrow}  {rate:.0}/min")];
+        if wiki_visible_width(&format!("{outputs}{machine_label}")) <= width.saturating_sub(4) {
+            lines.push(format!("│  {outputs}{machine_label}"));
+        } else {
+            lines.push(format!("│  {outputs}"));
+        }
+        if !machine_label.is_empty() && lines.len() == 3 && !lines[2].contains(&machine_label) {
+            lines.push(format!("│ {machine_label}"));
+        }
+        lines
+    }
+}
+
+fn wiki_recipe_cards(world: &World, entry: Entry, width: usize) -> String {
+    let (sources, uses, makes): (Vec<(Recipe, Option<Kind>)>, Vec<(Recipe, Option<Kind>)>, Vec<(Recipe, Option<Kind>)>) = match entry {
+        Entry::Item(item) => {
+            let mut sources = Vec::new();
+            let mut uses = Vec::new();
+            for k in CRAFTERS {
+                for r in k.recipes() {
+                    if r.outputs.iter().any(|o| o.0 == item)
+                        && !(item == Item::CopperCoil && r.inputs == [(Item::CopperWire, 3)])
+                        && !sources.iter().any(|(old, _): &(Recipe, Option<Kind>)| same_recipe(old, r))
+                    {
+                        sources.push((*r, Some(k)));
+                    }
+                    if r.inputs.iter().any(|i| i.0 == item) && !uses.iter().any(|(old, _): &(Recipe, Option<Kind>)| same_recipe(old, r)) {
+                        uses.push((*r, Some(k)));
+                    }
+                }
+            }
+            (sources, uses, Vec::new())
+        }
+        Entry::Part(k) => (Vec::new(), Vec::new(), k.recipes().iter().map(|r| (*r, Some(k))).collect()),
+    };
+    if !makes.is_empty() {
+        let mut out = String::from("## Recipes\n\n### Makes\n");
+        for (r, k) in &makes {
+            out.push_str(&render_recipe_card(world, *r, *k, width));
+        }
+        return out;
+    } else {
+        let mut out = String::from("## Recipes\n\n### Sources\n");
+        for (r, k) in &sources {
+            out.push_str(&render_recipe_card(world, *r, *k, width));
+        }
+        if sources.is_empty() {
+            out.push_str("No recipes found.\n");
+        }
+        out.push_str("\n### Uses\n");
+        for (r, k) in &uses {
+            out.push_str(&render_recipe_card(world, *r, *k, width));
+        }
+        return out;
+    }
+}
+
+fn render_recipe_card(world: &World, r: Recipe, machine: Option<Kind>, width: usize) -> String {
+    let inner = width.saturating_sub(2).max(8);
+    let mut out = format!("╭{}╮\n", "─".repeat(inner));
+    for line in recipe_equation(&r, machine, inner) {
+        let body = line.trim_start_matches('│').trim_end_matches('│').to_string();
+        out.push('│');
+        out.push_str(&body);
+        out.push_str(&" ".repeat(inner.saturating_sub(wiki_visible_width(&body))));
+        out.push('│');
+        out.push('\n');
+    }
+    let _ = world;
+    out.push_str(&format!("╰{}╯\n", "─".repeat(inner)));
+    out
+}
+
+fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> String {
+    let mut lines = md.lines();
+    let title = lines.next().unwrap_or("# Page");
+    let body: Vec<_> = lines.collect();
+    let section_at = body.iter().position(|line| line.starts_with("## ")).unwrap_or(body.len());
+    let (intro, rest) = body.split_at(section_at);
+    let mut out = format!("{title}\n\n## Information\n");
+    for line in intro.iter().filter(|line| !line.trim().is_empty()) {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push('\n');
+    out.push_str(&wiki_recipe_cards(world, entry, width));
+    out.push_str("\n## Unlock\n");
+    match entry {
+        Entry::Item(item) => {
+            let made = world.econ.made[item.idx()];
+            if let Some(i) = TREE.iter().position(|(n, _)| *n == Node::Key(Made::Item(item))) {
+                let next: Vec<String> = tree_children(i)
+                    .iter()
+                    .map(|&child| {
+                        let name = node_name(TREE[child].0);
+                        let slug = crate::wiki::slug(&name);
+                        if crate::wiki::page(&slug).is_some() {
+                            format!("[[{slug}|{name}]]")
+                        } else {
+                            name
+                        }
+                    })
+                    .collect();
+                let done = if made > 0 { " (done)" } else { "" };
+                out.push_str(&format!("Your first one brings {}{}{}.\n", next.join(", "), key_letter_text(Made::Item(item)), done));
+            }
+            for tech in Tech::ALL.iter().filter(|tech| tech.milestone().0 == item && !world.progress.has(**tech)) {
+                let n = tech.milestone().1;
+                out.push_str(&format!("Make {n} to unlock {} free ({}/{n}).\n", tech.name(), made.min(n)));
+            }
+        }
+        Entry::Part(k) => {
+            out.push_str(if world.progress.part_unlocked(k) { "Ready to build.\n" } else { "Locked by research or company progress.\n" });
+        }
+    }
+    for line in rest {
+        if !line.trim().is_empty() {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    let (nav_title, category) = match entry {
+        Entry::Item(_) => ("Items", "Items"),
+        Entry::Part(_) => ("Machines", "Machines"),
+    };
+    let width = width.max(24);
+    let links = "[[items|Items]]  ·  [[machines|Machines]]  ·  [[topics|Topics]]";
+    let title = format!(" {nav_title} ");
+    let sides = width.saturating_sub(title.chars().count() + 2);
+    out.push_str(&format!(
+        "\n┌{}{}{}┐\n│ {}{} │\n└{}┘\nCategory: {category}\n",
+        "─".repeat(sides / 2),
+        title,
+        "─".repeat(sides - sides / 2),
+        links,
+        // Pad by the shown text, not the markup, so the right border meets the box's edge.
+        " ".repeat(width.saturating_sub(4 + "Items  ·  Machines  ·  Topics".chars().count())),
+        "─".repeat(width.saturating_sub(2))
+    ));
+    out
+}
+
+fn book_home_markdown(w: &World, seed: usize) -> String {
+    let items = Item::ALL.len();
+    let machines = Kind::ALL.iter().filter(|k| crate::wiki::page(&crate::wiki::slug(k.name())).is_some()).count();
+    let recipes = CRAFTERS.iter().map(|k| k.recipes().len()).sum::<usize>();
+    let facts = vec![
+        "…that [[copper-coil]] can be made in a [[press]] or a [[winder]]?".to_string(),
+        "…that [[stone]] goes into [[concrete]], [[sand]] and [[brick]]?".to_string(),
+        "…that the most valuable item is the [[computer]]?".to_string(),
+        "…that [[waste]] can fuel a [[boiler]]?".to_string(),
+    ];
+    let seed = seed ^ w.tick as usize;
+    let mut out = format!("## ⚙\n## Welcome to the\n**Terminactory Wiki!**\n────────────────────────────────\n## about\n{}\n\n[[getting-started|New here? Start with Getting started]]\n## statistics\n**{} pages**  ·  **{} items · {} machines · {} recipes**\n## navigation\n╭──────────╮ ╭──────────╮ ╭──────────╮ ╭───────────╮\n│ [[machines|Machines]] │ │  [[items|Items]]   │ │  [[topics|Topics]]  │ │ [[companies|Companies]] │\n╰──────────╯ ╰──────────╯ ╰──────────╯ ╰───────────╯\n## did you know?\n", crate::wiki::page("home").unwrap_or("").lines().find(|l| l.starts_with("**Terminactory Wiki**")).unwrap_or("A factory building game about making things, one recipe at a time."), crate::wiki::PAGES.len() + 3, items, machines, recipes);
+    out.push('\n');
+    for i in 0..4 {
+        if i > 0 {
+            out.push('\n');
+        }
+        out.push_str("- ");
+        out.push_str(&facts[(seed + i * 5) % facts.len()]);
+    }
+    out.push_str("\n╭──────────────────────────────╮\n│     [[close-book|BACK TO THE FACTORY]]     │\n╰──────────────────────────────╯\n");
+    out
+}
+
+fn draw_book_index(f: &mut Frame, area: Rect, app: &mut App, machines: bool) {
+    let query = if app.book_typing { &app.book_query } else { "" };
+    let entries = Entry::list(query, machines);
+    let hint =
+        format!("Search {}... {}", if machines { "machines" } else { "items" }, if query.is_empty() { "(type to filter)" } else { query });
+    f.buffer_mut().set_string(area.x, area.y, &hint, Style::new().fg(Color::Indexed(117)).bg(Color::Indexed(236)));
+    let cols = (area.width / 18).max(1) as usize;
+    let card_w = (area.width as usize / cols).max(1);
+    let mut idx = 0usize;
+    for (n, e) in entries.iter().enumerate().skip(app.book_scroll as usize) {
+        let row = idx / cols;
+        let col = idx % cols;
+        let y = area.y + 2 + (row * 4) as u16;
+        if y + 3 >= area.bottom() {
+            break;
+        }
+        let x = area.x + (col * card_w) as u16;
+        let width = card_w.min(area.right().saturating_sub(x) as usize).max(1) as u16;
+        let title = match e {
+            Entry::Item(i) => capitalise(i.name()),
+            Entry::Part(k) => k.name().to_string(),
+        };
+        let style = if n == app.book_selected {
+            Style::new().fg(Color::White).bg(Color::Indexed(24))
+        } else {
+            Style::new().fg(Color::Indexed(238))
+        };
+        f.render_widget(Block::bordered().style(style), Rect::new(x, y, width, 4));
+        let (glyph, gs) = match e {
+            Entry::Item(i) => item_cell(*i, Color::Reset),
+            Entry::Part(k) => (kind_cells(*k, Dir::E, true)[0].0, kind_cells(*k, Dir::E, true)[0].1),
+        };
+        let gx = x + width / 2;
+        f.buffer_mut().set_string(gx, y + 1, glyph.to_string(), gs);
+        let max = width.saturating_sub(2) as usize;
+        let label: String = title.chars().take(max).collect();
+        let lx = x + width.saturating_sub(label.chars().count() as u16) / 2;
+        f.buffer_mut().set_string(lx, y + 2, &label, Style::new().fg(Color::Indexed(117)).underlined());
+        let slug = crate::wiki::slug(e.name());
+        app.book_urls.push((Rect::new(x, y, width, 4), slug.clone()));
+        app.book_links.push((Rect::new(x, y, width, 4), *e));
+        idx += 1;
+    }
+}
+
+fn render_wiki_text(f: &mut Frame, area: Rect, md: &str, app: &mut App, info_area: Option<Rect>, entry: Option<Entry>, narrow: bool) {
     type WikiChar = (char, Option<String>, bool, Style);
     let width = area.width as usize;
-    let mut rows: Vec<(Vec<WikiChar>, bool, bool)> = Vec::new();
+    let center_rows = md.contains("Welcome to the");
+    let mut rows: Vec<(Vec<WikiChar>, bool, bool, bool)> = Vec::new();
+    let mut in_recipes = false;
     for raw in md.lines() {
+        if raw.starts_with("## Recipes") {
+            in_recipes = true;
+        }
+        let intro_column = info_area.is_some() && !in_recipes;
+        let line_width = if intro_column { info_area.unwrap().x.saturating_sub(area.x) as usize } else { width };
         if raw.trim().is_empty() {
-            rows.push((Vec::new(), false, false));
+            rows.push((Vec::new(), false, false, intro_column));
             continue;
         }
         let title = raw.starts_with("# ");
@@ -3798,45 +4186,123 @@ fn render_wiki_text(
             chars.insert(0, ('•', None, false));
             chars.insert(1, (' ', None, false));
         }
-        let wrapped = wrap_wiki_chars(chars, width.max(1));
+        let wrapped = wrap_wiki_chars(chars, line_width.max(1));
         for (line_no, line) in wrapped.into_iter().enumerate() {
-            rows.push((line.into_iter().map(|(c, link, bold)| (c, link, bold, Style::default())).collect(), title, heading));
+            let dim = raw.starts_with("Category: ");
+            rows.push((
+                line.into_iter()
+                    .map(|(c, link, bold)| (c, link, bold, if dim { Style::new().fg(Color::DarkGray) } else { Style::default() }))
+                    .collect(),
+                title,
+                heading,
+                intro_column,
+            ));
+            if heading {
+                let rule_width = if intro_column { info_area.unwrap().x.saturating_sub(area.x) as usize } else { width };
+                rows.push((
+                    "─".repeat(rule_width).chars().map(|c| (c, None, false, Style::new().fg(Color::DarkGray))).collect(),
+                    false,
+                    false,
+                    intro_column,
+                ));
+            }
             if title && line_no == 0 {
-                rows.push(("═".repeat(width).chars().map(|c| (c, None, false, Style::new().fg(Color::DarkGray))).collect(), false, false));
+                rows.push((
+                    "From Terminactory Wiki".chars().map(|c| (c, None, false, Style::new().fg(Color::DarkGray))).collect(),
+                    false,
+                    false,
+                    intro_column,
+                ));
             }
         }
     }
 
     if narrow {
-        if let Some(info_rows) = info {
+        if entry.is_some() {
             let info_top = 2.min(rows.len());
-            let mut inserted: Vec<_> = info_rows.iter().cloned().map(|r| (r, false, false)).collect();
-            inserted.push((Vec::new(), false, false));
-            rows.splice(info_top..info_top, inserted);
+            rows.splice(info_top..info_top, std::iter::repeat_n((Vec::new(), false, false, false), 12));
         }
     }
-    let total_rows = if narrow { rows.len() } else { rows.len().max(info.map_or(0, <[_]>::len)) };
+    let info_total = entry.map_or(0, |_| if narrow { 14 } else { 11 });
+    let total_rows = rows.len().max(info_total);
     app.book_scroll = app.book_scroll.min(total_rows.saturating_sub(area.height as usize) as u16);
-    let start = app.book_scroll as usize;
+    let mut start = app.book_scroll as usize;
+    let mut card_ranges = Vec::new();
+    let mut open_card = None;
+    for (i, (line, _, _, _)) in rows.iter().enumerate() {
+        if line.first().is_some_and(|c| c.0 == '╭') {
+            open_card = Some(i);
+        } else if line.first().is_some_and(|c| c.0 == '╰') {
+            if let Some(first) = open_card.take() {
+                card_ranges.push((first, i));
+            }
+        }
+    }
+    for (first, last) in &card_ranges {
+        if start > *first && start <= *last {
+            start = if last.saturating_add(area.height as usize) >= rows.len() { last + 1 } else { *first };
+            app.book_scroll = start as u16;
+            break;
+        }
+    }
     let mut y = area.y;
     let mut link_index = 0usize;
-    for (line, title, heading) in rows.iter().skip(start) {
+    for (row_index, (line, title, heading, intro_column)) in rows.iter().enumerate().skip(start) {
         if y >= area.bottom() {
             break;
         }
-        draw_wiki_row(f, area, y, line, *title || *heading, app, &mut link_index);
+        if card_ranges
+            .iter()
+            .any(|(first, last)| *first == row_index && area.y as usize + row_index - start + last - first >= area.bottom() as usize)
+        {
+            break;
+        }
+        let row_area = if *intro_column {
+            Rect { width: info_area.map_or(area.width, |r| r.x.saturating_sub(area.x)), ..area }
+        } else if center_rows {
+            let offset = area.width.saturating_sub(line.len().min(area.width as usize) as u16) / 2;
+            Rect { x: area.x + offset, width: area.width.saturating_sub(offset), ..area }
+        } else {
+            area
+        };
+        draw_wiki_row(f, row_area, y, line, *title || *heading, app, &mut link_index);
         y += 1;
     }
-    if !narrow {
-        if let (Some(info_rows), Some(info_area)) = (info, info_area) {
-            for (i, line) in info_rows.iter().enumerate().skip(start).take(info_area.height as usize) {
-                let iy = info_area.y + (i - start) as u16;
-                if iy >= info_area.bottom() {
-                    break;
-                }
-                draw_wiki_row(f, info_area, iy, line, false, app, &mut link_index);
-            }
+    if let Some(entry) = entry {
+        let doc_y = area.y as i32 + if narrow { 2 } else { 0 } - start as i32;
+        let y = doc_y.max(area.y as i32) as u16;
+        let clipped = doc_y < area.y as i32;
+        if !clipped && y < area.bottom() {
+            let box_area = if narrow {
+                Rect::new(area.x, y, area.width, 11.min(area.bottom() - y))
+            } else {
+                let info_area = info_area.unwrap_or(area);
+                Rect::new(info_area.x, y, info_area.width, 11.min(area.bottom() - y))
+            };
+            draw_wiki_infobox(f, box_area, entry);
         }
+    }
+}
+
+fn draw_wiki_contents(f: &mut Frame, area: Rect, md: &str, app: &mut App) {
+    f.buffer_mut().set_string(area.x, area.y, "Contents", Style::new().fg(Color::Indexed(229)).bold());
+    let mut y = area.y + 1;
+    for line in md.lines().filter(|l| l.starts_with("## ") || l.starts_with("### ")) {
+        if y >= area.bottom() {
+            break;
+        }
+        let child = line.starts_with("### ");
+        let label = line.trim_start_matches('#').trim();
+        let slug = format!("#{}", label.to_lowercase().replace(' ', "-"));
+        f.buffer_mut().set_stringn(
+            area.x + u16::from(child),
+            y,
+            label,
+            area.width.saturating_sub(u16::from(child)) as usize,
+            Style::new().fg(Color::Cyan).underlined(),
+        );
+        app.book_urls.push((Rect::new(area.x, y, area.width, 1), slug));
+        y += 1;
     }
 }
 
@@ -3860,9 +4326,22 @@ fn draw_wiki_row(
         }
         let txt: String = line[i..end].iter().map(|x| x.0).collect();
         let selected = link.is_some() && *link_index == app.book_selected;
-        let mut style = if link.is_some() { Style::new().fg(Color::Cyan).underlined() } else { line[i].3 };
+        let mut style = if let Some(slug) = link.as_deref() {
+            if let Some(Entry::Item(item)) = crate::app::App::book_entry_for_slug_for_ui(slug) {
+                let (glyph, glyph_style) = item_cell(item, Color::Reset);
+                if txt == glyph.to_string() {
+                    glyph_style.underlined()
+                } else {
+                    Style::new().fg(Color::Cyan).underlined()
+                }
+            } else {
+                Style::new().fg(Color::Cyan).underlined()
+            }
+        } else {
+            line[i].3
+        };
         if is_bold || heading {
-            style = style.bold();
+            style = style.fg(Color::Indexed(229)).bold();
         }
         if selected {
             style = style.reversed();
@@ -3922,6 +4401,7 @@ fn wrap_words(text: &str, width: usize) -> Vec<String> {
 
 /// " and a letter from X" for the companies a key opens. A company with another key says so:
 /// "a letter from X (opens on A or B)".
+#[allow(dead_code)]
 fn key_letter_text(key: Made) -> String {
     let from: Vec<String> = Company::ALL
         .iter()
@@ -3938,6 +4418,7 @@ fn key_letter_text(key: Made) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn node_name(n: Node) -> String {
     match n {
         Node::Start => "Copper Works".into(),
