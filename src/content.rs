@@ -631,7 +631,7 @@ impl Category {
 }
 
 /// Things that can be unlocked.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum Tech {
     Press,
     Coking,

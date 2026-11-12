@@ -2,6 +2,7 @@
 
 use crate::content::{Node, TREE};
 use crate::sim::Tech;
+use std::collections::HashSet;
 
 pub const BOX_W: u16 = 16;
 pub const COL_GAP: u16 = 4;
@@ -52,27 +53,43 @@ fn tree_nodes() -> Vec<TreeNode> {
     nodes
 }
 
-/// Recursively assign rows. A node's descendants occupy one contiguous block;
-/// the node is centered on the first and last child centers within that block.
-fn place_subtree(index: usize, col: usize, top: usize, nodes: &[TreeNode], out: &mut Vec<NodePos>) -> usize {
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn layout() -> Vec<NodePos> {
+    layout_expanded(&HashSet::new())
+}
+
+/// Lay out only the nodes visible with this set of expanded groups.
+pub fn layout_expanded(expanded: &HashSet<Tech>) -> Vec<NodePos> {
+    let nodes = tree_nodes();
+    let mut out = Vec::with_capacity(nodes.len());
+    let roots: Vec<_> = nodes.iter().enumerate().filter(|(_, n)| n.parent.is_none()).map(|(i, _)| i).collect();
+    let mut top = 0;
+    for root in roots {
+        top += place_visible(root, 0, top, &nodes, expanded, &mut out);
+        top += 1;
+    }
+    out
+}
+
+fn place_visible(index: usize, col: usize, top: usize, nodes: &[TreeNode], expanded: &HashSet<Tech>, out: &mut Vec<NodePos>) -> usize {
     let node = &nodes[index];
-    if node.children.is_empty() {
+    if node.children.is_empty() || !expanded.contains(&node.tech) {
         out.push(NodePos { tech: node.tech, parent: node.parent, col, row: top });
         return BOX_H as usize;
     }
-
+    let visible_children = node.children.clone();
     let mut child_top = top;
-    let mut child_centers = Vec::with_capacity(node.children.len());
+    let mut child_centers = Vec::with_capacity(visible_children.len());
     let mut previous_had_children = false;
-    for &child in &node.children {
+    for child in visible_children {
         let child_node = &nodes[child];
         if previous_had_children && !child_node.children.is_empty() {
             child_top += 1;
         }
-        let height = place_subtree(child, col + 1, child_top, nodes, out);
+        let height = place_visible(child, col + 1, child_top, nodes, expanded, out);
         child_centers.push(out.iter().find(|p| p.tech == child_node.tech).unwrap().row + 1);
         child_top += height;
-        previous_had_children = !child_node.children.is_empty();
+        previous_had_children = expanded.contains(&child_node.tech) && !child_node.children.is_empty();
     }
     let block_height = (child_top - top).max(BOX_H as usize);
     let center = (child_centers[0] + *child_centers.last().unwrap()) / 2;
@@ -81,22 +98,37 @@ fn place_subtree(index: usize, col: usize, top: usize, nodes: &[TreeNode], out: 
     block_height
 }
 
-pub fn layout() -> Vec<NodePos> {
-    let nodes = tree_nodes();
-    let mut out = Vec::with_capacity(nodes.len());
-    let roots: Vec<_> = nodes.iter().enumerate().filter(|(_, n)| n.parent.is_none()).map(|(i, _)| i).collect();
-    let mut top = 0;
-    for root in roots {
-        top += place_subtree(root, 0, top, &nodes, &mut out);
-        top += 1;
+pub fn has_children(tech: Tech) -> bool {
+    tree_nodes().iter().any(|n| n.parent == Some(tech))
+}
+
+pub fn hidden_descendants(tech: Tech) -> usize {
+    fn count(index: usize, nodes: &[TreeNode]) -> usize {
+        nodes[index].children.iter().map(|&c| 1 + count(c, nodes)).sum()
     }
-    out
+    let nodes = tree_nodes();
+    nodes.iter().position(|n| n.tech == tech).map_or(0, |i| count(i, &nodes))
+}
+
+pub fn ancestors(tech: Tech) -> Vec<Tech> {
+    let nodes = tree_nodes();
+    let mut current = nodes.iter().find(|n| n.tech == tech).and_then(|n| n.parent);
+    let mut result = Vec::new();
+    while let Some(parent) = current {
+        result.push(parent);
+        current = nodes.iter().find(|n| n.tech == parent).and_then(|n| n.parent);
+    }
+    result
 }
 
 /// Parent, ordered children, and vertical navigation. If a node has no sibling
 /// in that direction, move to the nearest box in the same column.
 pub fn neighbors(tech: Tech) -> (Option<Tech>, Vec<Tech>, (Option<Tech>, Option<Tech>)) {
-    let positions = layout();
+    neighbors_in(tech, &HashSet::new())
+}
+
+pub fn neighbors_in(tech: Tech, expanded: &HashSet<Tech>) -> (Option<Tech>, Vec<Tech>, (Option<Tech>, Option<Tech>)) {
+    let positions = layout_expanded(expanded);
     let Some(here) = positions.iter().find(|p| p.tech == tech) else { return (None, vec![], (None, None)) };
     let children: Vec<_> = positions.iter().filter(|p| p.parent == Some(tech)).collect();
     let siblings: Vec<_> = positions.iter().filter(|p| p.parent == here.parent && p.col == here.col && p.tech != tech).collect();
@@ -114,8 +146,13 @@ pub fn neighbors(tech: Tech) -> (Option<Tech>, Vec<Tech>, (Option<Tech>, Option<
     (here.parent, children.iter().map(|p| p.tech).collect(), (prev, next))
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn canvas_size() -> (u16, u16) {
-    let positions = layout();
+    canvas_size_expanded(&HashSet::new())
+}
+
+pub fn canvas_size_expanded(expanded: &HashSet<Tech>) -> (u16, u16) {
+    let positions = layout_expanded(expanded);
     let cols = positions.iter().map(|p| p.col).max().unwrap_or(0) + 1;
     let rows = positions.iter().map(|p| p.row + BOX_H as usize).max().unwrap_or(0);
     (rows as u16, (cols as u16 * (BOX_W + COL_GAP) - COL_GAP))
@@ -125,9 +162,14 @@ pub fn canvas_size() -> (u16, u16) {
 mod tests {
     use super::*;
 
+    fn expanded_all() -> HashSet<Tech> {
+        Tech::ALL.into_iter().collect()
+    }
+
     #[test]
     fn every_tech_once_and_boxes_are_disjoint() {
-        let positions = layout();
+        let all = expanded_all();
+        let positions = layout_expanded(&all);
         assert_eq!(positions.len(), Tech::ALL.len());
         for tech in Tech::ALL {
             assert_eq!(positions.iter().filter(|p| p.tech == tech).count(), 1);
@@ -163,16 +205,21 @@ mod tests {
                 assert!(ar.1 < br.0 || br.1 < ar.0, "buses overlap: {a:?} {ar:?}, {b:?} {br:?}");
             }
         }
-        assert_eq!(canvas_size().1, ((positions.iter().map(|p| p.col).max().unwrap() + 1) as u16) * 20 - 4);
-        assert!(canvas_size().0 > 30, "tidy tree should retain its full height");
+        assert_eq!(canvas_size_expanded(&all).1, ((positions.iter().map(|p| p.col).max().unwrap() + 1) as u16) * 20 - 4);
+        assert_eq!(canvas_size_expanded(&all).0, 107, "fully expanded tree keeps its original height");
+        let collapsed = layout();
+        assert_eq!(collapsed.len(), 3);
+        assert!(canvas_size().0 < 15);
+        assert_eq!(hidden_descendants(Tech::Press), 35);
     }
 
     #[test]
     fn navigation_uses_tree_edges_siblings_and_column_fallback() {
-        let (_, children, _) = neighbors(Tech::Press);
+        let all = expanded_all();
+        let (_, children, _) = neighbors_in(Tech::Press, &all);
         assert!(children.contains(&Tech::BasicDrill));
-        assert_eq!(neighbors(Tech::BasicDrill).0, Some(Tech::Press));
-        let pos = layout();
+        assert_eq!(neighbors_in(Tech::BasicDrill, &all).0, Some(Tech::Press));
+        let pos = layout_expanded(&all);
         let drill = pos.iter().find(|p| p.tech == Tech::BasicDrill).unwrap();
         let sibling_down = pos
             .iter()
@@ -181,7 +228,7 @@ mod tests {
             .map(|p| p.tech);
         if sibling_down.is_none() {
             let below = pos.iter().filter(|p| p.col == drill.col && p.row > drill.row).min_by_key(|p| p.row).map(|p| p.tech);
-            assert_eq!(neighbors(drill.tech).2 .1, below);
+            assert_eq!(neighbors_in(drill.tech, &all).2 .1, below);
         }
         assert!(!graph_enabled(49));
         assert!(graph_enabled(50));

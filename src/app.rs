@@ -251,6 +251,8 @@ pub struct App {
     /// The research screen is open, and which row is picked.
     pub tree: bool,
     pub tree_pick: usize,
+    /// Groups opened in the research tree for this session.
+    pub tree_expanded: std::collections::HashSet<Tech>,
     /// Where its rows were drawn, for the mouse.
     pub tree_rows: Vec<(Rect, usize)>,
     /// Recipe book: open, the page shown, how far it's scrolled, and how many columns the grid had.
@@ -357,6 +359,7 @@ impl App {
             menu: None,
             tree: false,
             tree_pick: 0,
+            tree_expanded: std::collections::HashSet::new(),
             stats: false,
             stats_scroll: 0,
             stats_history: false,
@@ -963,21 +966,34 @@ impl App {
 
     fn move_tree(&mut self, code: KeyCode) {
         let tech = self.tree_choice();
-        let (parent, children, siblings) = crate::research::neighbors(tech);
-        let next = match code {
-            KeyCode::Left => parent,
-            KeyCode::Right => children.first().copied(),
-            KeyCode::Up => siblings.0,
-            KeyCode::Down => siblings.1,
-            _ => None,
-        };
-        if let Some(next) = next {
-            self.tree_pick = tree_rows().iter().position(|&t| t == next).unwrap_or(self.tree_pick);
+        let (parent, children, siblings) = crate::research::neighbors_in(tech, &self.tree_expanded);
+        match code {
+            KeyCode::Left if self.tree_expanded.remove(&tech) => {}
+            KeyCode::Left => self.select_visible(parent),
+            KeyCode::Right if crate::research::has_children(tech) && !self.tree_expanded.contains(&tech) => {
+                self.tree_expanded.insert(tech);
+            }
+            KeyCode::Right => self.select_visible(children.first().copied()),
+            KeyCode::Up => self.select_visible(siblings.0),
+            KeyCode::Down => self.select_visible(siblings.1),
+            _ => {}
         }
+    }
+
+    fn select_visible(&mut self, tech: Option<Tech>) {
+        if let Some(tech) = tech {
+            self.tree_pick = tree_rows().iter().position(|&t| t == tech).unwrap_or(self.tree_pick);
+        }
+    }
+
+    pub fn ensure_tree_selection_visible(&mut self) {
+        let tech = self.tree_choice();
+        self.tree_expanded.extend(crate::research::ancestors(tech));
     }
 
     /// The research screen: up/down pick, Enter researches.
     fn tree_key(&mut self, code: KeyCode, action: Option<Action>) {
+        self.ensure_tree_selection_visible();
         let n = tree_rows().len();
         match (code, action) {
             (KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down, _) => self.move_tree(code),
@@ -2401,6 +2417,8 @@ mod tests {
         let mut app = App::new(World::new());
         key(&mut app, KeyCode::Char('t'));
         assert!(app.tree);
+        assert_eq!(app.tree_choice(), Tech::Press);
+        key(&mut app, KeyCode::Right);
         assert_eq!(app.tree_choice(), Tech::Press);
         key(&mut app, KeyCode::Right);
         assert_eq!(app.tree_choice(), Tech::BasicDrill);

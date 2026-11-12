@@ -163,7 +163,7 @@ fn research_tree_fits_the_window() {
     assert!(t.contains("Press · Create · affordable"), "{t}");
     assert!(t.contains("free at 50 copper ingot") && t.contains("Path: Press"), "{t}");
     let tall = text(&render(&mut app, 130, 64));
-    assert!(tall.contains("Press") && tall.contains("more "), "{tall}");
+    assert!(tall.contains("Press") && tall.contains("Coking") && tall.contains("Warehouse"), "{tall}");
     std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
     // Going to a low tech scrolls down to it and shows the off-screen hint.
     app.tree_pick = tree_rows().len() - 1;
@@ -195,12 +195,42 @@ fn research_tree_fits_the_window() {
 }
 
 #[test]
+fn research_tree_expands_and_collapses_with_arrows() {
+    let mut app = App::new(World::new());
+    app.tree = true;
+    let key = |app: &mut App, code| app.on_key(KeyEvent::from(code));
+    assert_eq!(crate::research::layout_expanded(&app.tree_expanded).len(), 3);
+    key(&mut app, KeyCode::Right);
+    assert!(app.tree_expanded.contains(&Tech::Press));
+    assert_eq!(app.tree_choice(), Tech::Press);
+    key(&mut app, KeyCode::Right);
+    assert_eq!(app.tree_choice(), Tech::BasicDrill);
+    key(&mut app, KeyCode::Left);
+    assert_eq!(app.tree_choice(), Tech::Press);
+    key(&mut app, KeyCode::Left);
+    assert!(!app.tree_expanded.contains(&Tech::Press));
+    assert_eq!(crate::research::layout_expanded(&app.tree_expanded).len(), 3);
+}
+
+#[test]
+fn deep_tree_pick_expands_its_ancestors() {
+    let mut app = App::new(World::new());
+    app.tree = true;
+    app.tree_pick = tree_rows().iter().position(|&t| t == Tech::Excavation).unwrap();
+    render(&mut app, 80, 40);
+    assert!(app.tree_expanded.contains(&Tech::Press));
+    assert!(app.tree_expanded.contains(&Tech::Mixer));
+    assert!(crate::research::layout_expanded(&app.tree_expanded).iter().any(|p| p.tech == Tech::Mixer));
+}
+
+#[test]
 fn print_research_tree_render_sizes() {
     let mut app = App::new(World::new());
     app.tree = true;
     let wide = render(&mut app, 80, 40);
     println!("80x40:\n{}", text(&wide));
-    let (rows, cols) = crate::research::canvas_size();
+    app.tree_expanded = Tech::ALL.into_iter().collect();
+    let (rows, cols) = crate::research::canvas_size_expanded(&app.tree_expanded);
     println!("Full canvas: {rows} rows × {cols} columns");
     let narrow = render(&mut app, 50, 34);
     println!("50x34:\n{}", text(&narrow));
@@ -215,7 +245,7 @@ fn print_research_tree_render_sizes() {
         .collect::<Vec<_>>()
         .join("\n");
     let canvas_lines: Vec<Vec<char>> = canvas.lines().map(|line| line.chars().collect()).collect();
-    let positions = crate::research::layout();
+    let positions = crate::research::layout_expanded(&app.tree_expanded);
     let stride = (crate::research::BOX_W + crate::research::COL_GAP) as usize;
     for parent in &positions {
         for child in positions.iter().filter(|p| p.col == parent.col + 1 && p.row == parent.row) {

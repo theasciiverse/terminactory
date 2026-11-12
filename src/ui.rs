@@ -2681,7 +2681,7 @@ fn draw_tree_list(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
-    use crate::research::{layout, BOX_W, COL_GAP};
+    use crate::research::{BOX_W, COL_GAP};
 
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let dim = Style::new().fg(Color::DarkGray);
@@ -2703,14 +2703,15 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
     let pick = app.tree_pick.min(rows.len().saturating_sub(1));
     app.tree_pick = pick;
     let selected = rows[pick];
-    let positions = layout();
+    app.ensure_tree_selection_visible();
+    let positions = crate::research::layout_expanded(&app.tree_expanded);
     let here = positions.iter().find(|p| p.tech == selected).copied();
     let graph_top = r.y + 2;
     let footer_y = r.y + r.height - 2;
     let detail_top = footer_y.saturating_sub(4);
     let graph_h = detail_top.saturating_sub(graph_top);
     let stride_x = BOX_W + COL_GAP;
-    let (total_h, total_w) = crate::research::canvas_size();
+    let (total_h, total_w) = crate::research::canvas_size_expanded(&app.tree_expanded);
     let visible_cols = ((width + COL_GAP) / stride_x).max(1);
     let graph_w = (visible_cols * stride_x - COL_GAP).min(width);
     let scroll_x = here.map_or(0, |p| {
@@ -2889,6 +2890,14 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
             let style = if dx < 2 { mark_style } else { name_style };
             put(f, x + 1 + dx as i32, y + 1, ch, style);
         }
+        if crate::research::has_children(p.tech) && !app.tree_expanded.contains(&p.tech) {
+            let stub = format!(" +{}", crate::research::hidden_descendants(p.tech));
+            put(f, x + BOX_W as i32 - 1, y + 1, if picked { '╟' } else { '├' }, line_style);
+            put(f, x + BOX_W as i32, y + 1, '─', line_style);
+            for (dx, ch) in stub.chars().take(4).enumerate() {
+                put(f, x + BOX_W as i32 + 1 + dx as i32, y + 1, ch, dim);
+            }
+        }
         if y >= graph_top as i32 && y + 2 < detail_top as i32 && x >= x0 as i32 && x + BOX_W as i32 <= (x0 + width) as i32 {
             app.tree_rows.push((Rect::new(x as u16, y as u16, BOX_W, 3), tech_idx));
         }
@@ -2922,9 +2931,9 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
     }
     let more = (!more.is_empty()).then(|| format!("{} more", more.join(" ")));
     let hints = if width < 60 {
-        vec![(3, "↑↓←→ move"), (1, "Enter"), (0, "t/Esc")]
+        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter"), (0, "t/Esc")]
     } else {
-        vec![(3, "↑↓ siblings"), (2, "←→ path"), (1, "Enter research"), (0, "t/Esc close")]
+        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter research"), (0, "t/Esc close")]
     };
     f.render_widget(Paragraph::new(footer_line(width, &hints, more.as_deref())), Rect::new(x0, footer_y, width, 1));
 }
