@@ -1104,6 +1104,38 @@ fn new_machines_snapshot() {
     std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
 }
 
+/// Silicon's book pages (old machines, new rows) fit narrow, tall and zoomed-out panes.
+#[test]
+fn silicon_book_pages_fit_every_size() {
+    let mut app = App::new(World::blank());
+    app.book = true;
+    let pages = [
+        (Entry::Part(Kind::BlastFurnace), vec!["3 sand + coke  ──→  molten silicon + 2 waste"]),
+        (Entry::Part(Kind::Molder), vec!["molten silicon  ──→  silicon ingot"]),
+        (Entry::Part(Kind::Lathe), vec!["2 silicon ingot  ──→  2 wafer + 2 silicon scrap"]),
+        (
+            Entry::Part(Kind::Kiln),
+            vec!["4 stone  ─coal─→  dopant", "wafer + 2 dopant  ─coal─→  doped wafer", "2 brick + sand  ─coal─→  2 ceramic"],
+        ),
+        (Entry::Part(Kind::AdvancedAssembler), vec!["x3x1", "doped wafer + 6 fine wire + iron sheet  ──→  3 transistor"]),
+        (Entry::Item(Item::SiliconIngot), vec!["Made by", "Used in"]),
+        (Entry::Item(Item::SiliconScrap), vec!["Made by", "sells $1.5"]),
+        (Entry::Item(Item::TransistorBoard), vec!["Made by", "sells $450"]),
+    ];
+    for (entry, wants) in pages {
+        app.book_go(entry);
+        let wide = text(&render(&mut app, 130, 42));
+        for want in wants {
+            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
+        }
+        // Narrow, tall and zoomed-out panes draw the page without trouble.
+        for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
+            let buf = render(&mut app, w, h);
+            assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
+        }
+    }
+}
+
 /// The new machines and items have book pages that link to each other.
 #[test]
 fn book_pages_for_the_new_machines_and_items() {

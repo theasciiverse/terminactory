@@ -1045,6 +1045,16 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::LampMatrix => ('A', 229),
         Item::TubeBoard => ('W', 46),
         Item::Terminal => ('K', 51),
+        // Silicon is slate blue-grey; boards stay green.
+        Item::SiliconIngot => ('i', 109),
+        Item::SiliconScrap => ('s', 66),
+        Item::Wafer => ('f', 146),
+        Item::Dopant => ('d', 176),
+        Item::DopedWafer => ('v', 183),
+        Item::Ceramic => ('e', 223),
+        Item::CircuitBoard => ('J', 71),
+        Item::Transistor => ('q', 80),
+        Item::TransistorBoard => ('Z', 82),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1318,11 +1328,12 @@ fn fluid_colour(fl: Fluid) -> u8 {
         Fluid::MoltenCopper => 208,
         Fluid::MoltenIron => 160,
         Fluid::MoltenSteel => 229,
+        Fluid::MoltenSilicon => 117,
     }
 }
 
 /// A pipe joins up with neighbouring pipes and machines that use them; its colour shows
-/// what its network holds (blue water, white steam, orange copper, red iron, pale steel, grey empty).
+/// what its network holds (blue water, white steam, orange copper, red iron, pale steel, light blue silicon, grey empty).
 fn pipe_cell(w: &World, f: usize, x: i32, y: i32) -> Cells {
     let joins = |d: Dir| {
         let (dx, dy) = d.delta();
@@ -2647,17 +2658,17 @@ fn blurb(kind: Kind) -> Option<&'static str> {
     Some(match kind {
         Kind::Crusher => "grinds ore into grit, which melts further, and stone into sand",
         Kind::Furnace => "melts ore or grit into molten metal, and bakes coal into coke",
-        Kind::Molder => "casts molten metal into ingots",
+        Kind::Molder => "casts molten metal and silicon into ingots",
         Kind::BlastFurnace => {
-            "melts iron fast, makes molten steel and hardened plate from plate and coke or coal; most leave waste out the back"
+            "melts iron fast, makes molten steel and hardened plate from plate and coke or coal, and molten silicon from sand and coke; most leave waste out the back"
         }
         Kind::CokeOven => "cooks its own coal into coke: no EC, no fuel, but it leaves waste out the back",
         Kind::Press => "presses ingots into plates, and plates and steel into wire, pipe, gears and girders",
         Kind::WireDrawer => "draws plate into wire, and wire into fine wire",
         Kind::Winder => "winds wire into coils, and iron rods into springs",
         Kind::RollingMill => "rolls plate flat into sheets, and steel into steel sheets and girders",
-        Kind::Lathe => "turns plate into rods and screws, and steel into steel rods and bearings",
-        Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass, and tubes (leaving waste)",
+        Kind::Lathe => "turns plate into rods and screws, steel into steel rods and bearings, and silicon ingots into wafers (and scrap)",
+        Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass, tubes (leaving waste), dopant, doped wafers and ceramic",
         Kind::LargeKiln => "fires 32 at once, every 20 seconds: four kilns in one, burning four kilns' coal",
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
         Kind::Evacuator => "pulls the air out of glass with a water jet from a pipe: 2 tubes a run, no waste",
@@ -2665,7 +2676,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays, gearboxes, transformers and lamp matrices",
         Kind::BasicAssembler => "builds electric motors, pistons and terminals, and the crude parts twice as fast",
         Kind::AdvancedAssembler => {
-            "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), and everything below faster"
+            "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), circuit boards, transistors and transistor boards (x3x1), and everything below faster"
         }
         Kind::PrecisionAssembler => "builds control boards twice as fast as an advanced one, and takes later chips; nothing below",
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
@@ -3524,7 +3535,7 @@ READING THE MAP
          D boiler shell  S silo shell  F frame  U pump unit  E generator
          N engine block  T control panel  Y steam tractor
   Pipes show what they hold: blue water, white steam, orange copper,
-         red iron, pale steel (molten) and grey when empty.
+         red iron, pale steel and silicon (molten) and grey when empty.
 
 HOW IT WORKS
   Buildings take input from any side and output from the arrow side only:

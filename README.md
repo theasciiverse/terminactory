@@ -161,6 +161,8 @@ The direct route takes molten iron from a pipe, or from an iron blast furnace st
 
 **Tubes.** A **tube** ($48) is a lamp's glass with the air taken out: lamp + copper sheet + 2 fine wire. The kiln bakes them the slow way ("tube (baked)": 1 tube + 1 waste out the back per run, a firing of 8 takes 40 s, 12 a minute; the large kiln does 32 per 40 s). Sablon's **evacuator** (2×2, 6 EC, $3,500, takes water from a pipe like the mixer) pulls the air out with a water jet instead: 2 tubes per run, 8 s, no waste, no fire.
 
+**Silicon.** No new raw material and no new machine: sand and coke go into the blast furnace ("molten silicon": 3 sand + 1 coke → molten silicon + 2 waste, 10 s, the dirty way), a molder casts it into a **silicon ingot** ($6), and the lathe slices 2 ingots into 2 **wafers** ($12) and 2 **silicon scrap** ($1.50, which sells) in 40 s. The kiln fires **dopant** ($10: 4 stone, 20 s a batch), **doped wafers** ($50: wafer + 2 dopant, 32 s) and **ceramic** ($8: 2 brick + sand → 2, 32 s), all burning coal; the large kiln does them too. The advanced and precision assemblers build the **circuit board** ($60: ceramic + copper sheet + 4 fine wire), the **transistor** ($42: doped wafer + 6 fine wire + iron sheet → 3) and the **transistor board** ($450, the x3x1: 6 transistors + circuit board + 4 fine wire), 10 s each. Making a silicon ingot opens Halverson Smelting, which sells nothing yet.
+
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
 - Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), transformer $200 (2 copper coil + 4 iron sheet), lamp matrix $230 (8 lamp + copper sheet + 4 fine wire), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
 - Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw), terminal $2,100 (lamp matrix + tube board; a keyboard joins it later).
@@ -187,6 +189,7 @@ Every other item except waste goes into at least one recipe (the transformer and
 | | Large basic drill (8×8, coal) | 20,000 | 150 motor |
 | | Large basic assembler (5×5) | 25,000 | 300 motor |
 | **Sablon** (tube) | Evacuator (2×2, 6 EC, $3,500) | 30,000 | 40 tube |
+| **Halverson** (silicon ingot) | nothing yet | | |
 | **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
 | | Precision assembler (3×3) | 30,000 | 120 control board |
 | | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
@@ -317,7 +320,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `SOL2` | Basic solar panel (20 EC, reach 4) | 2×2 | |
 | `/\` | EC pole | 1×1 | |
 | `┌ LIFT ┐` | Elevator: a box, 2×2 to 8×8 | 2×2–8×8 | |
-| `==` `\|\|` `++` | Pipe (blue water, white steam, orange copper, red iron, pale steel, grey empty) | 1×1 | `=` (pale) iron plate |
+| `==` `\|\|` `++` | Pipe (blue water, white steam, orange copper, red iron, pale steel, light blue silicon, grey empty) | 1×1 | `=` (pale) iron plate |
 | `PU` `MP` | Water pump (anywhere on the ground) | 1×2 | `%` steel |
 | `BLST` | Blast furnace (I molten iron, S steel) | 2×2 | `,` waste |
 | `BOIL` | Boiler | 2×2 | |

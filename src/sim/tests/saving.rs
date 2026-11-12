@@ -128,7 +128,29 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
     // Nor the tube: no Sablon, no evacuator, no tube items, and the file is still format 6.
     assert!(!text.contains("Sablon") && !text.contains("Evacuator") && !text.contains("\"Tube\""));
     assert!(!l.progress.is_open(Company::Sablon) && !l.progress.has(Tech::Evacuator));
+    // Nor silicon: no Halverson, no silicon items or molten silicon, and still format 6.
+    assert!(!text.contains("Halverson") && !text.contains("MoltenSilicon") && !text.contains("Silicon") && !text.contains("Wafer"));
+    assert!(!l.progress.is_open(Company::Halverson));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
+    let _ = std::fs::remove_dir_all(&data);
+}
+
+#[test]
+fn molten_silicon_in_a_pipe_survives_a_save_by_name() {
+    let mut w = World::blank();
+    w.place(0, 20, 20, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 21, 20, Kind::Pipe, Dir::E).unwrap();
+    let pool = w.fluids.pipe_pool[0][idx(20, 20)] as usize;
+    w.fluids.pools[pool].add(Fluid::MoltenSilicon, 3.0);
+    let data = temp("silicon-pipe");
+    let path = crate::saves::path_of(&data, "save1");
+    w.save(&path).unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("MoltenSilicon"), "the fluid is saved by name");
+    assert!(text.contains(&format!("\"version\":{SAVE_VERSION}")) || text.contains(&format!("\"version\": {SAVE_VERSION}")));
+    let l = World::load(&path).unwrap();
+    let pool = l.fluids.pipe_pool[0][idx(21, 20)] as usize;
+    assert_eq!((l.fluids.pools[pool].fluid, l.fluids.pools[pool].amount), (Some(Fluid::MoltenSilicon), 3.0));
     let _ = std::fs::remove_dir_all(&data);
 }
 

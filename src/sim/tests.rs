@@ -140,7 +140,8 @@ fn furnace_pipe_molder() {
     run(&mut w, 8);
     assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[0].amount), (Some(Fluid::MoltenCopper), 1.0));
     assert_eq!(crafter_fluid(&w, 10, 4).0, 0);
-    // Back to copper (iron -> steel -> copper) and with EC, it casts them all.
+    // Back to copper (iron -> steel -> silicon -> copper) and with EC, it casts them all.
+    w.configure(0, 10, 4);
     w.configure(0, 10, 4);
     w.configure(0, 10, 4);
     w.place(0, 10, 6, Kind::Solar, Dir::E).unwrap();
@@ -241,6 +242,7 @@ fn molders_follow_their_recipe_and_idle_without_metal() {
     assert_eq!(crafter_fluid(&w, 8, 5), (0, 0));
     assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"), "and the furnace waits");
     assert!(w.configure(0, 8, 5).unwrap().contains("steel"));
+    assert!(w.configure(0, 8, 5).unwrap().contains("silicon ingot"));
     assert!(w.configure(0, 8, 5).unwrap().contains("copper ingot"));
 }
 
@@ -1135,7 +1137,7 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
     assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "transformer", "lamp matrix", "control board (hand-wired)"]);
     assert_eq!(basic, ["electric motor", "piston", "terminal"]);
-    assert_eq!(adv, ["control board", "tube board"]);
+    assert_eq!(adv, ["control board", "tube board", "circuit board", "transistor", "transistor board"]);
     assert!(prec.is_empty(), "later processors go here");
     assert_eq!(large_basic, ["pump unit", "engine block"]);
     assert_eq!(large_adv, ["generator", "control panel", "drilling rig", "steam tractor"]);
@@ -1212,8 +1214,8 @@ fn a_precision_assembler_refuses_crude_and_basic_recipes() {
     for crude in CRUDE_RECIPES.iter().chain(BASIC_RECIPES) {
         assert!(!names.contains(&crude.name), "{}", crude.name);
     }
-    assert_eq!(names, ["control board", "tube board"]);
-    // It cycles between the two processors it knows.
+    assert_eq!(names, ["control board", "tube board", "circuit board", "transistor", "transistor board"]);
+    // It cycles between the processors and boards it knows.
     assert!(!w.configure(0, 10, 10).unwrap().contains("only one recipe"));
     w.apply_setting(0, 10, 10, Setting::Recipe(0));
     // It takes what a control board uses, and turns away what only a crude or basic recipe uses.
@@ -1376,7 +1378,12 @@ fn a_batch_machine_fires_for_one_runs_time_times_batch_over_two() {
     // four kilns in one (decided after review 14), so it keeps the kiln's 20 s firing.
     // The baked tube is the exception: it takes 10 s a run, so a batch of eight fires for 40 s (12 a minute).
     for r in Kind::Kiln.recipes() {
-        let run_secs = if r.name == "tube (baked)" { 10 } else { 5 };
+        // The baked tube takes 10 s a run; doped wafer and ceramic 8 s a run (32 s a batch).
+        let run_secs = match r.name {
+            "tube (baked)" => 10,
+            "doped wafer" | "ceramic" => 8,
+            _ => 5,
+        };
         assert_eq!(r.ticks as u64, run_secs * TPS * Kind::Kiln.batch() as u64 / 2, "{}", r.name);
     }
     let kiln = |k: Kind, name: &str| k.recipes().iter().find(|r| r.name == name).unwrap().ticks;
@@ -1396,8 +1403,13 @@ fn the_large_kiln_is_four_kilns_in_one() {
         // Four kilns' worth a minute, for four kilns' coal.
         let rate = |k: Kind, r: &Recipe| r.outputs[0].1 * k.batch() * 60 * 60 / r.ticks;
         assert_eq!(rate(Kind::LargeKiln, b), 4 * rate(Kind::Kiln, a), "{}", a.name);
-        // Bricks and glass fire for 20 s; the baked tube takes 40 s.
-        let per_minute = if a.name == "tube (baked)" { 48 } else { 96 };
+        // Bricks and glass fire for 20 s; the baked tube takes 40 s; doped wafer and ceramic 32 s.
+        let per_minute = match a.name {
+            "tube (baked)" => 48,
+            "doped wafer" => 60,
+            "ceramic" => 120,
+            _ => 96,
+        };
         assert_eq!(rate(Kind::LargeKiln, b), per_minute, "{}", a.name);
         assert_eq!(Kind::LargeKiln.fires(), 4);
     }
@@ -1674,6 +1686,132 @@ fn sablons_letter_comes_with_its_one_tech() {
     assert!(m.md.contains("Nothing is as patient as a tube."), "{}", m.md);
     assert!(m.md.contains("- Evacuator (Create)"), "{}", m.md);
     assert!(!crate::mail::gift_note(Company::Sablon).is_empty());
+}
+
+// ---------- silicon on the old machines (computers phase 2a) ----------
+
+/// A blast furnace on `recipe`, with its waste crate behind it and a molder casting its molten
+/// silicon into a crate. Returns (silicon ingots, waste) after `secs`.
+fn silicon_route(stock: &[(Item, u32)], secs: u64) -> (usize, usize) {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::BlastFurnace, Dir::E).unwrap(); // covers 5-6, 5-6: front is x=7
+    pick_recipe(&mut w, 5, 5, "molten silicon");
+    for (item, n) in stock {
+        set_stock(&mut w, 5, 5, *item, *n);
+    }
+    w.place(0, 4, 5, Kind::Crate, Dir::W).unwrap(); // the waste, out the back
+    w.place(0, 7, 6, Kind::Molder, Dir::E).unwrap();
+    pick_recipe(&mut w, 7, 6, "silicon ingot");
+    w.place(0, 9, 6, Kind::Crate, Dir::E).unwrap(); // the ingots
+    w.place(0, 7, 8, Kind::Solar, Dir::E).unwrap();
+    run(&mut w, secs);
+    (
+        crate_items(&w, 0, 9, 6).iter().filter(|i| **i == Item::SiliconIngot).count(),
+        crate_items(&w, 0, 4, 5).iter().filter(|i| **i == Item::Waste).count(),
+    )
+}
+
+#[test]
+fn a_blast_furnace_makes_molten_silicon_and_two_waste_from_sand_and_coke() {
+    let r = Kind::BlastFurnace.recipes().iter().find(|r| r.name == "molten silicon").unwrap();
+    assert_eq!((r.inputs, r.outputs, r.ticks), (&[(Item::Sand, 3), (Item::Coke, 1)][..], &[(Item::Waste, 2)][..], 10 * 60));
+    assert_eq!((r.fluid_out, r.fluid_in, r.fuel, r.needs), (Some((Fluid::MoltenSilicon, 1)), None, None, None));
+    let stock = [(Item::Sand, 3), (Item::Coke, 1)];
+    assert_eq!(silicon_route(&stock, 9), (0, 0), "still melting");
+    assert_eq!(silicon_route(&stock, 11), (0, 2), "the waste first, the silicon still casting");
+    assert_eq!(silicon_route(&stock, 14), (1, 2), "10 s melting, 2.5 s casting");
+    // Without the coke, it waits.
+    assert_eq!(silicon_route(&[(Item::Sand, 3)], 30), (0, 0));
+    // Molten silicon is not sold: it has no price, and no company opens on it.
+    assert!(Company::ALL.iter().all(|c| !c.key_items().contains(&Made::Fluid(Fluid::MoltenSilicon))));
+}
+
+#[test]
+fn silicon_is_wafers_and_scrap_in_the_lathe_and_doped_wafers_in_the_kiln() {
+    // The lathe: 2 ingots give 2 wafers and 2 scrap, all out of the front (scrap is not waste), in 40 s.
+    let r = LATHE_RECIPES.iter().find(|r| r.name == "wafer (rough)").unwrap();
+    assert_eq!(r.outputs, &[(Item::Wafer, 2), (Item::SiliconScrap, 2)]);
+    assert_eq!(r.ticks, 40 * 60);
+    assert!(run_powered(Kind::Lathe, "wafer (rough)", &[(Item::SiliconIngot, 2)], 39).is_empty());
+    let out = run_powered(Kind::Lathe, "wafer (rough)", &[(Item::SiliconIngot, 2)], 41);
+    assert_eq!((count(&out, Item::Wafer), count(&out, Item::SiliconScrap), out.len()), (2, 2, 4));
+    assert!(Item::SiliconScrap.price() > 0.0, "scrap sells");
+    // The kiln: a full batch of 8 fires for 32 s and gives 8 doped wafers from 8 wafers and 16 dopant.
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Kiln, Dir::E).unwrap(); // front is x=8
+    w.place(0, 8, 9, Kind::Crate, Dir::E).unwrap();
+    pick_recipe(&mut w, 5, 5, "doped wafer");
+    set_stock(&mut w, 5, 5, Item::Coal, 12);
+    set_stock(&mut w, 5, 5, Item::Wafer, 8);
+    set_stock(&mut w, 5, 5, Item::Dopant, 16);
+    run(&mut w, 30);
+    assert_eq!(w.econ.made[Item::DopedWafer.idx()], 0, "a full batch fires for 32 s");
+    run(&mut w, 5);
+    assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::DopedWafer; 8]);
+    // Dopant and ceramic, and the large kiln, pick the new recipes up with the rest.
+    let find = |k: Kind, n: &str| *k.recipes().iter().find(|r| r.name == n).unwrap_or_else(|| panic!("{k:?} has no {n}"));
+    for k in [Kind::Kiln, Kind::LargeKiln] {
+        let d = find(k, "dopant");
+        assert_eq!((d.inputs, d.outputs, d.fuel), (&[(Item::Stone, 4)][..], &[(Item::Dopant, 1)][..], Some(Item::Coal)));
+        let c = find(k, "ceramic");
+        assert_eq!((c.inputs, c.outputs, c.fuel), (&[(Item::Brick, 2), (Item::Sand, 1)][..], &[(Item::Ceramic, 2)][..], Some(Item::Coal)));
+        assert!(find(k, "doped wafer").needs.is_none());
+    }
+    assert_eq!(
+        (find(Kind::Kiln, "dopant").ticks, find(Kind::Kiln, "doped wafer").ticks, find(Kind::Kiln, "ceramic").ticks),
+        (1200, 1920, 1920)
+    );
+}
+
+#[test]
+fn the_advanced_assemblers_build_circuit_boards_transistors_and_transistor_boards() {
+    let find = |n: &str| ADVANCED_RECIPES.iter().find(|r| r.name == n).unwrap();
+    assert_eq!(find("circuit board").inputs, &[(Item::Ceramic, 1), (Item::CopperSheet, 1), (Item::FineWire, 4)]);
+    assert_eq!(find("transistor").inputs, &[(Item::DopedWafer, 1), (Item::FineWire, 6), (Item::IronSheet, 1)]);
+    assert_eq!(find("transistor board").inputs, &[(Item::Transistor, 6), (Item::CircuitBoard, 1), (Item::FineWire, 4)]);
+    assert!(ADVANCED_RECIPES.iter().all(|r| r.name == "tube board" || r.name == "control board" || r.ticks == 10 * 60));
+    // One doped wafer gives three transistors, in 10 s.
+    let stock = [(Item::DopedWafer, 1), (Item::FineWire, 6), (Item::IronSheet, 1)];
+    assert!(run_powered(Kind::AdvancedAssembler, "transistor", &stock, 9).is_empty());
+    assert_eq!(run_powered(Kind::AdvancedAssembler, "transistor", &stock, 11), vec![Item::Transistor; 3]);
+    // The precision assembler knows them too, twice as fast.
+    assert_eq!(run_powered(Kind::PrecisionAssembler, "transistor", &stock, 6), vec![Item::Transistor; 3]);
+    let board = [(Item::Transistor, 6), (Item::CircuitBoard, 1), (Item::FineWire, 4)];
+    assert_eq!(run_powered(Kind::AdvancedAssembler, "transistor board", &board, 11), vec![Item::TransistorBoard]);
+    let circuit = [(Item::Ceramic, 1), (Item::CopperSheet, 1), (Item::FineWire, 4)];
+    assert_eq!(run_powered(Kind::AdvancedAssembler, "circuit board", &circuit, 11), vec![Item::CircuitBoard]);
+    for k in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler] {
+        assert!(!recipe_names(k).contains(&"transistor"), "{k:?}");
+    }
+}
+
+#[test]
+fn halversons_key_is_silicon_made_before_it_sells_anything() {
+    assert_eq!(Company::Halverson.key_items(), &[Made::Item(Item::SiliconIngot)]);
+    // It sells nothing yet: its arc furnace, crystal grower and wafer saw come in the next phase.
+    assert!(Tech::ALL.iter().all(|t| t.company() != Company::Halverson));
+    assert!(Kind::ALL.iter().all(|k| k.company() != Some(Company::Halverson)));
+    // Sand and coke melt in a blast furnace (Cinderhall), a crusher grinds the sand (Ashgrove),
+    // and a molder casts it: with only the companies whose techs those need, the ingot is makeable.
+    let mut open = [false; COMPANIES];
+    for c in Company::ALL {
+        open[c.idx()] = c.key_items().is_empty();
+    }
+    for c in [Company::Cinderhall, Company::Ashgrove] {
+        open[c.idx()] = true;
+    }
+    let (have, _) = makeable(&open);
+    assert!(have[Item::SiliconIngot.idx()], "silicon ingot with only the early companies");
+    assert!(!open[Company::Halverson.idx()] && !open[Company::Sablon.idx()]);
+    // In the tree it hangs under the kiln, beside its dopant and ceramic.
+    let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
+    assert_eq!(TREE[at(Node::Key(Made::Item(Item::SiliconIngot)))].1, Some(at(Node::Tech(Tech::Kiln))));
+    // A letter with no tech list, and a gift note.
+    let m = crate::mail::letter(Company::Halverson, Made::Item(Item::SiliconIngot), 0);
+    assert!(m.md.contains("A lovely byproduct of sand."), "{}", m.md);
+    assert!(!m.md.contains("Unlocked for research"), "{}", m.md);
+    assert_eq!(m.from, "Halverson Smelting");
+    assert!(!crate::mail::gift_note(Company::Halverson).is_empty());
 }
 
 /// `n` panels (10 EC each) in a column at x - 2, joined by poles at x, from row y down.
@@ -2028,7 +2166,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::Terminal);
+    assert_eq!(last, Item::TransistorBoard);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -2044,7 +2182,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "Terminal": 7}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "TransistorBoard": 7}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -2730,7 +2868,8 @@ fn every_item_recipe_runs_in_its_machine() {
             assert!(crate_items(&w, 0, front, y).is_empty(), "{kind:?} {} early", r.name);
             assert!(crate_items(&w, 0, x - 1, y).is_empty(), "{kind:?} {} early", r.name);
             // A batch leaves one item a tick through the one crate beside its front edge.
-            for _ in 0..13 + batch {
+            let per_run: u32 = r.outputs.iter().map(|o| o.1).sum();
+            for _ in 0..13 + batch * per_run {
                 w.tick();
             }
             let mut out = crate_items(&w, 0, front, y);
@@ -2848,7 +2987,9 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
     let crown = [Item::DrillingRig, Item::SteamTractor];
     // The computer eats both (computers phase 5), so until it arrives nothing consumes them.
-    let waits_for_a_later_phase = [Item::Transformer, Item::Terminal];
+    // SiliconScrap is remelted by the arc furnace (computers phase 2b); the disk drive eats the
+    // transistor board (phase 5).
+    let waits_for_a_later_phase = [Item::Transformer, Item::Terminal, Item::SiliconScrap, Item::TransistorBoard];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
