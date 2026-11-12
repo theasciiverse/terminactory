@@ -163,15 +163,17 @@ The direct route takes molten iron from a pipe, or from an iron blast furnace st
 
 **Silicon.** No new raw material and no new machine: sand and coke go into the blast furnace ("molten silicon": 3 sand + 1 coke → molten silicon + 2 waste, 10 s, the dirty way), a molder casts it into a **silicon ingot** ($6), and the lathe slices 2 ingots into 2 **wafers** ($12) and 2 **silicon scrap** ($1.50, which sells) in 40 s. The kiln fires **dopant** ($10: 4 stone, 20 s a batch), **doped wafers** ($50: wafer + 2 dopant, 32 s) and **ceramic** ($8: 2 brick + sand → 2, 32 s), all burning coal; the large kiln does them too. The advanced and precision assemblers build the **circuit board** ($60: ceramic + copper sheet + 4 fine wire), the **transistor** ($42: doped wafer + 6 fine wire + iron sheet → 3) and the **transistor board** ($450, the x3x1: 6 transistors + circuit board + 4 fine wire), 10 s each. Making a silicon ingot opens Halverson Smelting, which sells nothing yet.
 
+**Chips.** Four new items and a machine, from the same raw materials. The mixer makes **etchant** ($2: coal + sand + water → 2 etchant + 1 waste out the back, 5 s). The advanced and precision assemblers build a **mask** ($40: glass + copper sheet + 2 fine wire, 10 s). Lattice & Finch's **etcher** (3×3, 24 EC, $25,000, sixth slot of Create) etches a doped wafer with a mask and etchant into 2 **dies** ($68) and 2 silicon scrap, 15 s. The precision assembler alone turns a die + ceramic + fine wire into a **microprocessor (x4x1)** ($200: 4 fine wire) or a **RAM chip** ($150: 2 fine wire), 10 s each. Making a microprocessor opens Meridian Instruments, which sells nothing yet.
+
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
 - Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), transformer $200 (2 copper coil + 4 iron sheet), lamp matrix $230 (8 lamp + copper sheet + 4 fine wire), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
 - Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw), terminal $2,100 (lamp matrix + tube board; a keyboard joins it later).
-- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor; the **tube board** $900 (15 s: 6 tube + control board + iron sheet) is the "x2x1". The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
+- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor; the **tube board** $900 (15 s: 6 tube + control board + iron sheet) is the "x2x1". The precision assembler makes it in 5 s and refuses crude and basic parts; it alone builds the x4x1 microprocessor and RAM chip. Both assemblers build the **mask** (see Chips).
 - Welder (10 s, 30 EC only while working): boiler shell $80 (steel sheet + 4 brick), silo shell $260 (3 steel sheet + valve), frame $280 (2 steel girder + 8 screw).
 
 **Big goods.** Large basic assembler (20 s): pump unit $900 (motor + 2 valve + silo shell + gauge), engine block $1,150 (frame + 4 piston + gearbox + boiler shell). Large advanced assembler (also does those, twice as fast): generator $1,100 (frame + 2 motor + gauge + control board, 20 s), control panel $900 (2 control board + 4 lamp + 2 gauge + steel sheet, 20 s), **drilling rig** $3,500 (4 girder + 2 gearbox + 4 reinforced concrete + motor + pump unit, 40 s) and **steam tractor** $7,500 (engine block + frame + 4 hardened gear + control panel + generator, 60 s). The drilling rig and steam tractor are **crown items**: they go into nothing, only sell, and keep a high research floor so they keep paying research however many you sell.
 
-Every other item except waste goes into at least one recipe (the transformer and terminal wait for the computer, a later phase).
+Every other item except waste goes into at least one recipe (the transformer, terminal, microprocessor and RAM chip wait for the computer, a later phase).
 
 **Companies and what they offer now** (research cost; the free milestone is the item to make):
 
@@ -190,8 +192,10 @@ Every other item except waste goes into at least one recipe (the transformer and
 | | Large basic assembler (5×5) | 25,000 | 300 motor |
 | **Sablon** (tube) | Evacuator (2×2, 6 EC, $3,500) | 30,000 | 40 tube |
 | **Halverson** (silicon ingot) | nothing yet | | |
+| **Meridian** (microprocessor x4x1) | nothing yet | | |
 | **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
 | | Precision assembler (3×3) | 30,000 | 120 control board |
+| | Etcher (3×3, 24 EC, $25,000) | 80,000 | 60 transistor board |
 | | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
 | | Large advanced assembler (5×5) | 100,000 | 800 control board |
 
@@ -206,6 +210,7 @@ Every key item can be made with machines from companies that open before it, so 
 | | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
 | | 4 | assemblers (crude to large advanced) and the welder |
 | | 5 | water pump / advanced pump / mixer / evacuator |
+| | 6 | etcher |
 | Transport (2) | 1 | belt / fast belt / tunnel |
 | | 2 | splitter / filter splitter |
 | | 3 | arm / long arm |
@@ -334,6 +339,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `ROLL` | Rolling mill (C copper sheet, I iron sheet) | 2×2 | |
 | `LATHE` | Lathe (R rod, S screw, r steel rod, b bearing) | 3×3 | |
 | `KILN` `WELDER` `MIXR` `EVAC` | Kiln (3×5), welder (3×3), mixer (2×2), evacuator (2×2) | | `b` brick, `u` glass, `C` reinforced concrete, `t` tube |
+| `ETCH` | Etcher (3×3) | | `h` etchant `m` mask `k` die `H` microprocessor `R` RAM chip |
 | `BASM` `ADVASM` `PRCASM` | Basic (2×2), advanced (3×3), precision (3×3) assembler | | `V` valve `Q` gauge `L` lamp `r` relay `M` motor `P` piston `B` control board |
 | `LRG ASM B` `LRG ASM A` | Large basic and advanced assembler | 5×5 | `D` boiler shell `S` silo shell `F` frame `U` pump unit `E` generator `N` engine block `T` control panel `Y` steam tractor |
 | `ADV DRL` `LRG … DRILL` `APMP` | Advanced drill (4×4), large drills (8×8), advanced pump | | |
