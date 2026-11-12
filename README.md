@@ -159,15 +159,17 @@ The direct route takes molten iron from a pipe, or from an iron blast furnace st
 
 **Stone.** The **kiln** (3×5, burns coal) fires 8 at once: 2 stone → 1 **brick** ($1), 3 sand → 1 **glass** ($2), a firing takes 20 s (24 a minute): a batch machine fires for one run's time × its batch ÷ 2. The **large kiln** (5×7, $7,500, from Underhill; press the kiln's slot again to switch) has the same recipes and the same 20 s firing but a batch of 32: four kilns in one machine (96 a minute), so it takes 64 stone or 96 sand before it fires and burns 20 coal a firing, like four kilns. The **mixer** (2×2, 4 EC) takes water from a pipe: 2 sand + 1 stone + 1 water → 1 **concrete** ($2); 2 concrete + 1 iron rod + 1 water → 1 **reinforced concrete** ($16); 5 s each.
 
+**Tubes.** A **tube** ($48) is a lamp's glass with the air taken out: lamp + copper sheet + 2 fine wire. The kiln bakes them the slow way ("tube (baked)": 1 tube + 1 waste out the back per run, a firing of 8 takes 40 s, 12 a minute; the large kiln does 32 per 40 s). Sablon's **evacuator** (2×2, 6 EC, $3,500, takes water from a pipe like the mixer) pulls the air out with a water jet instead: 2 tubes per run, 8 s, no waste, no fire.
+
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
-- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
-- Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw).
-- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor. The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
+- Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), transformer $200 (2 copper coil + 4 iron sheet), lamp matrix $230 (8 lamp + copper sheet + 4 fine wire), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
+- Basic assembler (10 s): electric motor $160 (2 copper coil + steel rod + 2 bearing), piston $60 (steel rod + hardened plate + 2 screw), terminal $2,100 (lamp matrix + tube board; a keyboard joins it later).
+- Advanced assembler (10 s): control board $170 (relay + 4 fine wire + iron sheet; it hides the slow hand-wired recipe). The control board is the "x1x1", the weakest microprocessor; the **tube board** $900 (15 s: 6 tube + control board + iron sheet) is the "x2x1". The precision assembler makes it in 5 s and refuses crude and basic parts; later processors will go there.
 - Welder (10 s, 30 EC only while working): boiler shell $80 (steel sheet + 4 brick), silo shell $260 (3 steel sheet + valve), frame $280 (2 steel girder + 8 screw).
 
 **Big goods.** Large basic assembler (20 s): pump unit $900 (motor + 2 valve + silo shell + gauge), engine block $1,150 (frame + 4 piston + gearbox + boiler shell). Large advanced assembler (also does those, twice as fast): generator $1,100 (frame + 2 motor + gauge + control board, 20 s), control panel $900 (2 control board + 4 lamp + 2 gauge + steel sheet, 20 s), **drilling rig** $3,500 (4 girder + 2 gearbox + 4 reinforced concrete + motor + pump unit, 40 s) and **steam tractor** $7,500 (engine block + frame + 4 hardened gear + control panel + generator, 60 s). The drilling rig and steam tractor are **crown items**: they go into nothing, only sell, and keep a high research floor so they keep paying research however many you sell.
 
-Every other item except waste goes into at least one recipe.
+Every other item except waste goes into at least one recipe (the transformer and terminal wait for the computer, a later phase).
 
 **Companies and what they offer now** (research cost; the free milestone is the item to make):
 
@@ -184,6 +186,7 @@ Every other item except waste goes into at least one recipe.
 | **Ampleworth** (electric motor) | Advanced drill (4×4, EC) | 8,000 | 40 motor |
 | | Large basic drill (8×8, coal) | 20,000 | 150 motor |
 | | Large basic assembler (5×5) | 25,000 | 300 motor |
+| **Sablon** (tube) | Evacuator (2×2, 6 EC, $3,500) | 30,000 | 40 tube |
 | **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
 | | Precision assembler (3×3) | 30,000 | 120 control board |
 | | Large advanced drill (8×8, EC) | 60,000 | 300 control board |
@@ -199,7 +202,7 @@ Every key item can be made with machines from companies that open before it, so 
 | | 2 | furnace / molder / blast furnace / coke oven / kiln / large kiln |
 | | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
 | | 4 | assemblers (crude to large advanced) and the welder |
-| | 5 | water pump / advanced pump / mixer |
+| | 5 | water pump / advanced pump / mixer / evacuator |
 | Transport (2) | 1 | belt / fast belt / tunnel |
 | | 2 | splitter / filter splitter |
 | | 3 | arm / long arm |
@@ -327,7 +330,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `WNC>` | Winder (C coil, S spring) | 2×1 | |
 | `ROLL` | Rolling mill (C copper sheet, I iron sheet) | 2×2 | |
 | `LATHE` | Lathe (R rod, S screw, r steel rod, b bearing) | 3×3 | |
-| `KILN` `WELDER` `MIXR` | Kiln (3×5), welder (3×3), mixer (2×2) | | `b` brick, `u` glass, `C` reinforced concrete |
+| `KILN` `WELDER` `MIXR` `EVAC` | Kiln (3×5), welder (3×3), mixer (2×2), evacuator (2×2) | | `b` brick, `u` glass, `C` reinforced concrete, `t` tube |
 | `BASM` `ADVASM` `PRCASM` | Basic (2×2), advanced (3×3), precision (3×3) assembler | | `V` valve `Q` gauge `L` lamp `r` relay `M` motor `P` piston `B` control board |
 | `LRG ASM B` `LRG ASM A` | Large basic and advanced assembler | 5×5 | `D` boiler shell `S` silo shell `F` frame `U` pump unit `E` generator `N` engine block `T` control panel `Y` steam tractor |
 | `ADV DRL` `LRG … DRILL` `APMP` | Advanced drill (4×4), large drills (8×8), advanced pump | | |
