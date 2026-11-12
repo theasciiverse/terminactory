@@ -961,17 +961,32 @@ impl App {
         rows[self.tree_pick.min(rows.len() - 1)]
     }
 
+    fn move_tree(&mut self, code: KeyCode) {
+        let tech = self.tree_choice();
+        let (parent, children, siblings) = crate::research::neighbors(tech);
+        let next = match code {
+            KeyCode::Left => parent,
+            KeyCode::Right => children.first().copied(),
+            KeyCode::Up => siblings.0,
+            KeyCode::Down => siblings.1,
+            _ => None,
+        };
+        if let Some(next) = next {
+            self.tree_pick = tree_rows().iter().position(|&t| t == next).unwrap_or(self.tree_pick);
+        }
+    }
+
     /// The research screen: up/down pick, Enter researches.
     fn tree_key(&mut self, code: KeyCode, action: Option<Action>) {
         let n = tree_rows().len();
-        let pick = &mut self.tree_pick;
         match (code, action) {
-            (KeyCode::PageUp, _) => *pick = pick.saturating_sub(5),
-            (KeyCode::PageDown, _) => *pick = (*pick + 5).min(n - 1),
-            (KeyCode::Home, _) => *pick = 0,
-            (KeyCode::End, _) => *pick = n - 1,
-            (_, Some(Action::MoveUp)) => *pick = pick.saturating_sub(1),
-            (_, Some(Action::MoveDown)) => *pick = (*pick + 1).min(n - 1),
+            (KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down, _) => self.move_tree(code),
+            (KeyCode::PageUp, _) => self.tree_pick = self.tree_pick.saturating_sub(5),
+            (KeyCode::PageDown, _) => self.tree_pick = (self.tree_pick + 5).min(n - 1),
+            (KeyCode::Home, _) => self.tree_pick = 0,
+            (KeyCode::End, _) => self.tree_pick = n - 1,
+            (_, Some(Action::MoveUp)) => self.tree_pick = self.tree_pick.saturating_sub(1),
+            (_, Some(Action::MoveDown)) => self.tree_pick = (self.tree_pick + 1).min(n - 1),
             (_, Some(Action::Place)) => self.buy_research(),
             (_, Some(Action::Tree | Action::Back)) => self.tree = false,
             _ => {}
@@ -2386,6 +2401,14 @@ mod tests {
         let mut app = App::new(World::new());
         key(&mut app, KeyCode::Char('t'));
         assert!(app.tree);
+        assert_eq!(app.tree_choice(), Tech::Press);
+        key(&mut app, KeyCode::Right);
+        assert_eq!(app.tree_choice(), Tech::BasicDrill);
+        key(&mut app, KeyCode::Left);
+        assert_eq!(app.tree_choice(), Tech::Press);
+        key(&mut app, KeyCode::Down);
+        assert_eq!(app.tree_choice(), Tech::Coking);
+        key(&mut app, KeyCode::Up);
         assert_eq!(app.tree_choice(), Tech::Press);
         key(&mut app, KeyCode::Down);
         assert_eq!(app.tree_choice(), Tech::Coking);

@@ -58,7 +58,7 @@ fn render_snapshots() {
     app.power_view = false;
     app.tree = true;
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("Press") && text(&buf).contains("make copper wire first"));
+    assert!(text(&buf).contains("Press") && text(&buf).contains("starting machinery"));
 
     app.tree = false;
     // A company's letter is a telegram in the sidebar, and the game keeps running.
@@ -148,7 +148,7 @@ fn telegram_log_lists_newest_first() {
     assert!(text(&render(&mut app, 64, 16)).contains("Nothing yet"));
 }
 
-/// The research tree turns top-down in a tall, narrow window, and scrolls in a small one.
+/// The boxed research tree stays compact and scrolls in both directions.
 #[test]
 fn research_tree_fits_the_window() {
     use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
@@ -156,40 +156,31 @@ fn research_tree_fits_the_window() {
     w.econ.research = 17_687.0;
     let mut app = App::new(w);
     app.tree = true;
-    // Wide: group names in the gutter, every unlock showing, details under the list.
+    // Wide: the selection and its path stay visible under the horizontal graph.
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("17,687 research") && !t.contains("Upgrades"), "{t}");
-    assert!(t.contains("Making        ● Press"), "{t}");
-    assert!(t.contains("make copper wire first") && t.contains("Crystal grower") && t.contains("Large prec. assembler"), "{t}");
-    assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
-    // 37 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
-    assert!(t.contains("more ▼") && !t.contains("Blueprints"), "{t}");
+    assert!(t.contains("17,687 research"), "{t}");
+    assert!(t.contains("Press · Create · affordable"), "{t}");
+    assert!(t.contains("free at 50 copper ingot") && t.contains("Path: Press"), "{t}");
     let tall = text(&render(&mut app, 130, 64));
-    assert!(
-        !tall.contains("more ")
-            && tall.contains("Floors")
-            && tall.contains("Excavation")
-            && tall.contains("Upgrade planner")
-            && tall.contains("Large adv. drill"),
-        "{tall}"
-    );
+    assert!(tall.contains("Press") && tall.contains("more "), "{tall}");
     std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
-    // Going to the last row scrolls it into view, and the top-of-list marker shows.
+    // Going to a low tech scrolls down to it and shows the off-screen hint.
     app.tree_pick = tree_rows().len() - 1;
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("more ▲") && t.contains("Upgrade planner") && t.contains("Upgrade planner · Misc"), "{t}");
+    assert!(t.contains("▼") && t.contains("more") && t.contains("Upgrade planner · Misc"), "{t}");
     std::fs::write("target/snapshot-tree-scrolled.html", to_html(&buf)).unwrap();
     app.tree_pick = 0;
-    // Narrow: group names on their own lines; small: it scrolls, with markers.
+    // At 60 columns the graph still works and scrolls horizontally.
     let t = text(&render(&mut app, 60, 50));
-    assert!(t.lines().any(|l| l.trim_matches(|c| c == '│' || c == ' ') == "Making"), "{t}");
+    assert!(t.contains("Press") && t.contains("more"), "{t}");
     let buf = render(&mut app, 64, 16);
     assert!(text(&buf).contains("more "), "{}", text(&buf));
     std::fs::write("target/snapshot-tree-small.html", to_html(&buf)).unwrap();
     // Clicking a row picks it; clicking it again researches it.
-    render(&mut app, 130, 42);
+    app.tree_pick = 0;
+    render(&mut app, 130, 120);
     let (r, i) = app.tree_rows.iter().copied().find(|(_, i)| tree_rows()[*i] == Tech::Coking).unwrap();
     let click = MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x + 2, row: r.y, modifiers: KeyModifiers::NONE };
     app.on_mouse(click);
@@ -201,6 +192,49 @@ fn research_tree_fits_the_window() {
     app.mail = Some(crate::mail::parse("Done", 0));
     app.on_key(KeyEvent::from(KeyCode::Char('n')));
     assert!(app.mail_open && app.tree);
+}
+
+#[test]
+fn print_research_tree_render_sizes() {
+    let mut app = App::new(World::new());
+    app.tree = true;
+    let wide = render(&mut app, 80, 40);
+    println!("80x40:\n{}", text(&wide));
+    let (rows, cols) = crate::research::canvas_size();
+    println!("Full canvas: {rows} rows × {cols} columns");
+    let narrow = render(&mut app, 50, 34);
+    println!("50x34:\n{}", text(&narrow));
+
+    let full = render(&mut app, cols + 4, rows + 10);
+    let full_text = text(&full);
+    let canvas = full_text
+        .lines()
+        .skip(2)
+        .take(rows as usize)
+        .map(|line| line.chars().skip(2).take(cols as usize).collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let canvas_lines: Vec<Vec<char>> = canvas.lines().map(|line| line.chars().collect()).collect();
+    let positions = crate::research::layout();
+    let stride = (crate::research::BOX_W + crate::research::COL_GAP) as usize;
+    for parent in &positions {
+        for child in positions.iter().filter(|p| p.col == parent.col + 1 && p.row == parent.row) {
+            let y = parent.row + 1;
+            let start = parent.col * stride + crate::research::BOX_W as usize - 1;
+            let end = child.col * stride;
+            let joined = (start..=end).all(|x| matches!(canvas_lines[y][x], '─' | '├' | '┤' | '┬' | '┴' | '┼' | '╠' | '╣'));
+            if joined {
+                assert_eq!(
+                    child.parent,
+                    Some(parent.tech),
+                    "horizontal connection without TREE edge: {:?} -> {:?}",
+                    parent.tech,
+                    child.tech
+                );
+            }
+        }
+    }
+    println!("Full canvas render ({rows} × {cols}):\n{canvas}");
 }
 
 /// The recipe book: pages for items and machines, word equations, links, search.
@@ -1351,7 +1385,7 @@ fn book_pages_for_the_new_machines_and_items() {
     app.tree = true;
     app.tree_pick = tree_rows().iter().position(|t| *t == Tech::Crusher).unwrap();
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Crusher · Create") && t.contains("Make copper wire once"), "{t}");
+    assert!(t.contains("Crusher · Create") && t.contains("copper wire"), "{t}");
     std::fs::write("target/snapshot-tree-new.html", to_html(&render(&mut app, 130, 42))).unwrap();
     std::fs::write("target/snapshot-tree-new-narrow.html", to_html(&render(&mut app, 50, 34))).unwrap();
     // Every item has its own glyph and colour.
@@ -1443,17 +1477,17 @@ fn content_step_screens_fit_every_size() {
     }
     app.menu = None;
 
-    // The research list at ~50 columns: names whole, status short, scrolls to the end.
+    // The research tree at 50 columns: two boxes remain visible, and the selected details fit.
     app.world.progress = Progress::default();
     app.tree = true;
     app.tree_pick = tree_rows().len() - 1;
     let buf = render(&mut app, 50, 40);
     let t = text(&buf);
-    assert!(t.contains("Excavation") && t.contains("Floors"), "{t}");
+    assert!(t.contains("Upgrade planner") && t.contains("free at") && t.contains("t/Esc"), "{t}");
     app.tree_pick = tree_rows().iter().position(|x| *x == Tech::LargeAdvancedAssembler).unwrap();
     let buf = render(&mut app, 50, 40);
     let t = text(&buf);
-    assert!(t.contains("Large adv. assembler") && t.contains("needs control board"), "{t}");
+    assert!(t.contains("Large adv. assembler") && t.contains("control board"), "{t}");
     std::fs::write("target/snapshot-tree-50.html", to_html(&buf)).unwrap();
     let buf = render(&mut app, 130, 42);
     std::fs::write("target/snapshot-tree-130.html", to_html(&buf)).unwrap();

@@ -2528,6 +2528,14 @@ fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
 /// The research screen, over everything but the bottom line (where results show).
 /// New parts in groups; the picked row's details sit under the list.
 fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
+    if !crate::research::graph_enabled(area.width) || area.height < 16 {
+        draw_tree_list(f, area, app);
+    } else {
+        draw_tree_graph(f, area, app);
+    }
+}
+
+fn draw_tree_list(f: &mut Frame, area: Rect, app: &mut App) {
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let dim = Style::new().fg(Color::DarkGray);
     let r = Rect { height: area.height.saturating_sub(1), ..area };
@@ -2670,6 +2678,303 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     };
     let hints = [(2, "↑↓ pick"), (1, "Enter research"), (0, close.as_str())];
     f.render_widget(Paragraph::new(footer_line(width, &hints, more)), Rect::new(x0, footer_y, width, 1));
+}
+
+fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
+    use crate::research::{layout, BOX_W, COL_GAP};
+
+    let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+    let dim = Style::new().fg(Color::DarkGray);
+    let r = Rect { height: area.height.saturating_sub(1), ..area };
+    f.render_widget(Clear, r);
+    f.render_widget(Block::bordered().title(" Research ").title_style(head), r);
+    if r.width < 34 || r.height < 9 {
+        return;
+    }
+
+    let x0 = r.x + 2;
+    let width = r.width.saturating_sub(4);
+    let points = format!("{} research", grouped(app.world.econ.research));
+    f.render_widget(
+        Paragraph::new(Line::styled(points, Style::new().fg(RESEARCH).add_modifier(Modifier::BOLD))),
+        Rect::new(x0, r.y + 1, width, 1),
+    );
+    let rows = tree_rows();
+    let pick = app.tree_pick.min(rows.len().saturating_sub(1));
+    app.tree_pick = pick;
+    let selected = rows[pick];
+    let positions = layout();
+    let here = positions.iter().find(|p| p.tech == selected).copied();
+    let graph_top = r.y + 2;
+    let footer_y = r.y + r.height - 2;
+    let detail_top = footer_y.saturating_sub(4);
+    let graph_h = detail_top.saturating_sub(graph_top);
+    let stride_x = BOX_W + COL_GAP;
+    let (total_h, total_w) = crate::research::canvas_size();
+    let visible_cols = ((width + COL_GAP) / stride_x).max(1);
+    let graph_w = (visible_cols * stride_x - COL_GAP).min(width);
+    let scroll_x = here.map_or(0, |p| {
+        let left = p.col as u16 * stride_x;
+        left.min(total_w.saturating_sub(graph_w))
+    });
+    let scroll_y = here.map_or(0, |p| {
+        let focus = p.row as u16 + 1;
+        focus.saturating_sub(graph_h / 2).min(total_h.saturating_sub(graph_h))
+    });
+    let gx = |p: &crate::research::NodePos| x0 as i32 + (p.col as u16 * stride_x) as i32 - scroll_x as i32;
+    let gy = |p: &crate::research::NodePos| graph_top as i32 + p.row as i32 - scroll_y as i32;
+    let put = |f: &mut Frame, x: i32, y: i32, ch: char, style: Style| {
+        if x >= x0 as i32 && x < (x0 + graph_w) as i32 && y >= graph_top as i32 && y < detail_top as i32 {
+            if let Some(cell) = f.buffer_mut().cell_mut((x as u16, y as u16)) {
+                cell.set_char(ch).set_style(style);
+            }
+        }
+    };
+    let line_style = Style::new().fg(Color::DarkGray);
+
+    // Each edge stays in the four-cell gap between consecutive depth columns.
+    // Segment masks are merged into box-side and bus junction glyphs below.
+    let mut lines = std::collections::HashMap::<(i32, i32), u8>::new();
+    const U: u8 = 1;
+    const D: u8 = 2;
+    const L: u8 = 4;
+    const R: u8 = 8;
+    let connect = |lines: &mut std::collections::HashMap<(i32, i32), u8>, a: (i32, i32), b: (i32, i32)| {
+        let (ba, bb) = if b.0 > a.0 {
+            (R, L)
+        } else if b.0 < a.0 {
+            (L, R)
+        } else if b.1 > a.1 {
+            (D, U)
+        } else {
+            (U, D)
+        };
+        *lines.entry(a).or_default() |= ba;
+        *lines.entry(b).or_default() |= bb;
+    };
+    let mut parents: Vec<_> = positions.iter().collect();
+    parents.sort_by_key(|p| p.col);
+    for parent in parents {
+        let mut children: Vec<_> = positions.iter().filter(|child| child.parent == Some(parent.tech)).collect();
+        if children.is_empty() {
+            continue;
+        }
+        children.sort_by_key(|p| p.row);
+        let px = parent.col as i32 * stride_x as i32;
+        let py = parent.row as i32 + 1;
+        let bus_x = px + BOX_W as i32 + 2;
+        if children.len() == 1 {
+            connect(&mut lines, (px + BOX_W as i32 - 1, py), (px + BOX_W as i32, py));
+            connect(&mut lines, (px + BOX_W as i32, py), (px + BOX_W as i32 + 1, py));
+            connect(&mut lines, (px + BOX_W as i32 + 1, py), (bus_x, py));
+            connect(&mut lines, (bus_x, py), (bus_x + 1, py));
+            connect(&mut lines, (bus_x + 1, py), (bus_x + 2, py));
+            connect(&mut lines, (bus_x + 2, py), (px + stride_x as i32 - 1, py));
+        } else {
+            let first_y = children[0].row as i32 + 1;
+            let last_y = children.last().unwrap().row as i32 + 1;
+            for y in first_y..last_y {
+                connect(&mut lines, (bus_x, y), (bus_x, y + 1));
+            }
+            for y in [py] {
+                connect(&mut lines, (px + BOX_W as i32 - 1, y), (px + BOX_W as i32, y));
+                connect(&mut lines, (px + BOX_W as i32, y), (px + BOX_W as i32 + 1, y));
+                connect(&mut lines, (px + BOX_W as i32 + 1, y), (bus_x, y));
+            }
+            for child in children {
+                let cy = child.row as i32 + 1;
+                for x in bus_x..px + stride_x as i32 {
+                    connect(&mut lines, (x, cy), (x + 1, cy));
+                }
+            }
+        }
+    }
+    for (&(x, y), &mask) in &lines {
+        let ch = match mask {
+            12 => '─',
+            3 => '│',
+            10 => '┌',
+            6 => '┐',
+            9 => '└',
+            5 => '┘',
+            11 => '├',
+            7 => '┤',
+            14 => '┬',
+            13 => '┴',
+            15 => '┼',
+            _ => continue,
+        };
+        put(f, x0 as i32 + x - scroll_x as i32, graph_top as i32 + y - scroll_y as i32, ch, line_style);
+    }
+
+    app.tree_rows.clear();
+    for p in &positions {
+        let x = gx(p);
+        let y = gy(p);
+        if x + BOX_W as i32 <= x0 as i32 || x >= (x0 + width) as i32 || y + 2 < graph_top as i32 || y >= detail_top as i32 {
+            continue;
+        }
+        let tech_idx = rows.iter().position(|t| *t == p.tech).unwrap_or(0);
+        let picked = p.tech == selected;
+        let (tl, tr, bl, br, h, v) =
+            if picked { ('╔', '╗', '╚', '╝', '═', '║') } else { ('┌', '┐', '└', '┘', '─', '│') };
+        for dx in 0..BOX_W as i32 {
+            put(
+                f,
+                x + dx,
+                y,
+                if dx == 0 {
+                    tl
+                } else if dx == BOX_W as i32 - 1 {
+                    tr
+                } else {
+                    h
+                },
+                if picked { head } else { line_style },
+            );
+            put(
+                f,
+                x + dx,
+                y + 2,
+                if dx == 0 {
+                    bl
+                } else if dx == BOX_W as i32 - 1 {
+                    br
+                } else {
+                    h
+                },
+                if picked { head } else { line_style },
+            );
+        }
+        let logical_x = p.col as i32 * stride_x as i32;
+        let logical_y = p.row as i32 + 1;
+        let left_has_edge = lines.get(&(logical_x, logical_y)).is_some_and(|mask| mask & L != 0);
+        let right_has_edge = lines.get(&(logical_x + BOX_W as i32 - 1, logical_y)).is_some_and(|mask| mask & R != 0);
+        put(
+            f,
+            x,
+            y + 1,
+            if left_has_edge {
+                if picked {
+                    '╣'
+                } else {
+                    '┤'
+                }
+            } else {
+                v
+            },
+            if picked { head } else { line_style },
+        );
+        put(
+            f,
+            x + BOX_W as i32 - 1,
+            y + 1,
+            if right_has_edge {
+                if picked {
+                    '╠'
+                } else {
+                    '├'
+                }
+            } else {
+                v
+            },
+            if picked { head } else { line_style },
+        );
+        let spans = tree_row_spans(&app.world, p.tech, 12, true, true);
+        let mark = spans.first().map(|s| s.content.to_string()).unwrap_or_else(|| "· ".into());
+        let mark_style = spans.first().map(|s| s.style).unwrap_or(dim);
+        let name = spans.get(1).map(|s| s.content.to_string()).unwrap_or_else(|| fit(p.tech.name(), 12));
+        let name_style = spans.get(1).map(|s| s.style).unwrap_or(Style::new());
+        for (dx, ch) in mark.chars().chain(name.chars()).take((BOX_W - 2) as usize).enumerate() {
+            let style = if dx < 2 { mark_style } else { name_style };
+            put(f, x + 1 + dx as i32, y + 1, ch, style);
+        }
+        if y >= graph_top as i32 && y + 2 < detail_top as i32 && x >= x0 as i32 && x + BOX_W as i32 <= (x0 + width) as i32 {
+            app.tree_rows.push((Rect::new(x as u16, y as u16, BOX_W, 3), tech_idx));
+        }
+    }
+
+    // Keep the selected tech and its unlock gate readable beneath the graph.
+    let details = graph_details(&app.world, selected);
+    for (i, (text, style)) in details.iter().take(4).enumerate() {
+        let mut clipped = fit(text, width as usize);
+        if clipped.chars().count() > width as usize {
+            clipped = fit(&clipped, width as usize);
+        }
+        f.render_widget(Paragraph::new(Line::styled(clipped, *style)), Rect::new(x0, detail_top + i as u16, width, 1));
+    }
+    let hidden_left = scroll_x > 0;
+    let hidden_right = scroll_x + graph_w < total_w;
+    let hidden_up = scroll_y > 0;
+    let hidden_down = scroll_y + graph_h < total_h;
+    let mut more = Vec::new();
+    if hidden_up {
+        more.push("▲");
+    }
+    if hidden_left {
+        more.push("◀");
+    }
+    if hidden_down {
+        more.push("▼");
+    }
+    if hidden_right {
+        more.push("▶");
+    }
+    let more = (!more.is_empty()).then(|| format!("{} more", more.join(" ")));
+    let hints = if width < 60 {
+        vec![(3, "↑↓←→ move"), (1, "Enter"), (0, "t/Esc")]
+    } else {
+        vec![(3, "↑↓ siblings"), (2, "←→ path"), (1, "Enter research"), (0, "t/Esc close")]
+    };
+    f.render_widget(Paragraph::new(footer_line(width, &hints, more.as_deref())), Rect::new(x0, footer_y, width, 1));
+}
+
+fn graph_details(w: &World, t: Tech) -> Vec<(String, Style)> {
+    use crate::content::{Node, TREE};
+    let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+    let note = Style::new().fg(RESEARCH);
+    let dim = Style::new().fg(Color::DarkGray);
+    let (item, n) = t.milestone();
+    let made = w.econ.made[item.idx()].min(n);
+    let status = if w.progress.has(t) {
+        "researched".to_string()
+    } else if w.econ.research + 1e-9 >= t.cost() {
+        "affordable".to_string()
+    } else {
+        format!("{} RP", grouped(t.cost()))
+    };
+    let tree_idx = TREE.iter().position(|(node, _)| *node == Node::Tech(t));
+    let key = tree_idx.and_then(|i| TREE[i].1).and_then(|mut i| loop {
+        if let Node::Key(made) = TREE[i].0 {
+            break Some(made.name());
+        }
+        i = TREE[i].1?;
+    });
+    let mut chain = Vec::new();
+    let mut at = Some(t);
+    while let Some(cur) = at {
+        chain.push(cur.name().to_string());
+        at = crate::research::neighbors(cur).0;
+    }
+    chain.reverse();
+    if let Some(k) = key {
+        if chain.len() > 1 {
+            chain.insert(chain.len() - 1, k.to_string());
+        }
+    }
+    let path = chain.join(" → ");
+    let gate_item = keys_text(t.requires());
+    let gate = if w.progress.is_open(t.company()) {
+        format!("Gate: {} · {}", t.company().name(), if gate_item == "its key item" { "starting machinery" } else { &gate_item })
+    } else {
+        format!("Opens with {} from {}", gate_item, t.company().name())
+    };
+    vec![
+        (format!("{} · {} · {}", t.name(), t.category().name(), status), head),
+        (format!("{} RP · free at {} {} ({} made)", grouped(t.cost()), grouped(n as f64), item.name(), grouped(made as f64)), note),
+        (format!("Path: {path}"), dim),
+        (gate, dim),
+    ]
 }
 
 /// Machines that craft, in the order the book lists them.

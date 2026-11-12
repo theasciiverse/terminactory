@@ -8,6 +8,7 @@ mod hints;
 mod history;
 mod library;
 mod mail;
+mod research;
 mod saves;
 mod settings;
 mod sim;

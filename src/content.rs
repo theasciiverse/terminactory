@@ -1115,6 +1115,12 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::WaferSaw), Some(43)),                // 48
     (Node::Tech(Tech::FineEtcher), Some(45)),              // 49: Meridian's machine, under the x4x1 that opens it
     (Node::Tech(Tech::LargePrecisionAssembler), Some(45)), // 50: beside the fine etcher
+    (Node::Tech(Tech::Tunnels), Some(1)),                  // 51: belts pass under buildings
+    (Node::Tech(Tech::LongArms), Some(1)),                 // 52: longer reach from the press
+    (Node::Tech(Tech::FilterSplitters), Some(1)),          // 53: filter splitter
+    (Node::Tech(Tech::Blueprints), Some(1)),               // 54: copy a built layout
+    (Node::Tech(Tech::Warehouses), Some(0)),               // 55: starting drill milestone
+    (Node::Tech(Tech::UpgradePlanner), Some(27)),          // 56: gearbox unlocks upgrade planning
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
