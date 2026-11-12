@@ -315,6 +315,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::ArcFurnace => "ARC",
         Kind::CrystalGrower => "GROW",
         Kind::WaferSaw => "SAW",
+        Kind::FineEtcher => "FETC",
         Kind::Solar => "SOLR",
         Kind::BasicSolar => "SOL2",
         Kind::Pole => "POLE",
@@ -1071,6 +1072,9 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::Microprocessor => ('H', 207),
         Item::RamChip => ('R', 213),
         Item::SiliconCrystal => ('y', 153),
+        Item::FineMask => ('n', 252),
+        Item::FineDie => ('j', 75),
+        Item::FineMicroprocessor => ('U', 219),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1117,6 +1121,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::ArcFurnace => (INK, 216),
         Kind::CrystalGrower => (INK, 153),
         Kind::WaferSaw => (INK, 187),
+        Kind::FineEtcher => (INK, 189),
         Kind::AdvancedDrill => (INK, 74),
         Kind::LargeBasicDrill => (INK, 111),
         Kind::LargeAdvancedDrill => (INK, 38),
@@ -1182,6 +1187,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::ArcFurnace => ('A', 'R'),
         Kind::CrystalGrower => ('G', 'R'),
         Kind::WaferSaw => ('S', 'W'),
+        Kind::FineEtcher => ('F', 'E'),
         Kind::AdvancedDrill => ('D', '3'),
         Kind::LargeBasicDrill => ('D', '4'),
         Kind::LargeAdvancedDrill => ('D', '5'),
@@ -1290,6 +1296,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::ArcFurnace => labelled("ARC"),
         Kind::CrystalGrower => labelled("GROW"),
         Kind::WaferSaw => strip("SW"),
+        Kind::FineEtcher => labelled("FETCH"),
         Kind::AdvancedDrill => labelled("ADV DRL"),
         Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
         Kind::LargeAdvancedDrill => labelled("LRG ADV DRILL"),
@@ -2657,7 +2664,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 25] = [
+const CRAFTERS: [Kind; 26] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
@@ -2679,6 +2686,7 @@ const CRAFTERS: [Kind; 25] = [
     Kind::AdvancedAssembler,
     Kind::PrecisionAssembler,
     Kind::Etcher,
+    Kind::FineEtcher,
     Kind::CrystalGrower,
     Kind::WaferSaw,
     Kind::LargeBasicAssembler,
@@ -2707,6 +2715,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Etcher => "etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
         Kind::ArcFurnace => "melts sand to silicon on power alone, with half the blast furnace's waste, and remelts silicon scrap",
         Kind::CrystalGrower => "grows silicon crystals from ingots, slowly: 20 s each",
+        Kind::FineEtcher => "etches a fine die and a spare die from each wafer with a fine mask: no scrap, but very hungry",
         Kind::WaferSaw => "saws a crystal into 6 wafers with a fine wire: twice the lathe's wafers per ingot, no scrap",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays, gearboxes, transformers and lamp matrices",
@@ -2714,7 +2723,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::AdvancedAssembler => {
             "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), circuit boards, transistors, transistor boards (x3x1) and masks, and everything below faster"
         }
-        Kind::PrecisionAssembler => "builds microprocessors (x4x1) and RAM chips, and control boards twice as fast as an advanced one; nothing below",
+        Kind::PrecisionAssembler => "builds microprocessors (x4x1 and x4x2), RAM chips and fine masks, and control boards twice as fast as an advanced one; nothing below",
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
         Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",
         Kind::AdvancedDrill => "a drill on EC: twice a basic drill's ore, no coal",

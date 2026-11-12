@@ -219,6 +219,7 @@ pub enum Kind {
     ArcFurnace,
     CrystalGrower,
     WaferSaw,
+    FineEtcher,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -245,7 +246,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 49] = [
+    pub const ALL: [Kind; 50] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -295,6 +296,7 @@ impl Kind {
         Kind::ArcFurnace,
         Kind::CrystalGrower,
         Kind::WaferSaw,
+        Kind::FineEtcher,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -326,6 +328,7 @@ impl Kind {
             | Kind::ArcFurnace
             | Kind::CrystalGrower
             | Kind::WaferSaw
+            | Kind::FineEtcher
             | Kind::AdvancedDrill
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
@@ -370,6 +373,7 @@ impl Kind {
             Kind::ArcFurnace => "Arc furnace",
             Kind::CrystalGrower => "Crystal grower",
             Kind::WaferSaw => "Wafer saw",
+            Kind::FineEtcher => "Fine etcher",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
             Kind::LargeAdvancedDrill => "Large advanced drill",
@@ -425,6 +429,7 @@ impl Kind {
             Kind::ArcFurnace => 10_000.0,
             Kind::CrystalGrower => 7500.0,
             Kind::WaferSaw => 6000.0,
+            Kind::FineEtcher => 60_000.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
             Kind::LargeAdvancedDrill => 2000.0,
@@ -475,7 +480,7 @@ impl Kind {
             | Kind::Etcher
             | Kind::ArcFurnace => (3, 3),
             Kind::CrystalGrower => (2, 4),
-            Kind::Kiln => (3, 5),
+            Kind::Kiln | Kind::FineEtcher => (3, 5),
             Kind::LargeKiln => (5, 7),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
             Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
@@ -532,6 +537,7 @@ impl Kind {
             Kind::ArcFurnace => 40.0,
             Kind::CrystalGrower => 12.0,
             Kind::WaferSaw => 6.0,
+            Kind::FineEtcher => 96.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
@@ -608,6 +614,7 @@ impl Kind {
             Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
             Kind::Evacuator => Some(Company::Sablon),
             Kind::ArcFurnace | Kind::CrystalGrower | Kind::WaferSaw => Some(Company::Halverson),
+            Kind::FineEtcher => Some(Company::Meridian),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
             Kind::Crusher => Some(Company::Ashgrove),
@@ -635,6 +642,7 @@ impl Kind {
             Kind::ArcFurnace => Some(Tech::ArcFurnace),
             Kind::CrystalGrower => Some(Tech::CrystalGrower),
             Kind::WaferSaw => Some(Tech::WaferSaw),
+            Kind::FineEtcher => Some(Tech::FineEtcher),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
@@ -690,6 +698,7 @@ impl Kind {
             Kind::ArcFurnace => ARC_RECIPES,
             Kind::CrystalGrower => GROWER_RECIPES,
             Kind::WaferSaw => SAW_RECIPES,
+            Kind::FineEtcher => FINE_ETCHER_RECIPES,
             Kind::CokeOven => COKE_OVEN_RECIPES,
             Kind::Crusher => CRUSHER_RECIPES,
             Kind::WireDrawer => WIRE_DRAWER_RECIPES,
@@ -1028,6 +1037,7 @@ impl Building {
             | Kind::ArcFurnace
             | Kind::CrystalGrower
             | Kind::WaferSaw
+            | Kind::FineEtcher
             | Kind::CokeOven
             | Kind::Crusher
             | Kind::WireDrawer

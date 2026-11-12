@@ -163,7 +163,9 @@ The direct route takes molten iron from a pipe, or from an iron blast furnace st
 
 **Silicon.** No new raw material and no new machine: sand and coke go into the blast furnace ("molten silicon": 3 sand + 1 coke → molten silicon + 2 waste, 10 s, the dirty way), a molder casts it into a **silicon ingot** ($6), and the lathe slices 2 ingots into 2 **wafers** ($12) and 2 **silicon scrap** ($1.50, which sells) in 40 s. The kiln fires **dopant** ($10: 4 stone, 20 s a batch), **doped wafers** ($50: wafer + 2 dopant, 32 s) and **ceramic** ($8: 2 brick + sand → 2, 32 s), all burning coal; the large kiln does them too. The advanced and precision assemblers build the **circuit board** ($60: ceramic + copper sheet + 4 fine wire), the **transistor** ($42: doped wafer + 6 fine wire + iron sheet → 3) and the **transistor board** ($450, the x3x1: 6 transistors + circuit board + 4 fine wire), 10 s each. Making a silicon ingot opens Halverson Smelting, whose machines are a better road (below).
 
-**Chips.** Four new items and a machine, from the same raw materials. The mixer makes **etchant** ($2: coal + sand + water → 2 etchant + 1 waste out the back, 5 s). The advanced and precision assemblers build a **mask** ($40: glass + copper sheet + 2 fine wire, 10 s). Lattice & Finch's **etcher** (3×3, 24 EC, $25,000, sixth slot of Create) etches a doped wafer with a mask and etchant into 2 **dies** ($68) and 2 silicon scrap, 15 s. The precision assembler alone turns a die + ceramic + fine wire into a **microprocessor (x4x1)** ($200: 4 fine wire) or a **RAM chip** ($150: 2 fine wire), 10 s each. Making a microprocessor opens Meridian Instruments, which sells nothing yet.
+**Chips.** Four new items and a machine, from the same raw materials. The mixer makes **etchant** ($2: coal + sand + water → 2 etchant + 1 waste out the back, 5 s). The advanced and precision assemblers build a **mask** ($40: glass + copper sheet + 2 fine wire, 10 s). Lattice & Finch's **etcher** (3×3, 24 EC, $25,000, sixth slot of Create) etches a doped wafer with a mask and etchant into 2 **dies** ($68) and 2 silicon scrap, 15 s. The precision assembler alone turns a die + ceramic + fine wire into a **microprocessor (x4x1)** ($200: 4 fine wire) or a **RAM chip** ($150: 2 fine wire), 10 s each. Making a microprocessor opens Meridian Instruments.
+
+**Fine etching.** Meridian's one machine is a better road, never the only one: the etcher's die and the x4x1 stay. The precision assembler builds a **fine mask** ($90: mask + glass + 2 fine wire, 10 s) and, from a **fine die** ($140), the **microprocessor (x4x2)** ($420: fine die + ceramic + 4 fine wire, 10 s). The **fine etcher** (3×5, 96 EC, $60,000, last in slot 6 of Create) etches 1 doped wafer + 1 fine mask + 1 etchant into 1 fine die and 1 die, 20 s, with no scrap and both out the front: very hungry, but every wafer gives a fine die.
 
 **Better silicon.** Halverson's three machines (all EC, no fuel) are better roads, never the only ones: the blast furnace and lathe routes stay. The **arc furnace** (3×3, 40 EC, $10,000) melts silicon with no fuel: 3 sand + 1 coke → 2 molten silicon + 1 waste (10 s), 3 sand + 2 coal → 1 + 2 waste, or a clean remelt of 3 silicon scrap → 2 molten silicon (5 s). The **crystal grower** (2×4, 12 EC, $7,500) grows a **silicon crystal** ($50) from 3 silicon ingots in 20 s, the slowest machine in the game. The **wafer saw** (2×1, 6 EC, $6,000) saws a crystal and a fine wire into 6 wafers in 10 s, with no scrap: twice the lathe's wafers per ingot.
 
@@ -196,7 +198,7 @@ Every other item except waste goes into at least one recipe (the transformer, te
 | **Halverson** (silicon ingot) | Arc furnace (3×3, 40 EC, $10,000) | 40,000 | 100 silicon ingot |
 | | Crystal grower (2×4, 12 EC, $7,500) | 45,000 | 200 silicon ingot |
 | | Wafer saw (2×1, 6 EC, $6,000) | 35,000 | 100 wafer |
-| **Meridian** (microprocessor x4x1) | nothing yet | | |
+| **Meridian** (microprocessor x4x1) | Fine etcher (3×5, 96 EC, $60,000) | 150,000 | 100 microprocessor (x4x1) |
 | **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
 | | Precision assembler (3×3) | 30,000 | 120 control board |
 | | Etcher (3×3, 24 EC, $25,000) | 80,000 | 60 transistor board |
@@ -214,7 +216,7 @@ Every key item can be made with machines from companies that open before it, so 
 | | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
 | | 4 | assemblers (crude to large advanced) and the welder |
 | | 5 | water pump / advanced pump / mixer / evacuator |
-| | 6 | etcher / crystal grower / wafer saw |
+| | 6 | etcher / crystal grower / wafer saw / fine etcher |
 | Transport (2) | 1 | belt / fast belt / tunnel |
 | | 2 | splitter / filter splitter |
 | | 3 | arm / long arm |
@@ -344,7 +346,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `LATHE` | Lathe (R rod, S screw, r steel rod, b bearing) | 3×3 | |
 | `KILN` `WELDER` `MIXR` `EVAC` | Kiln (3×5), welder (3×3), mixer (2×2), evacuator (2×2) | | `b` brick, `u` glass, `C` reinforced concrete, `t` tube |
 | `ARC` `GROW` `SW` | Arc furnace (3×3), crystal grower (2×4), wafer saw (2×1) | | `y` silicon crystal `W` wafer |
-| `ETCH` | Etcher (3×3) | | `h` etchant `m` mask `k` die `H` microprocessor `R` RAM chip |
+| `ETCH` `FETCH` | Etcher (3×3), fine etcher (3×5) | | `h` etchant `m` mask `k` die `H` microprocessor `R` RAM chip `n` fine mask `j` fine die `U` microprocessor x4x2 |
 | `BASM` `ADVASM` `PRCASM` | Basic (2×2), advanced (3×3), precision (3×3) assembler | | `V` valve `Q` gauge `L` lamp `r` relay `M` motor `P` piston `B` control board |
 | `LRG ASM B` `LRG ASM A` | Large basic and advanced assembler | 5×5 | `D` boiler shell `S` silo shell `F` frame `U` pump unit `E` generator `N` engine block `T` control panel `Y` steam tractor |
 | `ADV DRL` `LRG … DRILL` `APMP` | Advanced drill (4×4), large drills (8×8), advanced pump | | |

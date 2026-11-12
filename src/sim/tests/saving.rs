@@ -140,6 +140,11 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
         !text.contains("ArcFurnace") && !text.contains("CrystalGrower") && !text.contains("WaferSaw") && !text.contains("SiliconCrystal")
     );
     assert!(!l.progress.has(Tech::ArcFurnace) && !l.progress.has(Tech::CrystalGrower) && !l.progress.has(Tech::WaferSaw));
+    // Nor fine etching: no fine etcher, fine mask, fine die or x4x2, and still format 6.
+    assert!(
+        !text.contains("FineEtcher") && !text.contains("FineMask") && !text.contains("FineDie") && !text.contains("FineMicroprocessor")
+    );
+    assert!(!l.progress.has(Tech::FineEtcher));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }

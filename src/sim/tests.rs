@@ -1138,7 +1138,7 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "transformer", "lamp matrix", "control board (hand-wired)"]);
     assert_eq!(basic, ["electric motor", "piston", "terminal"]);
     assert_eq!(adv, ["control board", "tube board", "circuit board", "transistor", "transistor board", "mask"]);
-    assert_eq!(prec, ["microprocessor (x4x1)", "RAM chip"]);
+    assert_eq!(prec, ["microprocessor (x4x1)", "RAM chip", "fine mask", "microprocessor (x4x2)"]);
     assert_eq!(large_basic, ["pump unit", "engine block"]);
     assert_eq!(large_adv, ["generator", "control panel", "drilling rig", "steam tractor"]);
     // Large and small assemblers share nothing.
@@ -1216,7 +1216,18 @@ fn a_precision_assembler_refuses_crude_and_basic_recipes() {
     }
     assert_eq!(
         names,
-        ["control board", "tube board", "circuit board", "transistor", "transistor board", "mask", "microprocessor (x4x1)", "RAM chip"]
+        [
+            "control board",
+            "tube board",
+            "circuit board",
+            "transistor",
+            "transistor board",
+            "mask",
+            "microprocessor (x4x1)",
+            "RAM chip",
+            "fine mask",
+            "microprocessor (x4x2)"
+        ]
     );
     // It cycles between the processors and boards it knows.
     assert!(!w.configure(0, 10, 10).unwrap().contains("only one recipe"));
@@ -1940,18 +1951,22 @@ fn only_the_precision_assembler_builds_the_x4x1_microprocessor_and_ram_chip() {
     for k in Kind::ALL.into_iter().filter(|k| *k != Kind::PrecisionAssembler) {
         let names = recipe_names(k);
         assert!(!names.contains(&"microprocessor (x4x1)") && !names.contains(&"RAM chip"), "{k:?}");
+        assert!(!names.contains(&"fine mask") && !names.contains(&"microprocessor (x4x2)"), "{k:?}");
     }
     // Each product has its own letter in the precision assembler.
     assert_eq!((find("microprocessor (x4x1)").tag, find("RAM chip").tag), ('M', 'R'));
+    assert_eq!((find("fine mask").tag, find("microprocessor (x4x2)").tag), ('F', 'X'));
 }
 
 #[test]
 fn meridians_key_is_the_x4x1_made_before_it_sells_anything() {
     assert_eq!(Company::Meridian.key_items(), &[Made::Item(Item::Microprocessor)]);
     assert_eq!(Company::Meridian.name(), "Meridian Instruments");
-    // It sells nothing yet: the fine etcher and the large precision assembler come later.
-    assert!(Tech::ALL.iter().all(|t| t.company() != Company::Meridian));
-    assert!(Kind::ALL.iter().all(|k| k.company() != Some(Company::Meridian)));
+    // It sells exactly the fine etcher (the large precision assembler comes later).
+    let techs: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Meridian).collect();
+    assert_eq!(techs, [Tech::FineEtcher]);
+    let kinds: Vec<Kind> = Kind::ALL.iter().copied().filter(|k| k.company() == Some(Company::Meridian)).collect();
+    assert_eq!(kinds, [Kind::FineEtcher]);
     // The etcher comes from Lattice & Finch, the mask from the advanced assembler, the etchant
     // from Wellbourne's mixer: with Meridian, Halverson, Sablon and Ampleworth shut, the chip is makeable.
     let mut open = [true; COMPANIES];
@@ -1967,10 +1982,10 @@ fn meridians_key_is_the_x4x1_made_before_it_sells_anything() {
     // In the tree it hangs under the etcher.
     let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
     assert_eq!(TREE[at(Node::Key(Made::Item(Item::Microprocessor)))].1, Some(at(Node::Tech(Tech::Etcher))));
-    // A letter with no tech list, and a gift note.
+    // A letter whose research list is the fine etcher alone, and a gift note.
     let m = crate::mail::letter(Company::Meridian, Made::Item(Item::Microprocessor), 0);
     assert!(m.md.contains("Your very first chip! We are all friends here."), "{}", m.md);
-    assert!(!m.md.contains("Unlocked for research"), "{}", m.md);
+    assert!(m.md.contains("Unlocked for research") && m.md.contains("Fine etcher"), "{}", m.md);
     assert_eq!(m.from, "Meridian Instruments");
     assert!(!crate::mail::gift_note(Company::Meridian).is_empty());
 }
@@ -2327,7 +2342,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::SiliconCrystal);
+    assert_eq!(last, Item::FineMicroprocessor);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -2343,7 +2358,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "SiliconCrystal": 7}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"FineMicroprocessor": 7, "Gauge": 11}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -2876,10 +2891,10 @@ fn a_company_never_gates_its_own_key_item() {
 
 // ---------- the content step: steel, stone, parts and big goods ----------
 
-/// Like `run_machine`, on a big grid (90 EC) so even the thirsty machines run at full speed.
+/// Like `run_machine`, on a big grid (100 EC) so even the thirsty machines run at full speed.
 fn run_powered(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Vec<Item> {
     let mut w = World::blank();
-    big_grid(&mut w, 10, 0, 9);
+    big_grid(&mut w, 10, 0, 10);
     let (x, y) = (12, 12);
     w.place(0, x, y, kind, Dir::E).unwrap();
     pick_recipe(&mut w, x, y, recipe);
@@ -3010,7 +3025,7 @@ fn every_item_recipe_runs_in_its_machine() {
         for r in kind.recipes().iter().filter(|r| r.fluid_in.is_none()) {
             let batch = kind.batch();
             let mut w = World::blank();
-            big_grid(&mut w, 10, 0, 9);
+            big_grid(&mut w, 10, 0, 10);
             let (x, y) = (12, 12);
             w.place(0, x, y, kind, Dir::E).unwrap();
             pick_recipe(&mut w, x, y, r.name);
@@ -3150,8 +3165,10 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
     let crown = [Item::DrillingRig, Item::SteamTractor];
     // The computer eats both (computers phase 5), so until it arrives nothing consumes them.
-    // The disk drive eats the transistor board (phase 5); the mainboard eats the microprocessor and the RAM chip (phase 5).
-    let waits_for_a_later_phase = [Item::Transformer, Item::Terminal, Item::TransistorBoard, Item::Microprocessor, Item::RamChip];
+    // The disk drive eats the transistor board (phase 5); the mainboard eats the microprocessor and the RAM chip (phase 5),
+    // and the x4x2 as well: it is the better microprocessor, so it waits for the same mainboard.
+    let waits_for_a_later_phase =
+        [Item::Transformer, Item::Terminal, Item::TransistorBoard, Item::Microprocessor, Item::RamChip, Item::FineMicroprocessor];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
@@ -3450,4 +3467,81 @@ fn a_grower_and_saw_make_six_wafers_from_three_ingots() {
     assert_eq!(run_powered(Kind::CrystalGrower, "silicon crystal", &[(Item::SiliconIngot, 3)], 21), [Item::SiliconCrystal]);
     let out = run_powered(Kind::WaferSaw, "wafer", &[(Item::SiliconCrystal, 1), (Item::FineWire, 1)], 11);
     assert_eq!((count(&out, Item::Wafer), out.len()), (6, 6), "no scrap");
+}
+
+// ---------- fine etching (computers phase 4) ----------
+
+#[test]
+fn a_fine_etcher_makes_a_fine_die_and_a_spare_die_from_each_wafer() {
+    assert_eq!(recipe_names(Kind::FineEtcher), ["fine die"]);
+    let stock = [(Item::DopedWafer, 1), (Item::FineMask, 1), (Item::Etchant, 1)];
+    // 96 EC: a bigger grid than the usual 90, still fully powered.
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 10);
+    w.place(0, 12, 12, Kind::FineEtcher, Dir::E).unwrap(); // covers 12-14 across, 12-16 down: front is x=15
+    assert_eq!(w.ratio_at(0, 12, 12), 1.0, "the fine etcher is fully powered");
+    pick_recipe(&mut w, 12, 12, "fine die");
+    for (item, n) in stock {
+        set_stock(&mut w, 12, 12, item, n);
+    }
+    w.place(0, 15, 12, Kind::Crate, Dir::E).unwrap();
+    run(&mut w, 19);
+    assert!(crate_items(&w, 0, 15, 12).is_empty(), "nothing before 20 s");
+    run(&mut w, 3);
+    let out = crate_items(&w, 0, 15, 12);
+    assert_eq!((count(&out, Item::FineDie), count(&out, Item::Die), out.len()), (1, 1, 2), "{out:?}");
+    assert_eq!(w.econ.used[Item::FineMask.idx()], 1);
+    // Short of any one input, it does not start.
+    for missing in 0..stock.len() {
+        let mut part = stock.to_vec();
+        part.remove(missing);
+        assert!(run_powered(Kind::FineEtcher, "fine die", &part, 30).is_empty(), "missing {:?}", stock[missing].0);
+    }
+}
+
+#[test]
+fn the_fine_etcher_is_meridians_machine_and_a_better_route_not_the_only_one() {
+    assert_eq!((Kind::FineEtcher.cost(), Kind::FineEtcher.power_draw(), Kind::FineEtcher.base_dims()), (60_000.0, 96.0, (3, 5)));
+    assert!(Kind::FineEtcher.electric() && !Kind::FineEtcher.uses_pipes());
+    assert!(Kind::FineEtcher.recipes().iter().all(|r| r.fuel.is_none() && r.fluid_in.is_none() && r.fluid_out.is_none()));
+    assert_eq!((Kind::FineEtcher.company(), Kind::FineEtcher.tech()), (Some(Company::Meridian), Some(Tech::FineEtcher)));
+    assert_eq!(Kind::FineEtcher.category(), Category::Create);
+    assert_eq!(
+        (Tech::FineEtcher.company(), Tech::FineEtcher.cost(), Tech::FineEtcher.milestone()),
+        (Company::Meridian, 150_000.0, (Item::Microprocessor, 100))
+    );
+    assert_eq!(Tech::FineEtcher.requires(), &[Made::Item(Item::Microprocessor)]);
+    // Create slot 6: the etcher is still the first pick.
+    assert_eq!(crate::app::slots(Category::Create)[5], &[Kind::Etcher, Kind::CrystalGrower, Kind::WaferSaw, Kind::FineEtcher]);
+    // Under the x4x1 in the tree, in the etcher's research group.
+    let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
+    assert_eq!(TREE[at(Node::Tech(Tech::FineEtcher))].1, Some(at(Node::Key(Made::Item(Item::Microprocessor)))));
+    let group = |t: Tech| UNLOCK_GROUPS.iter().find(|(_, ts)| ts.contains(&t)).map(|(n, _)| *n);
+    assert!(group(Tech::FineEtcher).is_some() && group(Tech::FineEtcher) == group(Tech::Etcher));
+    // Locked until researched (or the 100 x4x1 milestone).
+    let mut p = Progress::default();
+    assert!(!p.part_unlocked(Kind::FineEtcher));
+    p.opened[Company::Meridian.idx()] = true;
+    p.researched[Tech::FineEtcher.idx()] = true;
+    assert!(p.part_unlocked(Kind::FineEtcher));
+    // The old road stays: the etcher's die and the x4x1 do not need Meridian's machine.
+    assert_eq!(recipe_names(Kind::Etcher), ["die"]);
+    let mut open = [true; COMPANIES];
+    open[Company::Meridian.idx()] = false;
+    let (have, _) = makeable(&open);
+    assert!(have[Item::Microprocessor.idx()] && have[Item::Die.idx()] && !have[Item::FineDie.idx()]);
+    let (have, _) = makeable(&[true; COMPANIES]);
+    assert!(have[Item::FineDie.idx()] && have[Item::FineMicroprocessor.idx()]);
+}
+
+#[test]
+fn only_a_precision_assembler_makes_the_fine_mask_and_the_x4x2() {
+    let out = run_powered(Kind::PrecisionAssembler, "fine mask", &[(Item::Mask, 1), (Item::Glass, 1), (Item::FineWire, 2)], 11);
+    assert_eq!(out, [Item::FineMask]);
+    let cpu = [(Item::FineDie, 1), (Item::Ceramic, 1), (Item::FineWire, 4)];
+    assert!(run_powered(Kind::PrecisionAssembler, "microprocessor (x4x2)", &cpu, 9).is_empty());
+    assert_eq!(run_powered(Kind::PrecisionAssembler, "microprocessor (x4x2)", &cpu, 11), [Item::FineMicroprocessor]);
+    for k in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::AdvancedAssembler] {
+        assert!(!recipe_names(k).contains(&"fine mask") && !recipe_names(k).contains(&"microprocessor (x4x2)"), "{k:?}");
+    }
 }

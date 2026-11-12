@@ -450,6 +450,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"FineEtcher\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"fine die\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Furnace\"",
               "rr": "int",
               "size": "int",
@@ -1166,7 +1189,7 @@
       ]
     },
     "researched": {
-      "len": 41,
+      "len": 42,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1187,6 +1210,7 @@
         "\"Excavation\"",
         "\"FastBelts\"",
         "\"FilterSplitters\"",
+        "\"FineEtcher\"",
         "\"Kiln\"",
         "\"LargeAdvancedAssembler\"",
         "\"LargeAdvancedDrill\"",

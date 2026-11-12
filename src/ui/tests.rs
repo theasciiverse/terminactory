@@ -1155,8 +1155,25 @@ fn chip_book_pages_fit_every_size() {
         (Entry::Part(Kind::AdvancedAssembler), vec!["glass + copper sheet + 2 fine wire  ──→  mask"]),
         (
             Entry::Part(Kind::PrecisionAssembler),
-            vec!["die + ceramic + 4 fine wire  ──→  microprocessor (x4x1)", "die + ceramic + 2 fine wire  ──→  RAM chip"],
+            vec![
+                "die + ceramic + 4 fine wire  ──→  microprocessor (x4x1)",
+                "die + ceramic + 2 fine wire  ──→  RAM chip",
+                "mask + glass + 2 fine wire  ──→  fine mask",
+                "fine die + ceramic + 4 fine wire  ──→  microprocessor (x4x2)",
+            ],
         ),
+        (
+            Entry::Part(Kind::FineEtcher),
+            vec![
+                "doped wafer + fine mask + etchant  ──→  fine die + die",
+                "no scrap, but very hungry",
+                "96 EC",
+                "$60,000 · 3x5 · from Meridian",
+            ],
+        ),
+        (Entry::Item(Item::FineMask), vec!["Made by", "Used in", "sells $90"]),
+        (Entry::Item(Item::FineDie), vec!["Made by", "Used in", "sells $140"]),
+        (Entry::Item(Item::FineMicroprocessor), vec!["Made by", "sells $420"]),
         (Entry::Item(Item::Etchant), vec!["Made by", "sells $2"]),
         (Entry::Item(Item::Die), vec!["Made by", "Used in", "sells $68"]),
         (Entry::Item(Item::Microprocessor), vec!["Made by", "sells $200"]),
@@ -1175,13 +1192,44 @@ fn chip_book_pages_fit_every_size() {
     }
     // The long item name keeps its code in the grid, and the research list and tree show the etcher.
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("microprocessor x4x1"), "{t}");
+    assert!(t.contains("microprocessor x4x1") && t.contains("microprocessor x4x2"), "{t}");
     app.book = false;
     app.tree = true;
     app.tree_pick = tree_rows().iter().position(|t| t.name() == "Etcher").unwrap();
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Etcher"), "{w}x{h}: {t}");
+    }
+    // The fine etcher sits under the x4x1 in the tree.
+    app.tree_pick = tree_rows().iter().position(|t| t.name() == "Fine etcher").unwrap();
+    for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Fine etcher"), "{w}x{h}: {t}");
+    }
+}
+
+/// The fine etcher (3x5) on the map in every facing: its label fits, and the inspector names it.
+#[test]
+fn fine_etcher_snapshot() {
+    let mut w = World::blank();
+    let (x, y) = (52, 30);
+    w.place(0, x, y, Kind::FineEtcher, Dir::E).unwrap();
+    w.place(0, x + 5, y, Kind::FineEtcher, Dir::N).unwrap();
+    w.place(0, x + 11, y, Kind::FineEtcher, Dir::S).unwrap();
+    w.place(0, x + 17, y, Kind::FineEtcher, Dir::W).unwrap();
+    let mut app = App::new(w);
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    app.cam = (x - 2, y - 2);
+    app.cam_ready = true;
+    app.cursor = (x + 1, y + 1);
+    let buf = render(&mut app, 130, 42);
+    std::fs::write("target/snapshot-fine-etcher.html", to_html(&buf)).unwrap();
+    let t = text(&buf);
+    assert!(t.contains("FETCH"), "{t}");
+    assert!(t.contains("Fine etcher"), "{t}");
+    for (w, h) in [(44, 34), (60, 40), (50, 80), (200, 60)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Fine etcher"), "{w}x{h}: {t}");
     }
 }
 
@@ -1260,6 +1308,7 @@ fn content_step_screens_fit_every_size() {
         "Arc furnace",
         "Crystal grower",
         "Wafer saw",
+        "Fine etcher",
     ] {
         assert!(t.contains(name), "{name}: {t}");
     }
@@ -1277,7 +1326,12 @@ fn content_step_screens_fit_every_size() {
     let t = text(&render(&mut app, 130, 32));
     assert!(t.contains("Precision assembler") && t.contains("Welder") && t.contains("HERE"), "{t}");
     // The silicon machines: the heat slot and slot 6 grow, and the held part shows in the menu and the bottom line.
-    for (kind, name) in [(Kind::ArcFurnace, "Arc furnace"), (Kind::CrystalGrower, "Crystal grower"), (Kind::WaferSaw, "Wafer saw")] {
+    for (kind, name) in [
+        (Kind::ArcFurnace, "Arc furnace"),
+        (Kind::CrystalGrower, "Crystal grower"),
+        (Kind::WaferSaw, "Wafer saw"),
+        (Kind::FineEtcher, "Fine etcher"),
+    ] {
         app.selected = Some(kind);
         for (w, h) in [(130, 32), (130, 46), (50, 20), (64, 20), (90, 20), (44, 40), (200, 60)] {
             let t = text(&render(&mut app, w, h));
