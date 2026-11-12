@@ -5,8 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 56;
-pub const COMPANIES: usize = 13;
+pub const ITEMS: usize = 65;
+pub const COMPANIES: usize = 14;
 pub const TECHS: usize = 37;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -67,6 +67,15 @@ pub enum Item {
     LampMatrix,
     TubeBoard,
     Terminal,
+    SiliconIngot,
+    SiliconScrap,
+    Wafer,
+    Dopant,
+    DopedWafer,
+    Ceramic,
+    CircuitBoard,
+    Transistor,
+    TransistorBoard,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -155,6 +164,15 @@ impl Item {
         Item::LampMatrix,
         Item::TubeBoard,
         Item::Terminal,
+        Item::SiliconIngot,
+        Item::SiliconScrap,
+        Item::Wafer,
+        Item::Dopant,
+        Item::DopedWafer,
+        Item::Ceramic,
+        Item::CircuitBoard,
+        Item::Transistor,
+        Item::TransistorBoard,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -218,6 +236,17 @@ impl Item {
             // The x2x1: the next microprocessor after the control board (x1x1).
             Item::TubeBoard => "tube board",
             Item::Terminal => "terminal",
+            Item::SiliconIngot => "silicon ingot",
+            // Not waste: it sells, and the arc furnace remelts it (next phase).
+            Item::SiliconScrap => "silicon scrap",
+            Item::Wafer => "wafer",
+            Item::Dopant => "dopant",
+            Item::DopedWafer => "doped wafer",
+            Item::Ceramic => "ceramic",
+            Item::CircuitBoard => "circuit board",
+            // The x3x1: the next microprocessor after the tube board (x2x1).
+            Item::TransistorBoard => "transistor board",
+            Item::Transistor => "transistor",
         }
     }
     pub fn price(self) -> f64 {
@@ -279,6 +308,15 @@ impl Item {
             Item::LampMatrix => 230.0,
             Item::TubeBoard => 900.0,
             Item::Terminal => 2100.0,
+            Item::SiliconIngot => 6.0,
+            Item::SiliconScrap => 1.5,
+            Item::Wafer => 12.0,
+            Item::Dopant => 10.0,
+            Item::DopedWafer => 50.0,
+            Item::Ceramic => 8.0,
+            Item::CircuitBoard => 60.0,
+            Item::Transistor => 42.0,
+            Item::TransistorBoard => 450.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -344,6 +382,16 @@ impl Item {
             Item::LampMatrix => c(460.0, 0.997, 0.06),
             Item::TubeBoard => c(1800.0, 0.998, 0.08),
             Item::Terminal => c(4200.0, 0.998, 0.08),
+            Item::SiliconIngot => c(12.0, 0.99, 0.03),
+            // Worth 10 like sand and brick: the cheapest things never pay less than 10 RP.
+            Item::SiliconScrap => c(10.0, 0.98, 0.02),
+            Item::Wafer => c(24.0, 0.99, 0.04),
+            Item::Dopant => c(20.0, 0.99, 0.03),
+            Item::DopedWafer => c(100.0, 0.995, 0.05),
+            Item::Ceramic => c(16.0, 0.99, 0.03),
+            Item::CircuitBoard => c(120.0, 0.996, 0.06),
+            Item::Transistor => c(84.0, 0.996, 0.06),
+            Item::TransistorBoard => c(900.0, 0.998, 0.08),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
@@ -373,6 +421,7 @@ pub enum Company {
     Ampleworth,
     LatticeFinch,
     Sablon,
+    Halverson,
 }
 
 #[cfg(test)]
@@ -395,6 +444,7 @@ impl Company {
         Company::Ampleworth,
         Company::LatticeFinch,
         Company::Sablon,
+        Company::Halverson,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -414,6 +464,7 @@ impl Company {
             Company::Ampleworth => "Ampleworth Motor Works",
             Company::LatticeFinch => "Lattice & Finch",
             Company::Sablon => "Sablon Glassworks",
+            Company::Halverson => "Halverson Smelting",
         }
     }
     /// The industry it belongs to, for the story.
@@ -427,6 +478,7 @@ impl Company {
             Company::Gearwright | Company::Swiftline => "Machinery",
             Company::Ampleworth | Company::LatticeFinch => "Motors & Chips",
             Company::Sablon => "Tubes & Glass",
+            Company::Halverson => "Silicon & Wafers",
         }
     }
     /// What opens this company: the first of these to be made. Empty means it is open from
@@ -451,6 +503,8 @@ impl Company {
             Company::LatticeFinch => &[Made::Item(Item::ControlBoard)],
             // Made in the kiln: the evacuator is what Sablon sells, so it cannot be the way in.
             Company::Sablon => &[Made::Item(Item::Tube)],
+            // Crude oil will be a second key when the oil plan arrives.
+            Company::Halverson => &[Made::Item(Item::SiliconIngot)],
         }
     }
     /// The letter a company sends when it opens. `key` is the key that opened it, so a company
@@ -469,6 +523,7 @@ impl Company {
             Company::Swiftline => "A gearbox! Now that's something that turns. Swiftline belts move twice what Brannock's do, and our basic assembler builds electric motors and pistons. Tell the sisters we said hello.",
             Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
             Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::Halverson => "Silicon! A lovely byproduct of sand. We have many opportunities for the scrap. Do keep the waste coming; we find it charming.",
             Company::Sablon => "Glass, wire, and the air taken out. Nothing is as patient as a tube. Sablon has blown glass for a hundred years and never once hurried it. Our evacuator pulls the air out with a jet of water from a pipe: two tubes a run, no waste, no fire.",
         }
     }
@@ -923,6 +978,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::BasicSolar), Some(5)),                // 40: under the copper coil, with the steam engine
     (Node::Key(Made::Item(Item::Tube)), Some(34)),          // 41: baked in the kiln, from the lamps a board's maker already has
     (Node::Tech(Tech::Evacuator), Some(41)),                // 42
+    (Node::Key(Made::Item(Item::SiliconIngot)), Some(15)), // 43: sand and coke in a blast furnace, cast in a molder; under the kiln that fires its dopant
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -930,7 +986,7 @@ pub fn tree_children(i: usize) -> Vec<usize> {
 }
 
 /// How many fluids there are.
-pub const FLUIDS: usize = 5;
+pub const FLUIDS: usize = 6;
 
 /// Something a machine can make that opens a company: an item, or a fluid (crude oil, later).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -972,10 +1028,12 @@ pub enum Fluid {
     MoltenCopper,
     MoltenIron,
     MoltenSteel,
+    MoltenSilicon,
 }
 
 impl Fluid {
-    pub const ALL: [Fluid; FLUIDS] = [Fluid::Water, Fluid::Steam, Fluid::MoltenCopper, Fluid::MoltenIron, Fluid::MoltenSteel];
+    pub const ALL: [Fluid; FLUIDS] =
+        [Fluid::Water, Fluid::Steam, Fluid::MoltenCopper, Fluid::MoltenIron, Fluid::MoltenSteel, Fluid::MoltenSilicon];
     pub fn idx(self) -> usize {
         self as usize
     }
@@ -986,6 +1044,7 @@ impl Fluid {
             Fluid::MoltenCopper => "molten copper",
             Fluid::MoltenIron => "molten iron",
             Fluid::MoltenSteel => "molten steel",
+            Fluid::MoltenSilicon => "molten silicon",
         }
     }
 }
@@ -1104,6 +1163,17 @@ pub const MOLDER_RECIPES: &[Recipe] = &[
         needs: None,
         tag: 'S',
     },
+    Recipe {
+        name: "silicon ingot",
+        inputs: &[],
+        outputs: &[(Item::SiliconIngot, 1)],
+        fluid_in: Some((Fluid::MoltenSilicon, 1)),
+        fluid_out: None,
+        ticks: 150,
+        fuel: None,
+        needs: None,
+        tag: 'N',
+    },
 ];
 
 /// Presses squeeze ingots into plates, and plates and steel into parts.
@@ -1134,6 +1204,21 @@ const fn molten_steel(name: &'static str, inputs: &'static [(Item, u32)], waste:
         fuel: None,
         needs: None,
         tag: 'S',
+    }
+}
+
+/// The dirty road to silicon: sand and coke, and waste for every shovel of it.
+const fn molten_silicon(name: &'static str, inputs: &'static [(Item, u32)], waste: &'static [(Item, u32)], ticks: u32) -> Recipe {
+    Recipe {
+        name,
+        inputs,
+        outputs: waste,
+        fluid_in: None,
+        fluid_out: Some((Fluid::MoltenSilicon, 1)),
+        ticks,
+        fuel: None,
+        needs: None,
+        tag: 'M',
     }
 }
 
@@ -1176,6 +1261,8 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         None,
         'H',
     ),
+    // 3 sand and a coke melt to silicon; the waste is most of it.
+    molten_silicon("molten silicon", &[(Item::Sand, 3), (Item::Coke, 1)], &[(Item::Waste, 2)], 600),
     // Straight from molten iron: no cast, press or second melt. An iron blast furnace can sit
     // against this one and push its metal in with no pipe between them.
     Recipe {
@@ -1260,6 +1347,8 @@ pub const LATHE_RECIPES: &[Recipe] = &[
     item_recipe("screw", &[(Item::IronRod, 1)], &[(Item::Screw, 4)], 300, None, None, 'S'),
     item_recipe("steel rod", &[(Item::Steel, 1)], &[(Item::SteelRod, 2)], 300, None, None, 'r'),
     item_recipe("bearing", &[(Item::SteelRod, 1)], &[(Item::Bearing, 2)], 150, None, None, 'b'),
+    // Slicing is the lathe's slow job. The scrap sells, and will remelt.
+    item_recipe("wafer (rough)", &[(Item::SiliconIngot, 2)], &[(Item::Wafer, 2), (Item::SiliconScrap, 2)], 2400, None, None, 'W'),
 ];
 
 /// Winders wind wire into coils, and rods into springs.
@@ -1295,7 +1384,7 @@ pub const BASIC_RECIPES: &[Recipe] = &[
 ];
 
 /// Advanced tier (advanced and precision assemblers). The control board is the x1x1, the
-/// weakest microprocessor; the tube board is the x2x1.
+/// weakest microprocessor; the tube board is the x2x1 and the transistor board the x3x1.
 pub const ADVANCED_RECIPES: &[Recipe] = &[
     item_recipe(
         "control board",
@@ -1314,6 +1403,33 @@ pub const ADVANCED_RECIPES: &[Recipe] = &[
         None,
         None,
         'W',
+    ),
+    item_recipe(
+        "circuit board",
+        &[(Item::Ceramic, 1), (Item::CopperSheet, 1), (Item::FineWire, 4)],
+        &[(Item::CircuitBoard, 1)],
+        600,
+        None,
+        None,
+        'K',
+    ),
+    item_recipe(
+        "transistor",
+        &[(Item::DopedWafer, 1), (Item::FineWire, 6), (Item::IronSheet, 1)],
+        &[(Item::Transistor, 3)],
+        600,
+        None,
+        None,
+        'N',
+    ),
+    item_recipe(
+        "transistor board",
+        &[(Item::Transistor, 6), (Item::CircuitBoard, 1), (Item::FineWire, 4)],
+        &[(Item::TransistorBoard, 1)],
+        600,
+        None,
+        None,
+        'Y',
     ),
 ];
 
@@ -1423,6 +1539,10 @@ pub const KILN_RECIPES: &[Recipe] = &[
         None,
         't',
     ),
+    // Silicon's kiln work: batches of 8, every one burning coal.
+    item_recipe("dopant", &[(Item::Stone, 4)], &[(Item::Dopant, 1)], 1200, Some(Item::Coal), None, 'd'),
+    item_recipe("doped wafer", &[(Item::Wafer, 1), (Item::Dopant, 2)], &[(Item::DopedWafer, 1)], 1920, Some(Item::Coal), None, 'w'),
+    item_recipe("ceramic", &[(Item::Brick, 2), (Item::Sand, 1)], &[(Item::Ceramic, 2)], 1920, Some(Item::Coal), None, 'c'),
 ];
 
 /// The evacuator takes water from a pipe, and pulls the air out of a lamp's glass with it:

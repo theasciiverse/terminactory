@@ -75,7 +75,7 @@ impl Hint {
 
 /// An aside's id: (company that speaks, line). The lines are from plan 08 section 6. The
 /// ones that read as nudges (A1, A7, A14) are cut, and so are those for companies and items
-/// the game does not have yet (Halverson, Meridian, Sablon, Voss, oil and chips).
+/// the game has no asides for yet (Halverson, Meridian, Sablon, Voss, oil and chips).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Aside {
     /// 15+ fast belts.

@@ -1054,13 +1054,14 @@
   },
   "progress": {
     "opened": {
-      "len": 13,
+      "len": 14,
       "of": [
         "\"Ampleworth\"",
         "\"Ashgrove\"",
         "\"Brannock\"",
         "\"Cinderhall\"",
         "\"Gearwright\"",
+        "\"Halverson\"",
         "\"Hollowmere\"",
         "\"Kettering\"",
         "\"LatticeFinch\"",
