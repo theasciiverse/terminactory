@@ -31,7 +31,7 @@ fn the_tree_shows_both_keys_of_a_company() {
         // And on screen.
         let mut app = App::new(w);
         app.tree = true;
-        app.tree_pick = tree_rows().iter().position(|t| *t == Tech::Crusher).unwrap();
+        app.tree_pick = crate::research::node_id_for_tech(Tech::Crusher).unwrap();
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("copper wire or molten iron"), "{t}");
     });

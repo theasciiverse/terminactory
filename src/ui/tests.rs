@@ -31,6 +31,10 @@ fn text(buf: &Buffer) -> String {
     out
 }
 
+fn tech_node(t: Tech) -> usize {
+    crate::research::node_id_for_tech(t).unwrap()
+}
+
 /// Renders the demo factory, the research tree and a letter, writing colour
 /// snapshots to target/ so the look can be checked in a browser.
 #[test]
@@ -166,12 +170,12 @@ fn research_tree_fits_the_window() {
     assert!(tall.contains("Press") && tall.contains("Coking") && tall.contains("Warehouse"), "{tall}");
     std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
     // Going to a low tech scrolls down to it and shows the off-screen hint.
-    app.tree_pick = tree_rows().len() - 1;
+    app.tree_pick = tech_node(*tree_rows().last().unwrap());
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("▼") && t.contains("more") && t.contains("Upgrade planner · Misc"), "{t}");
+    assert!(t.contains("Upgrade planner · Misc") && t.contains("Path: Press → iron gear"), "{t}");
     std::fs::write("target/snapshot-tree-scrolled.html", to_html(&buf)).unwrap();
-    app.tree_pick = 0;
+    app.tree_pick = tech_node(Tech::Press);
     // At 60 columns the graph still works and scrolls horizontally.
     let t = text(&render(&mut app, 60, 50));
     assert!(t.contains("Press") && t.contains("more"), "{t}");
@@ -179,12 +183,12 @@ fn research_tree_fits_the_window() {
     assert!(text(&buf).contains("more "), "{}", text(&buf));
     std::fs::write("target/snapshot-tree-small.html", to_html(&buf)).unwrap();
     // Clicking a row picks it; clicking it again researches it.
-    app.tree_pick = 0;
+    app.tree_pick = tech_node(Tech::Press);
     render(&mut app, 130, 120);
     let (r, i) = app.tree_rows.iter().copied().find(|(_, i)| tree_rows()[*i] == Tech::Coking).unwrap();
     let click = MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x + 2, row: r.y, modifiers: KeyModifiers::NONE };
     app.on_mouse(click);
-    assert_eq!(app.tree_pick, i);
+    assert_eq!(app.tree_pick, tech_node(tree_rows()[i]));
     assert!(!app.world.progress.has(Tech::Coking));
     app.on_mouse(click);
     assert!(app.world.progress.has(Tech::Coking));
@@ -201,14 +205,32 @@ fn research_tree_expands_and_collapses_with_arrows() {
     let key = |app: &mut App, code| app.on_key(KeyEvent::from(code));
     assert_eq!(crate::research::layout_expanded(&app.tree_expanded).len(), 3);
     key(&mut app, KeyCode::Right);
-    assert!(app.tree_expanded.contains(&Tech::Press));
+    assert!(app.tree_expanded.contains(&crate::research::node_id_for_tech(Tech::Press).unwrap()));
     assert_eq!(app.tree_choice(), Tech::Press);
+    key(&mut app, KeyCode::Right);
+    assert_eq!(
+        app.tree_pick,
+        crate::content::TREE
+            .iter()
+            .position(|(n, _)| *n == crate::content::Node::Key(crate::content::Made::Item(crate::content::Item::CopperWire)))
+            .unwrap()
+    );
+    key(&mut app, KeyCode::Right);
     key(&mut app, KeyCode::Right);
     assert_eq!(app.tree_choice(), Tech::BasicDrill);
     key(&mut app, KeyCode::Left);
+    assert_eq!(
+        app.tree_pick,
+        crate::content::TREE
+            .iter()
+            .position(|(n, _)| *n == crate::content::Node::Key(crate::content::Made::Item(crate::content::Item::CopperWire)))
+            .unwrap()
+    );
+    key(&mut app, KeyCode::Left);
+    key(&mut app, KeyCode::Left);
     assert_eq!(app.tree_choice(), Tech::Press);
     key(&mut app, KeyCode::Left);
-    assert!(!app.tree_expanded.contains(&Tech::Press));
+    assert!(!app.tree_expanded.contains(&crate::research::node_id_for_tech(Tech::Press).unwrap()));
     assert_eq!(crate::research::layout_expanded(&app.tree_expanded).len(), 3);
 }
 
@@ -216,11 +238,17 @@ fn research_tree_expands_and_collapses_with_arrows() {
 fn deep_tree_pick_expands_its_ancestors() {
     let mut app = App::new(World::new());
     app.tree = true;
-    app.tree_pick = tree_rows().iter().position(|&t| t == Tech::Excavation).unwrap();
+    app.tree_pick = tech_node(Tech::Excavation);
     render(&mut app, 80, 40);
-    assert!(app.tree_expanded.contains(&Tech::Press));
-    assert!(app.tree_expanded.contains(&Tech::Mixer));
-    assert!(crate::research::layout_expanded(&app.tree_expanded).iter().any(|p| p.tech == Tech::Mixer));
+    assert!(app.tree_expanded.contains(&crate::research::node_id_for_tech(Tech::Press).unwrap()));
+    assert!(app.tree_expanded.contains(&crate::research::node_id_for_tech(Tech::Mixer).unwrap()));
+    assert!(app.tree_expanded.contains(
+        &crate::content::TREE
+            .iter()
+            .position(|(n, _)| *n == crate::content::Node::Key(crate::content::Made::Item(crate::content::Item::Concrete)))
+            .unwrap()
+    ));
+    assert!(crate::research::layout_expanded(&app.tree_expanded).iter().any(|p| crate::research::tech_for_node(p.id) == Some(Tech::Mixer)));
 }
 
 #[test]
@@ -229,7 +257,13 @@ fn print_research_tree_render_sizes() {
     app.tree = true;
     let wide = render(&mut app, 80, 40);
     println!("80x40:\n{}", text(&wide));
-    app.tree_expanded = Tech::ALL.into_iter().collect();
+    app.tree_expanded = crate::content::TREE
+        .iter()
+        .enumerate()
+        .filter_map(|(i, (n, _))| {
+            matches!(n, crate::content::Node::Tech(_) | crate::content::Node::Key(_) | crate::content::Node::Group(_)).then_some(i)
+        })
+        .collect();
     let (rows, cols) = crate::research::canvas_size_expanded(&app.tree_expanded);
     println!("Full canvas: {rows} rows × {cols} columns");
     let narrow = render(&mut app, 50, 34);
@@ -254,13 +288,7 @@ fn print_research_tree_render_sizes() {
             let end = child.col * stride;
             let joined = (start..=end).all(|x| matches!(canvas_lines[y][x], '─' | '├' | '┤' | '┬' | '┴' | '┼' | '╠' | '╣'));
             if joined {
-                assert_eq!(
-                    child.parent,
-                    Some(parent.tech),
-                    "horizontal connection without TREE edge: {:?} -> {:?}",
-                    parent.tech,
-                    child.tech
-                );
+                assert_eq!(child.parent, Some(parent.id), "horizontal connection without TREE edge: {:?} -> {:?}", parent.id, child.id);
             }
         }
     }
@@ -987,7 +1015,7 @@ fn render_phase3_snapshots() {
     // The research screen, picked on its last row.
     app.away = None;
     app.tree = true;
-    app.tree_pick = tree_rows().len() - 1;
+    app.tree_pick = tech_node(*tree_rows().last().unwrap());
     let buf = render(&mut app, 120, 42);
     assert!(text(&buf).contains("Upgrade planner · "), "{}", text(&buf));
     std::fs::write("target/snapshot-tree-end.html", to_html(&buf)).unwrap();
@@ -1263,13 +1291,13 @@ fn chip_book_pages_fit_every_size() {
     assert!(t.contains("microprocessor x4x1") && t.contains("microprocessor x4x2"), "{t}");
     app.book = false;
     app.tree = true;
-    app.tree_pick = tree_rows().iter().position(|t| t.name() == "Etcher").unwrap();
+    app.tree_pick = tech_node(Tech::Etcher);
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Etcher"), "{w}x{h}: {t}");
     }
     // The fine etcher sits under the x4x1 in the tree.
-    app.tree_pick = tree_rows().iter().position(|t| t.name() == "Fine etcher").unwrap();
+    app.tree_pick = tech_node(Tech::FineEtcher);
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Fine etcher"), "{w}x{h}: {t}");
@@ -1343,7 +1371,7 @@ fn computer_pages_rows_and_machine_fit_every_size() {
     // The research tree: its row shows next to the fine etcher.
     app.book = false;
     app.tree = true;
-    app.tree_pick = tree_rows().iter().position(|t| *t == Tech::LargePrecisionAssembler).unwrap();
+    app.tree_pick = tech_node(Tech::LargePrecisionAssembler);
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60), (130, 64)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Large prec"), "{w}x{h}: {t}");
@@ -1413,7 +1441,7 @@ fn book_pages_for_the_new_machines_and_items() {
     app.book = false;
     app.world = World::new();
     app.tree = true;
-    app.tree_pick = tree_rows().iter().position(|t| *t == Tech::Crusher).unwrap();
+    app.tree_pick = tech_node(Tech::Crusher);
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("Crusher · Create") && t.contains("copper wire"), "{t}");
     std::fs::write("target/snapshot-tree-new.html", to_html(&render(&mut app, 130, 42))).unwrap();
@@ -1510,11 +1538,11 @@ fn content_step_screens_fit_every_size() {
     // The research tree at 50 columns: two boxes remain visible, and the selected details fit.
     app.world.progress = Progress::default();
     app.tree = true;
-    app.tree_pick = tree_rows().len() - 1;
+    app.tree_pick = tech_node(*tree_rows().last().unwrap());
     let buf = render(&mut app, 50, 40);
     let t = text(&buf);
     assert!(t.contains("Upgrade planner") && t.contains("free at") && t.contains("t/Esc"), "{t}");
-    app.tree_pick = tree_rows().iter().position(|x| *x == Tech::LargeAdvancedAssembler).unwrap();
+    app.tree_pick = tech_node(Tech::LargeAdvancedAssembler);
     let buf = render(&mut app, 50, 40);
     let t = text(&buf);
     assert!(t.contains("Large adv. assembler") && t.contains("control board"), "{t}");

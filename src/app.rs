@@ -248,11 +248,11 @@ pub struct App {
     pub power_view: bool,
     /// The build category whose parts the number keys pick (None = keys pick a category).
     pub menu: Option<Category>,
-    /// The research screen is open, and which row is picked.
+    /// The research screen is open, and the selected TREE node id.
     pub tree: bool,
     pub tree_pick: usize,
-    /// Groups opened in the research tree for this session.
-    pub tree_expanded: std::collections::HashSet<Tech>,
+    /// TREE node ids opened in the research tree for this session.
+    pub tree_expanded: std::collections::HashSet<usize>,
     /// Where its rows were drawn, for the mouse.
     pub tree_rows: Vec<(Rect, usize)>,
     /// Recipe book: open, the page shown, how far it's scrolled, and how many columns the grid had.
@@ -358,7 +358,7 @@ impl App {
             power_view: false,
             menu: None,
             tree: false,
-            tree_pick: 0,
+            tree_pick: 1,
             tree_expanded: std::collections::HashSet::new(),
             stats: false,
             stats_scroll: 0,
@@ -959,19 +959,19 @@ impl App {
     }
 
     /// What's picked on the research screen.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn tree_choice(&self) -> Tech {
-        let rows = tree_rows();
-        rows[self.tree_pick.min(rows.len() - 1)]
+        crate::research::tech_for_node(self.tree_pick).unwrap_or(Tech::Press)
     }
 
     fn move_tree(&mut self, code: KeyCode) {
-        let tech = self.tree_choice();
-        let (parent, children, siblings) = crate::research::neighbors_in(tech, &self.tree_expanded);
+        let id = self.tree_pick;
+        let (parent, children, siblings) = crate::research::neighbors_in(id, &self.tree_expanded);
         match code {
-            KeyCode::Left if self.tree_expanded.remove(&tech) => {}
+            KeyCode::Left if self.tree_expanded.remove(&id) => {}
             KeyCode::Left => self.select_visible(parent),
-            KeyCode::Right if crate::research::has_children(tech) && !self.tree_expanded.contains(&tech) => {
-                self.tree_expanded.insert(tech);
+            KeyCode::Right if crate::research::has_children(id) && !self.tree_expanded.contains(&id) => {
+                self.tree_expanded.insert(id);
             }
             KeyCode::Right => self.select_visible(children.first().copied()),
             KeyCode::Up => self.select_visible(siblings.0),
@@ -980,37 +980,38 @@ impl App {
         }
     }
 
-    fn select_visible(&mut self, tech: Option<Tech>) {
-        if let Some(tech) = tech {
-            self.tree_pick = tree_rows().iter().position(|&t| t == tech).unwrap_or(self.tree_pick);
+    fn select_visible(&mut self, id: Option<usize>) {
+        if let Some(id) = id {
+            self.tree_pick = id;
         }
     }
 
     pub fn ensure_tree_selection_visible(&mut self) {
-        let tech = self.tree_choice();
-        self.tree_expanded.extend(crate::research::ancestors(tech));
+        self.tree_expanded.extend(crate::research::ancestors(self.tree_pick));
     }
 
     /// The research screen: up/down pick, Enter researches.
     fn tree_key(&mut self, code: KeyCode, action: Option<Action>) {
         self.ensure_tree_selection_visible();
-        let n = tree_rows().len();
+        let ids: Vec<usize> = crate::research::layout_expanded(&self.tree_expanded).iter().map(|p| p.id).collect();
+        let at = ids.iter().position(|&id| id == self.tree_pick).unwrap_or(0);
+        let n = ids.len();
         match (code, action) {
             (KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down, _) => self.move_tree(code),
-            (KeyCode::PageUp, _) => self.tree_pick = self.tree_pick.saturating_sub(5),
-            (KeyCode::PageDown, _) => self.tree_pick = (self.tree_pick + 5).min(n - 1),
-            (KeyCode::Home, _) => self.tree_pick = 0,
-            (KeyCode::End, _) => self.tree_pick = n - 1,
-            (_, Some(Action::MoveUp)) => self.tree_pick = self.tree_pick.saturating_sub(1),
-            (_, Some(Action::MoveDown)) => self.tree_pick = (self.tree_pick + 1).min(n - 1),
-            (_, Some(Action::Place)) => self.buy_research(),
+            (KeyCode::PageUp, _) => self.select_visible(ids.get(at.saturating_sub(5)).copied()),
+            (KeyCode::PageDown, _) => self.select_visible(ids.get((at + 5).min(n - 1)).copied()),
+            (KeyCode::Home, _) => self.select_visible(ids.first().copied()),
+            (KeyCode::End, _) => self.select_visible(ids.last().copied()),
+            (_, Some(Action::MoveUp)) => self.select_visible(ids.get(at.saturating_sub(1)).copied()),
+            (_, Some(Action::MoveDown)) => self.select_visible(ids.get((at + 1).min(n - 1)).copied()),
+            (_, Some(Action::Place)) if crate::research::tech_for_node(self.tree_pick).is_some() => self.buy_research(),
             (_, Some(Action::Tree | Action::Back)) => self.tree = false,
             _ => {}
         }
     }
 
     fn buy_research(&mut self) {
-        let t = self.tree_choice();
+        let Some(t) = crate::research::tech_for_node(self.tree_pick) else { return };
         match self.world.research(t) {
             Ok(()) => self.say(format!("Researched {}: {}", t.name(), t.about())),
             Err(e) => self.say(e),
@@ -1019,19 +1020,22 @@ impl App {
 
     fn tree_mouse(&mut self, m: MouseEvent) {
         let at = ratatui::layout::Position::new(m.column, m.row);
-        let n = tree_rows().len();
+        let rows = tree_rows();
+        let n = rows.len();
+        let current = crate::research::tech_for_node(self.tree_pick).and_then(|t| rows.iter().position(|&x| x == t)).unwrap_or(0);
         match m.kind {
             MouseEventKind::Down(MouseButton::Left) => {
                 if let Some(&(_, i)) = self.tree_rows.iter().find(|(r, _)| r.contains(at)) {
                     // Click picks a row; clicking the picked row again researches it.
-                    if self.tree_pick == i {
+                    let id = crate::research::node_id_for_tech(tree_rows()[i]).unwrap();
+                    if self.tree_pick == id {
                         self.buy_research();
                     }
-                    self.tree_pick = i;
+                    self.tree_pick = id;
                 }
             }
-            MouseEventKind::ScrollUp => self.tree_pick = self.tree_pick.saturating_sub(1),
-            MouseEventKind::ScrollDown => self.tree_pick = (self.tree_pick + 1).min(n - 1),
+            MouseEventKind::ScrollUp => self.tree_pick = crate::research::node_id_for_tech(rows[current.saturating_sub(1)]).unwrap(),
+            MouseEventKind::ScrollDown => self.tree_pick = crate::research::node_id_for_tech(rows[(current + 1).min(n - 1)]).unwrap(),
             _ => {}
         }
     }
@@ -2421,7 +2425,25 @@ mod tests {
         key(&mut app, KeyCode::Right);
         assert_eq!(app.tree_choice(), Tech::Press);
         key(&mut app, KeyCode::Right);
+        assert_eq!(
+            app.tree_pick,
+            crate::content::TREE
+                .iter()
+                .position(|(n, _)| *n == crate::content::Node::Key(crate::content::Made::Item(crate::content::Item::CopperWire)))
+                .unwrap()
+        );
+        key(&mut app, KeyCode::Right);
+        key(&mut app, KeyCode::Right);
         assert_eq!(app.tree_choice(), Tech::BasicDrill);
+        key(&mut app, KeyCode::Left);
+        assert_eq!(
+            app.tree_pick,
+            crate::content::TREE
+                .iter()
+                .position(|(n, _)| *n == crate::content::Node::Key(crate::content::Made::Item(crate::content::Item::CopperWire)))
+                .unwrap()
+        );
+        key(&mut app, KeyCode::Left);
         key(&mut app, KeyCode::Left);
         assert_eq!(app.tree_choice(), Tech::Press);
         key(&mut app, KeyCode::Down);

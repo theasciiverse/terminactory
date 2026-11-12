@@ -2561,8 +2561,7 @@ fn draw_tree_list(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Details first (so the list knows how much room it has), wrapped to the window.
     let rows = tree_rows();
-    let pick = app.tree_pick.min(rows.len() - 1);
-    app.tree_pick = pick;
+    let pick = crate::research::tech_for_node(app.tree_pick).and_then(|t| rows.iter().position(|x| *x == t)).unwrap_or(0);
     // In a short pane the details are three lines (title, about, status) so the list keeps its room.
     let short_pane = r.height < 24;
     // In a very short one the "about" line goes too.
@@ -2699,13 +2698,10 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
         Paragraph::new(Line::styled(points, Style::new().fg(RESEARCH).add_modifier(Modifier::BOLD))),
         Rect::new(x0, r.y + 1, width, 1),
     );
-    let rows = tree_rows();
-    let pick = app.tree_pick.min(rows.len().saturating_sub(1));
-    app.tree_pick = pick;
-    let selected = rows[pick];
+    let selected = app.tree_pick;
     app.ensure_tree_selection_visible();
     let positions = crate::research::layout_expanded(&app.tree_expanded);
-    let here = positions.iter().find(|p| p.tech == selected).copied();
+    let here = positions.iter().find(|p| p.id == selected).copied();
     let graph_top = r.y + 2;
     let footer_y = r.y + r.height - 2;
     let detail_top = footer_y.saturating_sub(4);
@@ -2756,7 +2752,7 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
     let mut parents: Vec<_> = positions.iter().collect();
     parents.sort_by_key(|p| p.col);
     for parent in parents {
-        let mut children: Vec<_> = positions.iter().filter(|child| child.parent == Some(parent.tech)).collect();
+        let mut children: Vec<_> = positions.iter().filter(|child| child.parent == Some(parent.id)).collect();
         if children.is_empty() {
             continue;
         }
@@ -2815,38 +2811,10 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
         if x + BOX_W as i32 <= x0 as i32 || x >= (x0 + width) as i32 || y + 2 < graph_top as i32 || y >= detail_top as i32 {
             continue;
         }
-        let tech_idx = rows.iter().position(|t| *t == p.tech).unwrap_or(0);
-        let picked = p.tech == selected;
-        let (tl, tr, bl, br, h, v) =
-            if picked { ('╔', '╗', '╚', '╝', '═', '║') } else { ('┌', '┐', '└', '┘', '─', '│') };
-        for dx in 0..BOX_W as i32 {
-            put(
-                f,
-                x + dx,
-                y,
-                if dx == 0 {
-                    tl
-                } else if dx == BOX_W as i32 - 1 {
-                    tr
-                } else {
-                    h
-                },
-                if picked { head } else { line_style },
-            );
-            put(
-                f,
-                x + dx,
-                y + 2,
-                if dx == 0 {
-                    bl
-                } else if dx == BOX_W as i32 - 1 {
-                    br
-                } else {
-                    h
-                },
-                if picked { head } else { line_style },
-            );
-        }
+        let picked = p.id == selected;
+        let node = TREE[p.id].0;
+        let section = !matches!(node, Node::Tech(_));
+        let v = if picked && !section { '║' } else { '│' };
         let logical_x = p.col as i32 * stride_x as i32;
         let logical_y = p.row as i32 + 1;
         let left_has_edge = lines.get(&(logical_x, logical_y)).is_some_and(|mask| mask & L != 0);
@@ -2881,17 +2849,71 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
             },
             if picked { head } else { line_style },
         );
-        let spans = tree_row_spans(&app.world, p.tech, 12, true, true);
-        let mark = spans.first().map(|s| s.content.to_string()).unwrap_or_else(|| "· ".into());
-        let mark_style = spans.first().map(|s| s.style).unwrap_or(dim);
-        let name = spans.get(1).map(|s| s.content.to_string()).unwrap_or_else(|| fit(p.tech.name(), 12));
-        let name_style = spans.get(1).map(|s| s.style).unwrap_or(Style::new());
+        let (tl, tr, bl, br, h, _v) = if section {
+            ('╭', '╮', '╰', '╯', '─', '│')
+        } else if picked {
+            ('╔', '╗', '╚', '╝', '═', '║')
+        } else {
+            ('┌', '┐', '└', '┘', '─', '│')
+        };
+        for dx in 0..BOX_W as i32 {
+            put(
+                f,
+                x + dx,
+                y,
+                if dx == 0 {
+                    tl
+                } else if dx == BOX_W as i32 - 1 {
+                    tr
+                } else {
+                    h
+                },
+                if picked { head } else { line_style },
+            );
+            put(
+                f,
+                x + dx,
+                y + 2,
+                if dx == 0 {
+                    bl
+                } else if dx == BOX_W as i32 - 1 {
+                    br
+                } else {
+                    h
+                },
+                if picked { head } else { line_style },
+            );
+        }
+        let label = match node {
+            Node::Tech(t) => fit(t.name(), 12),
+            Node::Key(k) => fit(k.name(), 12),
+            Node::Group(g) => fit(g, 12),
+            Node::Start => String::new(),
+        };
+        let name_style = match node {
+            Node::Key(Made::Item(i)) => Style::new().fg(item_cell(i, Color::Reset).1.fg.unwrap_or(KEY_ITEM)),
+            _ if section => Style::new().fg(Color::White),
+            _ => Style::new(),
+        };
+        let (mark, mark_style, name, name_style) = if section {
+            (" ".to_string(), name_style, fit(&label, 13), name_style)
+        } else if let Node::Tech(t) = node {
+            let spans = tree_row_spans(&app.world, t, 12, true, true);
+            (
+                spans.first().map(|s| s.content.to_string()).unwrap_or_else(|| "· ".into()),
+                spans.first().map(|s| s.style).unwrap_or(dim),
+                spans.get(1).map(|s| s.content.to_string()).unwrap_or(label),
+                spans.get(1).map(|s| s.style).unwrap_or(name_style),
+            )
+        } else {
+            (String::new(), name_style, label, name_style)
+        };
         for (dx, ch) in mark.chars().chain(name.chars()).take((BOX_W - 2) as usize).enumerate() {
-            let style = if dx < 2 { mark_style } else { name_style };
+            let style = if dx < 2 && !section { mark_style } else { name_style };
             put(f, x + 1 + dx as i32, y + 1, ch, style);
         }
-        if crate::research::has_children(p.tech) && !app.tree_expanded.contains(&p.tech) {
-            let stub = format!(" +{}", crate::research::hidden_descendants(p.tech));
+        if crate::research::has_children(p.id) && !app.tree_expanded.contains(&p.id) {
+            let stub = format!(" +{}", crate::research::hidden_descendants(p.id));
             put(f, x + BOX_W as i32 - 1, y + 1, if picked { '╟' } else { '├' }, line_style);
             put(f, x + BOX_W as i32, y + 1, '─', line_style);
             for (dx, ch) in stub.chars().take(4).enumerate() {
@@ -2899,12 +2921,14 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
             }
         }
         if y >= graph_top as i32 && y + 2 < detail_top as i32 && x >= x0 as i32 && x + BOX_W as i32 <= (x0 + width) as i32 {
-            app.tree_rows.push((Rect::new(x as u16, y as u16, BOX_W, 3), tech_idx));
+            if let Some(t) = crate::research::tech_for_node(p.id) {
+                app.tree_rows.push((Rect::new(x as u16, y as u16, BOX_W, 3), tree_rows().iter().position(|x| *x == t).unwrap_or(0)));
+            }
         }
     }
 
     // Keep the selected tech and its unlock gate readable beneath the graph.
-    let details = graph_details(&app.world, selected);
+    let details = graph_node_details(&app.world, selected);
     for (i, (text, style)) in details.iter().take(4).enumerate() {
         let mut clipped = fit(text, width as usize);
         if clipped.chars().count() > width as usize {
@@ -2938,6 +2962,34 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_widget(Paragraph::new(footer_line(width, &hints, more.as_deref())), Rect::new(x0, footer_y, width, 1));
 }
 
+fn graph_node_details(w: &World, id: usize) -> Vec<(String, Style)> {
+    match TREE[id].0 {
+        Node::Tech(t) => graph_details(w, t),
+        Node::Key(Made::Item(item)) => {
+            let count = crate::research::hidden_descendants(id);
+            let made = w.econ.made[item.idx()] > 0;
+            let mut lines = vec![(
+                format!("{} · {} to open {} techs", item.name(), if made { "made ✓" } else { "make 1" }, count),
+                Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD),
+            )];
+            let companies: Vec<_> = Company::ALL.iter().filter(|c| c.key_items().contains(&Made::Item(item))).map(|c| c.name()).collect();
+            if !companies.is_empty() {
+                lines.push((format!("Company: {}", companies.join(", ")), Style::new().fg(RESEARCH)));
+            }
+            lines
+        }
+        Node::Key(Made::Fluid(fluid)) => vec![(
+            format!("{} · make 1 to open {} techs", fluid.name(), crate::research::hidden_descendants(id)),
+            Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD),
+        )],
+        Node::Group(name) => vec![(
+            format!("{name} · {} techs", crate::research::hidden_descendants(id)),
+            Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+        )],
+        Node::Start => vec![],
+    }
+}
+
 fn graph_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     use crate::content::{Node, TREE};
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
@@ -2953,24 +3005,18 @@ fn graph_details(w: &World, t: Tech) -> Vec<(String, Style)> {
         format!("{} RP", grouped(t.cost()))
     };
     let tree_idx = TREE.iter().position(|(node, _)| *node == Node::Tech(t));
-    let key = tree_idx.and_then(|i| TREE[i].1).and_then(|mut i| loop {
-        if let Node::Key(made) = TREE[i].0 {
-            break Some(made.name());
-        }
-        i = TREE[i].1?;
-    });
     let mut chain = Vec::new();
-    let mut at = Some(t);
-    while let Some(cur) = at {
-        chain.push(cur.name().to_string());
-        at = crate::research::neighbors(cur).0;
+    let mut at = tree_idx;
+    while let Some(i) = at {
+        match TREE[i].0 {
+            Node::Tech(t) => chain.push(t.name().to_string()),
+            Node::Key(k) => chain.push(k.name().to_string()),
+            Node::Group(g) => chain.push(g.to_string()),
+            Node::Start => {}
+        }
+        at = TREE[i].1.filter(|p| *p != 0);
     }
     chain.reverse();
-    if let Some(k) = key {
-        if chain.len() > 1 {
-            chain.insert(chain.len() - 1, k.to_string());
-        }
-    }
     let path = chain.join(" → ");
     let gate_item = keys_text(t.requires());
     let gate = if w.progress.is_open(t.company()) {
@@ -3758,6 +3804,7 @@ fn node_name(n: Node) -> String {
         Node::Start => "Copper Works".into(),
         Node::Tech(t) => t.name().into(),
         Node::Key(k) => format!("* {}", k.name()),
+        Node::Group(name) => name.into(),
     }
 }
 

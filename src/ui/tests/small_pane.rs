@@ -96,7 +96,7 @@ fn phone_36x24() {
     // The research list keeps whole names, with a short status after them.
     app.menu = None;
     app.tree = true;
-    app.tree_pick = tech_row("Crude assembler");
+    app.tree_pick = crate::research::node_id_for_tech(tree_rows()[tech_row("Crude assembler")]).unwrap();
     let t = text(&render(&mut app, 36, 24));
     assert!(t.contains("Crude assembler ") && !t.contains("assemblerneeds"), "{t}");
     assert!(t.contains("needs") && t.contains("Assembling"), "{t}");
@@ -149,7 +149,7 @@ fn tall_44x60() {
     app.book = false;
     // The whole research list fits and says which group the picked row is in.
     app.tree = true;
-    app.tree_pick = tech_row("Large basic drill");
+    app.tree_pick = crate::research::node_id_for_tech(tree_rows()[tech_row("Large basic drill")]).unwrap();
     let t = text(&render(&mut app, 44, 60));
     assert!(t.contains("Drilling") && t.contains("Large basic drill"), "{t}");
     app.tree = false;

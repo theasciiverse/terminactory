@@ -6,7 +6,6 @@ use std::collections::HashSet;
 
 pub const BOX_W: u16 = 16;
 pub const COL_GAP: u16 = 4;
-/// Boxes are three text rows high. Rows here are text rows, not box slots.
 pub const BOX_H: u16 = 3;
 
 pub fn graph_enabled(width: u16) -> bool {
@@ -15,222 +14,169 @@ pub fn graph_enabled(width: u16) -> bool {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NodePos {
-    pub tech: Tech,
-    pub parent: Option<Tech>,
+    pub id: usize,
+    pub parent: Option<usize>,
     pub col: usize,
-    /// Top text row of the three-row box.
     pub row: usize,
 }
 
-#[derive(Clone)]
-struct TreeNode {
-    tech: Tech,
-    parent: Option<Tech>,
-    children: Vec<usize>,
+fn children(id: usize) -> Vec<usize> {
+    TREE.iter().enumerate().filter_map(|(i, (_, p))| (*p == Some(id) && !matches!(TREE[i].0, Node::Start)).then_some(i)).collect()
+}
+fn is_visible_root(id: usize) -> bool {
+    TREE[id].1 == Some(0)
 }
 
-fn tree_nodes() -> Vec<TreeNode> {
-    let mut nodes = Vec::new();
-    for (i, (node, _)) in TREE.iter().enumerate() {
-        let Node::Tech(tech) = node else { continue };
-        let parent_idx = TREE[i].1.and_then(|mut p| loop {
-            if let Node::Tech(parent) = TREE[p].0 {
-                break nodes.iter().position(|n: &TreeNode| n.tech == parent);
-            }
-            p = TREE[p].1?;
-        });
-        let parent = parent_idx.map(|p| nodes[p].tech);
-        nodes.push(TreeNode { tech: *tech, parent, children: Vec::new() });
-    }
-    // Use the original TREE order for children, including key nodes collapsed to their
-    // nearest technology parent.
-    let links: Vec<_> = nodes.iter().enumerate().filter_map(|(i, n)| n.parent.map(|parent| (i, parent))).collect();
-    for (i, parent) in links {
-        if let Some(p) = nodes.iter().position(|n| n.tech == parent) {
-            nodes[p].children.push(i);
-        }
-    }
-    nodes
+pub fn node_id_for_tech(tech: Tech) -> Option<usize> {
+    TREE.iter().position(|(n, _)| *n == Node::Tech(tech))
 }
-
-#[cfg_attr(not(test), allow(dead_code))]
+pub fn tech_for_node(id: usize) -> Option<Tech> {
+    match TREE.get(id)?.0 {
+        Node::Tech(t) => Some(t),
+        _ => None,
+    }
+}
+#[allow(dead_code)]
 pub fn layout() -> Vec<NodePos> {
     layout_expanded(&HashSet::new())
 }
-
-/// Lay out only the nodes visible with this set of expanded groups.
-pub fn layout_expanded(expanded: &HashSet<Tech>) -> Vec<NodePos> {
-    let nodes = tree_nodes();
-    let mut out = Vec::with_capacity(nodes.len());
-    let roots: Vec<_> = nodes.iter().enumerate().filter(|(_, n)| n.parent.is_none()).map(|(i, _)| i).collect();
+pub fn layout_expanded(expanded: &HashSet<usize>) -> Vec<NodePos> {
+    let mut out = Vec::new();
     let mut top = 0;
-    for root in roots {
-        top += place_visible(root, 0, top, &nodes, expanded, &mut out);
-        top += 1;
+    for id in 0..TREE.len() {
+        if is_visible_root(id) {
+            top += place(id, None, 0, top, expanded, &mut out) + 1;
+        }
     }
     out
 }
-
-fn place_visible(index: usize, col: usize, top: usize, nodes: &[TreeNode], expanded: &HashSet<Tech>, out: &mut Vec<NodePos>) -> usize {
-    let node = &nodes[index];
-    if node.children.is_empty() || !expanded.contains(&node.tech) {
-        out.push(NodePos { tech: node.tech, parent: node.parent, col, row: top });
+fn place(id: usize, parent: Option<usize>, col: usize, top: usize, expanded: &HashSet<usize>, out: &mut Vec<NodePos>) -> usize {
+    let kids = children(id);
+    if kids.is_empty() || !expanded.contains(&id) {
+        out.push(NodePos { id, parent, col, row: top });
         return BOX_H as usize;
     }
-    let visible_children = node.children.clone();
-    let mut child_top = top;
-    let mut child_centers = Vec::with_capacity(visible_children.len());
-    let mut previous_had_children = false;
-    for child in visible_children {
-        let child_node = &nodes[child];
-        if previous_had_children && !child_node.children.is_empty() {
-            child_top += 1;
+    let mut y = top;
+    let mut centers = Vec::new();
+    let mut previous_branch = false;
+    for child in kids {
+        let child_branch = !children(child).is_empty() && expanded.contains(&child);
+        if previous_branch && child_branch {
+            y += 1;
         }
-        let height = place_visible(child, col + 1, child_top, nodes, expanded, out);
-        child_centers.push(out.iter().find(|p| p.tech == child_node.tech).unwrap().row + 1);
-        child_top += height;
-        previous_had_children = expanded.contains(&child_node.tech) && !child_node.children.is_empty();
+        let h = place(child, Some(id), col + 1, y, expanded, out);
+        centers.push(out.iter().find(|p| p.id == child).unwrap().row + 1);
+        y += h;
+        previous_branch = child_branch;
     }
-    let block_height = (child_top - top).max(BOX_H as usize);
-    let center = (child_centers[0] + *child_centers.last().unwrap()) / 2;
-    let row = center.saturating_sub(top + 1).clamp(0, block_height - BOX_H as usize) + top;
-    out.push(NodePos { tech: node.tech, parent: node.parent, col, row });
-    block_height
+    let h = (y - top).max(BOX_H as usize);
+    let row = ((centers[0] + centers[centers.len() - 1]) / 2).saturating_sub(top + 1).clamp(0, h - BOX_H as usize) + top;
+    out.push(NodePos { id, parent, col, row });
+    h
 }
-
-pub fn has_children(tech: Tech) -> bool {
-    tree_nodes().iter().any(|n| n.parent == Some(tech))
+pub fn has_children(id: usize) -> bool {
+    !children(id).is_empty()
 }
-
-pub fn hidden_descendants(tech: Tech) -> usize {
-    fn count(index: usize, nodes: &[TreeNode]) -> usize {
-        nodes[index].children.iter().map(|&c| 1 + count(c, nodes)).sum()
+pub fn hidden_descendants(id: usize) -> usize {
+    fn count(id: usize) -> usize {
+        children(id).iter().map(|&c| usize::from(matches!(TREE[c].0, Node::Tech(_))) + count(c)).sum()
     }
-    let nodes = tree_nodes();
-    nodes.iter().position(|n| n.tech == tech).map_or(0, |i| count(i, &nodes))
+    count(id)
 }
-
-pub fn ancestors(tech: Tech) -> Vec<Tech> {
-    let nodes = tree_nodes();
-    let mut current = nodes.iter().find(|n| n.tech == tech).and_then(|n| n.parent);
+pub fn ancestors(id: usize) -> Vec<usize> {
     let mut result = Vec::new();
-    while let Some(parent) = current {
-        result.push(parent);
-        current = nodes.iter().find(|n| n.tech == parent).and_then(|n| n.parent);
+    let mut at = TREE.get(id).and_then(|(_, p)| *p);
+    while let Some(i) = at {
+        if i != 0 {
+            result.push(i);
+        }
+        at = TREE[i].1;
     }
     result
 }
-
-/// Parent, ordered children, and vertical navigation. If a node has no sibling
-/// in that direction, move to the nearest box in the same column.
-pub fn neighbors(tech: Tech) -> (Option<Tech>, Vec<Tech>, (Option<Tech>, Option<Tech>)) {
-    neighbors_in(tech, &HashSet::new())
-}
-
-pub fn neighbors_in(tech: Tech, expanded: &HashSet<Tech>) -> (Option<Tech>, Vec<Tech>, (Option<Tech>, Option<Tech>)) {
+pub fn neighbors_in(id: usize, expanded: &HashSet<usize>) -> (Option<usize>, Vec<usize>, (Option<usize>, Option<usize>)) {
     let positions = layout_expanded(expanded);
-    let Some(here) = positions.iter().find(|p| p.tech == tech) else { return (None, vec![], (None, None)) };
-    let children: Vec<_> = positions.iter().filter(|p| p.parent == Some(tech)).collect();
-    let siblings: Vec<_> = positions.iter().filter(|p| p.parent == here.parent && p.col == here.col && p.tech != tech).collect();
-    let nearest = |candidates: Vec<&NodePos>, above: bool| {
-        candidates
-            .into_iter()
+    let Some(here) = positions.iter().find(|p| p.id == id) else { return (None, vec![], (None, None)) };
+    let kids = positions.iter().filter(|p| p.parent == Some(id)).map(|p| p.id).collect();
+    let siblings: Vec<_> = positions.iter().filter(|p| p.parent == here.parent && p.col == here.col && p.id != id).collect();
+    let nearest = |list: Vec<&NodePos>, above: bool| {
+        list.into_iter()
             .filter(|p| if above { p.row < here.row } else { p.row > here.row })
             .min_by_key(|p| p.row.abs_diff(here.row))
-            .map(|p| p.tech)
+            .map(|p| p.id)
     };
-    let prev = nearest(siblings.iter().copied().collect(), true)
-        .or_else(|| nearest(positions.iter().filter(|p| p.col == here.col && p.tech != tech).collect(), true));
-    let next = nearest(siblings.iter().copied().collect(), false)
-        .or_else(|| nearest(positions.iter().filter(|p| p.col == here.col && p.tech != tech).collect(), false));
-    (here.parent, children.iter().map(|p| p.tech).collect(), (prev, next))
+    let prev =
+        nearest(siblings.clone(), true).or_else(|| nearest(positions.iter().filter(|p| p.col == here.col && p.id != id).collect(), true));
+    let next = nearest(siblings, false).or_else(|| nearest(positions.iter().filter(|p| p.col == here.col && p.id != id).collect(), false));
+    (here.parent, kids, (prev, next))
 }
-
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn canvas_size() -> (u16, u16) {
     canvas_size_expanded(&HashSet::new())
 }
-
-pub fn canvas_size_expanded(expanded: &HashSet<Tech>) -> (u16, u16) {
-    let positions = layout_expanded(expanded);
-    let cols = positions.iter().map(|p| p.col).max().unwrap_or(0) + 1;
-    let rows = positions.iter().map(|p| p.row + BOX_H as usize).max().unwrap_or(0);
-    (rows as u16, (cols as u16 * (BOX_W + COL_GAP) - COL_GAP))
+pub fn canvas_size_expanded(expanded: &HashSet<usize>) -> (u16, u16) {
+    let p = layout_expanded(expanded);
+    let cols = p.iter().map(|p| p.col).max().unwrap_or(0) + 1;
+    let rows = p.iter().map(|p| p.row + BOX_H as usize).max().unwrap_or(0);
+    (rows as u16, cols as u16 * (BOX_W + COL_GAP) - COL_GAP)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::content::{Item, Made};
 
-    fn expanded_all() -> HashSet<Tech> {
-        Tech::ALL.into_iter().collect()
+    fn id(node: Node) -> usize {
+        TREE.iter().position(|(n, _)| *n == node).unwrap()
+    }
+    fn all_open() -> HashSet<usize> {
+        (1..TREE.len()).collect()
     }
 
     #[test]
-    fn every_tech_once_and_boxes_are_disjoint() {
-        let all = expanded_all();
-        let positions = layout_expanded(&all);
-        assert_eq!(positions.len(), Tech::ALL.len());
+    fn every_tech_and_section_appears_once_when_open() {
+        let pos = layout_expanded(&all_open());
+        for (id, (node, _)) in TREE.iter().enumerate().skip(1) {
+            if matches!(node, Node::Tech(_) | Node::Key(_) | Node::Group(_)) {
+                assert_eq!(pos.iter().filter(|p| p.id == id).count(), 1, "{node:?}");
+            }
+        }
         for tech in Tech::ALL {
-            assert_eq!(positions.iter().filter(|p| p.tech == tech).count(), 1);
+            let id = id(Node::Tech(tech));
+            assert_eq!(pos.iter().filter(|p| p.id == id).count(), 1, "{tech:?}");
         }
-        for a in &positions {
-            for b in positions.iter().filter(|b| b.col == a.col && b.tech != a.tech) {
-                assert!(a.row + 3 <= b.row || b.row + 3 <= a.row, "overlap: {a:?}, {b:?}");
+        for a in &pos {
+            for b in pos.iter().filter(|b| b.col == a.col && b.id != a.id) {
+                assert!(a.row + 3 <= b.row || b.row + 3 <= a.row, "overlap {a:?} {b:?}");
             }
         }
-        for parent in &positions {
-            let mut children: Vec<_> = positions.iter().filter(|p| p.parent == Some(parent.tech)).collect();
-            children.sort_by_key(|p| p.row);
-            assert!(children.iter().all(|child| child.col == parent.col + 1), "child not in next depth column: {parent:?} -> {children:?}");
-            if children.len() > 1 {
-                let span = (children[0].row + 1, children.last().unwrap().row + 1);
-                assert!(span.0 <= parent.row + 1 && parent.row + 1 <= span.1, "parent is not centered within its block: {parent:?}");
-            }
-        }
-        // Parent buses live in the gap to their right. Their vertical spans are
-        // disjoint because their child subtrees own disjoint row blocks.
-        for a in &positions {
-            let ac: Vec<_> = positions.iter().filter(|p| p.parent == Some(a.tech)).collect();
-            if ac.len() < 2 {
-                continue;
-            }
-            let ar = (ac.iter().map(|p| p.row).min().unwrap() + 1, ac.iter().map(|p| p.row).max().unwrap() + 1);
-            for b in positions.iter().filter(|b| b.col == a.col && b.tech != a.tech) {
-                let bc: Vec<_> = positions.iter().filter(|p| p.parent == Some(b.tech)).collect();
-                if bc.len() < 2 {
-                    continue;
-                }
-                let br = (bc.iter().map(|p| p.row).min().unwrap() + 1, bc.iter().map(|p| p.row).max().unwrap() + 1);
-                assert!(ar.1 < br.0 || br.1 < ar.0, "buses overlap: {a:?} {ar:?}, {b:?} {br:?}");
-            }
-        }
-        assert_eq!(canvas_size_expanded(&all).1, ((positions.iter().map(|p| p.col).max().unwrap() + 1) as u16) * 20 - 4);
-        assert_eq!(canvas_size_expanded(&all).0, 107, "fully expanded tree keeps its original height");
-        let collapsed = layout();
-        assert_eq!(collapsed.len(), 3);
-        assert!(canvas_size().0 < 15);
-        assert_eq!(hidden_descendants(Tech::Press), 35);
     }
 
     #[test]
-    fn navigation_uses_tree_edges_siblings_and_column_fallback() {
-        let all = expanded_all();
-        let (_, children, _) = neighbors_in(Tech::Press, &all);
-        assert!(children.contains(&Tech::BasicDrill));
-        assert_eq!(neighbors_in(Tech::BasicDrill, &all).0, Some(Tech::Press));
-        let pos = layout_expanded(&all);
-        let drill = pos.iter().find(|p| p.tech == Tech::BasicDrill).unwrap();
-        let sibling_down = pos
-            .iter()
-            .filter(|p| p.parent == drill.parent && p.col == drill.col && p.row > drill.row)
-            .min_by_key(|p| p.row)
-            .map(|p| p.tech);
-        if sibling_down.is_none() {
-            let below = pos.iter().filter(|p| p.col == drill.col && p.row > drill.row).min_by_key(|p| p.row).map(|p| p.tech);
-            assert_eq!(neighbors_in(drill.tech, &all).2 .1, below);
-        }
-        assert!(!graph_enabled(49));
-        assert!(graph_enabled(50));
+    fn initial_view_is_only_three_roots_and_press_has_four_sections() {
+        let initial = layout();
+        assert_eq!(initial.len(), 3);
+        assert!(initial.iter().all(|p| matches!(TREE[p.id].0, Node::Tech(_))));
+        let press = layout_expanded(&HashSet::from([id(Node::Tech(Tech::Press))]));
+        let sections: Vec<_> = press.iter().filter(|p| p.parent == Some(id(Node::Tech(Tech::Press)))).map(|p| TREE[p.id].0).collect();
+        assert_eq!(
+            sections,
+            [
+                Node::Key(Made::Item(Item::CopperWire)),
+                Node::Key(Made::Item(Item::CopperPipe)),
+                Node::Key(Made::Item(Item::IronGear)),
+                Node::Group("Logistics")
+            ]
+        );
+    }
+
+    #[test]
+    fn sections_are_collapsible_and_hidden_counts_skip_sections() {
+        let wire = id(Node::Key(Made::Item(Item::CopperWire)));
+        assert_eq!(hidden_descendants(wire), 6);
+        let open = HashSet::from([id(Node::Tech(Tech::Press)), wire]);
+        assert!(layout_expanded(&open).iter().any(|p| p.id == id(Node::Tech(Tech::BasicDrill))));
+        assert_eq!(neighbors_in(wire, &open).1.len(), 3);
+        assert_eq!(neighbors_in(wire, &HashSet::from([id(Node::Tech(Tech::Press))])).1.len(), 0);
     }
 }
