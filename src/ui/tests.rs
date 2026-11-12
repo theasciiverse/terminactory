@@ -1787,3 +1787,18 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     assert!(home_text.contains(&format!("{machine_pages} machines")), "{home_text}");
     assert!(!home_text.contains("Raw materials:"), "{home_text}");
 }
+
+/// The home page's "did you know?" facts are picked once when the book opens, not every frame.
+#[test]
+fn did_you_know_facts_hold_still_while_the_game_runs() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    let before = text(&render(&mut app, 140, 45));
+    for _ in 0..37 {
+        app.world.tick();
+    }
+    let after = text(&render(&mut app, 140, 45));
+    let facts = |t: &str| t.lines().filter(|l| l.contains("…that")).map(|l| l.trim().to_string()).collect::<Vec<_>>();
+    assert!(!facts(&before).is_empty(), "{before}");
+    assert_eq!(facts(&before), facts(&after));
+}
