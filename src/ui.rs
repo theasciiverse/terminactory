@@ -3815,14 +3815,8 @@ fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
             (c[0].0, c[0].1)
         }
     };
-    let gx = area.x + area.width / 2;
-    for dy in 0..3 {
-        let count = if dy == 1 { 5 } else { 3 };
-        let start = gx.saturating_sub((count / 2) as u16);
-        for dx in 0..count {
-            f.buffer_mut().set_string(start + dx, area.y + 1 + dy, &glyph.to_string(), style);
-        }
-    }
+    // The "picture": the item's own glyph, once, centred in the three rows under the title.
+    f.buffer_mut().set_string(area.x + area.width / 2, area.y + 2, glyph.to_string(), style.bold());
     f.buffer_mut().set_stringn(
         area.x + 1,
         area.y + 4,

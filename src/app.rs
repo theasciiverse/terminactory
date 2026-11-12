@@ -858,7 +858,9 @@ impl App {
             }
             return;
         }
-        if crate::wiki::page(slug).is_none() || slug == self.book_slug {
+        // Home and the index pages are generated, so they have no markdown file.
+        let generated = matches!(slug, "home" | "items" | "machines" | "topics");
+        if (crate::wiki::page(slug).is_none() && !generated) || slug == self.book_slug {
             return;
         }
         self.book_history.push(self.book_slug.clone());

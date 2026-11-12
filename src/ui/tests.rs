@@ -1802,3 +1802,20 @@ fn did_you_know_facts_hold_still_while_the_game_runs() {
     assert!(!facts(&before).is_empty(), "{before}");
     assert_eq!(facts(&before), facts(&after));
 }
+
+/// The four tiles on the wiki's home page open their pages, generated ones included.
+#[test]
+fn home_navigation_tiles_open_their_pages() {
+    for (slug, shows) in [("machines", "Press"), ("items", "Copper ore"), ("topics", "Power"), ("companies", "Companies")] {
+        let mut app = App::new(World::new());
+        app.on_key(KeyEvent::from(KeyCode::Char('b')));
+        render(&mut app, 140, 45);
+        app.book_selected = app.book_urls.iter().position(|(_, s)| s == slug).unwrap_or_else(|| panic!("no {slug} link on home"));
+        app.on_key(KeyEvent::from(KeyCode::Enter));
+        assert_eq!(app.book_slug, slug);
+        let t = text(&render(&mut app, 140, 45));
+        assert!(t.to_lowercase().contains(&shows.to_lowercase()), "{slug}: {t}");
+        app.on_key(KeyEvent::from(KeyCode::Backspace));
+        assert_eq!(app.book_slug, "home");
+    }
+}
