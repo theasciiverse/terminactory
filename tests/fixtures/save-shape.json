@@ -91,6 +91,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"ArcFurnace\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"molten silicon\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Arm\"",
               "rr": "int",
               "size": "int",
@@ -299,6 +322,29 @@
                   },
                   "progress": "float",
                   "recipe_name": "\"copper grit\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"CrystalGrower\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"silicon crystal\"",
                   "stock": {
                     "Coal": "int"
                   }
@@ -818,6 +864,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"WaferSaw\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"wafer\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Warehouse\"",
               "rr": "int",
               "size": "int",
@@ -1097,11 +1166,12 @@
       ]
     },
     "researched": {
-      "len": 38,
+      "len": 41,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
         "\"AdvancedPump\"",
+        "\"ArcFurnace\"",
         "\"Assembler\"",
         "\"BasicAssembler\"",
         "\"BasicDrill\"",
@@ -1111,6 +1181,7 @@
         "\"CokeOven\"",
         "\"Coking\"",
         "\"Crusher\"",
+        "\"CrystalGrower\"",
         "\"Etcher\"",
         "\"Evacuator\"",
         "\"Excavation\"",
@@ -1133,6 +1204,7 @@
         "\"SupportBeams\"",
         "\"Tunnels\"",
         "\"UpgradePlanner\"",
+        "\"WaferSaw\"",
         "\"Warehouses\"",
         "\"Welder\"",
         "\"Winder\"",

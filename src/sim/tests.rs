@@ -1791,9 +1791,11 @@ fn the_advanced_assemblers_build_circuit_boards_transistors_and_transistor_board
 #[test]
 fn halversons_key_is_silicon_made_before_it_sells_anything() {
     assert_eq!(Company::Halverson.key_items(), &[Made::Item(Item::SiliconIngot)]);
-    // It sells nothing yet: its arc furnace, crystal grower and wafer saw come in the next phase.
-    assert!(Tech::ALL.iter().all(|t| t.company() != Company::Halverson));
-    assert!(Kind::ALL.iter().all(|k| k.company() != Some(Company::Halverson)));
+    // It sells exactly three techs and their machines: the arc furnace, crystal grower and wafer saw.
+    let techs: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Halverson).collect();
+    assert_eq!(techs, [Tech::ArcFurnace, Tech::CrystalGrower, Tech::WaferSaw]);
+    let kinds: Vec<Kind> = Kind::ALL.iter().copied().filter(|k| k.company() == Some(Company::Halverson)).collect();
+    assert_eq!(kinds, [Kind::ArcFurnace, Kind::CrystalGrower, Kind::WaferSaw]);
     // Sand and coke melt in a blast furnace (Cinderhall), a crusher grinds the sand (Ashgrove),
     // and a molder casts it: with only the companies whose techs those need, the ingot is makeable.
     let mut open = [false; COMPANIES];
@@ -1809,10 +1811,14 @@ fn halversons_key_is_silicon_made_before_it_sells_anything() {
     // In the tree it hangs under the kiln, beside its dopant and ceramic.
     let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
     assert_eq!(TREE[at(Node::Key(Made::Item(Item::SiliconIngot)))].1, Some(at(Node::Tech(Tech::Kiln))));
-    // A letter with no tech list, and a gift note.
+    // A letter that lists the three techs, and a gift note.
     let m = crate::mail::letter(Company::Halverson, Made::Item(Item::SiliconIngot), 0);
     assert!(m.md.contains("A lovely byproduct of sand."), "{}", m.md);
-    assert!(!m.md.contains("Unlocked for research"), "{}", m.md);
+    assert!(
+        m.md.contains("Unlocked for research") && m.md.contains("- Arc furnace (Create)") && m.md.contains("- Wafer saw (Create)"),
+        "{}",
+        m.md
+    );
     assert_eq!(m.from, "Halverson Smelting");
     assert!(!crate::mail::gift_note(Company::Halverson).is_empty());
 }
@@ -1888,8 +1894,8 @@ fn the_etcher_is_a_three_by_three_ec_machine_that_lattice_and_finch_sell() {
         (Company::LatticeFinch, 80_000.0, (Item::TransistorBoard, 60))
     );
     assert_eq!(Tech::Etcher.requires(), &[Made::Item(Item::ControlBoard)]);
-    // The sixth slot of Create, alone.
-    assert_eq!(crate::app::slots(Category::Create)[5], &[Kind::Etcher]);
+    // The sixth slot of Create, first in it (the grower and the saw follow).
+    assert_eq!(crate::app::slots(Category::Create)[5][0], Kind::Etcher);
     // In the tree beside the precision assembler, and in the same research group.
     let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
     let board = at(Node::Key(Made::Item(Item::ControlBoard)));
@@ -2321,7 +2327,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::RamChip);
+    assert_eq!(last, Item::SiliconCrystal);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -2337,7 +2343,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "RamChip": 7}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "SiliconCrystal": 7}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -3144,10 +3150,8 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
     let crown = [Item::DrillingRig, Item::SteamTractor];
     // The computer eats both (computers phase 5), so until it arrives nothing consumes them.
-    // SiliconScrap is remelted by the arc furnace (computers phase 2b); the disk drive eats the
-    // transistor board (phase 5); the mainboard eats the microprocessor and the RAM chip (phase 5).
-    let waits_for_a_later_phase =
-        [Item::Transformer, Item::Terminal, Item::SiliconScrap, Item::TransistorBoard, Item::Microprocessor, Item::RamChip];
+    // The disk drive eats the transistor board (phase 5); the mainboard eats the microprocessor and the RAM chip (phase 5).
+    let waits_for_a_later_phase = [Item::Transformer, Item::Terminal, Item::TransistorBoard, Item::Microprocessor, Item::RamChip];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
