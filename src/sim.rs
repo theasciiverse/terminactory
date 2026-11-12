@@ -227,9 +227,9 @@ static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
 });
 // The precision assembler only makes the top tiers: no crude or basic recipes.
 static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
-// The large kiln fires four times the batch (32 against 8) for four times as long (80 s against 20 s):
-// the kiln's recipes with every time x4, so it makes the same number a minute in one big lump.
-static LARGE_KILN: LazyLock<Vec<Recipe>> = LazyLock::new(|| batch_list(KILN_RECIPES, 4));
+// The large kiln is four kilns in one: four times the batch (32 against 8) in the same 20 s firing,
+// burning four times the coal (see `Kind::fires`).
+static LARGE_KILN: LazyLock<Vec<Recipe>> = LazyLock::new(|| batch_list(KILN_RECIPES, 1));
 static LARGE_ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> =
     LazyLock::new(|| assembler_list(&[(LARGE_BASIC_RECIPES, 2), (LARGE_ADVANCED_RECIPES, 1)]));
 
@@ -714,6 +714,15 @@ impl Kind {
         }
     }
     /// Burns coal (the others run on EC).
+    /// How many fires this machine keeps going at once: one coal lasts this many times less.
+    /// The large kiln is four kilns in one, so it burns like four.
+    pub fn fires(self) -> u32 {
+        match self {
+            Kind::LargeKiln => 4,
+            _ => 1,
+        }
+    }
+
     pub fn burns_coal(self) -> bool {
         self.drill_rates().1 > 0
     }
@@ -3088,7 +3097,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                         if *fuel == 0 && stock[f.idx()] > 0 {
                             stock[f.idx()] -= 1;
                             econ.used[f.idx()] += 1;
-                            *fuel = f.burn_ticks().unwrap_or(0);
+                            *fuel = f.burn_ticks().unwrap_or(0) / kind.fires();
                         }
                         if *fuel > 0 {
                             *fuel -= 1;

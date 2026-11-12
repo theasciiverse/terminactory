@@ -2622,7 +2622,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::RollingMill => "rolls plate flat into sheets, and steel into steel sheets and girders",
         Kind::Lathe => "turns plate into rods and screws, and steel into steel rods and bearings",
         Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass",
-        Kind::LargeKiln => "fires 32 at once, every 80 seconds: the kiln's recipes, the same rate, in one big lump",
+        Kind::LargeKiln => "fires 32 at once, every 20 seconds: four kilns in one, burning four kilns' coal",
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays and gearboxes",

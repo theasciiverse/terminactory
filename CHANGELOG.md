@@ -17,7 +17,7 @@ Saves: format version 6 (older saves are refused; start a fresh game with `tfac 
 - `tfac --version` / `-V`.
 - Apache-2.0 license and package metadata.
 - Basic solar panel (2×2, 20 EC, reach 4, $300, Kettering & Vane; research 1,800 RP or make 60 glass): the second version in the solar slot. Panels still link only through poles.
-- Large kiln (5×7, batch of 32, an 80 s firing, $7,500, Underhill; research 10,000 RP or make 1,000 brick): the kiln's recipes in one bigger lump. It is the second version in the kiln's build slot (press the slot's number again).
+- Large kiln (5×7, batch of 32, a 20 s firing, $7,500, Underhill; research 10,000 RP or make 1,000 brick): four kilns in one machine, burning four kilns' coal. It is the second version in the kiln's build slot (press the slot's number again).
 
 - Area tool (`c`): mark a rectangle with two corners or a drag, then `x` removes everything in it with a full refund (waste held in storage pays its fee once, after a second `x` when it is over $20). `z` puts back the last area you removed. Free from the start.
 - Blueprints (Brannock & Daughters; research 800 RP or make 1,500 copper plate; a new Tools group): `c` (or Space, Enter) copies a chosen rectangle to your hand, a ghost follows the cursor, `r` / Shift+`r` turn it, Space or a click pastes what fits and what you can afford in reading order, and pasting again at the same spot fills in the rest at no double charge. A middle-drag copies a rectangle straight to the hand. Settings, recipes (by name), tunnel pairs, elevators and long machines travel with it.

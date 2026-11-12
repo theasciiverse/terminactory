@@ -631,7 +631,7 @@ impl Tech {
             Tech::BasicSolar => "a 2x2 solar panel that gives 20 EC and reaches 4 tiles, twice the cheap one; it still joins other panels only through poles",
             Tech::Blueprints => "copy an area to your hand (c, then c again), paste it anywhere, and keep blueprints in a library (l) for every save",
             Tech::UpgradePlanner => "swap every belt, drill, panel and assembler in an area (c, then u) for its next version, paying only the difference in price",
-            Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 80 seconds: the kiln's recipes in one big lump",
+            Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 20 seconds: four kilns in one machine",
         }
     }
     pub fn company(self) -> Company {

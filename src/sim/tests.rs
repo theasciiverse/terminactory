@@ -1371,17 +1371,18 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
 
 #[test]
 fn a_batch_machine_fires_for_one_runs_time_times_batch_over_two() {
-    // The rule for every batch machine: 5 s a run x 8 runs / 2 = 20 s, so 24 bricks a minute.
-    for kind in [Kind::Kiln, Kind::LargeKiln] {
+    // The rule for the kiln: 5 s a run x 8 runs / 2 = 20 s, so 24 bricks a minute. The large kiln is
+    // four kilns in one (decided after review 14), so it keeps the kiln's 20 s firing.
+    for kind in [Kind::Kiln] {
         for r in kind.recipes() {
             assert_eq!(r.ticks as u64, 5 * TPS * kind.batch() as u64 / 2, "{kind:?} {}", r.name);
         }
     }
-    assert_eq!((Kind::Kiln.recipes()[0].ticks, Kind::LargeKiln.recipes()[0].ticks), (20 * 60, 80 * 60));
+    assert_eq!((Kind::Kiln.recipes()[0].ticks, Kind::LargeKiln.recipes()[0].ticks), (20 * 60, 20 * 60));
 }
 
 #[test]
-fn the_large_kiln_has_the_kilns_recipes_at_the_kilns_rate() {
+fn the_large_kiln_is_four_kilns_in_one() {
     let (small, big) = (Kind::Kiln.recipes(), Kind::LargeKiln.recipes());
     assert_eq!((Kind::Kiln.batch(), Kind::LargeKiln.batch()), (8, 32));
     assert_eq!(small.len(), big.len());
@@ -1389,10 +1390,11 @@ fn the_large_kiln_has_the_kilns_recipes_at_the_kilns_rate() {
         // Same name, tag, inputs, outputs and fuel: only the time differs.
         assert_eq!((a.name, a.tag, a.inputs, a.outputs, a.fuel), (b.name, b.tag, b.inputs, b.outputs, b.fuel));
         assert_eq!((a.fluid_in, a.fluid_out, a.needs), (b.fluid_in, b.fluid_out, b.needs));
-        // A bigger lump, not a faster copy: items a minute are the same.
+        // Four kilns' worth a minute, for four kilns' coal.
         let rate = |k: Kind, r: &Recipe| r.outputs[0].1 * k.batch() * 60 * 60 / r.ticks;
-        assert_eq!(rate(Kind::Kiln, a), rate(Kind::LargeKiln, b), "{}", a.name);
-        assert_eq!(rate(Kind::LargeKiln, b), 24, "{}", a.name);
+        assert_eq!(rate(Kind::LargeKiln, b), 4 * rate(Kind::Kiln, a), "{}", a.name);
+        assert_eq!(rate(Kind::LargeKiln, b), 96, "{}", a.name);
+        assert_eq!(Kind::LargeKiln.fires(), 4);
     }
     // Four times the lump: it holds 32 runs of input and 320 finished goods.
     assert_eq!((Kind::Kiln.out_cap(), Kind::LargeKiln.out_cap()), (80, 320));
@@ -1417,7 +1419,7 @@ fn the_large_kiln_is_5x7_burns_coal_and_costs_a_few_minutes_of_income() {
 }
 
 #[test]
-fn the_large_kiln_waits_for_a_full_load_then_fires_32_at_once_after_80_seconds() {
+fn the_large_kiln_waits_for_a_full_load_then_fires_32_at_once_after_20_seconds() {
     let mut w = World::blank();
     w.place(0, 5, 5, Kind::LargeKiln, Dir::E).unwrap(); // covers 5-9, 5-11: front is x=10
     assert!(w.place(0, 6, 11, Kind::Crate, Dir::E).is_err(), "7 tall");
@@ -1441,9 +1443,9 @@ fn the_large_kiln_waits_for_a_full_load_then_fires_32_at_once_after_80_seconds()
         }
     }
     let t = fired_at.expect("it fired");
-    assert!((4799..=4801).contains(&t), "one firing, 80 s (4800 ticks): {t}");
+    assert!((1199..=1201).contains(&t), "one firing, 20 s (1200 ticks): {t}");
     assert_eq!(w.econ.used[Item::Stone.idx()], 64);
-    // 20 coal burnt for the 80 s (a coal burns 4 s).
+    // 20 coal for the 20 s: four fires, a coal lasting 1 s each (4 s in a kiln).
     assert_eq!(w.econ.used[Item::Coal.idx()], 20);
     // The goods leave by the front, into the crate beside its edge.
     run(&mut w, 10);
@@ -1453,12 +1455,12 @@ fn the_large_kiln_waits_for_a_full_load_then_fires_32_at_once_after_80_seconds()
 
 #[test]
 fn the_large_kiln_makes_bricks_and_glass() {
-    let out = run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 85);
+    let out = run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 24);
     assert_eq!(out, vec![Item::Brick; 32]);
-    let out = run_machine(Kind::LargeKiln, "glass", &[(Item::Sand, 96), (Item::Coal, 25)], 85);
+    let out = run_machine(Kind::LargeKiln, "glass", &[(Item::Sand, 96), (Item::Coal, 25)], 24);
     assert_eq!(out, vec![Item::Glass; 32]);
-    // Still waiting at 75 s.
-    assert!(run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 75).is_empty());
+    // Still waiting at 15 s.
+    assert!(run_machine(Kind::LargeKiln, "brick", &[(Item::Stone, 64), (Item::Coal, 25)], 15).is_empty());
 }
 
 #[test]
@@ -2571,7 +2573,7 @@ fn every_item_recipe_runs_in_its_machine() {
             }
             if let Some(f) = r.fuel {
                 // Enough to burn for the whole recipe time (a long firing outlasts the 10 a feed keeps in stock).
-                set_stock(&mut w, x, y, f, (r.ticks / f.burn_ticks().unwrap_or(1) + 2).max(10));
+                set_stock(&mut w, x, y, f, (r.ticks * kind.fires() / f.burn_ticks().unwrap_or(1) + 2).max(10));
             }
             let front = x + kind.dims(Dir::E).0;
             w.place(0, front, y, Kind::Crate, Dir::E).unwrap();
