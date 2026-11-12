@@ -2662,8 +2662,8 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
         Kind::Evacuator => "pulls the air out of glass with a water jet from a pipe: 2 tubes a run, no waste",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
-        Kind::CrudeAssembler => "builds valves, gauges, lamps, relays and gearboxes",
-        Kind::BasicAssembler => "builds electric motors and pistons, and the crude parts twice as fast",
+        Kind::CrudeAssembler => "builds valves, gauges, lamps, relays, gearboxes, transformers and lamp matrices",
+        Kind::BasicAssembler => "builds electric motors, pistons and terminals, and the crude parts twice as fast",
         Kind::AdvancedAssembler => {
             "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), and everything below faster"
         }

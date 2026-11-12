@@ -1202,7 +1202,7 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("lamp", &[(Item::Glass, 1), (Item::FineWire, 2)], &[(Item::Lamp, 1)], 600, None, None, 'L'),
     item_recipe("relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], &[(Item::Relay, 1)], 600, None, None, 'R'),
     item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 600, None, None, 'B'),
-    item_recipe("transformer", &[(Item::CopperCoil, 2), (Item::IronSheet, 4)], &[(Item::Transformer, 1)], 600, None, None, 'T'),
+    item_recipe("transformer", &[(Item::CopperCoil, 2), (Item::IronSheet, 4)], &[(Item::Transformer, 1)], 600, None, None, 'X'),
     item_recipe(
         "lamp matrix",
         &[(Item::Lamp, 8), (Item::CopperSheet, 1), (Item::FineWire, 4)],
@@ -1210,7 +1210,7 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
         600,
         None,
         None,
-        'M',
+        'A',
     ),
     // The slow way round: boards by hand, before steel and motors. Advanced assemblers and up
     // hide it (they have the 10 s recipe below).
@@ -1291,7 +1291,7 @@ pub const BASIC_RECIPES: &[Recipe] = &[
         'P',
     ),
     // The final design adds a keyboard, which needs items from a later phase: it joins in phase 5.
-    item_recipe("terminal", &[(Item::LampMatrix, 1), (Item::TubeBoard, 1)], &[(Item::Terminal, 1)], 600, None, None, 'T'),
+    item_recipe("terminal", &[(Item::LampMatrix, 1), (Item::TubeBoard, 1)], &[(Item::Terminal, 1)], 600, None, None, 'D'),
 ];
 
 /// Advanced tier (advanced and precision assemblers). The control board is the x1x1, the
@@ -1313,7 +1313,7 @@ pub const ADVANCED_RECIPES: &[Recipe] = &[
         900,
         None,
         None,
-        'T',
+        'W',
     ),
 ];
 

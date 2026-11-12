@@ -3084,3 +3084,18 @@ fn a_small_factory_makes_electric_motors_from_ore() {
     assert!(motors.iter().all(|i| *i == Item::ElectricMotor));
     assert!(w.econ.made[Item::Waste.idx()] > 0, "steel left waste behind");
 }
+
+#[test]
+fn no_machine_shows_two_recipes_with_one_letter() {
+    // Two routes to one product may share a letter; different products may not.
+    let made = |r: &Recipe| r.outputs.first().map(|o| o.0.name()).or(r.fluid_out.map(|f| f.0.name()));
+    for kind in Kind::ALL {
+        let mut seen: Vec<(char, Option<&str>, &str)> = Vec::new();
+        for r in kind.recipes() {
+            if let Some((_, _, other)) = seen.iter().find(|(t, m, _)| *t == r.tag && *m != made(r)) {
+                panic!("{kind:?}: {} and {other} share the letter {}", r.name, r.tag);
+            }
+            seen.push((r.tag, made(r), r.name));
+        }
+    }
+}
