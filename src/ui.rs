@@ -3107,6 +3107,7 @@ fn blurb(kind: Kind) -> Option<&'static str> {
 const LINK: Color = Color::Indexed(117);
 
 /// Whether the player can get this item yet (or already has).
+#[allow(dead_code)]
 fn item_known(w: &World, item: Item) -> bool {
     let mined = matches!(item, Item::CopperOre | Item::Coal | Item::IronOre | Item::Stone);
     mined
@@ -3133,6 +3134,7 @@ fn num(v: f64) -> String {
 struct Seg {
     text: String,
     style: Style,
+    #[allow(dead_code)]
     link: Option<Entry>,
 }
 
@@ -3184,6 +3186,10 @@ fn lay_out(segs: Vec<Seg>, width: usize, hang: usize) -> Vec<Row> {
             col = hang;
         }
         if is_space && (col == hang && rows.len() > 1 || col + n > width) {
+            if col + n > width && col > hang {
+                rows.push(vec![seg(" ".repeat(hang), Style::new())]);
+                col = hang;
+            }
             continue;
         }
         col += n;
@@ -3618,150 +3624,283 @@ fn research_chart(w: &World, item: Item, width: u16) -> Vec<Line<'static>> {
 /// The recipe book: a tab of items and a tab of machines (Tab switches), each a grid
 /// (searchable with /), and the selected page under it. Names in blue are links: click them.
 fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
-    let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-    let dim = Style::new().fg(Color::DarkGray);
-    let r = Rect { height: area.height.saturating_sub(1), ..area };
-    f.render_widget(Clear, r);
-    let title = if app.book_query.is_empty() && !app.book_typing {
-        " Recipe book ".to_string()
+    let frame = if !app.compact_now && area.width >= 90 && area.height >= 30 {
+        centered(area, (area.width * 4 / 5).min(120), (area.height * 85 / 100).min(50))
     } else {
-        format!(" Recipe book · search: {}{} ", app.book_query, if app.book_typing { "_" } else { "" })
+        area
     };
-    let block = Block::bordered().title(title).title_style(head);
-    let inner = block.inner(r);
-    f.render_widget(block, r);
-    let body = Rect { x: inner.x + 1, width: inner.width.saturating_sub(2), ..inner };
+    app.book_area = frame;
+    if frame.right() < area.right() {
+        let shadow = Rect::new(frame.right(), frame.y.saturating_add(1), 1, frame.height.saturating_sub(1));
+        f.render_widget(Paragraph::new(" ".repeat(shadow.height as usize)).style(Style::new().bg(Color::Indexed(232))), shadow);
+    }
+    if frame.bottom() < area.bottom() {
+        let shadow = Rect::new(frame.x.saturating_add(1), frame.bottom(), frame.width.saturating_sub(1), 1);
+        f.render_widget(Paragraph::new(" ".repeat(shadow.width as usize)).style(Style::new().bg(Color::Indexed(232))), shadow);
+    }
+    f.render_widget(Clear, frame);
+    f.render_widget(Block::bordered(), frame);
+    let page_title =
+        crate::wiki::page(&app.book_slug).and_then(|md| md.lines().next()).unwrap_or("Page missing").trim_start_matches('#').trim();
+    for (i, color) in [Color::Indexed(167), Color::Indexed(221), Color::Indexed(114)].into_iter().enumerate() {
+        f.buffer_mut().set_string(frame.x + 2 + i as u16 * 2, frame.y, "●", Style::new().fg(color));
+    }
+    for x in [frame.x + 3, frame.x + 5, frame.x + 7, frame.x + 8] {
+        f.buffer_mut().set_string(x, frame.y, " ", Style::default());
+    }
+    let tab = format!("╭ {page_title} — Terminactory Wiki ╮");
+    let tab_width = frame.width.saturating_sub(12) as usize;
+    let tab: String = if tab.chars().count() > tab_width {
+        tab.chars().take(tab_width.saturating_sub(1)).chain(std::iter::once('…')).collect()
+    } else {
+        tab
+    };
+    f.buffer_mut().set_stringn(frame.x + 9, frame.y, &tab, tab_width, Style::new().fg(Color::Cyan).bold());
+    let inner = Block::bordered().inner(frame);
+    let url = format!(
+        "https://terminactory.wiki/{}{}",
+        app.book_slug,
+        if app.book_typing { format!("?{}▏", app.book_query) } else { String::new() }
+    );
+    let bar = Rect::new(inner.x, inner.y, inner.width, 1);
+    let url_fit = fit_left(&url, inner.width.saturating_sub(6) as usize);
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled("◀", Style::new().fg(if app.book_history.is_empty() { Color::DarkGray } else { Color::Gray })),
+            Span::raw(" "),
+            Span::styled("▶", Style::new().fg(if app.book_forward.is_empty() { Color::DarkGray } else { Color::Gray })),
+            Span::raw(format!("  {url_fit}")),
+        ]))
+        .style(Style::new().bg(Color::Indexed(236))),
+        bar,
+    );
+    let content = Rect::new(inner.x, inner.y.saturating_add(2), inner.width, inner.height.saturating_sub(3));
+    f.render_widget(
+        Paragraph::new("─".repeat(inner.width as usize)).style(Style::new().fg(Color::DarkGray)),
+        Rect::new(inner.x, inner.y + 1, inner.width, 1),
+    );
     app.book_links.clear();
-    app.book_cells.clear();
-    if body.height < 3 || body.width < 10 {
-        return;
-    }
-    const CELL: usize = 22;
-    let parts = app.book_entry.is_part();
-    let list = Entry::list(&app.book_query, parts);
-    let n = list.len().max(1);
-    let cols = (body.width as usize / CELL).clamp(1, n);
-    app.book_cols = cols;
-    let sel = list.iter().position(|e| *e == app.book_entry).unwrap_or(0);
-    let w = &app.world;
-
-    let page = book_page(w, app.book_entry, body.width, &app.controls.key(Action::Setup));
-    // Rows: the tabs, the grid, a rule, the page, the footer.
-    let avail = body.height as usize - 1;
-    let grid_rows = list.len().div_ceil(cols).max(1);
-    // The grid takes at most 40% of the rows, so the page (the point of the screen) gets the rest.
-    let gh = grid_rows.min(avail.saturating_sub(7).min((avail * 2 / 5).max(3)).max(1));
-    let gtop = (sel / cols + 1).saturating_sub(gh);
-    let buf = f.buffer_mut();
-    let mut y = body.y;
-    // The tabs: the one you're on highlighted; clicking one goes to it.
-    let mut x = body.x;
-    for (name, on_parts) in [("Items", false), ("Machines", true)] {
-        let label = format!(" {name} ");
-        let st = if on_parts == parts {
-            Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD)
-        } else {
-            Style::new().fg(Color::Gray)
-        };
-        buf.set_string(x, y, &label, st);
-        // The other tab opens on its last page, or its first match if a search hides that.
-        let target = if on_parts == parts {
-            app.book_entry
-        } else {
-            let l = Entry::list(&app.book_query, on_parts);
-            let last = app.book_last[on_parts as usize];
-            if l.contains(&last) || l.is_empty() {
-                last
+    app.book_urls.clear();
+    let md = crate::wiki::page(&app.book_slug).unwrap_or("# Page missing");
+    if !app.book_query.is_empty() {
+        app.book_result_capacity = content.height.saturating_sub(2).max(1) as usize;
+        app.book_scroll = app.book_scroll.min(app.book_results.len().saturating_sub(app.book_result_capacity) as u16);
+        let mut y = content.y;
+        f.buffer_mut().set_string(content.x, y, "Search results", Style::new().bold());
+        y += 2;
+        if app.book_results.is_empty() {
+            f.buffer_mut().set_string(content.x, y, "No pages match this search.", Style::new().fg(Color::DarkGray));
+        }
+        for (i, slug) in app.book_results.iter().enumerate().skip(app.book_scroll as usize).take(content.height.saturating_sub(2) as usize)
+        {
+            let label = crate::wiki::page(slug).and_then(|p| p.lines().next()).unwrap_or(slug).trim_start_matches('#').trim();
+            let style = if i == app.book_selected {
+                Style::new().add_modifier(Modifier::REVERSED)
             } else {
-                l[0]
-            }
-        };
-        app.book_cells.push((Rect::new(x, y, label.chars().count() as u16, 1), target));
-        x += label.chars().count() as u16 + 1;
-    }
-    buf.set_string(x + 1, y, "Tab switches", dim);
-    y += 1;
-    if list.is_empty() {
-        buf.set_string(body.x, y, "nothing matches: Esc clears the search", dim);
-    }
-    for row in gtop..gtop + gh {
-        let mut x = body.x;
-        for col in 0..cols {
-            let Some(&e) = list.get(row * cols + col) else {
-                break;
+                Style::new().fg(Color::Cyan).underlined()
             };
-            let (glyph, gst, known) = match e {
-                Entry::Item(i) => {
-                    let (g, st) = item_cell(i, Color::Reset);
-                    (g, st, item_known(w, i))
-                }
-                Entry::Part(k) => {
-                    let (g, st) = kind_cells(k, Dir::E, true)[0];
-                    (g, st, w.progress.part_unlocked(k))
-                }
-            };
-            let mut st = if known { Style::new() } else { dim };
-            if e == app.book_entry {
-                st = Style::new().fg(INK).bg(Color::Cyan).add_modifier(Modifier::BOLD);
-            }
-            buf.set_string(x, y, glyph.to_string(), gst);
-            // "microprocessor (x4x1)" is too long for a cell: drop the brackets, keep the code.
-            let name = e.name();
-            let name = if name.chars().count() > CELL - 3 { name.replace(" (", " ").replace(')', "") } else { name.to_string() };
-            buf.set_stringn(x + 1, y, format!(" {:<w$}", fit(&name, CELL - 3), w = CELL - 3), CELL - 2, st);
-            app.book_cells.push((Rect::new(x, y, CELL as u16 - 1, 1), e));
-            x += CELL as u16;
+            f.buffer_mut().set_string(content.x, y, format!("› {label}"), style);
+            app.book_urls.push((Rect::new(content.x, y, content.width, 1), slug.clone()));
+            y += 1;
         }
-        y += 1;
-    }
-    buf.set_string(body.x, y, "─".repeat(body.width as usize), dim);
-    y += 1;
-
-    // The page, scrolled; every visible link is recorded for the mouse and for Tab.
-    let ph = (body.y as usize + avail).saturating_sub(y as usize);
-    let max_scroll = page.len().saturating_sub(ph) as u16;
-    app.book_scroll = app.book_scroll.min(max_scroll);
-    for row in page.iter().skip(app.book_scroll as usize).take(ph) {
-        let mut x = body.x;
-        for s in row {
-            let wdt = s.text.chars().count() as u16;
-            let st = s.style;
-            if let Some(target) = s.link {
-                app.book_links.push((Rect::new(x, y, wdt, 1), target));
-            }
-            let room = (body.x + body.width).saturating_sub(x);
-            buf.set_stringn(x, y, &s.text, room as usize, st);
-            x += wdt;
-        }
-        y += 1;
-    }
-
-    // Footer: keys, and where there's more.
-    let foot = Rect { y: body.y + avail as u16, height: 1, ..body };
-    let close = format!("{}/Esc close", app.controls.key(Action::Book));
-    let wide = body.width >= 72;
-    let line = if app.book_typing {
-        footer_line(body.width, &[(1, "type to search"), (0, "Enter done"), (2, "Esc stop")], None)
     } else {
-        let tab = if wide { "Tab items/machines" } else { "Tab" };
-        let back = if app.book_back.is_empty() { None } else { Some((4, "Bksp back")) };
-        let hints: Vec<(u8, &str)> =
-            [Some((3, "↑↓ pick")), Some((2, tab)), Some((1, "/ search")), back, Some((5, "click a link")), Some((0, close.as_str()))]
-                .into_iter()
-                .flatten()
-                .collect();
-        let list = gtop > 0 || gtop + gh < grid_rows;
-        let page = if app.book_scroll < max_scroll { "▼" } else { "▲" };
-        let more = match (list, max_scroll > 0) {
-            (false, false) => None,
-            _ if !wide => Some("more ▲▼".to_string()),
-            (true, false) => Some("more: list ▲▼".to_string()),
-            (false, true) => Some(format!("more: page {page}")),
-            (true, true) => Some(format!("more: list ▲▼ page {page}")),
+        let narrow = content.width < 90;
+        let (prose, info) = if app.book_slug == "home"
+            || Entry::list("", false).iter().chain(Entry::list("", true).iter()).all(|e| crate::wiki::slug(e.name()) != app.book_slug)
+        {
+            (content, None)
+        } else if narrow {
+            (content, Some(content))
+        } else {
+            let info_width = if area.width >= 120 { 46 } else { 40 };
+            let [left, right] = Layout::horizontal([Constraint::Min(36), Constraint::Length(info_width)]).areas(content);
+            (left, Some(right))
         };
-        footer_line(body.width, &hints, more.as_deref())
+        let info_rows = info.and_then(|ir| {
+            Entry::list("", false).into_iter().chain(Entry::list("", true)).find(|e| crate::wiki::slug(e.name()) == app.book_slug).map(
+                |e| {
+                    book_page(&app.world, e, ir.width, &app.controls.key(Action::Setup))
+                        .into_iter()
+                        .map(|row| {
+                            row.into_iter()
+                                .flat_map(|seg| {
+                                    let style = seg.style;
+                                    seg.text.chars().map(move |c| (c, None, false, style)).collect::<Vec<_>>()
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                },
+            )
+        });
+        render_wiki_text(f, prose, md, app, info_rows.as_deref(), info, narrow);
+    }
+    let foot = Rect::new(inner.x, inner.bottom().saturating_sub(1), inner.width, 1);
+    let footer = if app.book_typing {
+        "Type to search · Enter opens result · Esc stops"
+    } else {
+        "↑↓ select links · Enter open · Backspace back · ] forward · PgUp/PgDn scroll · b/Esc close"
     };
-    f.render_widget(Paragraph::new(line), foot);
+    f.render_widget(Paragraph::new(footer).style(Style::new().fg(Color::DarkGray)), foot);
+}
+
+fn fit_left(s: &str, width: usize) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    chars.into_iter().rev().take(width).collect::<Vec<_>>().into_iter().rev().collect()
+}
+
+fn render_wiki_text(
+    f: &mut Frame,
+    area: Rect,
+    md: &str,
+    app: &mut App,
+    info: Option<&[Vec<(char, Option<String>, bool, Style)>]>,
+    info_area: Option<Rect>,
+    narrow: bool,
+) {
+    type WikiChar = (char, Option<String>, bool, Style);
+    let width = area.width as usize;
+    let mut rows: Vec<(Vec<WikiChar>, bool, bool)> = Vec::new();
+    for raw in md.lines() {
+        if raw.trim().is_empty() {
+            rows.push((Vec::new(), false, false));
+            continue;
+        }
+        let title = raw.starts_with("# ");
+        let heading = raw.starts_with("## ");
+        let source = raw.trim_start_matches('#').trim().strip_prefix("- ").unwrap_or(raw.trim_start_matches('#').trim());
+        let mut chars: Vec<(char, Option<String>, bool)> = Vec::new();
+        let mut bold = false;
+        let mut rest = source;
+        while !rest.is_empty() {
+            if let Some(after) = rest.strip_prefix("**") {
+                bold = !bold;
+                rest = after;
+                continue;
+            }
+            if let Some(after) = rest.strip_prefix("[[") {
+                if let Some(end) = after.find("]]") {
+                    let spec = &after[..end];
+                    let (slug, label) = match spec.split_once('|') {
+                        Some((slug, label)) => (slug, label.to_string()),
+                        None => (spec, crate::wiki::link_label(spec)),
+                    };
+                    chars.extend(label.chars().map(|c| (c, Some(slug.to_string()), bold)));
+                    rest = &after[end + 2..];
+                    continue;
+                }
+            }
+            let c = rest.chars().next().unwrap();
+            chars.push((c, None, bold));
+            rest = &rest[c.len_utf8()..];
+        }
+        if raw.starts_with("- ") {
+            chars.insert(0, ('•', None, false));
+            chars.insert(1, (' ', None, false));
+        }
+        let wrapped = wrap_wiki_chars(chars, width.max(1));
+        for (line_no, line) in wrapped.into_iter().enumerate() {
+            rows.push((line.into_iter().map(|(c, link, bold)| (c, link, bold, Style::default())).collect(), title, heading));
+            if title && line_no == 0 {
+                rows.push(("═".repeat(width).chars().map(|c| (c, None, false, Style::new().fg(Color::DarkGray))).collect(), false, false));
+            }
+        }
+    }
+
+    if narrow {
+        if let Some(info_rows) = info {
+            let info_top = 2.min(rows.len());
+            let mut inserted: Vec<_> = info_rows.iter().cloned().map(|r| (r, false, false)).collect();
+            inserted.push((Vec::new(), false, false));
+            rows.splice(info_top..info_top, inserted);
+        }
+    }
+    let total_rows = if narrow { rows.len() } else { rows.len().max(info.map_or(0, <[_]>::len)) };
+    app.book_scroll = app.book_scroll.min(total_rows.saturating_sub(area.height as usize) as u16);
+    let start = app.book_scroll as usize;
+    let mut y = area.y;
+    let mut link_index = 0usize;
+    for (line, title, heading) in rows.iter().skip(start) {
+        if y >= area.bottom() {
+            break;
+        }
+        draw_wiki_row(f, area, y, line, *title || *heading, app, &mut link_index);
+        y += 1;
+    }
+    if !narrow {
+        if let (Some(info_rows), Some(info_area)) = (info, info_area) {
+            for (i, line) in info_rows.iter().enumerate().skip(start).take(info_area.height as usize) {
+                let iy = info_area.y + (i - start) as u16;
+                if iy >= info_area.bottom() {
+                    break;
+                }
+                draw_wiki_row(f, info_area, iy, line, false, app, &mut link_index);
+            }
+        }
+    }
+}
+
+fn draw_wiki_row(
+    f: &mut Frame,
+    area: Rect,
+    y: u16,
+    line: &[(char, Option<String>, bool, Style)],
+    heading: bool,
+    app: &mut App,
+    link_index: &mut usize,
+) {
+    let mut x = 0usize;
+    let mut i = 0usize;
+    while i < line.len() {
+        let link = line[i].1.clone();
+        let is_bold = line[i].2;
+        let mut end = i + 1;
+        while end < line.len() && line[end].1 == link && line[end].2 == is_bold && line[end].3 == line[i].3 {
+            end += 1;
+        }
+        let txt: String = line[i..end].iter().map(|x| x.0).collect();
+        let selected = link.is_some() && *link_index == app.book_selected;
+        let mut style = if link.is_some() { Style::new().fg(Color::Cyan).underlined() } else { line[i].3 };
+        if is_bold || heading {
+            style = style.bold();
+        }
+        if selected {
+            style = style.reversed();
+        }
+        f.buffer_mut().set_stringn(area.x + x as u16, y, &txt, (area.width as usize).saturating_sub(x), style);
+        if let Some(slug) = link {
+            let rect = Rect::new(area.x + x as u16, y, txt.chars().count() as u16, 1);
+            app.book_urls.push((rect, slug.clone()));
+            if let Some(e) = crate::app::App::book_entry_for_slug_for_ui(&slug) {
+                app.book_links.push((rect, e));
+            }
+            *link_index += 1;
+        }
+        x += txt.chars().count();
+        i = end;
+    }
+}
+
+fn wrap_wiki_chars(chars: Vec<(char, Option<String>, bool)>, width: usize) -> Vec<Vec<(char, Option<String>, bool)>> {
+    let mut rows: Vec<Vec<(char, Option<String>, bool)>> = vec![Vec::new()];
+    for item in chars {
+        if item.0 == ' ' && rows.last().unwrap().is_empty() {
+            continue;
+        }
+        rows.last_mut().unwrap().push(item);
+        if rows.last().unwrap().len() > width {
+            let row = rows.last_mut().unwrap();
+            if let Some(space) = row.iter().take(width).rposition(|x| x.0 == ' ') {
+                let tail = row.split_off(space + 1);
+                row.pop();
+                rows.push(tail);
+            } else {
+                let last = row.pop().unwrap();
+                rows.push(vec![last]);
+            }
+        }
+    }
+    rows
 }
 
 /// Splits text into lines of at most `width` characters, at spaces.

@@ -13,6 +13,7 @@ mod saves;
 mod settings;
 mod sim;
 mod ui;
+mod wiki;
 
 use std::io;
 use std::path::{Path, PathBuf};

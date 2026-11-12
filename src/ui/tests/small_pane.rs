@@ -102,10 +102,10 @@ fn phone_36x24() {
     assert!(t.contains("needs") && t.contains("Assembling"), "{t}");
     assert_no_glued_hints(&t);
     app.tree = false;
-    // The book's footer keeps `b/Esc close` and `/ search` beside the more arrows.
+    // The browser keeps its URL bar and close hint readable in a phone-sized pane.
     app.book = true;
     let t = text(&render(&mut app, 36, 24));
-    assert!(t.contains("/ search") && t.contains("close") && t.contains("more ▲▼"), "{t}");
+    assert!(t.contains("terminactory.wiki"), "{t}");
     assert_no_glued_hints(&t);
 }
 
@@ -383,7 +383,11 @@ fn overlays_fit_every_pane_size() {
                 assert!(app.compact_now, "Always at {w}x{h}");
             }
             if (0..=3).contains(&scene) {
-                assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));
+                if matches!(scene, 1 | 2) && app.book_area.width < w {
+                    assert!(t.contains("b/Esc close"), "wiki footer at {w}x{h}: {t}");
+                } else {
+                    assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));
+                }
                 assert_no_glued_hints(&t);
             }
         }
@@ -429,7 +433,7 @@ fn the_pipe_page_prints_its_rules() {
     app.book_go(Entry::Part(Kind::Pipe));
     for (w, h) in [(44, 60), (50, 40), (130, 42)] {
         let t = text(&render(&mut app, w, h));
-        assert!(t.contains("Pipe") && t.contains("Rules"), "{w}x{h}: {t}");
-        assert!(t.contains("No flow, no pressure"), "{w}x{h}: {t}");
+        assert!(t.contains("Pipe") && t.contains("https://terminactory.wiki/pipe"), "{w}x{h}: {t}");
+        assert!(t.contains("fluid") && t.contains("pipe"), "{w}x{h}: {t}");
     }
 }

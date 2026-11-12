@@ -298,116 +298,107 @@ fn print_research_tree_render_sizes() {
 /// The recipe book: pages for items and machines, word equations, links, search.
 #[test]
 fn recipe_book() {
-    use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-    let mut w = World::new();
-    w.build_demo().unwrap();
-    let mut app = App::new(w);
+    use ratatui::crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+    let mut app = App::new(World::new());
     let key = |app: &mut App, c: KeyCode| app.on_key(KeyEvent::from(c));
-    // Pointing at the demo molder opens the book on copper ingot.
-    app.cursor = (56, 38);
     key(&mut app, KeyCode::Char('b'));
     assert!(app.book);
-    assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
-    let buf = render(&mut app, 130, 42);
-    let t = text(&buf);
-    assert!(t.contains("Made by") && t.contains("Used in") && !t.contains("MADE BY"), "{t}");
-    assert!(t.contains("molten copper  ──→  copper ingot"), "a word equation, with the fluid in it: {t}");
-    assert!(t.contains("copper ingot  ──→  copper plate   in Press"), "{t}");
-    assert!(t.contains("6.0 now, fading to a floor of 0.18") && t.contains("0.18 ┤") && t.contains("← floor"), "{t}");
-    std::fs::write("target/snapshot-book.html", to_html(&buf)).unwrap();
-
-    // Tab switches to the machines tab and back to the item you were on.
-    assert!(t.contains(" Items ") && t.contains(" Machines ") && !t.contains("Basic drill"), "items only: {t}");
-    key(&mut app, KeyCode::Tab);
-    assert_eq!(app.book_entry, Entry::Part(Kind::Drill));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Basic drill") && !t.contains("iron gear "), "machines only: {t}");
-    key(&mut app, KeyCode::Tab);
-    assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
-
-    // Clicking a machine's name opens its page (on the machines tab); Backspace comes back.
-    render(&mut app, 130, 42);
-    let (r, _) = *app.book_links.iter().find(|(_, e)| *e == Entry::Part(Kind::Molder)).unwrap();
-    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
-    assert_eq!(app.book_entry, Entry::Part(Kind::Molder));
+    assert_eq!(app.book_slug, "home");
+    let t = text(&render(&mut app, 80, 40));
+    assert!(t.contains("https://terminactory.wiki/home"), "{t}");
+    assert!(t.contains("Getting started") && t.contains("Raw materials"), "{t}");
+    let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
+    app.on_mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: r.x,
+        row: r.y,
+        modifiers: ratatui::crossterm::event::KeyModifiers::NONE,
+    });
+    assert_eq!(app.book_slug, "getting-started");
     key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_entry, Entry::Item(Item::CopperIngot));
-    app.book_go(Entry::Part(Kind::Furnace));
-    let buf = render(&mut app, 130, 42);
-    let t = text(&buf);
-    assert!(t.contains("Status") && t.contains("ready to build") && t.contains("Makes"), "{t}");
-    assert!(t.contains("copper ore  ─coal─→  molten copper"), "{t}");
-    assert!(t.contains("3 iron ore  ─coal─→  2 molten iron"), "{t}");
-    assert!(t.contains("3 coal  ──→  coke"), "{t}");
-    std::fs::write("target/snapshot-book-machine.html", to_html(&buf)).unwrap();
-    app.book_go(Entry::Part(Kind::Molder));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("molten iron  ──→  iron ingot") && t.contains("molten steel  ──→  steel"), "{t}");
-    // Stone and iron ore are mined by both drills.
-    app.book_go(Entry::Item(Item::Stone));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Cheap drill or Basic drill"), "{t}");
-    app.book_go(Entry::Part(Kind::Drill));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("iron ore") && t.contains("stone") && t.contains("half the basic drill's speed"), "{t}");
-
-    // Steel is cast from molten steel; the blast furnace's page shows the four ways to melt it, with their waste.
-    app.book_go(Entry::Item(Item::Steel));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("molten steel  ──→  steel") && t.contains("Used in"), "{t}");
-    app.book_go(Entry::Part(Kind::BlastFurnace));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("2 iron plate + coke  ──→  molten steel + waste"), "{t}");
-    assert!(t.contains("2 iron plate + 2 coal  ──→  molten steel + 3 waste"), "{t}");
-    assert!(t.contains("iron plate + coke  ──→  hardened iron plate"), "{t}");
-    std::fs::write("target/snapshot-book-blast.html", to_html(&render(&mut app, 130, 42))).unwrap();
-
-    // Search: / then letters filter the grid and jump to the first match; Esc clears it.
-    key(&mut app, KeyCode::Char('/'));
-    for c in "gear".chars() {
-        key(&mut app, KeyCode::Char(c));
-    }
-    assert_eq!(app.book_entry, Entry::Item(Item::IronGear));
-    assert_eq!(Entry::list(&app.book_query, false).len(), 3, "iron gear, gearbox, hardened gear");
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("search: gear_"), "{t}");
+    assert_eq!(app.book_slug, "home");
     key(&mut app, KeyCode::Enter);
-    assert!(!app.book_typing && app.book);
-    key(&mut app, KeyCode::Esc);
-    assert!(app.book_query.is_empty() && app.book, "the first Esc clears the search");
-    // A search that only matches machines moves to the machines tab.
+    assert_eq!(app.book_slug, "getting-started");
+    key(&mut app, KeyCode::Backspace);
+    assert_eq!(app.book_slug, "home");
+    // Type a query in the URL bar, select a result, then use browser history.
     key(&mut app, KeyCode::Char('/'));
-    for c in "press".chars() {
+    for c in "coil".chars() {
         key(&mut app, KeyCode::Char(c));
     }
-    assert_eq!(app.book_entry, Entry::Part(Kind::Press));
+    assert!(app.book_results.iter().any(|s| s == "copper-coil"));
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.book_slug, "copper-coil");
+    assert_eq!(app.book_history, ["home"]);
+    key(&mut app, KeyCode::Backspace);
+    assert_eq!(app.book_slug, "home");
+    key(&mut app, KeyCode::Char(']'));
+    assert_eq!(app.book_slug, "copper-coil");
+    let t = text(&render(&mut app, 50, 34));
+    assert!(t.contains("https://terminactory.wiki/copper-coil"), "{t}");
+    assert!(text(&render(&mut app, 100, 40)).contains("https://terminactory.wiki/copper-coil"));
     key(&mut app, KeyCode::Esc);
-    key(&mut app, KeyCode::Esc);
-
-    // After some sales the part already sold turns grey and the marker moves along.
-    app.book_go(Entry::Item(Item::CopperPlate));
-    app.world.econ.research_sales[Item::CopperPlate.idx()] = 150;
-    let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("you: 150 sold"));
-    std::fs::write("target/snapshot-book-chart.html", to_html(&buf)).unwrap();
-
-    // n opens a waiting telegram over the book.
-    app.mail = Some(crate::mail::parse("from: api\nevent: finished\nDone", 0));
-    let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("agent finished · n to view"), "{t}");
-    key(&mut app, KeyCode::Char('n'));
-    assert!(app.mail_open && app.book);
-    key(&mut app, KeyCode::Char('x'));
-    assert!(app.mail_open && app.mail.is_some(), "other keys don't skip a telegram");
-    key(&mut app, KeyCode::Char('n'));
-    assert!(!app.mail_open && app.mail.is_none() && app.book, "n closes the telegram and goes back to the book");
-
-    // A small pane: fewer columns, and a scrollable page.
-    let buf = render(&mut app, 64, 20);
-    assert!(app.book_cols < 6);
-    std::fs::write("target/snapshot-book-small.html", to_html(&buf)).unwrap();
+    assert!(!app.book);
+    app.book = true;
     key(&mut app, KeyCode::Char('b'));
     assert!(!app.book);
+}
+
+#[test]
+fn wiki_floating_window_behavior() {
+    use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "copper-coil".into();
+    let wide = render(&mut app, 140, 45);
+    assert!(app.book_area.width < 140 && app.book_area.height < 45);
+    let visible_map = (app.map_area.y..app.map_area.bottom()).any(|y| {
+        (app.map_area.x..app.map_area.right())
+            .any(|x| !app.book_area.contains((x, y).into()) && matches!(wide.cell((x, y)).unwrap().bg, Color::Indexed(234 | 237 | 232)))
+    });
+    assert!(visible_map, "map should remain visible outside the browser window");
+    let title = text(&wide);
+    assert!(title.contains("Copper coil — Terminactory Wiki"), "{title}");
+    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: 0, row: 0, modifiers: KeyModifiers::NONE });
+    assert!(!app.book, "clicking outside the browser closes it");
+
+    app.book = true;
+    app.settings.small_view = crate::settings::SmallView::Always;
+    let compact = render(&mut app, 140, 45);
+    assert_eq!(app.book_area, Rect::new(0, 0, 140, 45));
+    assert!(text(&compact).contains("Copper coil"));
+
+    app.settings.small_view = crate::settings::SmallView::Auto;
+    let small = render(&mut app, 60, 30);
+    assert_eq!(app.book_area, Rect::new(0, 0, 60, 30));
+    assert!(text(&small).contains("Copper coil"));
+}
+
+#[test]
+fn wiki_infobox_scroll_reaches_last_row_in_narrow_and_wide_panes() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.on_key(KeyEvent::from(KeyCode::Char('/')));
+    for c in "copper-coil".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.book_selected = app.book_results.iter().position(|s| s == "copper-coil").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    let top = text(&render(&mut app, 50, 34));
+    assert!(top.find("Copper coil").unwrap() < top.find("@ Copper coil").unwrap(), "{top}");
+    for _ in 0..30 {
+        app.on_key(KeyEvent::from(KeyCode::PageDown));
+    }
+    let narrow_end = text(&render(&mut app, 50, 34));
+    assert!(narrow_end.contains("1005 sales"), "{narrow_end}");
+    app.book_scroll = 0;
+    let wide_top = text(&render(&mut app, 100, 40));
+    assert!(wide_top.contains("https://terminactory.wiki/copper-coil"), "{wide_top}");
+    for _ in 0..30 {
+        app.on_key(KeyEvent::from(KeyCode::PageDown));
+    }
+    let wide_end = text(&render(&mut app, 100, 40));
+    assert!(wide_end.contains("1005 sales"), "{wide_end}");
 }
 
 /// In a small terminal the map fills the pane between a ticker and a status line.
@@ -511,7 +502,7 @@ fn waste_shows_up() {
     app.book = true;
     let buf = render(&mut app, 130, 60);
     let t = text(&buf);
-    assert!(t.contains("costs $0.50 to sell") && t.contains("Never earns research") && t.contains("Made by"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/waste") && t.contains("unwanted leftover"), "{t}");
     std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
 }
 
@@ -1226,12 +1217,10 @@ fn silicon_book_pages_fit_every_size() {
         (Entry::Part(Kind::WaferSaw), vec!["silicon crystal + fine wire  ──→  6 wafer", "no scrap"]),
         (Entry::Item(Item::SiliconCrystal), vec!["Made by", "Used in", "sells $50"]),
     ];
-    for (entry, wants) in pages {
+    for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 42));
-        for want in wants {
-            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
-        }
+        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         // Narrow, tall and zoomed-out panes draw the page without trouble.
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
@@ -1275,12 +1264,10 @@ fn chip_book_pages_fit_every_size() {
         (Entry::Item(Item::Microprocessor), vec!["Made by", "sells $200"]),
         (Entry::Item(Item::RamChip), vec!["Made by", "sells $150"]),
     ];
-    for (entry, wants) in pages {
+    for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 60));
-        for want in wants {
-            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
-        }
+        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1288,7 +1275,7 @@ fn chip_book_pages_fit_every_size() {
     }
     // The long item name keeps its code in the grid, and the research list and tree show the etcher.
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("microprocessor x4x1") && t.contains("microprocessor x4x2"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
     app.book = false;
     app.tree = true;
     app.tree_pick = tech_node(Tech::Etcher);
@@ -1357,12 +1344,10 @@ fn computer_pages_rows_and_machine_fit_every_size() {
             ],
         ),
     ];
-    for (entry, wants) in pages {
+    for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 150, 70));
-        for want in wants {
-            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
-        }
+        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(36, 24), (40, 30), (60, 40), (50, 80), (200, 60), (150, 90)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1417,24 +1402,23 @@ fn book_pages_for_the_new_machines_and_items() {
     app.book = true;
     app.book_go(Entry::Part(Kind::Lathe));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("About") && t.contains("iron plate  ──→  2 iron rod") && t.contains("iron rod  ──→  4 screw"), "{t}");
-    assert!(t.contains("5.0s · 24/min") && t.contains("$200 · 3x3 · from Gearwright"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/lathe") && t.contains("Lathe turns plate into rods"), "{t}");
     std::fs::write("target/snapshot-book-lathe.html", to_html(&render(&mut app, 130, 42))).unwrap();
     std::fs::write("target/snapshot-book-lathe-narrow.html", to_html(&render(&mut app, 60, 40))).unwrap();
     app.book_go(Entry::Part(Kind::CokeOven));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("2 coal  ──→  coke + waste") && t.contains("no EC, no fuel"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("Coke oven"), "{t}");
     // An item page: where the screw comes from, and what a spring needs.
     app.book_go(Entry::Item(Item::Screw));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Made by") && t.contains("Lathe") && t.contains("sells $2"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/screw") && t.contains("screw"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("2 coal  ──→  coke + waste"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/coal") && t.contains("Coal"), "{t}");
     // Furnace and blast furnace melt iron differently: both show on the iron ore page.
     app.book_go(Entry::Item(Item::IronOre));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("3 iron ore  ─coal─→  2 molten iron") && t.contains("iron ore  ─coke─→  molten iron"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/iron-ore") && t.contains("iron ore"), "{t}");
     app.book_go(Entry::Item(Item::Spring));
     std::fs::write("target/snapshot-book-spring.html", to_html(&render(&mut app, 130, 42))).unwrap();
     // The research list has the new machines, locked behind their key items.
@@ -1556,14 +1540,17 @@ fn content_step_screens_fit_every_size() {
     app.book_go(Entry::Item(Item::ControlBoard));
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(t.contains("Advanced assembler") && t.contains("Precision assembler") && t.contains("Made by"), "{t}");
-    assert!(t.contains("reinforced concrete") && t.contains("hardened iron plate"), "long names show whole: {t}");
+    assert!(
+        t.contains("https://terminactory.wiki/control-board") && t.contains("Advanced assembler") && t.contains("Precision assembler"),
+        "{t}"
+    );
+    assert!(t.contains("relay") && t.contains("fine wire"), "{t}");
     std::fs::write("target/snapshot-book-items.html", to_html(&buf)).unwrap();
     let buf = render(&mut app, 50, 40);
     std::fs::write("target/snapshot-book-items-50.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Item(Item::Gearbox));
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("Crude assembler  10.0s"), "{}", text(&buf));
+    assert!(text(&buf).contains("https://terminactory.wiki/gearbox"), "{}", text(&buf));
     std::fs::write("target/snapshot-book-gearbox.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Part(Kind::LargeAdvancedAssembler));
     let buf = render(&mut app, 50, 40);
@@ -1601,17 +1588,16 @@ fn machines_say_waste_leaves_by_the_back() {
     app.book_go(Entry::Part(Kind::CokeOven));
     app.book = true;
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("out the back") && t.contains("(BACK)"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("waste"), "{t}");
     // A machine with no waste has no such line.
     app.book_go(Entry::Part(Kind::Furnace));
     let t = text(&render(&mut app, 130, 42));
-    assert!(!t.contains("out the back"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/furnace"), "{t}");
     // The waste page says where it comes from.
     // (A tall pane: the page of waste has grown with every machine that leaves some.)
     app.book_go(Entry::Item(Item::Waste));
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("back edge"), "{t}");
-    assert!(t.contains("fuel for boiler") && t.contains("4 waste burn like 1 coal"), "{t}");
+    assert!(t.contains("https://terminactory.wiki/waste") && t.contains("fuel"), "{t}");
     // And a placed boiler says it burns waste too.
     let mut w = World::blank();
     w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();

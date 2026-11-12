@@ -184,9 +184,6 @@ impl Entry {
             Entry::Part(k) => k.name(),
         }
     }
-    pub fn is_part(self) -> bool {
-        matches!(self, Entry::Part(_))
-    }
     /// The pages on one tab (items, or machines), filtered by a search (case doesn't matter).
     pub fn list(query: &str, parts: bool) -> Vec<Entry> {
         let q = query.to_lowercase();
@@ -259,17 +256,21 @@ pub struct App {
     pub book: bool,
     pub book_entry: Entry,
     pub book_scroll: u16,
-    pub book_cols: usize,
     /// Search text (`/`), and whether keys are typing into it.
     pub book_query: String,
     pub book_typing: bool,
     /// Links on the page as last drawn (where, and where they go), grid cells and tabs too,
     /// and the pages Backspace goes back to.
     pub book_links: Vec<(Rect, Entry)>,
-    pub book_cells: Vec<(Rect, Entry)>,
-    pub book_back: Vec<Entry>,
-    /// The last item and the last machine looked at, so Tab goes back to them.
-    pub book_last: [Entry; 2],
+    pub book_urls: Vec<(Rect, String)>,
+    /// The browser window's last drawn bounds, used to dismiss it on an outside click.
+    pub book_area: Rect,
+    pub book_slug: String,
+    pub book_history: Vec<String>,
+    pub book_forward: Vec<String>,
+    pub book_selected: usize,
+    pub book_results: Vec<String>,
+    pub book_result_capacity: usize,
     /// "While you were away" summary waiting to be read.
     pub away: Option<String>,
     /// An agent message being read, and how far it's scrolled.
@@ -371,13 +372,17 @@ impl App {
             book: false,
             book_entry: Entry::Item(crate::sim::Item::CopperOre),
             book_scroll: 0,
-            book_cols: 1,
             book_query: String::new(),
             book_typing: false,
             book_links: Vec::new(),
-            book_cells: Vec::new(),
-            book_back: Vec::new(),
-            book_last: [Entry::Item(crate::sim::Item::CopperOre), Entry::Part(Kind::Drill)],
+            book_urls: Vec::new(),
+            book_area: Rect::default(),
+            book_slug: "home".into(),
+            book_history: Vec::new(),
+            book_forward: Vec::new(),
+            book_selected: 0,
+            book_results: Vec::new(),
+            book_result_capacity: 1,
             away: None,
             mail: None,
             mail_scroll: 0,
@@ -815,32 +820,74 @@ impl App {
         if let Some(e) = here {
             self.book_query.clear();
             self.book_show(e);
+        } else {
+            self.book_slug = "home".into();
+            self.book_scroll = 0;
         }
         self.book_scroll = 0;
-        self.book_back.clear();
+        self.book_history.clear();
+        self.book_forward.clear();
         self.book = true;
     }
 
     /// Shows a page (and so its tab), remembering it as that tab's last page.
     pub fn book_show(&mut self, e: Entry) {
         self.book_entry = e;
-        self.book_last[e.is_part() as usize] = e;
         self.book_scroll = 0;
+        self.book_slug = crate::wiki::slug(e.name());
+        self.book_selected = 0;
     }
 
     /// Goes to a page from a link, remembering this one for Backspace.
+    #[allow(dead_code)]
     pub fn book_go(&mut self, e: Entry) {
-        if e == self.book_entry {
-            return;
-        }
-        self.book_back.push(self.book_entry);
-        if !Entry::list(&self.book_query, e.is_part()).contains(&e) {
-            self.book_query.clear();
-        }
-        self.book_show(e);
+        let slug = crate::wiki::slug(e.name());
+        self.book_go_slug(&slug);
     }
 
-    /// Switches between the items tab and the machines tab.
+    fn book_go_slug(&mut self, slug: &str) {
+        if crate::wiki::page(slug).is_none() || slug == self.book_slug {
+            return;
+        }
+        self.book_history.push(self.book_slug.clone());
+        self.book_forward.clear();
+        self.book_slug = slug.to_string();
+        self.book_scroll = 0;
+        self.book_selected = 0;
+        if let Some(e) = Self::book_entry_for_slug(slug) {
+            self.book_entry = e;
+        }
+    }
+
+    fn book_entry_for_slug(slug: &str) -> Option<Entry> {
+        crate::sim::Item::ALL
+            .iter()
+            .copied()
+            .map(Entry::Item)
+            .chain(BOOK_PARTS.iter().copied().map(Entry::Part))
+            .find(|e| crate::wiki::slug(e.name()) == slug)
+    }
+    pub(crate) fn book_entry_for_slug_for_ui(slug: &str) -> Option<Entry> {
+        Self::book_entry_for_slug(slug)
+    }
+
+    fn book_search(&mut self) {
+        let q = self.book_query.to_lowercase();
+        self.book_results = if q.is_empty() {
+            Vec::new()
+        } else {
+            crate::wiki::PAGES
+                .iter()
+                .filter(|(slug, md)| {
+                    let title = md.lines().next().unwrap_or("");
+                    slug.contains(&q) || title.to_lowercase().contains(&q)
+                })
+                .map(|(s, _)| (*s).to_string())
+                .collect()
+        };
+        self.book_selected = self.book_selected.min(self.book_results.len().saturating_sub(1));
+    }
+
     /// Switches the production panel between its Production and History tabs.
     pub fn stats_tab(&mut self, history: bool) {
         self.stats_history = history;
@@ -858,57 +905,49 @@ impl App {
         true
     }
 
-    fn book_switch_tab(&mut self) {
-        let parts = !self.book_entry.is_part();
-        let list = Entry::list(&self.book_query, parts);
-        let last = self.book_last[parts as usize];
-        let e = if list.contains(&last) { Some(last) } else { list.first().copied() };
-        match e {
-            Some(e) => self.book_show(e),
-            // Nothing on the other tab matches the search: show all of it.
-            None => {
-                self.book_query.clear();
-                self.book_show(last);
-            }
-        }
-    }
-
+    #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
         if self.book_typing {
-            // Typing a search: letters filter the grid; Enter or Esc stop typing.
             match k.code {
-                KeyCode::Char(c) => self.book_query.push(c),
+                KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => self.book_query.push(c),
                 KeyCode::Backspace => {
                     self.book_query.pop();
                 }
-                KeyCode::Enter | KeyCode::Esc => self.book_typing = false,
+                KeyCode::Enter => {
+                    if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
+                        self.book_go_slug(&slug);
+                        self.book_query.clear();
+                        self.book_results.clear();
+                    }
+                    self.book_typing = false;
+                }
+                KeyCode::Up => {
+                    self.book_selected = self.book_selected.saturating_sub(1);
+                    if self.book_selected < self.book_scroll as usize {
+                        self.book_scroll = self.book_selected as u16;
+                    }
+                }
+                KeyCode::Down => {
+                    self.book_selected = (self.book_selected + 1).min(self.book_results.len().saturating_sub(1));
+                    if self.book_selected >= self.book_scroll as usize + self.book_result_capacity {
+                        self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
+                    }
+                }
+                KeyCode::Esc => self.book_typing = false,
                 _ => {}
             }
-            // Stay on this tab if anything here matches, otherwise try the other one.
-            let parts = self.book_entry.is_part();
-            let here = Entry::list(&self.book_query, parts);
-            let there = Entry::list(&self.book_query, !parts);
-            if !here.contains(&self.book_entry) {
-                if let Some(&first) = here.first().or(there.first()) {
-                    self.book_show(first);
-                }
-            }
+            self.book_search();
             return;
         }
-        let list = Entry::list(&self.book_query, self.book_entry.is_part());
-        let cols = self.book_cols.max(1);
-        let sel = list.iter().position(|e| *e == self.book_entry).unwrap_or(0);
-        let next = match (k.code, action) {
+        match (k.code, action) {
+            (KeyCode::Char('b'), _) | (_, Some(Action::Book | Action::Back)) => {
+                self.book = false;
+                return;
+            }
             (KeyCode::Char('/'), _) => {
                 self.book_typing = true;
-                return;
-            }
-            (KeyCode::Tab | KeyCode::BackTab, _) => {
-                self.book_switch_tab();
-                return;
-            }
-            (KeyCode::Esc, _) if !self.book_query.is_empty() => {
                 self.book_query.clear();
+                self.book_search();
                 return;
             }
             (KeyCode::PageUp, _) => {
@@ -920,23 +959,81 @@ impl App {
                 return;
             }
             (KeyCode::Backspace, _) => {
-                if let Some(e) = self.book_back.pop() {
-                    self.book_show(e);
+                if let Some(slug) = self.book_history.pop() {
+                    self.book_forward.push(self.book_slug.clone());
+                    self.book_slug = slug;
+                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                        self.book_entry = e;
+                    }
+                    self.book_scroll = 0;
                 }
                 return;
             }
-            (_, Some(Action::MoveLeft)) => sel.checked_sub(1),
-            (_, Some(Action::MoveRight)) => Some(sel + 1),
-            (_, Some(Action::MoveUp)) => sel.checked_sub(cols),
-            (_, Some(Action::MoveDown)) => Some(sel + cols),
-            (_, Some(Action::Book | Action::Back)) => {
-                self.book = false;
-                None
+            (KeyCode::Char(']'), _) => {
+                if let Some(slug) = self.book_forward.pop() {
+                    self.book_history.push(self.book_slug.clone());
+                    self.book_slug = slug;
+                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                        self.book_entry = e;
+                    }
+                    self.book_scroll = 0;
+                }
+                return;
             }
-            _ => None,
-        };
-        if let Some(&e) = next.and_then(|j| list.get(j)) {
-            self.book_show(e);
+            (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
+                if !self.book_query.is_empty() {
+                    self.book_selected = self.book_selected.saturating_sub(1);
+                    if self.book_selected < self.book_scroll as usize {
+                        self.book_scroll = self.book_selected as u16;
+                    }
+                } else if self.book_urls.is_empty() {
+                    self.book_scroll = self.book_scroll.saturating_sub(1);
+                } else if self.book_selected == 0 && self.book_scroll > 0 {
+                    self.book_scroll -= 1;
+                } else {
+                    self.book_selected = self.book_selected.saturating_sub(1);
+                }
+                return;
+            }
+            (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
+                if !self.book_query.is_empty() {
+                    self.book_selected = (self.book_selected + 1).min(self.book_results.len().saturating_sub(1));
+                    if self.book_selected >= self.book_scroll as usize + self.book_result_capacity {
+                        self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
+                    }
+                } else if !self.book_urls.is_empty() {
+                    if self.book_selected + 1 >= self.book_urls.len() && self.book_results.is_empty() {
+                        self.book_scroll += 1;
+                        self.book_selected = 0;
+                    } else {
+                        self.book_selected = (self.book_selected + 1).min(self.book_urls.len().saturating_sub(1));
+                    }
+                } else {
+                    self.book_scroll += 1;
+                }
+                return;
+            }
+            (KeyCode::Enter, _) => {
+                if !self.book_query.is_empty() {
+                    if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
+                        self.book_go_slug(&slug);
+                        self.book_query.clear();
+                        self.book_results.clear();
+                    }
+                } else if let Some((_, slug)) = self.book_urls.get(self.book_selected) {
+                    let slug = slug.clone();
+                    self.book_go_slug(&slug);
+                }
+                return;
+            }
+            (KeyCode::Char(c), _) if c.is_alphabetic() => {
+                self.book_typing = true;
+                self.book_query.clear();
+                self.book_query.push(c);
+                self.book_search();
+                return;
+            }
+            _ => {}
         }
     }
 
@@ -944,16 +1041,19 @@ impl App {
     /// shows that page; the wheel scrolls the page.
     fn book_mouse(&mut self, m: MouseEvent) {
         let at = ratatui::layout::Position::new(m.column, m.row);
+        let inside = self.book_area.contains(at);
         match m.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                if let Some(&(_, e)) = self.book_links.iter().find(|(r, _)| r.contains(at)) {
-                    self.book_go(e);
-                } else if let Some(&(_, e)) = self.book_cells.iter().find(|(r, _)| r.contains(at)) {
-                    self.book_show(e);
+                if !inside {
+                    self.book = false;
+                    return;
+                }
+                if let Some(slug) = self.book_urls.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
+                    self.book_go_slug(&slug);
                 }
             }
-            MouseEventKind::ScrollUp => self.book_scroll = self.book_scroll.saturating_sub(2),
-            MouseEventKind::ScrollDown => self.book_scroll += 2,
+            MouseEventKind::ScrollUp if inside => self.book_scroll = self.book_scroll.saturating_sub(2),
+            MouseEventKind::ScrollDown if inside => self.book_scroll += 2,
             _ => {}
         }
     }
