@@ -166,7 +166,7 @@ fn short_64x12() {
     let buf = render(&mut app, 64, 12);
     snapshot("short-64x12", &buf);
     let t = text(&buf);
-    let list = lines(&t).iter().filter(|l| ["✓", "○", "·", "●"].iter().any(|m| l.starts_with(&format!("│ {m} ")))).count();
+    let list = lines(&t).iter().filter(|l| ["✓", "○", "·", "●", "◔", "◑", "◕"].iter().any(|m| l.starts_with(&format!("│ {m} ")))).count();
     assert!(list >= 3, "{list} list rows: {t}");
     assert!(t.contains("Press") && t.contains("t/Esc close"), "{t}");
     app.tree = false;

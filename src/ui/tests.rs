@@ -1294,3 +1294,21 @@ fn long_telegrams_show_a_scrollbar() {
     let buf = render(&mut app, 130, 42);
     assert!(!buf.content.iter().any(|c| c.symbol() == "┃"), "no scrollbar for a short telegram");
 }
+
+/// A tech on its way to a free unlock shows a filling circle and how far along it is.
+#[test]
+fn research_rows_show_progress_toward_a_free_unlock() {
+    let mut app = App::new(World::new());
+    let row =
+        |app: &App| -> String { tree_row_spans(&app.world, Tech::Press, 20, false, false).iter().map(|s| s.content.to_string()).collect() };
+    assert!(row(&app).starts_with("○ "), "{}", row(&app));
+    let (item, n) = Tech::Press.milestone();
+    for (made, mark) in [(1, "◔"), (n as u64 / 2, "◑"), ((n as u64 * 3).div_ceil(4), "◕"), (n as u64 - 1, "◕")] {
+        app.world.econ.made[item.idx()] = made;
+        let r = row(&app);
+        assert!(r.starts_with(&format!("{mark} ")) && r.contains(&format!("{made}/{n}")), "{made}: {r}");
+    }
+    // Affordable still reads as ready, whatever the progress.
+    app.world.econ.research = Tech::Press.cost();
+    assert!(row(&app).starts_with("● "), "{}", row(&app));
+}

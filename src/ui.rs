@@ -2388,6 +2388,23 @@ fn grouped(v: f64) -> String {
     out
 }
 
+/// A tech partway to its free unlock: a circle filling a quarter at a time, with (made, needed).
+/// None before the first milestone item is made.
+fn milestone_mark(w: &World, t: Tech) -> Option<(&'static str, u64, u64)> {
+    let (item, n) = t.milestone();
+    let made = w.econ.made[item.idx()].min(n as u64);
+    let n = n as u64;
+    if made == 0 || n == 0 {
+        return None;
+    }
+    let mark = match made * 4 / n {
+        0 | 1 => "◔",
+        2 => "◑",
+        _ => "◕",
+    };
+    Some((mark, made, n))
+}
+
 /// One row on the research screen: a mark, the name, and what it costs or needs.
 fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bool) -> Vec<Span<'static>> {
     let rp = w.econ.research;
@@ -2402,10 +2419,18 @@ fn tree_row_spans(w: &World, t: Tech, name_w: usize, short: bool, very_short: bo
         ("·", dim, Span::styled(if short { format!("needs {key}") } else { format!("make {key} first") }, dim))
     } else if rp + 1e-9 >= t.cost() {
         ("●", Style::new().add_modifier(Modifier::BOLD), Span::styled(format!("{} RP", grouped(t.cost())), ready))
+    } else if let Some((mark, made, n)) = milestone_mark(w, t) {
+        // On the way to the free unlock: a filling circle, and how far along when there's room.
+        let text = if short { format!("{} RP", grouped(t.cost())) } else { format!("{} RP · {made}/{n}", grouped(t.cost())) };
+        (mark, Style::new(), Span::styled(text, saving))
     } else {
         ("○", Style::new(), Span::styled(format!("{} RP", grouped(t.cost())), saving))
     };
-    let mark_st = if mark == "●" { ready } else { ns };
+    let mark_st = match mark {
+        "●" => ready,
+        "◔" | "◑" | "◕" => Style::new().fg(Color::Green),
+        _ => ns,
+    };
     let name = format!("{:<name_w$}", fit(t.name(), name_w));
     if very_short {
         // A fixed status column: the full "needs X" is in the details under the list.
