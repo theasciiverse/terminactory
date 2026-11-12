@@ -129,13 +129,14 @@ pub fn max_slots(cat: Category) -> usize {
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
     use Kind::*;
     match cat {
-        // Create is crowded: five slots (drills, heat, shaping, assembling, water).
+        // Create is crowded: six slots (drills, heat, shaping, assembling, water, chips).
         Category::Create => &[
             &[Drill, BasicDrill, AdvancedDrill, LargeBasicDrill, LargeAdvancedDrill],
             &[Furnace, Molder, BlastFurnace, CokeOven, Kiln, LargeKiln],
             &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
             &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
             &[Pump, AdvancedPump, Mixer, Evacuator],
+            &[Etcher],
         ],
         // Pipes carry things, so they sit with the belts, in slot 5.
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
@@ -2282,6 +2283,7 @@ mod tests {
     fn pipes_have_transport_slot_five_and_pumps_keep_create_five() {
         assert_eq!(slots(Category::Transport)[4], &[Kind::Pipe]);
         assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer, Kind::Evacuator]);
+        assert_eq!(slots(Category::Create)[5], &[Kind::Etcher]);
         assert_eq!(Kind::Pipe.category(), Category::Transport);
         assert!(!parts_in(Category::Create).contains(&Kind::Pipe));
         assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost][..]]);

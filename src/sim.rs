@@ -215,6 +215,7 @@ pub enum Kind {
     LargeKiln,
     BasicSolar,
     Evacuator,
+    Etcher,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -241,7 +242,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 45] = [
+    pub const ALL: [Kind; 46] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -287,6 +288,7 @@ impl Kind {
         Kind::LargeKiln,
         Kind::BasicSolar,
         Kind::Evacuator,
+        Kind::Etcher,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -314,6 +316,7 @@ impl Kind {
             | Kind::LargeKiln
             | Kind::Mixer
             | Kind::Evacuator
+            | Kind::Etcher
             | Kind::AdvancedDrill
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
@@ -354,6 +357,7 @@ impl Kind {
             Kind::LargeKiln => "Large kiln",
             Kind::Mixer => "Mixer",
             Kind::Evacuator => "Evacuator",
+            Kind::Etcher => "Etcher",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
             Kind::LargeAdvancedDrill => "Large advanced drill",
@@ -405,6 +409,7 @@ impl Kind {
             Kind::LargeKiln => 7500.0,
             Kind::Mixer => 200.0,
             Kind::Evacuator => 3500.0,
+            Kind::Etcher => 25_000.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
             Kind::LargeAdvancedDrill => 2000.0,
@@ -446,7 +451,13 @@ impl Kind {
     /// Elevators can be built from 2x2 up to 8x8 (this is their smallest).
     pub fn base_dims(self) -> (i32, i32) {
         match self {
-            Kind::Furnace | Kind::TradePost | Kind::Lathe | Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::Welder => (3, 3),
+            Kind::Furnace
+            | Kind::TradePost
+            | Kind::Lathe
+            | Kind::AdvancedAssembler
+            | Kind::PrecisionAssembler
+            | Kind::Welder
+            | Kind::Etcher => (3, 3),
             Kind::Kiln => (3, 5),
             Kind::LargeKiln => (5, 7),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
@@ -500,6 +511,7 @@ impl Kind {
             Kind::Press => 2.0,
             Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
             Kind::Evacuator => 6.0,
+            Kind::Etcher => 24.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
@@ -582,7 +594,7 @@ impl Kind {
             Kind::Elevator | Kind::Kiln | Kind::LargeKiln => Some(Company::Underhill),
             Kind::FastBelt | Kind::BasicAssembler => Some(Company::Swiftline),
             Kind::AdvancedDrill | Kind::LargeBasicAssembler | Kind::LargeBasicDrill => Some(Company::Ampleworth),
-            Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill => {
+            Kind::AdvancedAssembler | Kind::PrecisionAssembler | Kind::LargeAdvancedAssembler | Kind::LargeAdvancedDrill | Kind::Etcher => {
                 Some(Company::LatticeFinch)
             }
             _ => Some(Company::Brannock),
@@ -597,6 +609,7 @@ impl Kind {
             Kind::AdvancedPump => Some(Tech::AdvancedPump),
             Kind::Mixer => Some(Tech::Mixer),
             Kind::Evacuator => Some(Tech::Evacuator),
+            Kind::Etcher => Some(Tech::Etcher),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
@@ -648,6 +661,7 @@ impl Kind {
             Kind::LargeKiln => &LARGE_KILN,
             Kind::Mixer => MIXER_RECIPES,
             Kind::Evacuator => EVACUATOR_RECIPES,
+            Kind::Etcher => ETCHER_RECIPES,
             Kind::CokeOven => COKE_OVEN_RECIPES,
             Kind::Crusher => CRUSHER_RECIPES,
             Kind::WireDrawer => WIRE_DRAWER_RECIPES,
@@ -982,6 +996,7 @@ impl Building {
             | Kind::LargeKiln
             | Kind::Mixer
             | Kind::Evacuator
+            | Kind::Etcher
             | Kind::CokeOven
             | Kind::Crusher
             | Kind::WireDrawer

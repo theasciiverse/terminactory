@@ -5,9 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 65;
-pub const COMPANIES: usize = 14;
-pub const TECHS: usize = 37;
+pub const ITEMS: usize = 70;
+pub const COMPANIES: usize = 15;
+pub const TECHS: usize = 38;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -76,6 +76,11 @@ pub enum Item {
     CircuitBoard,
     Transistor,
     TransistorBoard,
+    Etchant,
+    Mask,
+    Die,
+    Microprocessor,
+    RamChip,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -173,6 +178,11 @@ impl Item {
         Item::CircuitBoard,
         Item::Transistor,
         Item::TransistorBoard,
+        Item::Etchant,
+        Item::Mask,
+        Item::Die,
+        Item::Microprocessor,
+        Item::RamChip,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -247,6 +257,12 @@ impl Item {
             // The x3x1: the next microprocessor after the tube board (x2x1).
             Item::TransistorBoard => "transistor board",
             Item::Transistor => "transistor",
+            Item::Etchant => "etchant",
+            Item::Mask => "mask",
+            Item::Die => "die",
+            // The x4x1: the code is in the name because an x4x2 microprocessor comes after it.
+            Item::Microprocessor => "microprocessor (x4x1)",
+            Item::RamChip => "RAM chip",
         }
     }
     pub fn price(self) -> f64 {
@@ -317,6 +333,11 @@ impl Item {
             Item::CircuitBoard => 60.0,
             Item::Transistor => 42.0,
             Item::TransistorBoard => 450.0,
+            Item::Etchant => 2.0,
+            Item::Mask => 40.0,
+            Item::Die => 68.0,
+            Item::Microprocessor => 200.0,
+            Item::RamChip => 150.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -392,6 +413,11 @@ impl Item {
             Item::CircuitBoard => c(120.0, 0.996, 0.06),
             Item::Transistor => c(84.0, 0.996, 0.06),
             Item::TransistorBoard => c(900.0, 0.998, 0.08),
+            Item::Etchant => c(10.0, 0.98, 0.02),
+            Item::Mask => c(80.0, 0.995, 0.05),
+            Item::Die => c(136.0, 0.996, 0.06),
+            Item::Microprocessor => c(400.0, 0.997, 0.07),
+            Item::RamChip => c(300.0, 0.997, 0.07),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
@@ -422,6 +448,7 @@ pub enum Company {
     LatticeFinch,
     Sablon,
     Halverson,
+    Meridian,
 }
 
 #[cfg(test)]
@@ -445,6 +472,7 @@ impl Company {
         Company::LatticeFinch,
         Company::Sablon,
         Company::Halverson,
+        Company::Meridian,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -465,6 +493,7 @@ impl Company {
             Company::LatticeFinch => "Lattice & Finch",
             Company::Sablon => "Sablon Glassworks",
             Company::Halverson => "Halverson Smelting",
+            Company::Meridian => "Meridian Instruments",
         }
     }
     /// The industry it belongs to, for the story.
@@ -479,6 +508,7 @@ impl Company {
             Company::Ampleworth | Company::LatticeFinch => "Motors & Chips",
             Company::Sablon => "Tubes & Glass",
             Company::Halverson => "Silicon & Wafers",
+            Company::Meridian => "Chips & Instruments",
         }
     }
     /// What opens this company: the first of these to be made. Empty means it is open from
@@ -505,6 +535,8 @@ impl Company {
             Company::Sablon => &[Made::Item(Item::Tube)],
             // Crude oil will be a second key when the oil plan arrives.
             Company::Halverson => &[Made::Item(Item::SiliconIngot)],
+            // Plastic will be a second key when the oil plan arrives.
+            Company::Meridian => &[Made::Item(Item::Microprocessor)],
         }
     }
     /// The letter a company sends when it opens. `key` is the key that opened it, so a company
@@ -522,7 +554,8 @@ impl Company {
             Company::Gearwright => "A gear with teeth like that deserves a proper home. Gearwright's crude assembler builds valves, gauges, lamps, relays and gearboxes, patiently. Our lathe turns plate into rods and screws, and steel into steel rods and bearings.",
             Company::Swiftline => "A gearbox! Now that's something that turns. Swiftline belts move twice what Brannock's do, and our basic assembler builds electric motors and pistons. Tell the sisters we said hello.",
             Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
-            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the etcher, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::Meridian => "Your very first chip! We are all friends here. Meridian has been waiting for you, and we brought snacks.",
             Company::Halverson => "Silicon! A lovely byproduct of sand. We have many opportunities for the scrap. Do keep the waste coming; we find it charming.",
             Company::Sablon => "Glass, wire, and the air taken out. Nothing is as patient as a tube. Sablon has blown glass for a hundred years and never once hurried it. Our evacuator pulls the air out with a jet of water from a pipe: two tubes a run, no waste, no fire.",
         }
@@ -595,6 +628,7 @@ pub enum Tech {
     Blueprints,
     UpgradePlanner,
     Evacuator,
+    Etcher,
 }
 
 impl Tech {
@@ -636,6 +670,7 @@ impl Tech {
         Tech::Blueprints,
         Tech::UpgradePlanner,
         Tech::Evacuator,
+        Tech::Etcher,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -679,6 +714,7 @@ impl Tech {
             Tech::Blueprints => "Blueprints",
             Tech::UpgradePlanner => "Upgrade planner",
             Tech::Evacuator => "Evacuator",
+            Tech::Etcher => "Etcher",
         }
     }
     pub fn about(self) -> &'static str {
@@ -707,7 +743,7 @@ impl Tech {
             Tech::CokeOven => "bakes coal into coke on its own, no fire needed (leaving waste out the back)",
             Tech::Lathe => "turns plate into rods and rods into screws, and steel into steel rods and bearings",
             Tech::RollingMill => "rolls copper or iron plate into sheets, and steel into steel sheets and girders",
-            Tech::Mixer => "mixes sand, stone and water from a pipe into concrete, and concrete and rod into reinforced concrete",
+            Tech::Mixer => "mixes sand, stone and water from a pipe into concrete, and concrete and rod into reinforced concrete; coal, sand and water into etchant",
             Tech::AdvancedPump => "a 2x2 pump that gives four times the water",
             Tech::Welder => "welds steel into boiler shells, silo shells and frames (only draws EC while it works)",
             Tech::BasicAssembler => "a 2x2 assembler that runs crude recipes twice as fast, and builds electric motors and pistons",
@@ -716,7 +752,7 @@ impl Tech {
             Tech::AdvancedAssembler => "a 3x3 assembler, four times the crude speed, that also builds control boards",
             Tech::LargeBasicAssembler => "a 5x5 assembler for the big goods: pump units and engine blocks",
             Tech::LargeBasicDrill => "an 8x8 drill that mines 5 times a basic drill (one belt's worth), and burns 10 times the coal",
-            Tech::PrecisionAssembler => "a 3x3 assembler that builds control boards fastest, and later chips",
+            Tech::PrecisionAssembler => "a 3x3 assembler that builds microprocessors (x4x1) and RAM chips, and control boards fastest",
             Tech::LargeAdvancedAssembler => "a 5x5 assembler for the biggest goods: generators, panels, drilling rigs and steam tractors",
             Tech::LargeAdvancedDrill => "an 8x8 drill on EC that mines 5 times an advanced drill (one fast belt's worth)",
             Tech::BasicSolar => "a 2x2 solar panel that gives 20 EC and reaches 4 tiles, twice the cheap one; it still joins other panels only through poles",
@@ -724,6 +760,7 @@ impl Tech {
             Tech::UpgradePlanner => "swap every belt, drill, panel and assembler in an area (c, then u) for its next version, paying only the difference in price",
             Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 20 seconds: four kilns in one machine",
             Tech::Evacuator => "pulls the air out of glass with a water jet from a pipe: two tubes a run, no waste, no fire",
+            Tech::Etcher => "a 3x3 machine on EC that etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
         }
     }
     pub fn company(self) -> Company {
@@ -744,7 +781,7 @@ impl Tech {
             Tech::CokeOven => Company::Cinderhall,
             Tech::Lathe => Company::Gearwright,
             Tech::AdvancedDrill | Tech::LargeBasicAssembler | Tech::LargeBasicDrill => Company::Ampleworth,
-            Tech::AdvancedAssembler | Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill => {
+            Tech::AdvancedAssembler | Tech::PrecisionAssembler | Tech::LargeAdvancedAssembler | Tech::LargeAdvancedDrill | Tech::Etcher => {
                 Company::LatticeFinch
             }
         }
@@ -776,7 +813,8 @@ impl Tech {
             | Tech::LargeAdvancedAssembler
             | Tech::LargeAdvancedDrill
             | Tech::LargeKiln
-            | Tech::Evacuator => Category::Create,
+            | Tech::Evacuator
+            | Tech::Etcher => Category::Create,
             Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
@@ -833,6 +871,8 @@ impl Tech {
             Tech::LargeAdvancedAssembler => 100_000.0,
             // Processor stage, the first of the tubes.
             Tech::Evacuator => 30_000.0,
+            // Past the large advanced assembler's price: the etcher is the way into chips proper.
+            Tech::Etcher => 80_000.0,
         }
     }
     /// The free way to unlock: make this many of an item (nothing is used up).
@@ -876,6 +916,7 @@ impl Tech {
             Tech::Blueprints => (Item::CopperPlate, 1500),
             Tech::UpgradePlanner => (Item::Gearbox, 60),
             Tech::Evacuator => (Item::Tube, 40),
+            Tech::Etcher => (Item::TransistorBoard, 60),
         }
     }
 }
@@ -909,6 +950,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::BasicAssembler,
             Tech::AdvancedAssembler,
             Tech::PrecisionAssembler,
+            Tech::Etcher,
             Tech::LargeBasicAssembler,
             Tech::LargeAdvancedAssembler,
         ],
@@ -935,50 +977,52 @@ pub enum Node {
 
 /// The research tree, read left to right: (node, parent).
 pub const TREE: &[(Node, Option<usize>)] = &[
-    (Node::Start, None),                                    // 0
-    (Node::Tech(Tech::Press), Some(0)),                     // 1
-    (Node::Key(Made::Item(Item::CopperWire)), Some(1)),     // 2
-    (Node::Tech(Tech::BasicDrill), Some(2)),                // 3
-    (Node::Tech(Tech::Crusher), Some(2)),                   // 4
-    (Node::Key(Made::Item(Item::CopperCoil)), Some(2)),     // 5
-    (Node::Tech(Tech::Steam), Some(5)),                     // 6
-    (Node::Tech(Tech::WireDrawer), Some(5)),                // 7
-    (Node::Tech(Tech::Winder), Some(5)),                    // 8
-    (Node::Key(Made::Item(Item::CopperPipe)), Some(1)),     // 9
-    (Node::Tech(Tech::Pumps), Some(9)),                     // 10
-    (Node::Tech(Tech::Mixer), Some(9)),                     // 11
-    (Node::Tech(Tech::AdvancedPump), Some(9)),              // 12
-    (Node::Key(Made::Item(Item::Concrete)), Some(11)),      // 13
-    (Node::Tech(Tech::Excavation), Some(13)),               // 14
-    (Node::Tech(Tech::Kiln), Some(13)),                     // 15
-    (Node::Tech(Tech::Coking), Some(0)),                    // 16
-    (Node::Key(Made::Item(Item::Coke)), Some(16)),          // 17
-    (Node::Tech(Tech::BlastFurnace), Some(17)),             // 18
-    (Node::Tech(Tech::CokeOven), Some(17)),                 // 19
-    (Node::Key(Made::Item(Item::SteelGirder)), Some(18)),   // 20
-    (Node::Tech(Tech::SupportBeams), Some(20)),             // 21
-    (Node::Tech(Tech::RollingMill), Some(20)),              // 22
-    (Node::Tech(Tech::Welder), Some(20)),                   // 23
-    (Node::Key(Made::Item(Item::IronGear)), Some(1)),       // 24: iron plate has a job from the start
-    (Node::Tech(Tech::Lathe), Some(24)),                    // 25
-    (Node::Tech(Tech::Assembler), Some(24)),                // 26
-    (Node::Key(Made::Item(Item::Gearbox)), Some(26)),       // 27
-    (Node::Tech(Tech::FastBelts), Some(27)),                // 28
-    (Node::Tech(Tech::BasicAssembler), Some(27)),           // 29
-    (Node::Key(Made::Item(Item::ElectricMotor)), Some(29)), // 30
-    (Node::Tech(Tech::AdvancedDrill), Some(30)),            // 31
-    (Node::Tech(Tech::LargeBasicDrill), Some(30)),          // 32
-    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),      // 33
-    (Node::Key(Made::Item(Item::ControlBoard)), Some(26)),  // 34: hand-wired in the crude assembler
-    (Node::Tech(Tech::AdvancedAssembler), Some(34)),        // 35
-    (Node::Tech(Tech::PrecisionAssembler), Some(34)),       // 36
-    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),       // 37
-    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),   // 38
-    (Node::Tech(Tech::LargeKiln), Some(15)),                // 39: beside the kiln it grows from
-    (Node::Tech(Tech::BasicSolar), Some(5)),                // 40: under the copper coil, with the steam engine
-    (Node::Key(Made::Item(Item::Tube)), Some(34)),          // 41: baked in the kiln, from the lamps a board's maker already has
-    (Node::Tech(Tech::Evacuator), Some(41)),                // 42
+    (Node::Start, None),                                     // 0
+    (Node::Tech(Tech::Press), Some(0)),                      // 1
+    (Node::Key(Made::Item(Item::CopperWire)), Some(1)),      // 2
+    (Node::Tech(Tech::BasicDrill), Some(2)),                 // 3
+    (Node::Tech(Tech::Crusher), Some(2)),                    // 4
+    (Node::Key(Made::Item(Item::CopperCoil)), Some(2)),      // 5
+    (Node::Tech(Tech::Steam), Some(5)),                      // 6
+    (Node::Tech(Tech::WireDrawer), Some(5)),                 // 7
+    (Node::Tech(Tech::Winder), Some(5)),                     // 8
+    (Node::Key(Made::Item(Item::CopperPipe)), Some(1)),      // 9
+    (Node::Tech(Tech::Pumps), Some(9)),                      // 10
+    (Node::Tech(Tech::Mixer), Some(9)),                      // 11
+    (Node::Tech(Tech::AdvancedPump), Some(9)),               // 12
+    (Node::Key(Made::Item(Item::Concrete)), Some(11)),       // 13
+    (Node::Tech(Tech::Excavation), Some(13)),                // 14
+    (Node::Tech(Tech::Kiln), Some(13)),                      // 15
+    (Node::Tech(Tech::Coking), Some(0)),                     // 16
+    (Node::Key(Made::Item(Item::Coke)), Some(16)),           // 17
+    (Node::Tech(Tech::BlastFurnace), Some(17)),              // 18
+    (Node::Tech(Tech::CokeOven), Some(17)),                  // 19
+    (Node::Key(Made::Item(Item::SteelGirder)), Some(18)),    // 20
+    (Node::Tech(Tech::SupportBeams), Some(20)),              // 21
+    (Node::Tech(Tech::RollingMill), Some(20)),               // 22
+    (Node::Tech(Tech::Welder), Some(20)),                    // 23
+    (Node::Key(Made::Item(Item::IronGear)), Some(1)),        // 24: iron plate has a job from the start
+    (Node::Tech(Tech::Lathe), Some(24)),                     // 25
+    (Node::Tech(Tech::Assembler), Some(24)),                 // 26
+    (Node::Key(Made::Item(Item::Gearbox)), Some(26)),        // 27
+    (Node::Tech(Tech::FastBelts), Some(27)),                 // 28
+    (Node::Tech(Tech::BasicAssembler), Some(27)),            // 29
+    (Node::Key(Made::Item(Item::ElectricMotor)), Some(29)),  // 30
+    (Node::Tech(Tech::AdvancedDrill), Some(30)),             // 31
+    (Node::Tech(Tech::LargeBasicDrill), Some(30)),           // 32
+    (Node::Tech(Tech::LargeBasicAssembler), Some(30)),       // 33
+    (Node::Key(Made::Item(Item::ControlBoard)), Some(26)),   // 34: hand-wired in the crude assembler
+    (Node::Tech(Tech::AdvancedAssembler), Some(34)),         // 35
+    (Node::Tech(Tech::PrecisionAssembler), Some(34)),        // 36
+    (Node::Tech(Tech::LargeAdvancedDrill), Some(34)),        // 37
+    (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),    // 38
+    (Node::Tech(Tech::LargeKiln), Some(15)),                 // 39: beside the kiln it grows from
+    (Node::Tech(Tech::BasicSolar), Some(5)),                 // 40: under the copper coil, with the steam engine
+    (Node::Key(Made::Item(Item::Tube)), Some(34)),           // 41: baked in the kiln, from the lamps a board's maker already has
+    (Node::Tech(Tech::Evacuator), Some(41)),                 // 42
     (Node::Key(Made::Item(Item::SiliconIngot)), Some(15)), // 43: sand and coke in a blast furnace, cast in a molder; under the kiln that fires its dopant
+    (Node::Tech(Tech::Etcher), Some(34)),                  // 44: beside the precision assembler, under the control board
+    (Node::Key(Made::Item(Item::Microprocessor)), Some(44)), // 45: a die, ceramic and fine wire in a precision assembler
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -1431,11 +1475,23 @@ pub const ADVANCED_RECIPES: &[Recipe] = &[
         None,
         'Y',
     ),
+    item_recipe("mask", &[(Item::Glass, 1), (Item::CopperSheet, 1), (Item::FineWire, 2)], &[(Item::Mask, 1)], 600, None, None, 'S'),
 ];
 
-/// Precision tier (precision assembler only). Nothing yet: the later processors go here, and
-/// the precision assembler runs the advanced tier twice as fast meanwhile.
-pub const PRECISION_RECIPES: &[Recipe] = &[];
+/// Precision tier (precision assembler only): the x4x1 microprocessor and RAM. It also runs the
+/// advanced tier twice as fast.
+pub const PRECISION_RECIPES: &[Recipe] = &[
+    item_recipe(
+        "microprocessor (x4x1)",
+        &[(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 4)],
+        &[(Item::Microprocessor, 1)],
+        600,
+        None,
+        None,
+        'M',
+    ),
+    item_recipe("RAM chip", &[(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 2)], &[(Item::RamChip, 1)], 600, None, None, 'R'),
+];
 
 /// Large basic tier (large assemblers): the big goods, 20 s each.
 pub const LARGE_BASIC_RECIPES: &[Recipe] = &[
@@ -1559,6 +1615,18 @@ pub const EVACUATOR_RECIPES: &[Recipe] = &[Recipe {
     tag: 't',
 }];
 
+/// The etcher prints a mask's pattern onto a doped wafer with etchant, and cuts out dies. The
+/// scrap is a product, not waste: it sells, and will remelt.
+pub const ETCHER_RECIPES: &[Recipe] = &[item_recipe(
+    "die",
+    &[(Item::DopedWafer, 1), (Item::Mask, 1), (Item::Etchant, 1)],
+    &[(Item::Die, 2), (Item::SiliconScrap, 2)],
+    900,
+    None,
+    None,
+    'D',
+)];
+
 /// The mixer takes water from a pipe, and items from belts.
 pub const MIXER_RECIPES: &[Recipe] = &[
     Recipe {
@@ -1582,5 +1650,17 @@ pub const MIXER_RECIPES: &[Recipe] = &[
         fuel: None,
         needs: None,
         tag: 'r',
+    },
+    // Coal, sand and water make a lot of etchant and a little waste, out the back.
+    Recipe {
+        name: "etchant",
+        inputs: &[(Item::Coal, 1), (Item::Sand, 1)],
+        outputs: &[(Item::Etchant, 2), (Item::Waste, 1)],
+        fluid_in: Some((Fluid::Water, 1)),
+        fluid_out: None,
+        ticks: 300,
+        fuel: None,
+        needs: None,
+        tag: 'e',
     },
 ];

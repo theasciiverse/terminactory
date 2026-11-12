@@ -344,6 +344,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"Etcher\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"die\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Evacuator\"",
               "rr": "int",
               "size": "int",
@@ -1054,7 +1077,7 @@
   },
   "progress": {
     "opened": {
-      "len": 14,
+      "len": 15,
       "of": [
         "\"Ampleworth\"",
         "\"Ashgrove\"",
@@ -1065,6 +1088,7 @@
         "\"Hollowmere\"",
         "\"Kettering\"",
         "\"LatticeFinch\"",
+        "\"Meridian\"",
         "\"Pillar\"",
         "\"Sablon\"",
         "\"Swiftline\"",
@@ -1073,7 +1097,7 @@
       ]
     },
     "researched": {
-      "len": 37,
+      "len": 38,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1087,6 +1111,7 @@
         "\"CokeOven\"",
         "\"Coking\"",
         "\"Crusher\"",
+        "\"Etcher\"",
         "\"Evacuator\"",
         "\"Excavation\"",
         "\"FastBelts\"",

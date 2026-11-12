@@ -131,6 +131,10 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
     // Nor silicon: no Halverson, no silicon items or molten silicon, and still format 6.
     assert!(!text.contains("Halverson") && !text.contains("MoltenSilicon") && !text.contains("Silicon") && !text.contains("Wafer"));
     assert!(!l.progress.is_open(Company::Halverson));
+    // Nor chips: no Meridian, no etcher, no etchant, masks, dies or chips, and still format 6.
+    assert!(!text.contains("Meridian") && !text.contains("Etcher") && !text.contains("Etchant") && !text.contains("Microprocessor"));
+    assert!(!text.contains("\"Mask\"") && !text.contains("\"Die\"") && !text.contains("RamChip"));
+    assert!(!l.progress.is_open(Company::Meridian) && !l.progress.has(Tech::Etcher));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }
