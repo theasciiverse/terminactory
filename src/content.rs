@@ -5,9 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 74;
+pub const ITEMS: usize = 78;
 pub const COMPANIES: usize = 15;
-pub const TECHS: usize = 42;
+pub const TECHS: usize = 43;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -85,6 +85,10 @@ pub enum Item {
     FineMask,
     FineDie,
     FineMicroprocessor,
+    Keyboard,
+    DiskDrive,
+    Mainboard,
+    Computer,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -191,6 +195,10 @@ impl Item {
         Item::FineMask,
         Item::FineDie,
         Item::FineMicroprocessor,
+        Item::Keyboard,
+        Item::DiskDrive,
+        Item::Mainboard,
+        Item::Computer,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -276,6 +284,10 @@ impl Item {
             Item::FineDie => "fine die",
             // The x4x2: the same four-by-one word as the x4x1, finer.
             Item::FineMicroprocessor => "microprocessor (x4x2)",
+            Item::Keyboard => "keyboard",
+            Item::DiskDrive => "disk drive",
+            Item::Mainboard => "mainboard",
+            Item::Computer => "computer",
         }
     }
     pub fn price(self) -> f64 {
@@ -355,6 +367,10 @@ impl Item {
             Item::FineMask => 90.0,
             Item::FineDie => 140.0,
             Item::FineMicroprocessor => 420.0,
+            Item::Keyboard => 260.0,
+            Item::DiskDrive => 1100.0,
+            Item::Mainboard => 1800.0,
+            Item::Computer => 11_000.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -439,6 +455,11 @@ impl Item {
             Item::FineMask => c(180.0, 0.995, 0.06),
             Item::FineDie => c(280.0, 0.996, 0.07),
             Item::FineMicroprocessor => c(840.0, 0.997, 0.08),
+            Item::Keyboard => c(520.0, 0.997, 0.06),
+            Item::DiskDrive => c(2200.0, 0.997, 0.08),
+            Item::Mainboard => c(3600.0, 0.997, 0.08),
+            // The branch's crown item: same high floor as the drilling rig and the steam tractor.
+            Item::Computer => c(22_000.0, 0.99, 0.3),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
@@ -654,6 +675,7 @@ pub enum Tech {
     CrystalGrower,
     WaferSaw,
     FineEtcher,
+    LargePrecisionAssembler,
 }
 
 impl Tech {
@@ -700,6 +722,7 @@ impl Tech {
         Tech::CrystalGrower,
         Tech::WaferSaw,
         Tech::FineEtcher,
+        Tech::LargePrecisionAssembler,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -748,6 +771,7 @@ impl Tech {
             Tech::CrystalGrower => "Crystal grower",
             Tech::WaferSaw => "Wafer saw",
             Tech::FineEtcher => "Fine etcher",
+            Tech::LargePrecisionAssembler => "Large prec. assembler",
         }
     }
     pub fn about(self) -> &'static str {
@@ -796,6 +820,7 @@ impl Tech {
             Tech::Etcher => "a 3x3 machine on EC that etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
             Tech::ArcFurnace => "a 3x3 furnace on EC alone, no fuel: melts sand to silicon with half the blast furnace's waste, and remelts silicon scrap",
             Tech::CrystalGrower => "a 2x4 machine on EC that grows silicon crystals from ingots, slowly: 20 seconds each",
+            Tech::LargePrecisionAssembler => "a 5x5 assembler that builds the computer, and the large advanced goods twice as fast; nothing below",
             Tech::FineEtcher => "a 3x5 machine on EC that etches a fine die and a spare die from each wafer with a fine mask: no scrap, but very hungry",
             Tech::WaferSaw => "a 2x1 saw on EC that cuts a silicon crystal into 6 wafers with a fine wire: no scrap",
         }
@@ -810,7 +835,7 @@ impl Tech {
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
             Tech::Evacuator => Company::Sablon,
-            Tech::FineEtcher => Company::Meridian,
+            Tech::FineEtcher | Tech::LargePrecisionAssembler => Company::Meridian,
             Tech::ArcFurnace | Tech::CrystalGrower | Tech::WaferSaw => Company::Halverson,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler | Tech::UpgradePlanner => Company::Swiftline,
@@ -857,7 +882,8 @@ impl Tech {
             | Tech::ArcFurnace
             | Tech::CrystalGrower
             | Tech::WaferSaw
-            | Tech::FineEtcher => Category::Create,
+            | Tech::FineEtcher
+            | Tech::LargePrecisionAssembler => Category::Create,
             Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
@@ -920,8 +946,10 @@ impl Tech {
             Tech::ArcFurnace => 40_000.0,
             Tech::CrystalGrower => 45_000.0,
             Tech::WaferSaw => 35_000.0,
-            // Meridian's one machine: past the etcher, a chip company's price for finer dies.
+            // Meridian's first machine: past the etcher, a chip company's price for finer dies.
             Tech::FineEtcher => 150_000.0,
+            // The computer's machine: the biggest price on the shelf.
+            Tech::LargePrecisionAssembler => 300_000.0,
         }
     }
     /// The free way to unlock: make this many of an item (nothing is used up).
@@ -970,6 +998,7 @@ impl Tech {
             Tech::CrystalGrower => (Item::SiliconIngot, 200),
             Tech::WaferSaw => (Item::Wafer, 100),
             Tech::FineEtcher => (Item::Microprocessor, 100),
+            Tech::LargePrecisionAssembler => (Item::Mainboard, 40),
         }
     }
 }
@@ -1010,6 +1039,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::WaferSaw,
             Tech::LargeBasicAssembler,
             Tech::LargeAdvancedAssembler,
+            Tech::LargePrecisionAssembler,
         ],
     ),
     ("Drilling", &[Tech::BasicDrill, Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeAdvancedDrill]),
@@ -1084,6 +1114,7 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::CrystalGrower), Some(43)),           // 47
     (Node::Tech(Tech::WaferSaw), Some(43)),                // 48
     (Node::Tech(Tech::FineEtcher), Some(45)),              // 49: Meridian's machine, under the x4x1 that opens it
+    (Node::Tech(Tech::LargePrecisionAssembler), Some(45)), // 50: beside the fine etcher
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -1403,6 +1434,15 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 600, None, None, 'B'),
     item_recipe("transformer", &[(Item::CopperCoil, 2), (Item::IronSheet, 4)], &[(Item::Transformer, 1)], 600, None, None, 'X'),
     item_recipe(
+        "keyboard",
+        &[(Item::Spring, 4), (Item::CircuitBoard, 1), (Item::IronSheet, 1)],
+        &[(Item::Keyboard, 1)],
+        600,
+        None,
+        None,
+        'T',
+    ),
+    item_recipe(
         "lamp matrix",
         &[(Item::Lamp, 8), (Item::CopperSheet, 1), (Item::FineWire, 4)],
         &[(Item::LampMatrix, 1)],
@@ -1491,8 +1531,24 @@ pub const BASIC_RECIPES: &[Recipe] = &[
         None,
         'P',
     ),
-    // The final design adds a keyboard, which needs items from a later phase: it joins in phase 5.
-    item_recipe("terminal", &[(Item::LampMatrix, 1), (Item::TubeBoard, 1)], &[(Item::Terminal, 1)], 600, None, None, 'D'),
+    item_recipe(
+        "terminal",
+        &[(Item::LampMatrix, 1), (Item::Keyboard, 1), (Item::TubeBoard, 1)],
+        &[(Item::Terminal, 1)],
+        600,
+        None,
+        None,
+        'D',
+    ),
+    item_recipe(
+        "disk drive",
+        &[(Item::ElectricMotor, 1), (Item::SteelSheet, 1), (Item::TransistorBoard, 1)],
+        &[(Item::DiskDrive, 1)],
+        600,
+        None,
+        None,
+        'I',
+    ),
 ];
 
 /// Advanced tier (advanced and precision assemblers). The control board is the x1x1, the
@@ -1546,8 +1602,8 @@ pub const ADVANCED_RECIPES: &[Recipe] = &[
     item_recipe("mask", &[(Item::Glass, 1), (Item::CopperSheet, 1), (Item::FineWire, 2)], &[(Item::Mask, 1)], 600, None, None, 'S'),
 ];
 
-/// Precision tier (precision assembler only): the x4x1 microprocessor and RAM, and the fine mask and x4x2. It also runs the
-/// advanced tier twice as fast.
+/// Precision tier (precision assembler only): the x4x1 microprocessor and RAM, the fine mask and
+/// x4x2, and the mainboard. It also runs the advanced tier twice as fast.
 pub const PRECISION_RECIPES: &[Recipe] = &[
     item_recipe(
         "microprocessor (x4x1)",
@@ -1568,6 +1624,25 @@ pub const PRECISION_RECIPES: &[Recipe] = &[
         None,
         None,
         'X',
+    ),
+    // One x4x2 does the work of two x4x1, so the coarse way takes twice as long.
+    item_recipe(
+        "mainboard",
+        &[(Item::CircuitBoard, 1), (Item::FineMicroprocessor, 1), (Item::RamChip, 4)],
+        &[(Item::Mainboard, 1)],
+        600,
+        None,
+        None,
+        'B',
+    ),
+    item_recipe(
+        "mainboard (two coarse)",
+        &[(Item::CircuitBoard, 1), (Item::Microprocessor, 2), (Item::RamChip, 4)],
+        &[(Item::Mainboard, 1)],
+        1200,
+        None,
+        None,
+        'B',
     ),
 ];
 
@@ -1632,6 +1707,18 @@ pub const LARGE_ADVANCED_RECIPES: &[Recipe] = &[
         'T',
     ),
 ];
+
+/// Large precision tier (large precision assembler only): the computer, 60 s. It also runs the
+/// large advanced tier twice as fast.
+pub const LARGE_PRECISION_RECIPES: &[Recipe] = &[item_recipe(
+    "computer",
+    &[(Item::Mainboard, 1), (Item::Transformer, 1), (Item::Terminal, 1), (Item::DiskDrive, 1), (Item::Frame, 1)],
+    &[(Item::Computer, 1)],
+    3600,
+    None,
+    None,
+    'C',
+)];
 
 /// What an assembler can make: each (table, speed) pair in turn, with the table's times
 /// divided by the speed (rounded to a whole tick). Built once per assembler kind.

@@ -31,6 +31,7 @@ pub const UPGRADES: &[(Kind, Kind)] = &[
     (Kind::Solar, Kind::BasicSolar),
     (Kind::AdvancedAssembler, Kind::PrecisionAssembler),
     (Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler),
+    (Kind::LargeAdvancedAssembler, Kind::LargePrecisionAssembler),
     (Kind::LargeBasicDrill, Kind::LargeAdvancedDrill),
 ];
 

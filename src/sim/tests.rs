@@ -1125,7 +1125,7 @@ fn scaled(t: u32, by: u32) -> u32 {
 fn the_assembler_ladder_lists_what_each_can_make() {
     let tier = |t: &[Recipe]| t.iter().map(|r| r.name).collect::<Vec<_>>();
     let (crude, basic, adv, prec) = (tier(CRUDE_RECIPES), tier(BASIC_RECIPES), tier(ADVANCED_RECIPES), tier(PRECISION_RECIPES));
-    let (large_basic, large_adv) = (tier(LARGE_BASIC_RECIPES), tier(LARGE_ADVANCED_RECIPES));
+    let (large_basic, large_adv, large_prec) = (tier(LARGE_BASIC_RECIPES), tier(LARGE_ADVANCED_RECIPES), tier(LARGE_PRECISION_RECIPES));
     let joined = |parts: &[&Vec<&'static str>]| parts.iter().flat_map(|p| p.iter().copied()).collect::<Vec<_>>();
     assert_eq!(recipe_names(Kind::CrudeAssembler), crude);
     assert_eq!(recipe_names(Kind::BasicAssembler), joined(&[&crude, &basic]));
@@ -1135,15 +1135,20 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(recipe_names(Kind::PrecisionAssembler), joined(&[&adv, &prec]), "precision makes only the top tiers");
     assert_eq!(recipe_names(Kind::LargeBasicAssembler), large_basic);
     assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
-    assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "transformer", "lamp matrix", "control board (hand-wired)"]);
-    assert_eq!(basic, ["electric motor", "piston", "terminal"]);
+    assert_eq!(recipe_names(Kind::LargePrecisionAssembler), joined(&[&large_adv, &large_prec]), "large precision makes only the top tiers");
+    assert_eq!(
+        crude,
+        ["valve", "gauge", "lamp", "relay", "gearbox", "transformer", "keyboard", "lamp matrix", "control board (hand-wired)"]
+    );
+    assert_eq!(basic, ["electric motor", "piston", "terminal", "disk drive"]);
     assert_eq!(adv, ["control board", "tube board", "circuit board", "transistor", "transistor board", "mask"]);
-    assert_eq!(prec, ["microprocessor (x4x1)", "RAM chip", "fine mask", "microprocessor (x4x2)"]);
+    assert_eq!(prec, ["microprocessor (x4x1)", "RAM chip", "fine mask", "microprocessor (x4x2)", "mainboard", "mainboard (two coarse)"]);
     assert_eq!(large_basic, ["pump unit", "engine block"]);
     assert_eq!(large_adv, ["generator", "control panel", "drilling rig", "steam tractor"]);
+    assert_eq!(large_prec, ["computer"]);
     // Large and small assemblers share nothing.
     for small in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::AdvancedAssembler, Kind::PrecisionAssembler] {
-        for big in [Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler] {
+        for big in [Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler, Kind::LargePrecisionAssembler] {
             assert!(recipe_names(small).iter().all(|n| !recipe_names(big).contains(n)), "{small:?} and {big:?}");
         }
     }
@@ -1163,6 +1168,9 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(t(Kind::LargeAdvancedAssembler, "generator"), 1200);
     assert_eq!(t(Kind::LargeAdvancedAssembler, "drilling rig"), 2400);
     assert_eq!(t(Kind::LargeAdvancedAssembler, "steam tractor"), 3600);
+    assert_eq!(t(Kind::LargePrecisionAssembler, "generator"), 600);
+    assert_eq!(t(Kind::LargePrecisionAssembler, "steam tractor"), 1800);
+    assert_eq!(t(Kind::LargePrecisionAssembler, "computer"), 3600);
     // Odd times round to a whole tick.
     assert_eq!(scaled(75, 2), 38);
     // Sizes, power and prices.
@@ -1173,6 +1181,7 @@ fn the_assembler_ladder_lists_what_each_can_make() {
         (Kind::PrecisionAssembler, (3, 3), 64.0, 20_000.0),
         (Kind::LargeBasicAssembler, (5, 5), 12.0, 12_000.0),
         (Kind::LargeAdvancedAssembler, (5, 5), 48.0, 30_000.0),
+        (Kind::LargePrecisionAssembler, (5, 5), 160.0, 100_000.0),
     ];
     for (k, dims, ec, cost) in specs {
         assert_eq!((k.base_dims(), k.power_draw(), k.cost()), (dims, ec, cost), "{k:?}");
@@ -1226,7 +1235,9 @@ fn a_precision_assembler_refuses_crude_and_basic_recipes() {
             "microprocessor (x4x1)",
             "RAM chip",
             "fine mask",
-            "microprocessor (x4x2)"
+            "microprocessor (x4x2)",
+            "mainboard",
+            "mainboard (two coarse)"
         ]
     );
     // It cycles between the processors and boards it knows.
@@ -1686,12 +1697,15 @@ fn the_transformer_lamp_matrix_and_terminal_come_from_the_assembler_tiers() {
     assert_eq!(run_powered(Kind::CrudeAssembler, "lamp matrix", &matrix, 11), vec![Item::LampMatrix]);
     // The basic assembler runs the crude tier twice as fast.
     assert_eq!(run_powered(Kind::BasicAssembler, "lamp matrix", &matrix, 6), vec![Item::LampMatrix]);
-    let parts = [(Item::LampMatrix, 1), (Item::TubeBoard, 1)];
+    let parts = [(Item::LampMatrix, 1), (Item::Keyboard, 1), (Item::TubeBoard, 1)];
     assert!(!recipe_names(Kind::CrudeAssembler).contains(&"terminal"));
     assert!(run_powered(Kind::BasicAssembler, "terminal", &parts, 9).is_empty());
     assert_eq!(run_powered(Kind::BasicAssembler, "terminal", &parts, 11), vec![Item::Terminal]);
     // Higher assemblers know the lower tiers' recipes, faster.
     assert_eq!(run_powered(Kind::AdvancedAssembler, "terminal", &parts, 6), vec![Item::Terminal]);
+    // The keyboard is part of it: without one, nothing is made.
+    let no_keyboard = [(Item::LampMatrix, 1), (Item::TubeBoard, 1)];
+    assert!(run_powered(Kind::BasicAssembler, "terminal", &no_keyboard, 30).is_empty());
 }
 
 #[test]
@@ -1941,7 +1955,8 @@ fn only_the_precision_assembler_builds_the_x4x1_microprocessor_and_ram_chip() {
     let find = |n: &str| PRECISION_RECIPES.iter().find(|r| r.name == n).unwrap();
     assert_eq!(find("microprocessor (x4x1)").inputs, &[(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 4)]);
     assert_eq!(find("RAM chip").inputs, &[(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 2)]);
-    assert!(PRECISION_RECIPES.iter().all(|r| r.ticks == 10 * 60));
+    // 10 s each, but the coarse mainboard (two x4x1 for one x4x2) takes twice as long.
+    assert!(PRECISION_RECIPES.iter().all(|r| r.ticks == if r.name == "mainboard (two coarse)" { 20 * 60 } else { 10 * 60 }));
     let cpu = [(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 4)];
     let ram = [(Item::Die, 1), (Item::Ceramic, 1), (Item::FineWire, 2)];
     assert!(run_powered(Kind::PrecisionAssembler, "microprocessor (x4x1)", &cpu, 9).is_empty());
@@ -1956,17 +1971,18 @@ fn only_the_precision_assembler_builds_the_x4x1_microprocessor_and_ram_chip() {
     // Each product has its own letter in the precision assembler.
     assert_eq!((find("microprocessor (x4x1)").tag, find("RAM chip").tag), ('M', 'R'));
     assert_eq!((find("fine mask").tag, find("microprocessor (x4x2)").tag), ('F', 'X'));
+    assert_eq!((find("mainboard").tag, find("mainboard (two coarse)").tag), ('B', 'B'));
 }
 
 #[test]
 fn meridians_key_is_the_x4x1_made_before_it_sells_anything() {
     assert_eq!(Company::Meridian.key_items(), &[Made::Item(Item::Microprocessor)]);
     assert_eq!(Company::Meridian.name(), "Meridian Instruments");
-    // It sells exactly the fine etcher (the large precision assembler comes later).
+    // It sells exactly the fine etcher and the large precision assembler.
     let techs: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Meridian).collect();
-    assert_eq!(techs, [Tech::FineEtcher]);
+    assert_eq!(techs, [Tech::FineEtcher, Tech::LargePrecisionAssembler]);
     let kinds: Vec<Kind> = Kind::ALL.iter().copied().filter(|k| k.company() == Some(Company::Meridian)).collect();
-    assert_eq!(kinds, [Kind::FineEtcher]);
+    assert_eq!(kinds, [Kind::FineEtcher, Kind::LargePrecisionAssembler]);
     // The etcher comes from Lattice & Finch, the mask from the advanced assembler, the etchant
     // from Wellbourne's mixer: with Meridian, Halverson, Sablon and Ampleworth shut, the chip is makeable.
     let mut open = [true; COMPANIES];
@@ -1982,12 +1998,188 @@ fn meridians_key_is_the_x4x1_made_before_it_sells_anything() {
     // In the tree it hangs under the etcher.
     let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
     assert_eq!(TREE[at(Node::Key(Made::Item(Item::Microprocessor)))].1, Some(at(Node::Tech(Tech::Etcher))));
-    // A letter whose research list is the fine etcher alone, and a gift note.
+    // A letter whose research list is the fine etcher and the large precision assembler, and a gift note.
     let m = crate::mail::letter(Company::Meridian, Made::Item(Item::Microprocessor), 0);
     assert!(m.md.contains("Your very first chip! We are all friends here."), "{}", m.md);
-    assert!(m.md.contains("Unlocked for research") && m.md.contains("Fine etcher"), "{}", m.md);
+    assert!(m.md.contains("Unlocked for research") && m.md.contains("Fine etcher") && m.md.contains("Large prec. assembler"), "{}", m.md);
     assert_eq!(m.from, "Meridian Instruments");
     assert!(!crate::mail::gift_note(Company::Meridian).is_empty());
+}
+
+// ---------- computers (phase 5): the computer and the large precision assembler ----------
+
+/// The five things a computer is made of.
+const COMPUTER_PARTS: [(Item, u32); 5] =
+    [(Item::Mainboard, 1), (Item::Transformer, 1), (Item::Terminal, 1), (Item::DiskDrive, 1), (Item::Frame, 1)];
+
+#[test]
+fn the_computers_new_items_have_their_recipes_prices_and_curves() {
+    let find = |kind: Kind, name: &str| kind.recipes().iter().find(|r| r.name == name).unwrap();
+    let shape = |r: &Recipe| (r.inputs.to_vec(), r.outputs.to_vec(), r.ticks);
+    // Crude tier: the keyboard, 10 s.
+    let r = find(Kind::CrudeAssembler, "keyboard");
+    assert_eq!(shape(r), (vec![(Item::Spring, 4), (Item::CircuitBoard, 1), (Item::IronSheet, 1)], vec![(Item::Keyboard, 1)], 600));
+    // Basic tier: the terminal gains the keyboard, and the disk drive.
+    let r = find(Kind::BasicAssembler, "terminal");
+    assert_eq!(r.inputs, &[(Item::LampMatrix, 1), (Item::Keyboard, 1), (Item::TubeBoard, 1)]);
+    let r = find(Kind::BasicAssembler, "disk drive");
+    assert_eq!(
+        shape(r),
+        (vec![(Item::ElectricMotor, 1), (Item::SteelSheet, 1), (Item::TransistorBoard, 1)], vec![(Item::DiskDrive, 1)], 600)
+    );
+    // Precision tier: the mainboard, with the x4x2 or with two x4x1.
+    let r = find(Kind::PrecisionAssembler, "mainboard");
+    assert_eq!(
+        shape(r),
+        (vec![(Item::CircuitBoard, 1), (Item::FineMicroprocessor, 1), (Item::RamChip, 4)], vec![(Item::Mainboard, 1)], 600)
+    );
+    let r = find(Kind::PrecisionAssembler, "mainboard (two coarse)");
+    assert_eq!(shape(r), (vec![(Item::CircuitBoard, 1), (Item::Microprocessor, 2), (Item::RamChip, 4)], vec![(Item::Mainboard, 1)], 1200));
+    // The computer, 60 s.
+    let r = find(Kind::LargePrecisionAssembler, "computer");
+    assert_eq!(shape(r), (COMPUTER_PARTS.to_vec(), vec![(Item::Computer, 1)], 3600));
+    // Prices, and about twice the price in research (the computer is the crown: worth 22,000).
+    for (item, price, worth) in [
+        (Item::Keyboard, 260.0, 520.0),
+        (Item::DiskDrive, 1100.0, 2200.0),
+        (Item::Mainboard, 1800.0, 3600.0),
+        (Item::Computer, 11_000.0, 22_000.0),
+    ] {
+        assert_eq!((item.price(), item.curve().worth), (price, worth), "{item:?}");
+    }
+    let c = Item::Computer.curve();
+    assert_eq!((c.decay, c.floor), (0.99, 0.3));
+    assert_eq!(ITEMS, 78);
+}
+
+#[test]
+fn a_terminal_needs_the_keyboard() {
+    let without = [(Item::LampMatrix, 1), (Item::TubeBoard, 1)];
+    assert!(run_powered(Kind::BasicAssembler, "terminal", &without, 40).is_empty(), "no keyboard, no terminal");
+    let with = [(Item::LampMatrix, 1), (Item::Keyboard, 1), (Item::TubeBoard, 1)];
+    assert_eq!(run_powered(Kind::BasicAssembler, "terminal", &with, 11), vec![Item::Terminal]);
+    // The keyboard itself is a crude part: 4 springs, a circuit board and an iron sheet.
+    let keyboard = [(Item::Spring, 4), (Item::CircuitBoard, 1), (Item::IronSheet, 1)];
+    assert!(run_powered(Kind::CrudeAssembler, "keyboard", &keyboard, 9).is_empty());
+    assert_eq!(run_powered(Kind::CrudeAssembler, "keyboard", &keyboard, 11), vec![Item::Keyboard]);
+}
+
+#[test]
+fn a_precision_assembler_makes_the_mainboard_both_ways() {
+    let fine = [(Item::CircuitBoard, 1), (Item::FineMicroprocessor, 1), (Item::RamChip, 4)];
+    assert!(run_powered(Kind::PrecisionAssembler, "mainboard", &fine, 9).is_empty());
+    assert_eq!(run_powered(Kind::PrecisionAssembler, "mainboard", &fine, 11), vec![Item::Mainboard], "10 s with the x4x2");
+    let coarse = [(Item::CircuitBoard, 1), (Item::Microprocessor, 2), (Item::RamChip, 4)];
+    assert!(run_powered(Kind::PrecisionAssembler, "mainboard (two coarse)", &coarse, 19).is_empty());
+    assert_eq!(run_powered(Kind::PrecisionAssembler, "mainboard (two coarse)", &coarse, 21), vec![Item::Mainboard], "20 s with two x4x1");
+    // Only the precision assembler has it.
+    for k in Kind::ALL.into_iter().filter(|k| *k != Kind::PrecisionAssembler) {
+        assert!(!recipe_names(k).iter().any(|n| n.starts_with("mainboard")), "{k:?}");
+    }
+}
+
+#[test]
+fn a_fully_powered_large_precision_assembler_makes_a_computer_in_a_minute() {
+    assert!(run_powered(Kind::LargePrecisionAssembler, "computer", &COMPUTER_PARTS, 59).is_empty(), "nothing before 60 s");
+    assert_eq!(run_powered(Kind::LargePrecisionAssembler, "computer", &COMPUTER_PARTS, 61), vec![Item::Computer]);
+    // Short of one part, nothing is made at all.
+    assert!(run_powered(Kind::LargePrecisionAssembler, "computer", &COMPUTER_PARTS[1..], 90).is_empty());
+    // It is hungry: 100 EC is not enough for its 160 (run_powered's grid grows to feed it).
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 10);
+    w.place(0, 12, 12, Kind::LargePrecisionAssembler, Dir::E).unwrap();
+    assert!(w.ratio_at(0, 12, 12) < 1.0);
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 16);
+    w.place(0, 12, 12, Kind::LargePrecisionAssembler, Dir::E).unwrap();
+    assert_eq!(w.ratio_at(0, 12, 12), 1.0);
+}
+
+#[test]
+fn only_the_large_precision_assembler_builds_the_computer() {
+    // A large advanced assembler has no such recipe, and no machine but the large precision one does.
+    assert!(!recipe_names(Kind::LargeAdvancedAssembler).contains(&"computer"));
+    for k in Kind::ALL.into_iter().filter(|k| *k != Kind::LargePrecisionAssembler) {
+        assert!(!recipe_names(k).contains(&"computer"), "{k:?}");
+    }
+    // A large advanced assembler left holding the parts makes nothing.
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 10);
+    w.place(0, 12, 12, Kind::LargeAdvancedAssembler, Dir::E).unwrap();
+    for (item, n) in COMPUTER_PARTS {
+        set_stock(&mut w, 12, 12, item, n);
+    }
+    w.place(0, 17, 12, Kind::Crate, Dir::E).unwrap();
+    run(&mut w, 120);
+    assert!(crate_items(&w, 0, 17, 12).is_empty());
+}
+
+#[test]
+fn the_large_precision_assembler_runs_the_large_advanced_recipes_in_half_the_time() {
+    let generator = [(Item::Frame, 1), (Item::ElectricMotor, 2), (Item::Gauge, 1), (Item::ControlBoard, 1)];
+    // 20 s in a large advanced assembler, 10 s here.
+    assert!(run_powered(Kind::LargePrecisionAssembler, "generator", &generator, 9).is_empty());
+    assert_eq!(run_powered(Kind::LargePrecisionAssembler, "generator", &generator, 11), vec![Item::Generator]);
+    assert!(run_powered(Kind::LargeAdvancedAssembler, "generator", &generator, 11).is_empty());
+    let tractor = [(Item::EngineBlock, 1), (Item::Frame, 1), (Item::HardenedGear, 4), (Item::ControlPanel, 1), (Item::Generator, 1)];
+    assert!(run_powered(Kind::LargePrecisionAssembler, "steam tractor", &tractor, 29).is_empty());
+    assert_eq!(run_powered(Kind::LargePrecisionAssembler, "steam tractor", &tractor, 31), vec![Item::SteamTractor]);
+    // Nothing below: no large basic goods (the pump unit, the engine block).
+    let names = recipe_names(Kind::LargePrecisionAssembler);
+    assert_eq!(names, ["generator", "control panel", "drilling rig", "steam tractor", "computer"]);
+    // Its letters: one per product.
+    let tag = |n: &str| Kind::LargePrecisionAssembler.recipes().iter().find(|r| r.name == n).unwrap().tag;
+    assert_eq!(
+        (tag("generator"), tag("control panel"), tag("drilling rig"), tag("steam tractor"), tag("computer")),
+        ('G', 'P', 'D', 'T', 'C')
+    );
+}
+
+#[test]
+fn meridian_sells_the_fine_etcher_and_the_large_precision_assembler() {
+    let sold: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Meridian).collect();
+    assert_eq!(sold, [Tech::FineEtcher, Tech::LargePrecisionAssembler]);
+    let t = Tech::LargePrecisionAssembler;
+    assert_eq!((t.cost(), t.milestone()), (300_000.0, (Item::Mainboard, 40)));
+    assert_eq!(Kind::LargePrecisionAssembler.tech(), Some(t));
+    assert_eq!(Kind::LargePrecisionAssembler.company(), Some(Company::Meridian));
+    assert_eq!(Kind::LargePrecisionAssembler.cost(), 100_000.0);
+    assert_eq!(Kind::LargePrecisionAssembler.base_dims(), (5, 5));
+    // It sits in the research group that holds the large advanced assembler, and in the tree under the x4x1, beside the fine etcher.
+    let group = UNLOCK_GROUPS.iter().find(|(_, techs)| techs.contains(&Tech::LargeAdvancedAssembler)).unwrap();
+    assert!(group.1.contains(&t));
+    let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
+    assert_eq!(TREE[at(Node::Tech(t))].1, TREE[at(Node::Tech(Tech::FineEtcher))].1);
+    assert_eq!(TREE[at(Node::Tech(t))].1, Some(at(Node::Key(Made::Item(Item::Microprocessor)))));
+}
+
+/// A save made before this phase has a terminal half-built (its lamp matrix and tube board are in stock; inputs
+/// leave at the end of a run). It opens in this build and the terminal keeps its name (recipes are saved by name,
+/// and the keyboard joined the list before it). The machine now waits for a keyboard, keeping what it holds.
+#[test]
+fn a_terminal_mid_recipe_in_an_older_save_waits_for_a_keyboard_and_finishes() {
+    let mut w = World::blank();
+    big_grid(&mut w, 10, 0, 10);
+    w.place(0, 12, 12, Kind::BasicAssembler, Dir::E).unwrap();
+    pick_recipe(&mut w, 12, 12, "terminal");
+    set_stock(&mut w, 12, 12, Item::LampMatrix, 1);
+    set_stock(&mut w, 12, 12, Item::TubeBoard, 1);
+    if let Some(Building { st: St::Crafter { progress, busy, .. }, .. }) = w.floors[0].tiles[idx(12, 12)].as_mut() {
+        *progress = 300.0;
+        *busy = true;
+    }
+    w.place(0, 14, 12, Kind::Crate, Dir::E).unwrap();
+    let data = saving::temp("terminal-mid-run");
+    let path = crate::saves::path_of(&data, "save1");
+    w.save(&path).unwrap();
+    let mut l = World::load(&path).unwrap();
+    assert_eq!(l.tile(0, 12, 12).unwrap().recipe().unwrap().name, "terminal");
+    run(&mut l, 20);
+    assert!(crate_items(&l, 0, 14, 12).is_empty(), "no keyboard, so it waits");
+    set_stock(&mut l, 12, 12, Item::Keyboard, 1);
+    run(&mut l, 6);
+    assert_eq!(crate_items(&l, 0, 14, 12), vec![Item::Terminal], "the half-done run carries on from where it was");
+    let _ = std::fs::remove_dir_all(&data);
 }
 
 /// `n` panels (10 EC each) in a column at x - 2, joined by poles at x, from row y down.
@@ -2342,7 +2534,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::FineMicroprocessor);
+    assert_eq!(last, Item::Computer);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -2358,7 +2550,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"FineMicroprocessor": 7, "Gauge": 11}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"Computer": 7, "Gauge": 11}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -2378,7 +2570,7 @@ fn saves_round_trip_with_the_full_item_list() {
 
 /// Picks a machine's recipe by name (cycling with f).
 fn cycle_to(w: &mut World, x: i32, y: i32, name: &str) {
-    for _ in 0..12 {
+    for _ in 0..30 {
         if w.tile(0, x, y).and_then(|b| b.recipe()).is_some_and(|r| r.name == name) {
             return;
         }
@@ -2894,7 +3086,8 @@ fn a_company_never_gates_its_own_key_item() {
 /// Like `run_machine`, on a big grid (100 EC) so even the thirsty machines run at full speed.
 fn run_powered(kind: Kind, recipe: &str, stock: &[(Item, u32)], secs: u64) -> Vec<Item> {
     let mut w = World::blank();
-    big_grid(&mut w, 10, 0, 10);
+    // 10 EC a panel, and at least the usual 100 EC: the large precision assembler draws 160.
+    big_grid(&mut w, 10, 0, ((kind.power_draw() / 10.0).ceil() as i32).max(10));
     let (x, y) = (12, 12);
     w.place(0, x, y, kind, Dir::E).unwrap();
     pick_recipe(&mut w, x, y, recipe);
@@ -3025,7 +3218,7 @@ fn every_item_recipe_runs_in_its_machine() {
         for r in kind.recipes().iter().filter(|r| r.fluid_in.is_none()) {
             let batch = kind.batch();
             let mut w = World::blank();
-            big_grid(&mut w, 10, 0, 10);
+            big_grid(&mut w, 10, 0, ((kind.power_draw() / 10.0).ceil() as i32).max(10));
             let (x, y) = (12, 12);
             w.place(0, x, y, kind, Dir::E).unwrap();
             pick_recipe(&mut w, x, y, r.name);
@@ -3163,12 +3356,7 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 
 #[test]
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
-    let crown = [Item::DrillingRig, Item::SteamTractor];
-    // The computer eats both (computers phase 5), so until it arrives nothing consumes them.
-    // The disk drive eats the transistor board (phase 5); the mainboard eats the microprocessor and the RAM chip (phase 5),
-    // and the x4x2 as well: it is the better microprocessor, so it waits for the same mainboard.
-    let waits_for_a_later_phase =
-        [Item::Transformer, Item::Terminal, Item::TransistorBoard, Item::Microprocessor, Item::RamChip, Item::FineMicroprocessor];
+    let crown = [Item::DrillingRig, Item::SteamTractor, Item::Computer];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
@@ -3178,7 +3366,7 @@ fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
         }
     }
     for it in Item::ALL {
-        if it == Item::Waste || crown.contains(&it) || waits_for_a_later_phase.contains(&it) {
+        if it == Item::Waste || crown.contains(&it) {
             continue;
         }
         assert!(used[it.idx()], "{it:?} is an input to nothing");
@@ -3226,7 +3414,7 @@ fn each_step_sells_for_more_than_its_inputs() {
 
 #[test]
 fn crown_items_keep_a_high_research_floor() {
-    let crown = [Item::DrillingRig, Item::SteamTractor];
+    let crown = [Item::DrillingRig, Item::SteamTractor, Item::Computer];
     let top = Item::ALL.iter().filter(|i| !crown.contains(i)).map(|i| i.curve().floor).fold(0.0, f64::max);
     for c in crown {
         let curve = c.curve();
@@ -3236,7 +3424,7 @@ fn crown_items_keep_a_high_research_floor() {
         assert!(curve.value(1_000_000) > 1000.0, "{c:?}");
         assert!(curve.worth >= 2.0 * c.price(), "{c:?} worth about 2x the price");
     }
-    assert_eq!((Item::DrillingRig.price(), Item::SteamTractor.price()), (3500.0, 7500.0));
+    assert_eq!((Item::DrillingRig.price(), Item::SteamTractor.price(), Item::Computer.price()), (3500.0, 7500.0, 11_000.0));
     // Every new item is worth at least 10 research, and about twice its price.
     for it in &Item::ALL[28..] {
         let worth = it.curve().worth;

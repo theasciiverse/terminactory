@@ -624,6 +624,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"LargePrecisionAssembler\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"generator\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"Lathe\"",
               "rr": "int",
               "size": "int",
@@ -1189,7 +1212,7 @@
       ]
     },
     "researched": {
-      "len": 42,
+      "len": 43,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1217,6 +1240,7 @@
         "\"LargeBasicAssembler\"",
         "\"LargeBasicDrill\"",
         "\"LargeKiln\"",
+        "\"LargePrecisionAssembler\"",
         "\"Lathe\"",
         "\"LongArms\"",
         "\"Mixer\"",

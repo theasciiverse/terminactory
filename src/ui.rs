@@ -305,6 +305,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::PrecisionAssembler => "PREC",
         Kind::LargeBasicAssembler => "LRGB",
         Kind::LargeAdvancedAssembler => "LRGA",
+        Kind::LargePrecisionAssembler => "LRGP",
         Kind::Welder => "WELD",
         Kind::Pump => "PUMP",
         Kind::AdvancedPump => "APMP",
@@ -1075,6 +1076,11 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::FineMask => ('n', 252),
         Item::FineDie => ('j', 75),
         Item::FineMicroprocessor => ('U', 219),
+        // The computer and its parts: cyan and green boards, the computer in crown gold.
+        Item::Keyboard => ('l', 51),
+        Item::DiskDrive => ('I', 183),
+        Item::Mainboard => ('w', 82),
+        Item::Computer => ('&', 226),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1112,6 +1118,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::PrecisionAssembler => (INK, 117),
         Kind::LargeBasicAssembler => (INK, 222),
         Kind::LargeAdvancedAssembler => (INK, 123),
+        Kind::LargePrecisionAssembler => (INK, 159),
         Kind::Welder => (INK, 209),
         Kind::Kiln => (PAPER, 166),
         Kind::LargeKiln => (PAPER, 202),
@@ -1178,6 +1185,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::PrecisionAssembler => ('A', '4'),
         Kind::LargeBasicAssembler => ('L', '2'),
         Kind::LargeAdvancedAssembler => ('L', '3'),
+        Kind::LargePrecisionAssembler => ('L', '4'),
         Kind::Welder => ('W', 'E'),
         Kind::Kiln => ('K', 'I'),
         Kind::LargeKiln => ('K', '2'),
@@ -1287,6 +1295,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::PrecisionAssembler => labelled("PRCASM"),
         Kind::LargeBasicAssembler => labelled("LRG ASM B"),
         Kind::LargeAdvancedAssembler => labelled("LRG ASM A"),
+        Kind::LargePrecisionAssembler => labelled("LRG ASM P"),
         Kind::Welder => labelled("WELDER"),
         Kind::Kiln => labelled("KILN"),
         Kind::LargeKiln => labelled("LRG KILN"),
@@ -1709,7 +1718,7 @@ fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
                     let more = if !open && slot.len() > 1 { "+" } else { "" };
                     let mut name = format!("{}{more}", k.name());
                     if name.chars().count() > 17 {
-                        name = name.replace("advanced", "adv.");
+                        name = name.replace("advanced", "adv.").replace("precision", "prec.");
                         size.clear();
                     }
                     let room = if size.is_empty() { 21 } else { 17 };
@@ -2664,7 +2673,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 26] = [
+const CRAFTERS: [Kind; 27] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
@@ -2691,6 +2700,7 @@ const CRAFTERS: [Kind; 26] = [
     Kind::WaferSaw,
     Kind::LargeBasicAssembler,
     Kind::LargeAdvancedAssembler,
+    Kind::LargePrecisionAssembler,
 ];
 
 /// One plain line on what a machine is for (the inspector and its book page show it).
@@ -2723,9 +2733,10 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::AdvancedAssembler => {
             "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), circuit boards, transistors, transistor boards (x3x1) and masks, and everything below faster"
         }
-        Kind::PrecisionAssembler => "builds microprocessors (x4x1 and x4x2), RAM chips and fine masks, and control boards twice as fast as an advanced one; nothing below",
+        Kind::PrecisionAssembler => "builds microprocessors (x4x1 and x4x2), RAM chips, fine masks and mainboards, and control boards twice as fast as an advanced one; nothing below",
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
         Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",
+        Kind::LargePrecisionAssembler => "builds the computer, and the large advanced goods twice as fast; nothing below",
         Kind::AdvancedDrill => "a drill on EC: twice a basic drill's ore, no coal",
         Kind::LargeBasicDrill => "an 8x8 drill: 5x a basic drill's ore, burns 10x the coal",
         Kind::LargeAdvancedDrill => "an 8x8 drill on EC: 5x an advanced drill's ore",

@@ -220,6 +220,7 @@ pub enum Kind {
     CrystalGrower,
     WaferSaw,
     FineEtcher,
+    LargePrecisionAssembler,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -233,6 +234,10 @@ static ADVANCED_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
 });
 // The precision assembler only makes the top tiers: no crude or basic recipes.
 static PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> = LazyLock::new(|| assembler_list(&[(ADVANCED_RECIPES, 2), (PRECISION_RECIPES, 1)]));
+// The large precision assembler is the precision assembler's big sister: the large advanced tier twice
+// as fast and the computer, and nothing below.
+static LARGE_PRECISION_ASSEMBLER: LazyLock<Vec<Recipe>> =
+    LazyLock::new(|| assembler_list(&[(LARGE_ADVANCED_RECIPES, 2), (LARGE_PRECISION_RECIPES, 1)]));
 // The large kiln is four kilns in one: four times the batch (32 against 8) in the same 20 s firing,
 // burning four times the coal (see `Kind::fires`).
 static LARGE_KILN: LazyLock<Vec<Recipe>> = LazyLock::new(|| batch_list(KILN_RECIPES, 1));
@@ -246,7 +251,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 50] = [
+    pub const ALL: [Kind; 51] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -297,6 +302,7 @@ impl Kind {
         Kind::CrystalGrower,
         Kind::WaferSaw,
         Kind::FineEtcher,
+        Kind::LargePrecisionAssembler,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -319,6 +325,7 @@ impl Kind {
             | Kind::PrecisionAssembler
             | Kind::LargeBasicAssembler
             | Kind::LargeAdvancedAssembler
+            | Kind::LargePrecisionAssembler
             | Kind::Welder
             | Kind::Kiln
             | Kind::LargeKiln
@@ -374,6 +381,7 @@ impl Kind {
             Kind::CrystalGrower => "Crystal grower",
             Kind::WaferSaw => "Wafer saw",
             Kind::FineEtcher => "Fine etcher",
+            Kind::LargePrecisionAssembler => "Large precision assembler",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
             Kind::LargeAdvancedDrill => "Large advanced drill",
@@ -430,6 +438,7 @@ impl Kind {
             Kind::CrystalGrower => 7500.0,
             Kind::WaferSaw => 6000.0,
             Kind::FineEtcher => 60_000.0,
+            Kind::LargePrecisionAssembler => 100_000.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
             Kind::LargeAdvancedDrill => 2000.0,
@@ -483,7 +492,7 @@ impl Kind {
             Kind::Kiln | Kind::FineEtcher => (3, 5),
             Kind::LargeKiln => (5, 7),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
-            Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
+            Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler | Kind::LargePrecisionAssembler => (5, 5),
             Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => (8, 8),
             Kind::Press | Kind::WireDrawer | Kind::Winder | Kind::WaferSaw => (2, 1),
             Kind::Pump => (1, 2),
@@ -538,6 +547,7 @@ impl Kind {
             Kind::CrystalGrower => 12.0,
             Kind::WaferSaw => 6.0,
             Kind::FineEtcher => 96.0,
+            Kind::LargePrecisionAssembler => 160.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
@@ -614,7 +624,7 @@ impl Kind {
             Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
             Kind::Evacuator => Some(Company::Sablon),
             Kind::ArcFurnace | Kind::CrystalGrower | Kind::WaferSaw => Some(Company::Halverson),
-            Kind::FineEtcher => Some(Company::Meridian),
+            Kind::FineEtcher | Kind::LargePrecisionAssembler => Some(Company::Meridian),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
             Kind::Crusher => Some(Company::Ashgrove),
@@ -643,6 +653,7 @@ impl Kind {
             Kind::CrystalGrower => Some(Tech::CrystalGrower),
             Kind::WaferSaw => Some(Tech::WaferSaw),
             Kind::FineEtcher => Some(Tech::FineEtcher),
+            Kind::LargePrecisionAssembler => Some(Tech::LargePrecisionAssembler),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
@@ -689,6 +700,7 @@ impl Kind {
             Kind::PrecisionAssembler => &PRECISION_ASSEMBLER,
             Kind::LargeBasicAssembler => LARGE_BASIC_RECIPES,
             Kind::LargeAdvancedAssembler => &LARGE_ADVANCED_ASSEMBLER,
+            Kind::LargePrecisionAssembler => &LARGE_PRECISION_ASSEMBLER,
             Kind::Welder => WELDER_RECIPES,
             Kind::Kiln => KILN_RECIPES,
             Kind::LargeKiln => &LARGE_KILN,
@@ -1028,6 +1040,7 @@ impl Building {
             | Kind::PrecisionAssembler
             | Kind::LargeBasicAssembler
             | Kind::LargeAdvancedAssembler
+            | Kind::LargePrecisionAssembler
             | Kind::Welder
             | Kind::Kiln
             | Kind::LargeKiln

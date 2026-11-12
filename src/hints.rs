@@ -208,7 +208,8 @@ impl Facts {
                     | Kind::AdvancedAssembler
                     | Kind::PrecisionAssembler
                     | Kind::LargeBasicAssembler
-                    | Kind::LargeAdvancedAssembler => f.assemblers += 1,
+                    | Kind::LargeAdvancedAssembler
+                    | Kind::LargePrecisionAssembler => f.assemblers += 1,
                     _ => {}
                 }
                 if matches!(b.kind, Kind::AdvancedDrill | Kind::LargeBasicDrill | Kind::LargeAdvancedDrill) {

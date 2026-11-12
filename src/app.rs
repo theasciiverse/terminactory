@@ -134,7 +134,16 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
             &[Drill, BasicDrill, AdvancedDrill, LargeBasicDrill, LargeAdvancedDrill],
             &[Furnace, Molder, BlastFurnace, CokeOven, Kiln, LargeKiln, ArcFurnace],
             &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
-            &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
+            &[
+                CrudeAssembler,
+                BasicAssembler,
+                AdvancedAssembler,
+                PrecisionAssembler,
+                LargeBasicAssembler,
+                LargeAdvancedAssembler,
+                LargePrecisionAssembler,
+                Welder,
+            ],
             &[Pump, AdvancedPump, Mixer, Evacuator],
             &[Etcher, CrystalGrower, WaferSaw, FineEtcher],
         ],
@@ -2284,6 +2293,11 @@ mod tests {
         assert_eq!(slots(Category::Transport)[4], &[Kind::Pipe]);
         assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer, Kind::Evacuator]);
         assert_eq!(slots(Category::Create)[5], &[Kind::Etcher, Kind::CrystalGrower, Kind::WaferSaw, Kind::FineEtcher]);
+        // The assembler slot: the large precision assembler right after the large advanced one, and the welder last.
+        let asm = slots(Category::Create)[3];
+        let at = |k: Kind| asm.iter().position(|x| *x == k).unwrap();
+        assert_eq!(at(Kind::LargePrecisionAssembler), at(Kind::LargeAdvancedAssembler) + 1);
+        assert_eq!(asm.last(), Some(&Kind::Welder));
         assert_eq!(Kind::Pipe.category(), Category::Transport);
         assert!(!parts_in(Category::Create).contains(&Kind::Pipe));
         assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost][..]]);

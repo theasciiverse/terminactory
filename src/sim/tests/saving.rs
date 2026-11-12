@@ -145,6 +145,15 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
         !text.contains("FineEtcher") && !text.contains("FineMask") && !text.contains("FineDie") && !text.contains("FineMicroprocessor")
     );
     assert!(!l.progress.has(Tech::FineEtcher));
+    // Nor the computer: no large precision assembler, keyboard, disk drive, mainboard or computer, and still format 6.
+    assert!(
+        !text.contains("LargePrecisionAssembler")
+            && !text.contains("Keyboard")
+            && !text.contains("DiskDrive")
+            && !text.contains("Mainboard")
+            && !text.contains("\"Computer\"")
+    );
+    assert!(!l.progress.has(Tech::LargePrecisionAssembler));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }
