@@ -1653,25 +1653,28 @@ fn research_rows_show_progress_toward_a_free_unlock() {
 }
 
 #[test]
-fn wiki_links_follow_reading_order_and_both_arrow_pairs_move_linearly() {
+fn wiki_arrows_move_along_a_line_and_between_lines() {
     use ratatui::crossterm::event::{KeyCode, KeyEvent};
     let mut app = App::new(World::new());
     app.book = true;
     app.book_slug = "home".into();
-    render(&mut app, 80, 40);
-    let links: Vec<_> = app.book_urls.iter().map(|(_, slug)| slug.as_str()).collect();
-    let getting = links.iter().position(|s| *s == "getting-started").unwrap();
-    let first_nav = links.iter().position(|s| *s == "machines").unwrap();
-    assert!(getting < first_nav, "reading order: {links:?}");
-    app.book_selected = first_nav;
-    app.on_key(KeyEvent::from(KeyCode::Left));
-    assert_eq!(app.book_selected, first_nav - 1);
+    render(&mut app, 140, 45);
+    let at = |app: &App, slug: &str| app.book_urls.iter().position(|(_, s)| s == slug).unwrap();
+    // The four navigation tiles sit on one line: left and right walk along it.
+    app.book_selected = at(&app, "items");
     app.on_key(KeyEvent::from(KeyCode::Right));
-    assert_eq!(app.book_selected, first_nav);
+    assert_eq!(app.book_urls[app.book_selected].1, "topics");
+    app.on_key(KeyEvent::from(KeyCode::Left));
+    app.on_key(KeyEvent::from(KeyCode::Left));
+    assert_eq!(app.book_urls[app.book_selected].1, "machines");
+    app.on_key(KeyEvent::from(KeyCode::Left));
+    assert_eq!(app.book_urls[app.book_selected].1, "machines", "nothing further left on the line");
+    // Up and down change lines: up from the tiles reaches the line above them.
+    let tiles_y = app.book_urls[app.book_selected].0.y;
     app.on_key(KeyEvent::from(KeyCode::Up));
-    assert_eq!(app.book_selected, first_nav - 1);
+    assert!(app.book_urls[app.book_selected].0.y < tiles_y);
     app.on_key(KeyEvent::from(KeyCode::Down));
-    assert_eq!(app.book_selected, first_nav);
+    assert_eq!(app.book_urls[app.book_selected].0.y, tiles_y);
 }
 
 #[test]

@@ -3787,7 +3787,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     let footer = if app.book_typing {
         "Type to search · Enter opens result · Esc stops"
     } else {
-        "↑← prev · ↓→ next · Enter · Backspace · ] · PgUp/PgDn · b/Esc close"
+        "↑↓ lines · ←→ along a line · Enter · Backspace · ] · PgUp/PgDn · b/Esc close"
     };
     f.render_widget(Paragraph::new(footer).style(Style::new().fg(Color::DarkGray)), foot);
 }

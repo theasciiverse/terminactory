@@ -848,6 +848,25 @@ impl App {
         self.book_go_slug(&slug);
     }
 
+    /// The link on the nearest line above (or below) the selected one on screen, picking
+    /// the one closest across; None when there is no such line.
+    fn book_link_line(&self, down: bool) -> Option<usize> {
+        let &(cur, _) = self.book_urls.get(self.book_selected)?;
+        let centre = |r: &Rect| r.x as i32 + r.width as i32 / 2;
+        let row = self
+            .book_urls
+            .iter()
+            .map(|(r, _)| r.y)
+            .filter(|&y| if down { y > cur.y } else { y < cur.y })
+            .min_by_key(|&y| y.abs_diff(cur.y))?;
+        self.book_urls
+            .iter()
+            .enumerate()
+            .filter(|(_, (r, _))| r.y == row)
+            .min_by_key(|(_, (r, _))| (centre(r) - centre(&cur)).abs())
+            .map(|(i, _)| i)
+    }
+
     fn book_go_slug(&mut self, slug: &str) {
         if let Some(anchor) = slug.strip_prefix('#') {
             if let Some(page) = crate::wiki::page(&self.book_slug) {
@@ -996,36 +1015,47 @@ impl App {
                 }
                 return;
             }
-            (KeyCode::Up | KeyCode::Left, _) | (_, Some(Action::MoveUp)) => {
+            (KeyCode::Left | KeyCode::Right, _) if self.book_query.is_empty() => {
+                // Along the current line: the nearest link to the left or right on the same row.
+                if let Some(&(cur, _)) = self.book_urls.get(self.book_selected) {
+                    let right = k.code == KeyCode::Right;
+                    let next = self
+                        .book_urls
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, (r, _))| r.y == cur.y && if right { r.x > cur.x } else { r.x < cur.x })
+                        .min_by_key(|(_, (r, _))| r.x.abs_diff(cur.x));
+                    if let Some((i, _)) = next {
+                        self.book_selected = i;
+                    }
+                }
+                return;
+            }
+            (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
                 if !self.book_query.is_empty() {
                     self.book_selected = self.book_selected.saturating_sub(1);
                     if self.book_selected < self.book_scroll as usize {
                         self.book_scroll = self.book_selected as u16;
                     }
-                } else if self.book_urls.is_empty() {
-                    self.book_scroll = self.book_scroll.saturating_sub(1);
-                } else if self.book_selected == 0 && self.book_scroll > 0 {
-                    self.book_scroll -= 1;
+                } else if let Some(i) = self.book_link_line(false) {
+                    self.book_selected = i;
                 } else {
-                    self.book_selected = self.book_selected.saturating_sub(1);
+                    self.book_scroll = self.book_scroll.saturating_sub(1);
                 }
                 return;
             }
-            (KeyCode::Down | KeyCode::Right, _) | (_, Some(Action::MoveDown)) => {
+            (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
                 if !self.book_query.is_empty() {
                     self.book_selected = (self.book_selected + 1).min(self.book_results.len().saturating_sub(1));
                     if self.book_selected >= self.book_scroll as usize + self.book_result_capacity {
                         self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
                     }
-                } else if !self.book_urls.is_empty() {
-                    if self.book_selected + 1 >= self.book_urls.len() {
-                        self.book_scroll = self.book_scroll.saturating_add(1);
-                        self.book_selected = 0;
-                    } else {
-                        self.book_selected += 1;
-                    }
+                } else if let Some(i) = self.book_link_line(true) {
+                    self.book_selected = i;
                 } else {
-                    self.book_scroll += 1;
+                    // No link further down on screen: scroll, keeping the cursor near the bottom.
+                    self.book_scroll = self.book_scroll.saturating_add(1);
+                    self.book_selected = self.book_urls.len().saturating_sub(1);
                 }
                 return;
             }
