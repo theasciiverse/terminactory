@@ -214,6 +214,7 @@ pub enum Kind {
     AdvancedPump,
     LargeKiln,
     BasicSolar,
+    Evacuator,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -240,7 +241,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 44] = [
+    pub const ALL: [Kind; 45] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -285,6 +286,7 @@ impl Kind {
         Kind::AdvancedPump,
         Kind::LargeKiln,
         Kind::BasicSolar,
+        Kind::Evacuator,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -311,6 +313,7 @@ impl Kind {
             | Kind::Kiln
             | Kind::LargeKiln
             | Kind::Mixer
+            | Kind::Evacuator
             | Kind::AdvancedDrill
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
@@ -350,6 +353,7 @@ impl Kind {
             Kind::Kiln => "Kiln",
             Kind::LargeKiln => "Large kiln",
             Kind::Mixer => "Mixer",
+            Kind::Evacuator => "Evacuator",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
             Kind::LargeAdvancedDrill => "Large advanced drill",
@@ -400,6 +404,7 @@ impl Kind {
             // About four minutes of the ~$2,000 a minute a tidy player earns when its tech (10,000 RP) arrives.
             Kind::LargeKiln => 7500.0,
             Kind::Mixer => 200.0,
+            Kind::Evacuator => 3500.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
             Kind::LargeAdvancedDrill => 2000.0,
@@ -451,6 +456,7 @@ impl Kind {
             Kind::Pump => (1, 2),
             Kind::BasicAssembler
             | Kind::Mixer
+            | Kind::Evacuator
             | Kind::AdvancedPump
             | Kind::Drill
             | Kind::BasicDrill
@@ -493,6 +499,7 @@ impl Kind {
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
             Kind::Press => 2.0,
             Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
+            Kind::Evacuator => 6.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
@@ -553,6 +560,7 @@ impl Kind {
                 | Kind::BlastFurnace
                 | Kind::Molder
                 | Kind::Mixer
+                | Kind::Evacuator
         )
     }
     /// Not part of the current tier; nothing is a preview any more.
@@ -565,6 +573,7 @@ impl Kind {
             Kind::Drill => Some(Company::Hollowmere),
             Kind::BasicDrill => Some(Company::Ashgrove),
             Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
+            Kind::Evacuator => Some(Company::Sablon),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
             Kind::Crusher => Some(Company::Ashgrove),
@@ -587,6 +596,7 @@ impl Kind {
             Kind::Pipe | Kind::Pump => Some(Tech::Pumps),
             Kind::AdvancedPump => Some(Tech::AdvancedPump),
             Kind::Mixer => Some(Tech::Mixer),
+            Kind::Evacuator => Some(Tech::Evacuator),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
@@ -637,6 +647,7 @@ impl Kind {
             Kind::Kiln => KILN_RECIPES,
             Kind::LargeKiln => &LARGE_KILN,
             Kind::Mixer => MIXER_RECIPES,
+            Kind::Evacuator => EVACUATOR_RECIPES,
             Kind::CokeOven => COKE_OVEN_RECIPES,
             Kind::Crusher => CRUSHER_RECIPES,
             Kind::WireDrawer => WIRE_DRAWER_RECIPES,
@@ -970,6 +981,7 @@ impl Building {
             | Kind::Kiln
             | Kind::LargeKiln
             | Kind::Mixer
+            | Kind::Evacuator
             | Kind::CokeOven
             | Kind::Crusher
             | Kind::WireDrawer

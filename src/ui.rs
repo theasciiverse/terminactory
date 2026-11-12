@@ -310,6 +310,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::AdvancedPump => "APMP",
         Kind::Pipe => "PIPE",
         Kind::Mixer => "MIXR",
+        Kind::Evacuator => "EVAC",
         Kind::Solar => "SOLR",
         Kind::BasicSolar => "SOL2",
         Kind::Pole => "POLE",
@@ -1038,6 +1039,12 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::EngineBlock => ('N', 202),
         Item::ControlPanel => ('T', 77),
         Item::SteamTractor => ('Y', 220),
+        // Glass things are blue or green; boards are green like the control board.
+        Item::Tube => ('t', 123),
+        Item::Transformer => ('X', 214),
+        Item::LampMatrix => ('A', 229),
+        Item::TubeBoard => ('W', 46),
+        Item::Terminal => ('K', 51),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1079,6 +1086,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Kiln => (PAPER, 166),
         Kind::LargeKiln => (PAPER, 202),
         Kind::Mixer => (INK, 152),
+        Kind::Evacuator => (INK, 158),
         Kind::AdvancedDrill => (INK, 74),
         Kind::LargeBasicDrill => (INK, 111),
         Kind::LargeAdvancedDrill => (INK, 38),
@@ -1139,6 +1147,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Kiln => ('K', 'I'),
         Kind::LargeKiln => ('K', '2'),
         Kind::Mixer => ('M', 'X'),
+        Kind::Evacuator => ('E', 'V'),
         Kind::AdvancedDrill => ('D', '3'),
         Kind::LargeBasicDrill => ('D', '4'),
         Kind::LargeAdvancedDrill => ('D', '5'),
@@ -1242,6 +1251,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Kiln => labelled("KILN"),
         Kind::LargeKiln => labelled("LRG KILN"),
         Kind::Mixer => labelled("MIXR"),
+        Kind::Evacuator => labelled("EVAC"),
         Kind::AdvancedDrill => labelled("ADV DRL"),
         Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
         Kind::LargeAdvancedDrill => labelled("LRG ADV DRILL"),
@@ -2608,7 +2618,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 20] = [
+const CRAFTERS: [Kind; 21] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
@@ -2617,6 +2627,7 @@ const CRAFTERS: [Kind; 20] = [
     Kind::Kiln,
     Kind::LargeKiln,
     Kind::Mixer,
+    Kind::Evacuator,
     Kind::Press,
     Kind::WireDrawer,
     Kind::Winder,
@@ -2646,13 +2657,16 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Winder => "winds wire into coils, and iron rods into springs",
         Kind::RollingMill => "rolls plate flat into sheets, and steel into steel sheets and girders",
         Kind::Lathe => "turns plate into rods and screws, and steel into steel rods and bearings",
-        Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass",
+        Kind::Kiln => "fires eight at once, burning coal: stone into brick, sand into glass, and tubes (leaving waste)",
         Kind::LargeKiln => "fires 32 at once, every 20 seconds: four kilns in one, burning four kilns' coal",
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete",
+        Kind::Evacuator => "pulls the air out of glass with a water jet from a pipe: 2 tubes a run, no waste",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays and gearboxes",
         Kind::BasicAssembler => "builds electric motors and pistons, and the crude parts twice as fast",
-        Kind::AdvancedAssembler => "builds control boards (the x1x1, the weakest microprocessor), and everything below faster",
+        Kind::AdvancedAssembler => {
+            "builds control boards (the x1x1, the weakest microprocessor), then tube boards (x2x1), and everything below faster"
+        }
         Kind::PrecisionAssembler => "builds control boards twice as fast as an advanced one, and takes later chips; nothing below",
         Kind::LargeBasicAssembler => "builds the big goods: pump units and engine blocks",
         Kind::LargeAdvancedAssembler => "builds generators, control panels, drilling rigs and steam tractors; the large basic goods faster",

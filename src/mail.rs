@@ -243,6 +243,7 @@ pub fn gift_note(c: Company) -> &'static str {
         Company::Swiftline => "Swiftline couriered a bonus. It arrived before they posted it.",
         Company::Ampleworth => "Ampleworth sent a payment in a small crate. The crate hums faintly.",
         Company::LatticeFinch => "Lattice & Finch sent a cheque, and a note on the correct way to fold it.",
+        Company::Sablon => "Sablon sent payment in a hand-blown jar, sealed with wax. Nothing got in, and nothing got out.",
     }
 }
 

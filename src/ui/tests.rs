@@ -163,7 +163,7 @@ fn research_tree_fits_the_window() {
     assert!(t.contains("Making        ● Press"), "{t}");
     assert!(t.contains("make copper wire first") && t.contains("Belt tunnels") && t.contains("Large adv. drill"), "{t}");
     assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
-    // 36 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
+    // 37 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
     assert!(t.contains("more ▼") && !t.contains("Blueprints"), "{t}");
     let tall = text(&render(&mut app, 130, 60));
     assert!(
@@ -823,12 +823,22 @@ fn later_machines_have_book_pages() {
             vec!["frame + 2 electric motor + gauge + control board  ──→  generator", "4 steel girder", "steam tractor", "5x5"],
         ),
         (Kind::Welder, vec!["2 steel girder + 8 screw  ──→  frame", "30 EC only while working, none when idle"]),
-        (Kind::Kiln, vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "3x5", "fills up for 8 runs, then makes them all at once"]),
+        (
+            Kind::Kiln,
+            vec![
+                "2 stone  ─coal─→  brick",
+                "3 sand  ─coal─→  glass",
+                "lamp + copper sheet + 2 fine wire  ─coal─→  tube + waste",
+                "3x5",
+                "fills up for 8 runs, then makes them all at once",
+            ],
+        ),
         (
             Kind::LargeKiln,
             vec!["2 stone  ─coal─→  brick", "3 sand  ─coal─→  glass", "5x7", "fills up for 32 runs, then makes them all at once"],
         ),
         (Kind::Mixer, vec!["2 sand + stone + water  ──→  concrete", "2 concrete + iron rod + water  ──→  reinforced concrete"]),
+        (Kind::Evacuator, vec!["lamp + copper sheet + 2 fine wire + water  ──→  2 tube", "2x2", "6 EC", "no waste"]),
         (Kind::LargeBasicDrill, vec!["5x a basic drill's ore, burns 10x the coal", "8x8", "front edge"]),
         (Kind::LargeAdvancedDrill, vec!["5x an advanced drill's ore", "40 EC, no coal"]),
         (Kind::AdvancedDrill, vec!["2x a basic drill's ore", "EC, no coal", "4x4"]),
@@ -1156,7 +1166,9 @@ fn content_step_screens_fit_every_size() {
     // A tall sidebar lists every machine, five numbered groups.
     let buf = render(&mut app, 130, 46);
     let t = text(&buf);
-    for name in ["Large basic drill", "Mixer", "Kiln", "Welder", "Large adv. assembler", "Advanced pump", "Precision assembler"] {
+    for name in
+        ["Large basic drill", "Mixer", "Evacuator", "Kiln", "Welder", "Large adv. assembler", "Advanced pump", "Precision assembler"]
+    {
         assert!(t.contains(name), "{name}: {t}");
     }
     assert!(t.contains(" 5 ") && t.contains("HERE"), "{t}");
