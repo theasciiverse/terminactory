@@ -77,8 +77,7 @@ fn a_paid_removal_counts_as_waste_sold() {
 }
 
 #[test]
-fn waste_in_machines_belts_and_tunnels_is_lost_for_free() {
-    // Pinned: only crates, warehouses and elevators charge. Everything else just loses it.
+fn waste_in_machines_belts_and_tunnels_pays_the_fee_too() {
     let mut w = World::blank();
     w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
     if let Some(Building { st: St::Crafter { out, .. }, .. }) = w.floors[0].tiles[idx(5, 5)].as_mut() {
@@ -96,13 +95,19 @@ fn waste_in_machines_belts_and_tunnels_is_lost_for_free() {
     if let Some(Building { st: St::Drill { out, .. }, .. }) = w.floors[0].tiles[idx(40, 5)].as_mut() {
         out.push_back(Item::Waste);
     }
-    for (x, kind) in [(5, Kind::Furnace), (20, Kind::Belt), (30, Kind::Tunnel), (40, Kind::Drill)] {
-        assert_eq!(w.removal_fee(0, x, 5), (0, 0.0), "{kind:?}");
-        w.econ.money = 0.0;
-        assert_eq!(w.try_remove(0, x, 5), Ok(Some(kind)));
-        assert_eq!(w.econ.money, kind.price(kind.dims(Dir::E).0), "only the refund");
+    if let Some(Building { st: St::Crafter { stock, .. }, .. }) = w.floors[0].tiles[idx(5, 5)].as_mut() {
+        stock[Item::Waste] = 2;
     }
-    assert_eq!(w.econ.sold[Item::Waste.idx()], 0);
+    for (x, kind, n) in [(5, Kind::Furnace, 6), (20, Kind::Belt, 1), (30, Kind::Tunnel, 1), (40, Kind::Drill, 1)] {
+        let fee = n as f64 * WASTE_EACH;
+        assert_eq!(w.removal_fee(0, x, 5), (n, fee), "{kind:?}");
+        w.econ.money = 0.0;
+        assert!(w.try_remove(0, x, 5).is_err(), "{kind:?} needs the fee");
+        w.econ.money = fee;
+        assert_eq!(w.try_remove(0, x, 5), Ok(Some(kind)));
+        assert_eq!(w.econ.money, kind.price(kind.dims(Dir::E).0), "the refund, less the fee");
+    }
+    assert_eq!(w.econ.sold[Item::Waste.idx()], 9);
 }
 
 #[test]

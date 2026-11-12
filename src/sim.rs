@@ -1953,8 +1953,8 @@ impl World {
         Some(b)
     }
 
-    /// How much waste the storage covering (x, y) holds: crates, warehouses, and an
-    /// elevator (its car and its doors on every floor).
+    /// How much waste the part covering (x, y) holds: crates, warehouses, belts, tunnels,
+    /// splitters, arms, drills and machines, and an elevator (its car and its doors on every floor).
     pub fn waste_inside(&self, f: usize, x: i32, y: i32) -> usize {
         let Some(a) = self.floors[f].anchor_at(x, y) else {
             return 0;
@@ -1962,6 +1962,12 @@ impl World {
         let count = |it: &mut dyn Iterator<Item = &Item>| it.filter(|i| **i == Item::Waste).count();
         match self.floors[f].tiles[a].as_ref().map(|b| (&b.st, b.kind)) {
             Some((St::Crate { items }, _)) => count(&mut items.iter()),
+            Some((St::Belt { items }, _)) => count(&mut items.iter().map(|b| &b.item)),
+            Some((St::Tunnel { items, .. }, _)) => count(&mut items.iter().map(|(i, _)| i)),
+            Some((St::Splitter { buf, .. }, _)) => count(&mut buf.iter()),
+            Some((St::Arm { hold, .. }, _)) => count(&mut hold.iter()),
+            Some((St::Drill { out, .. }, _)) => count(&mut out.iter()),
+            Some((St::Crafter { stock, out, .. }, _)) => stock[Item::Waste] as usize + count(&mut out.iter()),
             Some((St::Elevator { .. }, Kind::Elevator)) => {
                 let mut n: usize = self.lifts.iter().filter(|c| c.anchor == a).map(|c| count(&mut c.load.iter())).sum();
                 for fl in &self.floors {
