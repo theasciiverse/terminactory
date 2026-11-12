@@ -161,13 +161,17 @@ fn research_tree_fits_the_window() {
     let t = text(&buf);
     assert!(t.contains("17,687 research") && !t.contains("Upgrades"), "{t}");
     assert!(t.contains("Making        ● Press"), "{t}");
-    assert!(t.contains("make copper wire first") && t.contains("Crystal grower") && t.contains("Large adv. drill"), "{t}");
+    assert!(t.contains("make copper wire first") && t.contains("Crystal grower") && t.contains("Large prec. assembler"), "{t}");
     assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
     // 37 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
     assert!(t.contains("more ▼") && !t.contains("Blueprints"), "{t}");
-    let tall = text(&render(&mut app, 130, 60));
+    let tall = text(&render(&mut app, 130, 64));
     assert!(
-        !tall.contains("more ") && tall.contains("Floors") && tall.contains("Excavation") && tall.contains("Upgrade planner"),
+        !tall.contains("more ")
+            && tall.contains("Floors")
+            && tall.contains("Excavation")
+            && tall.contains("Upgrade planner")
+            && tall.contains("Large adv. drill"),
         "{tall}"
     );
     std::fs::write("target/snapshot-tree.html", to_html(&buf)).unwrap();
@@ -1085,8 +1089,8 @@ fn new_machines_snapshot() {
     app.menu = Some(Category::Create);
     app.selected = Some(Kind::Lathe);
     app.dir = Dir::E;
-    // Create has 32 kinds now: below 46 rows the menu lists only the slot in use (checked after this).
-    let buf = render(&mut app, 130, 46);
+    // Create has 35 kinds now: below 48 rows the menu lists only the slot in use (checked after this).
+    let buf = render(&mut app, 130, 48);
     let t = text(&buf);
     for name in ["Crusher", "Coke oven", "Wire drawer", "Winder", "Rolling mill", "Lathe", "Crude assembler"] {
         assert!(t.contains(name), "{name}: {t}");
@@ -1233,6 +1237,87 @@ fn fine_etcher_snapshot() {
     }
 }
 
+/// The computer's pages, the large precision assembler's tree row and menu row, and the machine on the
+/// map in every facing, at narrow, tall and zoomed-out sizes.
+#[test]
+fn computer_pages_rows_and_machine_fit_every_size() {
+    let mut app = App::new(World::blank());
+    app.book = true;
+    let pages = [
+        (Entry::Item(Item::Keyboard), vec!["Made by", "Used in", "sells $260"]),
+        (Entry::Item(Item::DiskDrive), vec!["Made by", "Used in", "sells $1100"]),
+        (Entry::Item(Item::Mainboard), vec!["Made by", "Used in", "sells $1800"]),
+        (Entry::Item(Item::Computer), vec!["Made by", "sells $11000"]),
+        (
+            Entry::Part(Kind::LargePrecisionAssembler),
+            vec![
+                "mainboard + transformer + terminal + disk drive + frame  ──→  computer",
+                "builds the computer",
+                "160 EC",
+                "$100,000 · 5x5 · from Meridian",
+            ],
+        ),
+        (
+            Entry::Part(Kind::PrecisionAssembler),
+            vec![
+                "circuit board + microprocessor (x4x2) + 4 RAM chip  ──→  mainboard",
+                "circuit board + 2 microprocessor (x4x1) + 4 RAM chip  ──→  mainboard",
+            ],
+        ),
+    ];
+    for (entry, wants) in pages {
+        app.book_go(entry);
+        let wide = text(&render(&mut app, 150, 70));
+        for want in wants {
+            assert!(wide.contains(want), "{entry:?}: {want}\n{wide}");
+        }
+        for (w, h) in [(36, 24), (40, 30), (60, 40), (50, 80), (200, 60), (150, 90)] {
+            let buf = render(&mut app, w, h);
+            assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
+        }
+    }
+    // The research tree: its row shows next to the fine etcher.
+    app.book = false;
+    app.tree = true;
+    app.tree_pick = tree_rows().iter().position(|t| *t == Tech::LargePrecisionAssembler).unwrap();
+    for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60), (130, 64)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Large prec"), "{w}x{h}: {t}");
+    }
+    app.tree = false;
+    // The map: the label fits in every facing, and the inspector names the machine.
+    let mut w = World::blank();
+    let (x, y) = (52, 30);
+    for (i, d) in [Dir::E, Dir::N, Dir::S, Dir::W].into_iter().enumerate() {
+        w.place(0, x + 6 * i as i32, y, Kind::LargePrecisionAssembler, d).unwrap();
+    }
+    let mut app = App::new(w);
+    app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
+    app.cam = (x - 2, y - 2);
+    app.cam_ready = true;
+    app.cursor = (x + 1, y + 1);
+    let buf = render(&mut app, 130, 42);
+    std::fs::write("target/snapshot-large-precision-assembler.html", to_html(&buf)).unwrap();
+    let t = text(&buf);
+    assert!(t.contains("LRG ASM P") && t.contains("Large precision assembler"), "{t}");
+    for (w, h) in [(44, 34), (60, 40), (50, 80), (200, 60)] {
+        let t = text(&render(&mut app, w, h));
+        // A narrow pane cuts the name short with an ellipsis; it still reads.
+        assert!(t.contains("Large precision") && t.contains("LRG ASM P"), "{w}x{h}: {t}");
+    }
+    // The build menu: the new row sits right after the large advanced assembler, and the held part shows.
+    app.menu = Some(Category::Create);
+    app.selected = Some(Kind::LargePrecisionAssembler);
+    for (w, h) in [(130, 32), (130, 48), (50, 20), (64, 20), (90, 20), (44, 40), (200, 60)] {
+        let t = text(&render(&mut app, w, h));
+        assert!(t.contains("Large prec") || t.contains("Large precision") || t.contains("LRGP"), "{w}x{h}: {t}");
+    }
+    app.selected = None;
+    let t = text(&render(&mut app, 130, 48));
+    let (adv, prec, welder) = (t.find("Large adv. assembler"), t.find("Large prec. assembler"), t.find("Welder"));
+    assert!(adv < prec && prec < welder && adv.is_some(), "{t}");
+}
+
 /// The new machines and items have book pages that link to each other.
 #[test]
 fn book_pages_for_the_new_machines_and_items() {
@@ -1292,8 +1377,8 @@ fn content_step_screens_fit_every_size() {
     let mut app = App::new(w);
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
     app.menu = Some(Category::Create);
-    // A tall sidebar lists every machine, five numbered groups.
-    let buf = render(&mut app, 130, 46);
+    // A tall sidebar lists every machine, six numbered groups (it takes a row more for every new machine).
+    let buf = render(&mut app, 130, 48);
     let t = text(&buf);
     for name in [
         "Large basic drill",
@@ -1302,6 +1387,7 @@ fn content_step_screens_fit_every_size() {
         "Kiln",
         "Welder",
         "Large adv. assembler",
+        "Large prec. assembler",
         "Advanced pump",
         "Precision assembler",
         "Etcher",

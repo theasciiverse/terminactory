@@ -49,13 +49,23 @@ fn every_pair_keeps_the_footprint_costs_more_and_agrees_on_facing() {
         assert_eq!(from.category(), to.category(), "{from:?} to {to:?}");
         assert_eq!(from.upgrade(), Some(to));
     }
-    // A part is the start of one pair at most, and a target is never also a start (one step only).
+    // A part is the start of one pair at most. A target is a start only for the large advanced
+    // assembler (large basic to large advanced to large precision): one step per press.
     for (i, (from, to)) in UPGRADES.iter().enumerate() {
         assert!(UPGRADES.iter().skip(i + 1).all(|(f, _)| f != from), "{from:?} twice");
-        assert!(to.upgrade().is_none(), "{to:?} is a target and a start");
+        assert!(to.upgrade().is_none() || *to == Kind::LargeAdvancedAssembler, "{to:?} is a target and a start");
     }
     // The ones left out on purpose.
-    for kind in [Kind::Arm, Kind::Pump, Kind::Crate, Kind::AdvancedDrill, Kind::Kiln, Kind::PrecisionAssembler, Kind::FastBelt] {
+    for kind in [
+        Kind::Arm,
+        Kind::Pump,
+        Kind::Crate,
+        Kind::AdvancedDrill,
+        Kind::Kiln,
+        Kind::PrecisionAssembler,
+        Kind::LargePrecisionAssembler,
+        Kind::FastBelt,
+    ] {
         assert_eq!(kind.upgrade(), None, "{kind:?}");
     }
 }
@@ -70,6 +80,7 @@ fn the_table_is_what_the_plan_names() {
             (Kind::Solar, Kind::BasicSolar),
             (Kind::AdvancedAssembler, Kind::PrecisionAssembler),
             (Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler),
+            (Kind::LargeAdvancedAssembler, Kind::LargePrecisionAssembler),
             (Kind::LargeBasicDrill, Kind::LargeAdvancedDrill),
         ]
     );
@@ -486,4 +497,43 @@ fn the_planner_tech_is_priced_as_the_plan_says() {
     assert_eq!((t.cost(), t.milestone()), (3000.0, (Item::Gearbox, 60)));
     assert_eq!((t.company(), t.name()), (Company::Swiftline, "Upgrade planner"));
     assert!(UNLOCK_GROUPS.iter().any(|g| g.0 == "Tools" && g.1.contains(&t)));
+}
+
+#[test]
+fn a_large_advanced_assembler_becomes_a_large_precision_one_and_pays_the_difference() {
+    let mut w = World::blank();
+    w.place(0, 10, 10, Kind::LargeAdvancedAssembler, Dir::E).unwrap();
+    set_recipe(&mut w, 10, 10, "steam tractor");
+    set_stock(&mut w, 10, 10, Item::Frame, 3);
+    let before = w.econ.money;
+    let (rep, undo) = w.upgrade_area(0, ALL);
+    assert_eq!((rep.upgraded, rep.made.clone()), (1, vec![(Kind::LargePrecisionAssembler, 1)]));
+    assert!((before - w.econ.money - 70_000.0).abs() < 1e-9, "$100,000 less the $30,000 it was");
+    let b = w.tile(0, 10, 10).unwrap();
+    assert_eq!((b.kind, b.recipe().unwrap().name), (Kind::LargePrecisionAssembler, "steam tractor"));
+    assert_eq!(crafter(&w, 10, 10).3, 3, "what it holds comes along");
+    // Nothing further to upgrade, and the swap undoes for the same money.
+    assert_eq!(w.plan_upgrade(0, ALL).parts.len(), 0);
+    w.undo_upgrade(&undo.unwrap());
+    assert!((w.econ.money - before).abs() < 1e-9);
+    assert_eq!(w.tile(0, 10, 10).unwrap().kind, Kind::LargeAdvancedAssembler);
+}
+
+#[test]
+fn a_large_basic_assembler_climbs_one_step_a_press_and_a_large_basic_recipe_stops_at_the_second() {
+    let mut w = World::blank();
+    w.place(0, 10, 10, Kind::LargeBasicAssembler, Dir::E).unwrap();
+    set_recipe(&mut w, 10, 10, "engine block");
+    w.upgrade_area(0, ALL);
+    assert_eq!(w.tile(0, 10, 10).unwrap().kind, Kind::LargeAdvancedAssembler, "one step");
+    // The large precision assembler does not make engine blocks: it is left as it is, and counted.
+    let (rep, undo) = w.upgrade_area(0, ALL);
+    assert_eq!((rep.upgraded, rep.no_recipe), (0, 1));
+    assert!(undo.is_none());
+    assert_eq!(w.tile(0, 10, 10).unwrap().kind, Kind::LargeAdvancedAssembler);
+    // Set to something both make, it goes up.
+    set_recipe(&mut w, 10, 10, "generator");
+    let (rep, _) = w.upgrade_area(0, ALL);
+    assert_eq!(rep.upgraded, 1);
+    assert_eq!(w.tile(0, 10, 10).unwrap().kind, Kind::LargePrecisionAssembler);
 }
