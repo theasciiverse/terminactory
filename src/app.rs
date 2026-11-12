@@ -129,14 +129,14 @@ pub fn max_slots(cat: Category) -> usize {
 pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
     use Kind::*;
     match cat {
-        // Create is crowded: six slots (drills, heat, shaping, assembling, water, chips).
+        // Create is crowded: six slots (drills, heat, shaping, assembling, water, chips and silicon).
         Category::Create => &[
             &[Drill, BasicDrill, AdvancedDrill, LargeBasicDrill, LargeAdvancedDrill],
-            &[Furnace, Molder, BlastFurnace, CokeOven, Kiln, LargeKiln],
+            &[Furnace, Molder, BlastFurnace, CokeOven, Kiln, LargeKiln, ArcFurnace],
             &[Press, WireDrawer, Winder, RollingMill, Lathe, Crusher],
             &[CrudeAssembler, BasicAssembler, AdvancedAssembler, PrecisionAssembler, LargeBasicAssembler, LargeAdvancedAssembler, Welder],
             &[Pump, AdvancedPump, Mixer, Evacuator],
-            &[Etcher],
+            &[Etcher, CrystalGrower, WaferSaw],
         ],
         // Pipes carry things, so they sit with the belts, in slot 5.
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
@@ -2230,7 +2230,7 @@ mod tests {
     fn the_large_kiln_is_a_second_version_in_the_kilns_slot() {
         assert_eq!(
             slots(Category::Create)[1],
-            &[Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::CokeOven, Kind::Kiln, Kind::LargeKiln]
+            &[Kind::Furnace, Kind::Molder, Kind::BlastFurnace, Kind::CokeOven, Kind::Kiln, Kind::LargeKiln, Kind::ArcFurnace]
         );
         let mut app = App::new(World::new());
         app.world.progress.opened[Company::Underhill.idx()] = true;
@@ -2283,7 +2283,7 @@ mod tests {
     fn pipes_have_transport_slot_five_and_pumps_keep_create_five() {
         assert_eq!(slots(Category::Transport)[4], &[Kind::Pipe]);
         assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer, Kind::Evacuator]);
-        assert_eq!(slots(Category::Create)[5], &[Kind::Etcher]);
+        assert_eq!(slots(Category::Create)[5], &[Kind::Etcher, Kind::CrystalGrower, Kind::WaferSaw]);
         assert_eq!(Kind::Pipe.category(), Category::Transport);
         assert!(!parts_in(Category::Create).contains(&Kind::Pipe));
         assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost][..]]);

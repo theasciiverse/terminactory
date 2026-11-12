@@ -216,6 +216,9 @@ pub enum Kind {
     BasicSolar,
     Evacuator,
     Etcher,
+    ArcFurnace,
+    CrystalGrower,
+    WaferSaw,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -242,7 +245,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 46] = [
+    pub const ALL: [Kind; 49] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -289,6 +292,9 @@ impl Kind {
         Kind::BasicSolar,
         Kind::Evacuator,
         Kind::Etcher,
+        Kind::ArcFurnace,
+        Kind::CrystalGrower,
+        Kind::WaferSaw,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -317,6 +323,9 @@ impl Kind {
             | Kind::Mixer
             | Kind::Evacuator
             | Kind::Etcher
+            | Kind::ArcFurnace
+            | Kind::CrystalGrower
+            | Kind::WaferSaw
             | Kind::AdvancedDrill
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
@@ -358,6 +367,9 @@ impl Kind {
             Kind::Mixer => "Mixer",
             Kind::Evacuator => "Evacuator",
             Kind::Etcher => "Etcher",
+            Kind::ArcFurnace => "Arc furnace",
+            Kind::CrystalGrower => "Crystal grower",
+            Kind::WaferSaw => "Wafer saw",
             Kind::AdvancedDrill => "Advanced drill",
             Kind::LargeBasicDrill => "Large basic drill",
             Kind::LargeAdvancedDrill => "Large advanced drill",
@@ -410,6 +422,9 @@ impl Kind {
             Kind::Mixer => 200.0,
             Kind::Evacuator => 3500.0,
             Kind::Etcher => 25_000.0,
+            Kind::ArcFurnace => 10_000.0,
+            Kind::CrystalGrower => 7500.0,
+            Kind::WaferSaw => 6000.0,
             Kind::AdvancedDrill => 240.0,
             Kind::LargeBasicDrill => 1000.0,
             Kind::LargeAdvancedDrill => 2000.0,
@@ -457,13 +472,15 @@ impl Kind {
             | Kind::AdvancedAssembler
             | Kind::PrecisionAssembler
             | Kind::Welder
-            | Kind::Etcher => (3, 3),
+            | Kind::Etcher
+            | Kind::ArcFurnace => (3, 3),
+            Kind::CrystalGrower => (2, 4),
             Kind::Kiln => (3, 5),
             Kind::LargeKiln => (5, 7),
             Kind::CrudeAssembler | Kind::AdvancedDrill => (4, 4),
             Kind::LargeBasicAssembler | Kind::LargeAdvancedAssembler => (5, 5),
             Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => (8, 8),
-            Kind::Press | Kind::WireDrawer | Kind::Winder => (2, 1),
+            Kind::Press | Kind::WireDrawer | Kind::Winder | Kind::WaferSaw => (2, 1),
             Kind::Pump => (1, 2),
             Kind::BasicAssembler
             | Kind::Mixer
@@ -512,6 +529,9 @@ impl Kind {
             Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
             Kind::Evacuator => 6.0,
             Kind::Etcher => 24.0,
+            Kind::ArcFurnace => 40.0,
+            Kind::CrystalGrower => 12.0,
+            Kind::WaferSaw => 6.0,
             Kind::BasicAssembler => 6.0,
             Kind::LargeBasicAssembler => 12.0,
             Kind::Crusher => 6.0,
@@ -573,6 +593,7 @@ impl Kind {
                 | Kind::Molder
                 | Kind::Mixer
                 | Kind::Evacuator
+                | Kind::ArcFurnace
         )
     }
     /// Not part of the current tier; nothing is a preview any more.
@@ -586,6 +607,7 @@ impl Kind {
             Kind::BasicDrill => Some(Company::Ashgrove),
             Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
             Kind::Evacuator => Some(Company::Sablon),
+            Kind::ArcFurnace | Kind::CrystalGrower | Kind::WaferSaw => Some(Company::Halverson),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
             Kind::Crusher => Some(Company::Ashgrove),
@@ -610,6 +632,9 @@ impl Kind {
             Kind::Mixer => Some(Tech::Mixer),
             Kind::Evacuator => Some(Tech::Evacuator),
             Kind::Etcher => Some(Tech::Etcher),
+            Kind::ArcFurnace => Some(Tech::ArcFurnace),
+            Kind::CrystalGrower => Some(Tech::CrystalGrower),
+            Kind::WaferSaw => Some(Tech::WaferSaw),
             Kind::Welder => Some(Tech::Welder),
             Kind::Kiln => Some(Tech::Kiln),
             Kind::LargeKiln => Some(Tech::LargeKiln),
@@ -662,6 +687,9 @@ impl Kind {
             Kind::Mixer => MIXER_RECIPES,
             Kind::Evacuator => EVACUATOR_RECIPES,
             Kind::Etcher => ETCHER_RECIPES,
+            Kind::ArcFurnace => ARC_RECIPES,
+            Kind::CrystalGrower => GROWER_RECIPES,
+            Kind::WaferSaw => SAW_RECIPES,
             Kind::CokeOven => COKE_OVEN_RECIPES,
             Kind::Crusher => CRUSHER_RECIPES,
             Kind::WireDrawer => WIRE_DRAWER_RECIPES,
@@ -997,6 +1025,9 @@ impl Building {
             | Kind::Mixer
             | Kind::Evacuator
             | Kind::Etcher
+            | Kind::ArcFurnace
+            | Kind::CrystalGrower
+            | Kind::WaferSaw
             | Kind::CokeOven
             | Kind::Crusher
             | Kind::WireDrawer

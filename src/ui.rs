@@ -312,6 +312,9 @@ fn map_label(k: Kind) -> &'static str {
         Kind::Mixer => "MIXR",
         Kind::Evacuator => "EVAC",
         Kind::Etcher => "ETCH",
+        Kind::ArcFurnace => "ARC",
+        Kind::CrystalGrower => "GROW",
+        Kind::WaferSaw => "SAW",
         Kind::Solar => "SOLR",
         Kind::BasicSolar => "SOL2",
         Kind::Pole => "POLE",
@@ -1067,6 +1070,7 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::Die => ('k', 111),
         Item::Microprocessor => ('H', 207),
         Item::RamChip => ('R', 213),
+        Item::SiliconCrystal => ('y', 153),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1110,6 +1114,9 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Mixer => (INK, 152),
         Kind::Evacuator => (INK, 158),
         Kind::Etcher => (INK, 183),
+        Kind::ArcFurnace => (INK, 216),
+        Kind::CrystalGrower => (INK, 153),
+        Kind::WaferSaw => (INK, 187),
         Kind::AdvancedDrill => (INK, 74),
         Kind::LargeBasicDrill => (INK, 111),
         Kind::LargeAdvancedDrill => (INK, 38),
@@ -1172,6 +1179,9 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Mixer => ('M', 'X'),
         Kind::Evacuator => ('E', 'V'),
         Kind::Etcher => ('E', 'T'),
+        Kind::ArcFurnace => ('A', 'R'),
+        Kind::CrystalGrower => ('G', 'R'),
+        Kind::WaferSaw => ('S', 'W'),
         Kind::AdvancedDrill => ('D', '3'),
         Kind::LargeBasicDrill => ('D', '4'),
         Kind::LargeAdvancedDrill => ('D', '5'),
@@ -1277,6 +1287,9 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Mixer => labelled("MIXR"),
         Kind::Evacuator => labelled("EVAC"),
         Kind::Etcher => labelled("ETCH"),
+        Kind::ArcFurnace => labelled("ARC"),
+        Kind::CrystalGrower => labelled("GROW"),
+        Kind::WaferSaw => strip("SW"),
         Kind::AdvancedDrill => labelled("ADV DRL"),
         Kind::LargeBasicDrill => labelled("LRG BASIC DRILL"),
         Kind::LargeAdvancedDrill => labelled("LRG ADV DRILL"),
@@ -2644,11 +2657,12 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 22] = [
+const CRAFTERS: [Kind; 25] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
     Kind::BlastFurnace,
+    Kind::ArcFurnace,
     Kind::CokeOven,
     Kind::Kiln,
     Kind::LargeKiln,
@@ -2665,6 +2679,8 @@ const CRAFTERS: [Kind; 22] = [
     Kind::AdvancedAssembler,
     Kind::PrecisionAssembler,
     Kind::Etcher,
+    Kind::CrystalGrower,
+    Kind::WaferSaw,
     Kind::LargeBasicAssembler,
     Kind::LargeAdvancedAssembler,
 ];
@@ -2689,6 +2705,9 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::Mixer => "takes water from a pipe and mixes concrete, then reinforced concrete, and etchant from coal and sand (leaving waste)",
         Kind::Evacuator => "pulls the air out of glass with a water jet from a pipe: 2 tubes a run, no waste",
         Kind::Etcher => "etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
+        Kind::ArcFurnace => "melts sand to silicon on power alone, with half the blast furnace's waste, and remelts silicon scrap",
+        Kind::CrystalGrower => "grows silicon crystals from ingots, slowly: 20 s each",
+        Kind::WaferSaw => "saws a crystal into 6 wafers with a fine wire: twice the lathe's wafers per ingot, no scrap",
         Kind::Welder => "welds steel into boiler shells, silo shells and frames; EC only while it works",
         Kind::CrudeAssembler => "builds valves, gauges, lamps, relays, gearboxes, transformers and lamp matrices",
         Kind::BasicAssembler => "builds electric motors, pistons and terminals, and the crude parts twice as fast",

@@ -161,7 +161,7 @@ fn research_tree_fits_the_window() {
     let t = text(&buf);
     assert!(t.contains("17,687 research") && !t.contains("Upgrades"), "{t}");
     assert!(t.contains("Making        ● Press"), "{t}");
-    assert!(t.contains("make copper wire first") && t.contains("Belt tunnels") && t.contains("Large adv. drill"), "{t}");
+    assert!(t.contains("make copper wire first") && t.contains("Crystal grower") && t.contains("Large adv. drill"), "{t}");
     assert!(t.contains("Press · Create") && t.contains("Enter: research for 60 RP"), "{t}");
     // 37 techs are more than 42 rows hold: it scrolls (and a tall window shows them all).
     assert!(t.contains("more ▼") && !t.contains("Blueprints"), "{t}");
@@ -186,13 +186,13 @@ fn research_tree_fits_the_window() {
     std::fs::write("target/snapshot-tree-small.html", to_html(&buf)).unwrap();
     // Clicking a row picks it; clicking it again researches it.
     render(&mut app, 130, 42);
-    let (r, i) = app.tree_rows.iter().copied().find(|(_, i)| tree_rows()[*i] == Tech::Tunnels).unwrap();
+    let (r, i) = app.tree_rows.iter().copied().find(|(_, i)| tree_rows()[*i] == Tech::Coking).unwrap();
     let click = MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x + 2, row: r.y, modifiers: KeyModifiers::NONE };
     app.on_mouse(click);
     assert_eq!(app.tree_pick, i);
-    assert!(!app.world.progress.has(Tech::Tunnels));
+    assert!(!app.world.progress.has(Tech::Coking));
     app.on_mouse(click);
-    assert!(app.world.progress.has(Tech::Tunnels));
+    assert!(app.world.progress.has(Tech::Coking));
     // n opens a waiting telegram over the screen.
     app.mail = Some(crate::mail::parse("Done", 0));
     app.on_key(KeyEvent::from(KeyCode::Char('n')));
@@ -1085,12 +1085,16 @@ fn new_machines_snapshot() {
     app.menu = Some(Category::Create);
     app.selected = Some(Kind::Lathe);
     app.dir = Dir::E;
-    let buf = render(&mut app, 130, 42);
+    // Create has 32 kinds now: below 46 rows the menu lists only the slot in use (checked after this).
+    let buf = render(&mut app, 130, 46);
     let t = text(&buf);
     for name in ["Crusher", "Coke oven", "Wire drawer", "Winder", "Rolling mill", "Lathe", "Crude assembler"] {
         assert!(t.contains(name), "{name}: {t}");
     }
     std::fs::write("target/snapshot-new-machines-menu.html", to_html(&buf)).unwrap();
+    // In a 42-row pane it collapses to one kind a slot, with all six slots and HERE still showing.
+    let t = text(&render(&mut app, 130, 42));
+    assert!(t.contains(" 6 ET Etcher+") && t.contains("HERE") && t.contains("Lathe"), "{t}");
     // Narrow and tall: the map still reads, and the menu is one line.
     app.cursor = (x + 13, y + 1);
     app.cam = (x + 6, y - 3);
@@ -1121,6 +1125,10 @@ fn silicon_book_pages_fit_every_size() {
         (Entry::Item(Item::SiliconIngot), vec!["Made by", "Used in"]),
         (Entry::Item(Item::SiliconScrap), vec!["Made by", "sells $1.5"]),
         (Entry::Item(Item::TransistorBoard), vec!["Made by", "sells $450"]),
+        (Entry::Part(Kind::ArcFurnace), vec!["3 silicon scrap  ──→  2 molten silicon", "melts sand to silicon on power alone"]),
+        (Entry::Part(Kind::CrystalGrower), vec!["3 silicon ingot  ──→  silicon crystal", "slowly"]),
+        (Entry::Part(Kind::WaferSaw), vec!["silicon crystal + fine wire  ──→  6 wafer", "no scrap"]),
+        (Entry::Item(Item::SiliconCrystal), vec!["Made by", "Used in", "sells $50"]),
     ];
     for (entry, wants) in pages {
         app.book_go(entry);
@@ -1249,6 +1257,9 @@ fn content_step_screens_fit_every_size() {
         "Advanced pump",
         "Precision assembler",
         "Etcher",
+        "Arc furnace",
+        "Crystal grower",
+        "Wafer saw",
     ] {
         assert!(t.contains(name), "{name}: {t}");
     }
@@ -1265,6 +1276,19 @@ fn content_step_screens_fit_every_size() {
     app.selected = Some(Kind::Welder);
     let t = text(&render(&mut app, 130, 32));
     assert!(t.contains("Precision assembler") && t.contains("Welder") && t.contains("HERE"), "{t}");
+    // The silicon machines: the heat slot and slot 6 grow, and the held part shows in the menu and the bottom line.
+    for (kind, name) in [(Kind::ArcFurnace, "Arc furnace"), (Kind::CrystalGrower, "Crystal grower"), (Kind::WaferSaw, "Wafer saw")] {
+        app.selected = Some(kind);
+        for (w, h) in [(130, 32), (130, 46), (50, 20), (64, 20), (90, 20), (44, 40), (200, 60)] {
+            let t = text(&render(&mut app, w, h));
+            if w >= 90 && h >= 32 {
+                assert!(t.contains("HERE") && t.contains(name), "{kind:?} at {w}x{h}: {t}");
+            }
+        }
+        let t = text(&render(&mut app, 64, 20));
+        let last = t.lines().last().unwrap();
+        assert!(last.contains("Create ›") && last.contains(name) && last.contains("facing"), "{kind:?}: {last}");
+    }
     app.selected = None;
     // Small panes: the bottom line keeps all six numbers.
     for width in [50, 64, 90] {

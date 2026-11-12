@@ -5,9 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 70;
+pub const ITEMS: usize = 71;
 pub const COMPANIES: usize = 15;
-pub const TECHS: usize = 38;
+pub const TECHS: usize = 41;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -81,6 +81,7 @@ pub enum Item {
     Die,
     Microprocessor,
     RamChip,
+    SiliconCrystal,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -183,6 +184,7 @@ impl Item {
         Item::Die,
         Item::Microprocessor,
         Item::RamChip,
+        Item::SiliconCrystal,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -247,7 +249,7 @@ impl Item {
             Item::TubeBoard => "tube board",
             Item::Terminal => "terminal",
             Item::SiliconIngot => "silicon ingot",
-            // Not waste: it sells, and the arc furnace remelts it (next phase).
+            // Not waste: it sells, and the arc furnace remelts it.
             Item::SiliconScrap => "silicon scrap",
             Item::Wafer => "wafer",
             Item::Dopant => "dopant",
@@ -263,6 +265,7 @@ impl Item {
             // The x4x1: the code is in the name because an x4x2 microprocessor comes after it.
             Item::Microprocessor => "microprocessor (x4x1)",
             Item::RamChip => "RAM chip",
+            Item::SiliconCrystal => "silicon crystal",
         }
     }
     pub fn price(self) -> f64 {
@@ -338,6 +341,7 @@ impl Item {
             Item::Die => 68.0,
             Item::Microprocessor => 200.0,
             Item::RamChip => 150.0,
+            Item::SiliconCrystal => 50.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -418,6 +422,7 @@ impl Item {
             Item::Die => c(136.0, 0.996, 0.06),
             Item::Microprocessor => c(400.0, 0.997, 0.07),
             Item::RamChip => c(300.0, 0.997, 0.07),
+            Item::SiliconCrystal => c(100.0, 0.995, 0.045),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
@@ -556,7 +561,7 @@ impl Company {
             Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
             Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the etcher, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
             Company::Meridian => "Your very first chip! We are all friends here. Meridian has been waiting for you, and we brought snacks.",
-            Company::Halverson => "Silicon! A lovely byproduct of sand. We have many opportunities for the scrap. Do keep the waste coming; we find it charming.",
+            Company::Halverson => "Silicon! A lovely byproduct of sand. We have many opportunities for the scrap. Do keep the waste coming; we find it charming. Our arc furnace melts sand on power alone and makes fewer opportunities, but it will take your scrap back, which we consider a courtesy. Our crystal grower and wafer saw are slow, and so is our patience.",
             Company::Sablon => "Glass, wire, and the air taken out. Nothing is as patient as a tube. Sablon has blown glass for a hundred years and never once hurried it. Our evacuator pulls the air out with a jet of water from a pipe: two tubes a run, no waste, no fire.",
         }
     }
@@ -629,6 +634,9 @@ pub enum Tech {
     UpgradePlanner,
     Evacuator,
     Etcher,
+    ArcFurnace,
+    CrystalGrower,
+    WaferSaw,
 }
 
 impl Tech {
@@ -671,6 +679,9 @@ impl Tech {
         Tech::UpgradePlanner,
         Tech::Evacuator,
         Tech::Etcher,
+        Tech::ArcFurnace,
+        Tech::CrystalGrower,
+        Tech::WaferSaw,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -715,6 +726,9 @@ impl Tech {
             Tech::UpgradePlanner => "Upgrade planner",
             Tech::Evacuator => "Evacuator",
             Tech::Etcher => "Etcher",
+            Tech::ArcFurnace => "Arc furnace",
+            Tech::CrystalGrower => "Crystal grower",
+            Tech::WaferSaw => "Wafer saw",
         }
     }
     pub fn about(self) -> &'static str {
@@ -761,6 +775,9 @@ impl Tech {
             Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 20 seconds: four kilns in one machine",
             Tech::Evacuator => "pulls the air out of glass with a water jet from a pipe: two tubes a run, no waste, no fire",
             Tech::Etcher => "a 3x3 machine on EC that etches dies from doped wafers with a mask and etchant: 2 dies and 2 scrap a wafer",
+            Tech::ArcFurnace => "a 3x3 furnace on EC alone, no fuel: melts sand to silicon with half the blast furnace's waste, and remelts silicon scrap",
+            Tech::CrystalGrower => "a 2x4 machine on EC that grows silicon crystals from ingots, slowly: 20 seconds each",
+            Tech::WaferSaw => "a 2x1 saw on EC that cuts a silicon crystal into 6 wafers with a fine wire: no scrap",
         }
     }
     pub fn company(self) -> Company {
@@ -773,6 +790,7 @@ impl Tech {
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
             Tech::Evacuator => Company::Sablon,
+            Tech::ArcFurnace | Tech::CrystalGrower | Tech::WaferSaw => Company::Halverson,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler | Tech::UpgradePlanner => Company::Swiftline,
             Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints => Company::Brannock,
@@ -814,7 +832,10 @@ impl Tech {
             | Tech::LargeAdvancedDrill
             | Tech::LargeKiln
             | Tech::Evacuator
-            | Tech::Etcher => Category::Create,
+            | Tech::Etcher
+            | Tech::ArcFurnace
+            | Tech::CrystalGrower
+            | Tech::WaferSaw => Category::Create,
             Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
@@ -873,6 +894,10 @@ impl Tech {
             Tech::Evacuator => 30_000.0,
             // Past the large advanced assembler's price: the etcher is the way into chips proper.
             Tech::Etcher => 80_000.0,
+            // Halverson's three: the arc furnace first, then the saw, then the slow grower between them.
+            Tech::ArcFurnace => 40_000.0,
+            Tech::CrystalGrower => 45_000.0,
+            Tech::WaferSaw => 35_000.0,
         }
     }
     /// The free way to unlock: make this many of an item (nothing is used up).
@@ -917,6 +942,9 @@ impl Tech {
             Tech::UpgradePlanner => (Item::Gearbox, 60),
             Tech::Evacuator => (Item::Tube, 40),
             Tech::Etcher => (Item::TransistorBoard, 60),
+            Tech::ArcFurnace => (Item::SiliconIngot, 100),
+            Tech::CrystalGrower => (Item::SiliconIngot, 200),
+            Tech::WaferSaw => (Item::Wafer, 100),
         }
     }
 }
@@ -941,6 +969,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::LargeKiln,
             Tech::Mixer,
             Tech::Evacuator,
+            Tech::ArcFurnace,
         ],
     ),
     (
@@ -951,6 +980,8 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::AdvancedAssembler,
             Tech::PrecisionAssembler,
             Tech::Etcher,
+            Tech::CrystalGrower,
+            Tech::WaferSaw,
             Tech::LargeBasicAssembler,
             Tech::LargeAdvancedAssembler,
         ],
@@ -1023,6 +1054,9 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Key(Made::Item(Item::SiliconIngot)), Some(15)), // 43: sand and coke in a blast furnace, cast in a molder; under the kiln that fires its dopant
     (Node::Tech(Tech::Etcher), Some(34)),                  // 44: beside the precision assembler, under the control board
     (Node::Key(Made::Item(Item::Microprocessor)), Some(44)), // 45: a die, ceramic and fine wire in a precision assembler
+    (Node::Tech(Tech::ArcFurnace), Some(43)),              // 46: Halverson's three sit under the ingot that opens them
+    (Node::Tech(Tech::CrystalGrower), Some(43)),           // 47
+    (Node::Tech(Tech::WaferSaw), Some(43)),                // 48
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -1252,17 +1286,24 @@ const fn molten_steel(name: &'static str, inputs: &'static [(Item, u32)], waste:
 }
 
 /// The dirty road to silicon: sand and coke, and waste for every shovel of it.
-const fn molten_silicon(name: &'static str, inputs: &'static [(Item, u32)], waste: &'static [(Item, u32)], ticks: u32) -> Recipe {
+const fn molten_silicon(
+    name: &'static str,
+    inputs: &'static [(Item, u32)],
+    waste: &'static [(Item, u32)],
+    melt: u32,
+    ticks: u32,
+    tag: char,
+) -> Recipe {
     Recipe {
         name,
         inputs,
         outputs: waste,
         fluid_in: None,
-        fluid_out: Some((Fluid::MoltenSilicon, 1)),
+        fluid_out: Some((Fluid::MoltenSilicon, melt)),
         ticks,
         fuel: None,
         needs: None,
-        tag: 'M',
+        tag,
     }
 }
 
@@ -1306,7 +1347,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         'H',
     ),
     // 3 sand and a coke melt to silicon; the waste is most of it.
-    molten_silicon("molten silicon", &[(Item::Sand, 3), (Item::Coke, 1)], &[(Item::Waste, 2)], 600),
+    molten_silicon("molten silicon", &[(Item::Sand, 3), (Item::Coke, 1)], &[(Item::Waste, 2)], 1, 600, 'M'),
     // Straight from molten iron: no cast, press or second melt. An iron blast furnace can sit
     // against this one and push its metal in with no pipe between them.
     Recipe {
@@ -1614,6 +1655,24 @@ pub const EVACUATOR_RECIPES: &[Recipe] = &[Recipe {
     needs: None,
     tag: 't',
 }];
+
+/// The arc furnace melts silicon on EC alone, no fuel: the same sand and coke give twice the silicon
+/// for half the waste (against the blast furnace), and scrap remelts clean. Molten silicon leaves
+/// the front into a pipe, waste out the back.
+pub const ARC_RECIPES: &[Recipe] = &[
+    molten_silicon("molten silicon", &[(Item::Sand, 3), (Item::Coke, 1)], &[(Item::Waste, 1)], 2, 600, 'M'),
+    molten_silicon("molten silicon (coal)", &[(Item::Sand, 3), (Item::Coal, 2)], &[(Item::Waste, 2)], 1, 600, 'M'),
+    // No waste, so its own letter: the book tells a clean remelt from a dirty melt at a glance.
+    molten_silicon("molten silicon (remelt)", &[(Item::SiliconScrap, 3)], &[], 2, 300, 'R'),
+];
+
+/// The crystal grower pulls a crystal out of molten ingots, slowly: the slowest machine in the game.
+pub const GROWER_RECIPES: &[Recipe] =
+    &[item_recipe("silicon crystal", &[(Item::SiliconIngot, 3)], &[(Item::SiliconCrystal, 1)], 1200, None, None, 'C')];
+
+/// The wafer saw cuts a crystal into six wafers along a fine wire: no scrap.
+pub const SAW_RECIPES: &[Recipe] =
+    &[item_recipe("wafer", &[(Item::SiliconCrystal, 1), (Item::FineWire, 1)], &[(Item::Wafer, 6)], 600, None, None, 'W')];
 
 /// The etcher prints a mask's pattern onto a doped wafer with etchant, and cuts out dies. The
 /// scrap is a product, not waste: it sells, and will remelt.

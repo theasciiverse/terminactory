@@ -135,6 +135,11 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
     assert!(!text.contains("Meridian") && !text.contains("Etcher") && !text.contains("Etchant") && !text.contains("Microprocessor"));
     assert!(!text.contains("\"Mask\"") && !text.contains("\"Die\"") && !text.contains("RamChip"));
     assert!(!l.progress.is_open(Company::Meridian) && !l.progress.has(Tech::Etcher));
+    // Nor the better silicon machines: no arc furnace, crystal grower, wafer saw or silicon crystal.
+    assert!(
+        !text.contains("ArcFurnace") && !text.contains("CrystalGrower") && !text.contains("WaferSaw") && !text.contains("SiliconCrystal")
+    );
+    assert!(!l.progress.has(Tech::ArcFurnace) && !l.progress.has(Tech::CrystalGrower) && !l.progress.has(Tech::WaferSaw));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }

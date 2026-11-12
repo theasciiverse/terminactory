@@ -161,9 +161,11 @@ The direct route takes molten iron from a pipe, or from an iron blast furnace st
 
 **Tubes.** A **tube** ($48) is a lamp's glass with the air taken out: lamp + copper sheet + 2 fine wire. The kiln bakes them the slow way ("tube (baked)": 1 tube + 1 waste out the back per run, a firing of 8 takes 40 s, 12 a minute; the large kiln does 32 per 40 s). Sablon's **evacuator** (2×2, 6 EC, $3,500, takes water from a pipe like the mixer) pulls the air out with a water jet instead: 2 tubes per run, 8 s, no waste, no fire.
 
-**Silicon.** No new raw material and no new machine: sand and coke go into the blast furnace ("molten silicon": 3 sand + 1 coke → molten silicon + 2 waste, 10 s, the dirty way), a molder casts it into a **silicon ingot** ($6), and the lathe slices 2 ingots into 2 **wafers** ($12) and 2 **silicon scrap** ($1.50, which sells) in 40 s. The kiln fires **dopant** ($10: 4 stone, 20 s a batch), **doped wafers** ($50: wafer + 2 dopant, 32 s) and **ceramic** ($8: 2 brick + sand → 2, 32 s), all burning coal; the large kiln does them too. The advanced and precision assemblers build the **circuit board** ($60: ceramic + copper sheet + 4 fine wire), the **transistor** ($42: doped wafer + 6 fine wire + iron sheet → 3) and the **transistor board** ($450, the x3x1: 6 transistors + circuit board + 4 fine wire), 10 s each. Making a silicon ingot opens Halverson Smelting, which sells nothing yet.
+**Silicon.** No new raw material and no new machine: sand and coke go into the blast furnace ("molten silicon": 3 sand + 1 coke → molten silicon + 2 waste, 10 s, the dirty way), a molder casts it into a **silicon ingot** ($6), and the lathe slices 2 ingots into 2 **wafers** ($12) and 2 **silicon scrap** ($1.50, which sells) in 40 s. The kiln fires **dopant** ($10: 4 stone, 20 s a batch), **doped wafers** ($50: wafer + 2 dopant, 32 s) and **ceramic** ($8: 2 brick + sand → 2, 32 s), all burning coal; the large kiln does them too. The advanced and precision assemblers build the **circuit board** ($60: ceramic + copper sheet + 4 fine wire), the **transistor** ($42: doped wafer + 6 fine wire + iron sheet → 3) and the **transistor board** ($450, the x3x1: 6 transistors + circuit board + 4 fine wire), 10 s each. Making a silicon ingot opens Halverson Smelting, whose machines are a better road (below).
 
 **Chips.** Four new items and a machine, from the same raw materials. The mixer makes **etchant** ($2: coal + sand + water → 2 etchant + 1 waste out the back, 5 s). The advanced and precision assemblers build a **mask** ($40: glass + copper sheet + 2 fine wire, 10 s). Lattice & Finch's **etcher** (3×3, 24 EC, $25,000, sixth slot of Create) etches a doped wafer with a mask and etchant into 2 **dies** ($68) and 2 silicon scrap, 15 s. The precision assembler alone turns a die + ceramic + fine wire into a **microprocessor (x4x1)** ($200: 4 fine wire) or a **RAM chip** ($150: 2 fine wire), 10 s each. Making a microprocessor opens Meridian Instruments, which sells nothing yet.
+
+**Better silicon.** Halverson's three machines (all EC, no fuel) are better roads, never the only ones: the blast furnace and lathe routes stay. The **arc furnace** (3×3, 40 EC, $10,000) melts silicon with no fuel: 3 sand + 1 coke → 2 molten silicon + 1 waste (10 s), 3 sand + 2 coal → 1 + 2 waste, or a clean remelt of 3 silicon scrap → 2 molten silicon (5 s). The **crystal grower** (2×4, 12 EC, $7,500) grows a **silicon crystal** ($50) from 3 silicon ingots in 20 s, the slowest machine in the game. The **wafer saw** (2×1, 6 EC, $6,000) saws a crystal and a fine wire into 6 wafers in 10 s, with no scrap: twice the lathe's wafers per ingot.
 
 **Parts** (assemblers; each recipe's time is for the lowest assembler that can make it, and higher ones run it faster: basic 2×, advanced 4× for crude parts; precision 2× for advanced parts).
 - Crude assembler (10 s): valve $50 (copper pipe + iron gear), gauge $35 (glass + spring + copper sheet), lamp $15 (glass + 2 fine wire), relay $80 (copper coil + spring + iron sheet), gearbox $120 (3 iron gear + steel), transformer $200 (2 copper coil + 4 iron sheet), lamp matrix $230 (8 lamp + copper sheet + 4 fine wire), and a slow **hand-wired control board** (40 s: the same relay + 4 fine wire + iron sheet, no steel, gearbox or motor needed; 20 s in a basic assembler).
@@ -191,7 +193,9 @@ Every other item except waste goes into at least one recipe (the transformer, te
 | | Large basic drill (8×8, coal) | 20,000 | 150 motor |
 | | Large basic assembler (5×5) | 25,000 | 300 motor |
 | **Sablon** (tube) | Evacuator (2×2, 6 EC, $3,500) | 30,000 | 40 tube |
-| **Halverson** (silicon ingot) | nothing yet | | |
+| **Halverson** (silicon ingot) | Arc furnace (3×3, 40 EC, $10,000) | 40,000 | 100 silicon ingot |
+| | Crystal grower (2×4, 12 EC, $7,500) | 45,000 | 200 silicon ingot |
+| | Wafer saw (2×1, 6 EC, $6,000) | 35,000 | 100 wafer |
 | **Meridian** (microprocessor x4x1) | nothing yet | | |
 | **Lattice & Finch** (control board) | Advanced assembler (3×3) | 14,000 | 40 control board |
 | | Precision assembler (3×3) | 30,000 | 120 control board |
@@ -206,11 +210,11 @@ Every key item can be made with machines from companies that open before it, so 
 | Category | Slot | Kinds |
 | --- | --- | --- |
 | Create (1) | 1 | cheap / basic / advanced / large basic / large advanced drill |
-| | 2 | furnace / molder / blast furnace / coke oven / kiln / large kiln |
+| | 2 | furnace / molder / blast furnace / coke oven / kiln / large kiln / arc furnace |
 | | 3 | press / wire drawer / winder / rolling mill / lathe / crusher |
 | | 4 | assemblers (crude to large advanced) and the welder |
 | | 5 | water pump / advanced pump / mixer / evacuator |
-| | 6 | etcher |
+| | 6 | etcher / crystal grower / wafer saw |
 | Transport (2) | 1 | belt / fast belt / tunnel |
 | | 2 | splitter / filter splitter |
 | | 3 | arm / long arm |
@@ -339,6 +343,7 @@ Belts are dim arrows (`>>`, muted red without EC), and items ride on them. There
 | `ROLL` | Rolling mill (C copper sheet, I iron sheet) | 2×2 | |
 | `LATHE` | Lathe (R rod, S screw, r steel rod, b bearing) | 3×3 | |
 | `KILN` `WELDER` `MIXR` `EVAC` | Kiln (3×5), welder (3×3), mixer (2×2), evacuator (2×2) | | `b` brick, `u` glass, `C` reinforced concrete, `t` tube |
+| `ARC` `GROW` `SW` | Arc furnace (3×3), crystal grower (2×4), wafer saw (2×1) | | `y` silicon crystal `W` wafer |
 | `ETCH` | Etcher (3×3) | | `h` etchant `m` mask `k` die `H` microprocessor `R` RAM chip |
 | `BASM` `ADVASM` `PRCASM` | Basic (2×2), advanced (3×3), precision (3×3) assembler | | `V` valve `Q` gauge `L` lamp `r` relay `M` motor `P` piston `B` control board |
 | `LRG ASM B` `LRG ASM A` | Large basic and advanced assembler | 5×5 | `D` boiler shell `S` silo shell `F` frame `U` pump unit `E` generator `N` engine block `T` control panel `Y` steam tractor |
