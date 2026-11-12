@@ -5,9 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 51;
-pub const COMPANIES: usize = 12;
-pub const TECHS: usize = 36;
+pub const ITEMS: usize = 56;
+pub const COMPANIES: usize = 13;
+pub const TECHS: usize = 37;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -62,6 +62,11 @@ pub enum Item {
     EngineBlock,
     ControlPanel,
     SteamTractor,
+    Tube,
+    Transformer,
+    LampMatrix,
+    TubeBoard,
+    Terminal,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -145,6 +150,11 @@ impl Item {
         Item::EngineBlock,
         Item::ControlPanel,
         Item::SteamTractor,
+        Item::Tube,
+        Item::Transformer,
+        Item::LampMatrix,
+        Item::TubeBoard,
+        Item::Terminal,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -202,6 +212,12 @@ impl Item {
             Item::EngineBlock => "engine block",
             Item::ControlPanel => "control panel",
             Item::SteamTractor => "steam tractor",
+            Item::Tube => "tube",
+            Item::Transformer => "transformer",
+            Item::LampMatrix => "lamp matrix",
+            // The x2x1: the next microprocessor after the control board (x1x1).
+            Item::TubeBoard => "tube board",
+            Item::Terminal => "terminal",
         }
     }
     pub fn price(self) -> f64 {
@@ -258,6 +274,11 @@ impl Item {
             Item::EngineBlock => 1150.0,
             Item::ControlPanel => 900.0,
             Item::SteamTractor => 7500.0,
+            Item::Tube => 48.0,
+            Item::Transformer => 200.0,
+            Item::LampMatrix => 230.0,
+            Item::TubeBoard => 900.0,
+            Item::Terminal => 2100.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -318,6 +339,11 @@ impl Item {
             Item::ControlPanel => c(1800.0, 0.998, 0.08),
             // A crown item too: same high floor as the drilling rig.
             Item::SteamTractor => c(15000.0, 0.99, 0.2),
+            Item::Tube => c(96.0, 0.995, 0.04),
+            Item::Transformer => c(400.0, 0.997, 0.06),
+            Item::LampMatrix => c(460.0, 0.997, 0.06),
+            Item::TubeBoard => c(1800.0, 0.998, 0.08),
+            Item::Terminal => c(4200.0, 0.998, 0.08),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
@@ -346,6 +372,7 @@ pub enum Company {
     Swiftline,
     Ampleworth,
     LatticeFinch,
+    Sablon,
 }
 
 #[cfg(test)]
@@ -367,6 +394,7 @@ impl Company {
         Company::Swiftline,
         Company::Ampleworth,
         Company::LatticeFinch,
+        Company::Sablon,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -385,6 +413,7 @@ impl Company {
             Company::Swiftline => "Swiftline Conveyors",
             Company::Ampleworth => "Ampleworth Motor Works",
             Company::LatticeFinch => "Lattice & Finch",
+            Company::Sablon => "Sablon Glassworks",
         }
     }
     /// The industry it belongs to, for the story.
@@ -397,6 +426,7 @@ impl Company {
             Company::Pillar | Company::Underhill => "Construction",
             Company::Gearwright | Company::Swiftline => "Machinery",
             Company::Ampleworth | Company::LatticeFinch => "Motors & Chips",
+            Company::Sablon => "Tubes & Glass",
         }
     }
     /// What opens this company: the first of these to be made. Empty means it is open from
@@ -419,6 +449,8 @@ impl Company {
             Company::Swiftline => &[Made::Item(Item::Gearbox)],
             Company::Ampleworth => &[Made::Item(Item::ElectricMotor)],
             Company::LatticeFinch => &[Made::Item(Item::ControlBoard)],
+            // Made in the kiln: the evacuator is what Sablon sells, so it cannot be the way in.
+            Company::Sablon => &[Made::Item(Item::Tube)],
         }
     }
     /// The letter a company sends when it opens. `key` is the key that opened it, so a company
@@ -437,6 +469,7 @@ impl Company {
             Company::Swiftline => "A gearbox! Now that's something that turns. Swiftline belts move twice what Brannock's do, and our basic assembler builds electric motors and pistons. Tell the sisters we said hello.",
             Company::Ampleworth => "A motor, and a tidy one. Ampleworth sells things that turn on their own: an advanced drill that runs on EC and digs twice as fast, and for bigger hands, a large basic assembler and a large basic drill that eats coal by the shovel.",
             Company::LatticeFinch => "A control board! Mr Lattice has gone quiet, which means he's pleased. Ms Finch is already taking notes. We sell the advanced assembler, which wires boards four times faster than a crude one by hand, the precision assembler, the large advanced assembler for the biggest goods of all, and a large advanced drill. Mind the power bill.",
+            Company::Sablon => "Glass, wire, and the air taken out. Nothing is as patient as a tube. Sablon has blown glass for a hundred years and never once hurried it. Our evacuator pulls the air out with a jet of water from a pipe: two tubes a run, no waste, no fire.",
         }
     }
 }
@@ -506,6 +539,7 @@ pub enum Tech {
     BasicSolar,
     Blueprints,
     UpgradePlanner,
+    Evacuator,
 }
 
 impl Tech {
@@ -546,6 +580,7 @@ impl Tech {
         Tech::BasicSolar,
         Tech::Blueprints,
         Tech::UpgradePlanner,
+        Tech::Evacuator,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -588,6 +623,7 @@ impl Tech {
             Tech::BasicSolar => "Basic solar panel",
             Tech::Blueprints => "Blueprints",
             Tech::UpgradePlanner => "Upgrade planner",
+            Tech::Evacuator => "Evacuator",
         }
     }
     pub fn about(self) -> &'static str {
@@ -632,6 +668,7 @@ impl Tech {
             Tech::Blueprints => "copy an area to your hand (c, then c again), paste it anywhere, and keep blueprints in a library (l) for every save",
             Tech::UpgradePlanner => "swap every belt, drill, panel and assembler in an area (c, then u) for its next version, paying only the difference in price",
             Tech::LargeKiln => "a 5x7 kiln that fires 32 at once, every 20 seconds: four kilns in one machine",
+            Tech::Evacuator => "pulls the air out of glass with a water jet from a pipe: two tubes a run, no waste, no fire",
         }
     }
     pub fn company(self) -> Company {
@@ -643,6 +680,7 @@ impl Tech {
             Tech::BlastFurnace => Company::Cinderhall,
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
+            Tech::Evacuator => Company::Sablon,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler | Tech::UpgradePlanner => Company::Swiftline,
             Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints => Company::Brannock,
@@ -682,7 +720,8 @@ impl Tech {
             | Tech::PrecisionAssembler
             | Tech::LargeAdvancedAssembler
             | Tech::LargeAdvancedDrill
-            | Tech::LargeKiln => Category::Create,
+            | Tech::LargeKiln
+            | Tech::Evacuator => Category::Create,
             Tech::Steam | Tech::BasicSolar => Category::Power,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
@@ -737,6 +776,8 @@ impl Tech {
             Tech::PrecisionAssembler => 30_000.0,
             Tech::LargeAdvancedDrill => 60_000.0,
             Tech::LargeAdvancedAssembler => 100_000.0,
+            // Processor stage, the first of the tubes.
+            Tech::Evacuator => 30_000.0,
         }
     }
     /// The free way to unlock: make this many of an item (nothing is used up).
@@ -779,6 +820,7 @@ impl Tech {
             Tech::BasicSolar => (Item::Glass, 60),
             Tech::Blueprints => (Item::CopperPlate, 1500),
             Tech::UpgradePlanner => (Item::Gearbox, 60),
+            Tech::Evacuator => (Item::Tube, 40),
         }
     }
 }
@@ -802,6 +844,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::Kiln,
             Tech::LargeKiln,
             Tech::Mixer,
+            Tech::Evacuator,
         ],
     ),
     (
@@ -878,6 +921,8 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::LargeAdvancedAssembler), Some(34)),   // 38
     (Node::Tech(Tech::LargeKiln), Some(15)),                // 39: beside the kiln it grows from
     (Node::Tech(Tech::BasicSolar), Some(5)),                // 40: under the copper coil, with the steam engine
+    (Node::Key(Made::Item(Item::Tube)), Some(34)),          // 41: baked in the kiln, from the lamps a board's maker already has
+    (Node::Tech(Tech::Evacuator), Some(41)),                // 42
 ];
 
 pub fn tree_children(i: usize) -> Vec<usize> {
@@ -1157,6 +1202,16 @@ pub const CRUDE_RECIPES: &[Recipe] = &[
     item_recipe("lamp", &[(Item::Glass, 1), (Item::FineWire, 2)], &[(Item::Lamp, 1)], 600, None, None, 'L'),
     item_recipe("relay", &[(Item::CopperCoil, 1), (Item::Spring, 1), (Item::IronSheet, 1)], &[(Item::Relay, 1)], 600, None, None, 'R'),
     item_recipe("gearbox", &[(Item::IronGear, 3), (Item::Steel, 1)], &[(Item::Gearbox, 1)], 600, None, None, 'B'),
+    item_recipe("transformer", &[(Item::CopperCoil, 2), (Item::IronSheet, 4)], &[(Item::Transformer, 1)], 600, None, None, 'X'),
+    item_recipe(
+        "lamp matrix",
+        &[(Item::Lamp, 8), (Item::CopperSheet, 1), (Item::FineWire, 4)],
+        &[(Item::LampMatrix, 1)],
+        600,
+        None,
+        None,
+        'A',
+    ),
     // The slow way round: boards by hand, before steel and motors. Advanced assemblers and up
     // hide it (they have the 10 s recipe below).
     item_recipe(
@@ -1235,19 +1290,32 @@ pub const BASIC_RECIPES: &[Recipe] = &[
         None,
         'P',
     ),
+    // The final design adds a keyboard, which needs items from a later phase: it joins in phase 5.
+    item_recipe("terminal", &[(Item::LampMatrix, 1), (Item::TubeBoard, 1)], &[(Item::Terminal, 1)], 600, None, None, 'D'),
 ];
 
 /// Advanced tier (advanced and precision assemblers). The control board is the x1x1, the
-/// weakest microprocessor.
-pub const ADVANCED_RECIPES: &[Recipe] = &[item_recipe(
-    "control board",
-    &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)],
-    &[(Item::ControlBoard, 1)],
-    600,
-    None,
-    None,
-    'C',
-)];
+/// weakest microprocessor; the tube board is the x2x1.
+pub const ADVANCED_RECIPES: &[Recipe] = &[
+    item_recipe(
+        "control board",
+        &[(Item::Relay, 1), (Item::FineWire, 4), (Item::IronSheet, 1)],
+        &[(Item::ControlBoard, 1)],
+        600,
+        None,
+        None,
+        'C',
+    ),
+    item_recipe(
+        "tube board",
+        &[(Item::Tube, 6), (Item::ControlBoard, 1), (Item::IronSheet, 1)],
+        &[(Item::TubeBoard, 1)],
+        900,
+        None,
+        None,
+        'W',
+    ),
+];
 
 /// Precision tier (precision assembler only). Nothing yet: the later processors go here, and
 /// the precision assembler runs the advanced tier twice as fast meanwhile.
@@ -1345,7 +1413,31 @@ pub const WELDER_RECIPES: &[Recipe] = &[
 pub const KILN_RECIPES: &[Recipe] = &[
     item_recipe("brick", &[(Item::Stone, 2)], &[(Item::Brick, 1)], 1200, Some(Item::Coal), None, 'b'),
     item_recipe("glass", &[(Item::Sand, 3)], &[(Item::Glass, 1)], 1200, Some(Item::Coal), None, 'g'),
+    // The slow way to a tube: 40 s for a full batch of eight, 12 a minute, and waste out the back.
+    item_recipe(
+        "tube (baked)",
+        &[(Item::Lamp, 1), (Item::CopperSheet, 1), (Item::FineWire, 2)],
+        &[(Item::Tube, 1), (Item::Waste, 1)],
+        2400,
+        Some(Item::Coal),
+        None,
+        't',
+    ),
 ];
+
+/// The evacuator takes water from a pipe, and pulls the air out of a lamp's glass with it:
+/// two tubes a run, no waste, no fire.
+pub const EVACUATOR_RECIPES: &[Recipe] = &[Recipe {
+    name: "tube",
+    inputs: &[(Item::Lamp, 1), (Item::CopperSheet, 1), (Item::FineWire, 2)],
+    outputs: &[(Item::Tube, 2)],
+    fluid_in: Some((Fluid::Water, 1)),
+    fluid_out: None,
+    ticks: 480,
+    fuel: None,
+    needs: None,
+    tag: 't',
+}];
 
 /// The mixer takes water from a pipe, and items from belts.
 pub const MIXER_RECIPES: &[Recipe] = &[

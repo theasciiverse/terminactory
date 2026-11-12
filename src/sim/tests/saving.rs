@@ -125,6 +125,9 @@ fn a_save_that_names_none_of_the_newest_parts_still_opens() {
     let l = World::load(&path).unwrap();
     assert!(l.progress.has(Tech::Kiln) && !l.progress.has(Tech::LargeKiln) && !l.progress.has(Tech::BasicSolar));
     assert!(!l.progress.has(Tech::Blueprints));
+    // Nor the tube: no Sablon, no evacuator, no tube items, and the file is still format 6.
+    assert!(!text.contains("Sablon") && !text.contains("Evacuator") && !text.contains("\"Tube\""));
+    assert!(!l.progress.is_open(Company::Sablon) && !l.progress.has(Tech::Evacuator));
     assert_eq!(l.tile(0, 60, 50).map(|b| b.kind), Some(Kind::Solar));
     let _ = std::fs::remove_dir_all(&data);
 }

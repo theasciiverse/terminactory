@@ -1133,9 +1133,9 @@ fn the_assembler_ladder_lists_what_each_can_make() {
     assert_eq!(recipe_names(Kind::PrecisionAssembler), joined(&[&adv, &prec]), "precision makes only the top tiers");
     assert_eq!(recipe_names(Kind::LargeBasicAssembler), large_basic);
     assert_eq!(recipe_names(Kind::LargeAdvancedAssembler), joined(&[&large_basic, &large_adv]));
-    assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "control board (hand-wired)"]);
-    assert_eq!(basic, ["electric motor", "piston"]);
-    assert_eq!(adv, ["control board"]);
+    assert_eq!(crude, ["valve", "gauge", "lamp", "relay", "gearbox", "transformer", "lamp matrix", "control board (hand-wired)"]);
+    assert_eq!(basic, ["electric motor", "piston", "terminal"]);
+    assert_eq!(adv, ["control board", "tube board"]);
     assert!(prec.is_empty(), "later processors go here");
     assert_eq!(large_basic, ["pump unit", "engine block"]);
     assert_eq!(large_adv, ["generator", "control panel", "drilling rig", "steam tractor"]);
@@ -1212,9 +1212,10 @@ fn a_precision_assembler_refuses_crude_and_basic_recipes() {
     for crude in CRUDE_RECIPES.iter().chain(BASIC_RECIPES) {
         assert!(!names.contains(&crude.name), "{}", crude.name);
     }
-    assert_eq!(names, ["control board"]);
-    // Nothing to cycle to: the later processors are not here yet.
-    assert!(w.configure(0, 10, 10).unwrap().contains("only one recipe"));
+    assert_eq!(names, ["control board", "tube board"]);
+    // It cycles between the two processors it knows.
+    assert!(!w.configure(0, 10, 10).unwrap().contains("only one recipe"));
+    w.apply_setting(0, 10, 10, Setting::Recipe(0));
     // It takes what a control board uses, and turns away what only a crude or basic recipe uses.
     assert!(w.offer(0, 10, 10, Item::Relay));
     assert!(!w.offer(0, 10, 10, Item::IronGear), "a crude recipe's input");
@@ -1373,12 +1374,14 @@ fn the_kiln_waits_for_a_full_load_then_fires_eight_at_once() {
 fn a_batch_machine_fires_for_one_runs_time_times_batch_over_two() {
     // The rule for the kiln: 5 s a run x 8 runs / 2 = 20 s, so 24 bricks a minute. The large kiln is
     // four kilns in one (decided after review 14), so it keeps the kiln's 20 s firing.
-    for kind in [Kind::Kiln] {
-        for r in kind.recipes() {
-            assert_eq!(r.ticks as u64, 5 * TPS * kind.batch() as u64 / 2, "{kind:?} {}", r.name);
-        }
+    // The baked tube is the exception: it takes 10 s a run, so a batch of eight fires for 40 s (12 a minute).
+    for r in Kind::Kiln.recipes() {
+        let run_secs = if r.name == "tube (baked)" { 10 } else { 5 };
+        assert_eq!(r.ticks as u64, run_secs * TPS * Kind::Kiln.batch() as u64 / 2, "{}", r.name);
     }
-    assert_eq!((Kind::Kiln.recipes()[0].ticks, Kind::LargeKiln.recipes()[0].ticks), (20 * 60, 20 * 60));
+    let kiln = |k: Kind, name: &str| k.recipes().iter().find(|r| r.name == name).unwrap().ticks;
+    assert_eq!((kiln(Kind::Kiln, "brick"), kiln(Kind::LargeKiln, "brick")), (20 * 60, 20 * 60));
+    assert_eq!((kiln(Kind::Kiln, "tube (baked)"), kiln(Kind::LargeKiln, "tube (baked)")), (40 * 60, 40 * 60));
 }
 
 #[test]
@@ -1393,7 +1396,9 @@ fn the_large_kiln_is_four_kilns_in_one() {
         // Four kilns' worth a minute, for four kilns' coal.
         let rate = |k: Kind, r: &Recipe| r.outputs[0].1 * k.batch() * 60 * 60 / r.ticks;
         assert_eq!(rate(Kind::LargeKiln, b), 4 * rate(Kind::Kiln, a), "{}", a.name);
-        assert_eq!(rate(Kind::LargeKiln, b), 96, "{}", a.name);
+        // Bricks and glass fire for 20 s; the baked tube takes 40 s.
+        let per_minute = if a.name == "tube (baked)" { 48 } else { 96 };
+        assert_eq!(rate(Kind::LargeKiln, b), per_minute, "{}", a.name);
         assert_eq!(Kind::LargeKiln.fires(), 4);
     }
     // Four times the lump: it holds 32 runs of input and 320 finished goods.
@@ -1529,6 +1534,146 @@ fn a_mixer_without_water_waits() {
     run(&mut w, 10);
     assert!(crate_items(&w, 0, 11, 5).is_empty());
     assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"));
+}
+
+#[test]
+fn an_evacuator_makes_two_tubes_a_run_from_water_and_its_inputs() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Pump, Dir::E).unwrap();
+    for x in 6..=8 {
+        w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+    }
+    w.place(0, 9, 5, Kind::Evacuator, Dir::E).unwrap();
+    w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+    w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+    assert_eq!(recipe_names(Kind::Evacuator), ["tube"]);
+    set_stock(&mut w, 9, 5, Item::Lamp, 3);
+    set_stock(&mut w, 9, 5, Item::CopperSheet, 3);
+    set_stock(&mut w, 9, 5, Item::FineWire, 6);
+    run(&mut w, 30);
+    // 8 s a run: three runs need 24 s, and each makes two tubes with no waste.
+    assert_eq!(crate_items(&w, 0, 11, 5), vec![Item::Tube; 6]);
+    assert_eq!(w.econ.used[Item::Lamp.idx()], 3);
+    assert_eq!(w.econ.used[Item::FineWire.idx()], 6);
+    assert_eq!(w.econ.made[Item::Waste.idx()], 0);
+}
+
+#[test]
+fn an_evacuator_without_water_waits() {
+    let mut w = World::blank();
+    w.place(0, 9, 5, Kind::Evacuator, Dir::E).unwrap();
+    w.place(0, 11, 5, Kind::Crate, Dir::E).unwrap();
+    w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+    set_stock(&mut w, 9, 5, Item::Lamp, 1);
+    set_stock(&mut w, 9, 5, Item::CopperSheet, 1);
+    set_stock(&mut w, 9, 5, Item::FineWire, 2);
+    run(&mut w, 20);
+    assert!(crate_items(&w, 0, 11, 5).is_empty());
+    assert_eq!(w.idle_reason(0, idx(9, 5)), Some("FLUD"));
+}
+
+#[test]
+fn the_evacuator_is_a_two_by_two_water_machine_that_sablon_sells() {
+    assert_eq!((Kind::Evacuator.cost(), Kind::Evacuator.power_draw(), Kind::Evacuator.base_dims()), (3500.0, 6.0, (2, 2)));
+    assert!(Kind::Evacuator.uses_pipes());
+    assert_eq!((Kind::Evacuator.company(), Kind::Evacuator.tech()), (Some(Company::Sablon), Some(Tech::Evacuator)));
+    assert_eq!(Kind::Evacuator.category(), Category::Create);
+    let r = &EVACUATOR_RECIPES[0];
+    assert_eq!((r.fluid_in, r.outputs, r.ticks, r.fuel), (Some((Fluid::Water, 1)), &[(Item::Tube, 2)][..], 8 * 60, None));
+    assert_eq!(r.inputs, &[(Item::Lamp, 1), (Item::CopperSheet, 1), (Item::FineWire, 2)]);
+    // Locked until researched, like the other machines.
+    let mut p = Progress::default();
+    assert!(!p.part_unlocked(Kind::Evacuator));
+    p.opened[Company::Sablon.idx()] = true;
+    p.researched[Tech::Evacuator.idx()] = true;
+    assert!(p.part_unlocked(Kind::Evacuator));
+}
+
+#[test]
+fn a_kiln_bakes_tubes_in_forty_seconds_and_sends_waste_out_the_back() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Kiln, Dir::E).unwrap(); // covers 5-7, 5-9: front is x=8, back is x=4
+    w.place(0, 8, 9, Kind::Crate, Dir::E).unwrap(); // the tubes
+    w.place(0, 4, 5, Kind::Crate, Dir::W).unwrap(); // the waste
+    pick_recipe(&mut w, 5, 5, "tube (baked)");
+    set_stock(&mut w, 5, 5, Item::Coal, 12); // a coal keeps the fire going for 4 s
+    set_stock(&mut w, 5, 5, Item::Lamp, 8);
+    set_stock(&mut w, 5, 5, Item::CopperSheet, 8);
+    set_stock(&mut w, 5, 5, Item::FineWire, 16);
+    run(&mut w, 38);
+    assert_eq!(w.econ.made[Item::Tube.idx()], 0, "a full batch fires for 40 s");
+    run(&mut w, 5);
+    assert_eq!(crate_items(&w, 0, 8, 9), vec![Item::Tube; 8]);
+    assert_eq!(crate_items(&w, 0, 4, 5), vec![Item::Waste; 8]);
+    // The large kiln picks the recipe up the same way: 32 at once, still 40 s.
+    let big = Kind::LargeKiln.recipes().iter().find(|r| r.name == "tube (baked)").expect("the large kiln bakes tubes too");
+    assert_eq!((big.ticks, big.outputs), (40 * 60, &[(Item::Tube, 1), (Item::Waste, 1)][..]));
+}
+
+#[test]
+fn sablons_key_item_can_be_made_without_anything_sablon_sells() {
+    // Everything but Sablon (and Lattice & Finch, whose control board the tube board comes after).
+    let mut open = [true; COMPANIES];
+    open[Company::Sablon.idx()] = false;
+    open[Company::LatticeFinch.idx()] = false;
+    let (have, _) = makeable(&open);
+    assert_eq!(Company::Sablon.key_items(), &[Made::Item(Item::Tube)]);
+    assert!(have[Item::Tube.idx()], "baked in the kiln");
+    assert!(!have[Item::TubeBoard.idx()], "the tube board needs the advanced assembler");
+    // The evacuator is not the way in: it is locked behind Sablon itself.
+    assert_eq!(Tech::Evacuator.company(), Company::Sablon);
+    assert_eq!(Tech::Evacuator.requires(), &[Made::Item(Item::Tube)]);
+    assert_eq!((Tech::Evacuator.cost(), Tech::Evacuator.milestone()), (30_000.0, (Item::Tube, 40)));
+    // The baked recipe asks for no tech at all.
+    let baked = KILN_RECIPES.iter().find(|r| r.name == "tube (baked)").unwrap();
+    assert!(baked.needs.is_none());
+    // And the tree puts the tube under the control board, the evacuator under the tube.
+    let at = |n: Node| TREE.iter().position(|(m, _)| *m == n).unwrap();
+    let board = at(Node::Key(Made::Item(Item::ControlBoard)));
+    let tube = at(Node::Key(Made::Item(Item::Tube)));
+    let evac = at(Node::Tech(Tech::Evacuator));
+    assert_eq!((TREE[tube].1, TREE[evac].1), (Some(board), Some(tube)));
+    assert!(UNLOCK_GROUPS.iter().any(|g| g.1.contains(&Tech::Evacuator)));
+}
+
+#[test]
+fn a_tube_board_is_built_from_tubes_a_control_board_and_iron_sheet() {
+    let r = ADVANCED_RECIPES.iter().find(|r| r.name == "tube board").unwrap();
+    assert_eq!(r.inputs, &[(Item::Tube, 6), (Item::ControlBoard, 1), (Item::IronSheet, 1)]);
+    assert!(r.inputs.iter().all(|(i, _)| *i != Item::SteelSheet), "iron sheet, not steel");
+    let stock = [(Item::Tube, 6), (Item::ControlBoard, 1), (Item::IronSheet, 1)];
+    // 15 s in an advanced assembler, 7.5 s in a precision one; the crude and basic ones don't know it.
+    assert!(run_powered(Kind::AdvancedAssembler, "tube board", &stock, 14).is_empty());
+    assert_eq!(run_powered(Kind::AdvancedAssembler, "tube board", &stock, 16), vec![Item::TubeBoard]);
+    assert_eq!(run_powered(Kind::PrecisionAssembler, "tube board", &stock, 9), vec![Item::TubeBoard]);
+    for k in [Kind::CrudeAssembler, Kind::BasicAssembler, Kind::LargeBasicAssembler, Kind::LargeAdvancedAssembler] {
+        assert!(!recipe_names(k).contains(&"tube board"), "{k:?}");
+    }
+}
+
+#[test]
+fn the_transformer_lamp_matrix_and_terminal_come_from_the_assembler_tiers() {
+    let coil_sheets = [(Item::CopperCoil, 2), (Item::IronSheet, 4)];
+    assert!(run_powered(Kind::CrudeAssembler, "transformer", &coil_sheets, 9).is_empty());
+    assert_eq!(run_powered(Kind::CrudeAssembler, "transformer", &coil_sheets, 11), vec![Item::Transformer]);
+    let matrix = [(Item::Lamp, 8), (Item::CopperSheet, 1), (Item::FineWire, 4)];
+    assert_eq!(run_powered(Kind::CrudeAssembler, "lamp matrix", &matrix, 11), vec![Item::LampMatrix]);
+    // The basic assembler runs the crude tier twice as fast.
+    assert_eq!(run_powered(Kind::BasicAssembler, "lamp matrix", &matrix, 6), vec![Item::LampMatrix]);
+    let parts = [(Item::LampMatrix, 1), (Item::TubeBoard, 1)];
+    assert!(!recipe_names(Kind::CrudeAssembler).contains(&"terminal"));
+    assert!(run_powered(Kind::BasicAssembler, "terminal", &parts, 9).is_empty());
+    assert_eq!(run_powered(Kind::BasicAssembler, "terminal", &parts, 11), vec![Item::Terminal]);
+    // Higher assemblers know the lower tiers' recipes, faster.
+    assert_eq!(run_powered(Kind::AdvancedAssembler, "terminal", &parts, 6), vec![Item::Terminal]);
+}
+
+#[test]
+fn sablons_letter_comes_with_its_one_tech() {
+    let m = crate::mail::letter(Company::Sablon, Made::Item(Item::Tube), 0);
+    assert!(m.md.contains("Nothing is as patient as a tube."), "{}", m.md);
+    assert!(m.md.contains("- Evacuator (Create)"), "{}", m.md);
+    assert!(!crate::mail::gift_note(Company::Sablon).is_empty());
 }
 
 /// `n` panels (10 EC each) in a column at x - 2, joined by poles at x, from row y down.
@@ -1883,7 +2028,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::SteamTractor);
+    assert_eq!(last, Item::Terminal);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -1899,7 +2044,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "SteamTractor": 7}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"Gauge": 11, "Terminal": 7}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -2702,6 +2847,8 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 #[test]
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
     let crown = [Item::DrillingRig, Item::SteamTractor];
+    // The computer eats both (computers phase 5), so until it arrives nothing consumes them.
+    let waits_for_a_later_phase = [Item::Transformer, Item::Terminal];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
@@ -2711,7 +2858,7 @@ fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
         }
     }
     for it in Item::ALL {
-        if it == Item::Waste || crown.contains(&it) {
+        if it == Item::Waste || crown.contains(&it) || waits_for_a_later_phase.contains(&it) {
             continue;
         }
         assert!(used[it.idx()], "{it:?} is an input to nothing");
@@ -2936,4 +3083,19 @@ fn a_small_factory_makes_electric_motors_from_ore() {
     );
     assert!(motors.iter().all(|i| *i == Item::ElectricMotor));
     assert!(w.econ.made[Item::Waste.idx()] > 0, "steel left waste behind");
+}
+
+#[test]
+fn no_machine_shows_two_recipes_with_one_letter() {
+    // Two routes to one product may share a letter; different products may not.
+    let made = |r: &Recipe| r.outputs.first().map(|o| o.0.name()).or(r.fluid_out.map(|f| f.0.name()));
+    for kind in Kind::ALL {
+        let mut seen: Vec<(char, Option<&str>, &str)> = Vec::new();
+        for r in kind.recipes() {
+            if let Some((_, _, other)) = seen.iter().find(|(t, m, _)| *t == r.tag && *m != made(r)) {
+                panic!("{kind:?}: {} and {other} share the letter {}", r.name, r.tag);
+            }
+            seen.push((r.tag, made(r), r.name));
+        }
+    }
 }

@@ -344,6 +344,29 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"Evacuator\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": "int",
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"tube\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"FastBelt\"",
               "rr": "int",
               "size": "int",
@@ -1031,7 +1054,7 @@
   },
   "progress": {
     "opened": {
-      "len": 12,
+      "len": 13,
       "of": [
         "\"Ampleworth\"",
         "\"Ashgrove\"",
@@ -1042,13 +1065,14 @@
         "\"Kettering\"",
         "\"LatticeFinch\"",
         "\"Pillar\"",
+        "\"Sablon\"",
         "\"Swiftline\"",
         "\"Underhill\"",
         "\"Wellbourne\""
       ]
     },
     "researched": {
-      "len": 36,
+      "len": 37,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1062,6 +1086,7 @@
         "\"CokeOven\"",
         "\"Coking\"",
         "\"Crusher\"",
+        "\"Evacuator\"",
         "\"Excavation\"",
         "\"FastBelts\"",
         "\"FilterSplitters\"",
