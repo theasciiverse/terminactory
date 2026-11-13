@@ -16,7 +16,7 @@ board: Contracts   date: Y157-05-26   author: noon_market_mira   status: open
   - clean_melt | Y157-05-28 | A technical note, since you will be building it. A computer is a mainboard, a transformer, a terminal, a disk drive and a frame. The mainboard wants a fine microprocessor and four RAM chips, and the fine microprocessor wants a fine die. The fine die comes from a fine etcher, which is very hungry. If you have not built a chip line before, the order is a year, not a season.
     - noon_market_mira | Y157-05-28 | A year.
       - clean_melt | Y157-05-28 | A year if you are lucky and two if you are honest with yourself.
-  - [Deleted User #3312] | Y157-06-02 | A friendly price is still a price.
-    - noon_market_mira | Y157-06-02 | I have written that on the letter.
+  - [Deleted User #3312] | Y157-06-02 | We did two orders with them and both were paid on the day. The specification was what cost us, not the money. Ours ran to nine pages by the end and every page was a question we had not thought to ask.
+    - noon_market_mira | Y157-06-02 | Nine pages. I have written that on the letter.
   - noon_market_mira | Y158-04-11 | An update. I sent back a second page. They signed it. The computer shipped and it was two months late and they paid the penalty without a word. I still do not trust the friendliness and I will deal with them again.
     - copperkate | Y158-04-11 | That is the correct conclusion and I have reached it myself.

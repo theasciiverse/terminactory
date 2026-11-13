@@ -16,5 +16,5 @@ board: Waste   date: Y151-06-11   author: scrap_king_pell   status: open
     - scrap_king_pell | Y151-06-14 | Thank you. I will stop making this thread every year.
       - copperkate | Y151-06-14 | You will not.
         - scrap_king_pell | Y151-06-14 | No. I will not.
-  - [Deleted User #3312] | Y153-04-02 | A pile of scrap is a pile of money that has not been counted yet.
-    - scrap_king_pell | Y153-04-02 | I am having that put on a sign.
+  - [Deleted User #3312] | Y153-04-02 | What are you paying this quarter? We have two barrels a week and we have been giving them to the road because nobody told us they were worth anything.
+    - scrap_king_pell | Y153-04-02 | One and a half a unit, and I collect. Bring the barrels to the gate and ask for Pell.

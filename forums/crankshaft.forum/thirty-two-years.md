@@ -5,7 +5,7 @@ board: Off Topic   date: Y152-12-11   author: brass_tally   status: open
   Front clear. Back clear. Coal. EC. Belt behind it full.
   Thank you to everyone who answered a question of mine. There were a great many, especially in the first ten years. I have tried to answer more than I asked, and I am not sure I managed it.
   - OldHollowmere | Y152-12-11 | You managed it. Go and dig the garden.
-  - TamsinR | Y152-12-11 | I was an apprentice when you started this board's beginner thread. I am a shift lead now. You did not once make me feel stupid for asking. That is the whole of it.
+  - TamsinR | Y152-12-11 | I was an apprentice when I first asked in your beginner thread. I am a shift lead now. You did not once make me feel stupid for asking. That is the whole of it.
     - brass_tally | Y152-12-12 | You asked good questions. They were easy to answer.
   - GerdV | Y152-12-11 | I have a list of everyone who has left this plant in the time I have been here. I am putting your name at the top of it tonight, and I am not happy about it.
     - brass_tally | Y152-12-12 | Put me at the bottom. The list is not a ranking.

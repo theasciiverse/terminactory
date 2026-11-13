@@ -65,5 +65,5 @@ board: The Lounge   date: Y131-08-14   author: third_shift_tom   status: open
     - night_porter_iss | Y157-04-11 | Then I have reported it.
   - MillaOnNights | Y157-04-12 | Nothing is a report. Somebody told me that on this thread years ago and I have never forgotten it.
     - third_shift_tom | Y157-04-12 | It was me. I had forgotten I said it.
-  - [Deleted User #3312] | Y157-04-12 | The quiet shift is the good shift.
-    - night_porter_iss | Y157-04-12 | It is the good shift.
+  - [Deleted User #3312] | Y157-04-12 | Line 6, running. The corridor lights are out between fourteen and twenty and nobody has put it in the book, so I have put it in the book.
+    - night_porter_iss | Y157-04-12 | I will tell the gate.

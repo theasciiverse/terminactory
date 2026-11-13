@@ -22,7 +22,7 @@ board: Build Orders & Layouts   date: Y156-07-02   author: foreman_hale   status
       - ferrous_ann | Y156-07-05 | Good. Two plate, one coke. It does not change at the top of the tree.
   - ratio_warden | Y156-07-06 | A note on the question as asked. "Is it worth it" is not answerable without knowing the alternative. The alternative to a control panel is not a cheaper control panel, it is no steam tractor. If the plant wants a tractor, the panel is the price. If the plant wants a cheaper machine, it wants a different machine.
     - foreman_hale | Y156-07-06 | That is fair. I will put the question to the plant in those words.
-  - [Deleted User #3312] | Y156-08-19 | Build the panel line once and make two panels. The second one is cheaper than the first because the line already exists.
+  - [Deleted User #3312] | Y156-08-19 | How long does the panel line take to set up? Ours was six weeks, and four of those were waiting for lamps. That is the number I would take to whoever wants the tractor.
     - foreman_hale | Y156-08-19 | We have been told one tractor.
-      - [Deleted User #3312] | Y156-08-19 | Then you will build the line again next year.
-        - foreman_hale | Y157-02-11 | We built the line again next year.
+      - [Deleted User #3312] | Y156-08-19 | Then ask what a second one would cost on the same line. On ours it was the lamps and a fortnight, not six weeks again.
+        - foreman_hale | Y157-02-11 | We built the line again next year. It took five weeks.
