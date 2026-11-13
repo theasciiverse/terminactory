@@ -4203,16 +4203,16 @@ pub(crate) fn book_url(slug: &str) -> String {
 
 /// The letters of the termweb logo in block capitals: "term" in grey, "web" in white.
 const LOGO: [[&str; 5]; 7] = [
-    ["█████", "  █  ", "  █  ", "  █  ", "  █  "],
-    ["█████", "█    ", "████ ", "█    ", "█████"],
-    ["████ ", "█   █", "████ ", "█  █ ", "█   █"],
-    ["█   █", "██ ██", "█ █ █", "█   █", "█   █"],
-    ["█   █", "█   █", "█ █ █", "██ ██", "█   █"],
-    ["█████", "█    ", "████ ", "█    ", "█████"],
-    ["████ ", "█   █", "████ ", "█   █", "████ "],
+    ["████", " ██ ", " ██ ", " ██ ", " ██ "],
+    ["████", "█   ", "███ ", "█   ", "████"],
+    ["███ ", "█  █", "███ ", "█ █ ", "█  █"],
+    ["█  █", "████", "████", "█  █", "█  █"],
+    ["█  █", "█  █", "████", "████", "█  █"],
+    ["████", "█   ", "███ ", "█   ", "████"],
+    ["███ ", "█  █", "███ ", "█  █", "███ "],
 ];
-/// The logo's width in pixels: seven letters of five, with a pixel between them.
-const LOGO_WIDTH: u16 = 7 * 5 + 6;
+/// The logo's width in pixels: seven letters of four, with a pixel between them.
+const LOGO_WIDTH: u16 = 7 * 4 + 6;
 const LOGO_GREY: u8 = 245;
 const LOGO_WHITE: u8 = 255;
 
@@ -4267,7 +4267,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
                 }
             } else {
                 for text_row in 0..3usize {
-                    let line: String = (0..5)
+                    let line: String = (0..4)
                         .map(|col| match (on(text_row * 2, col), on(text_row * 2 + 1, col)) {
                             (true, true) => '█',
                             (true, false) => '▀',
@@ -4278,7 +4278,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
                     f.buffer_mut().set_string(x, y + text_row as u16, line, style);
                 }
             }
-            x += 6 * scale;
+            x += 5 * scale;
         }
     } else {
         draw_wordmark(f, area.x + area.width.saturating_sub(7) / 2, y);
