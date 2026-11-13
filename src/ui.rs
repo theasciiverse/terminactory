@@ -2457,8 +2457,8 @@ fn grouped(v: f64) -> String {
 /// None before the first milestone item is made.
 fn milestone_mark(w: &World, t: Tech) -> Option<(&'static str, u64, u64)> {
     let (item, n) = t.milestone();
-    let made = w.econ.made[item.idx()].min(n as u64);
-    let n = n as u64;
+    let made = w.econ.made[item.idx()].min(n);
+    let n = n;
     if made == 0 || n == 0 {
         return None;
     }
@@ -2773,7 +2773,8 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
             for y in first_y..last_y {
                 connect(&mut lines, (bus_x, y), (bus_x, y + 1));
             }
-            for y in [py] {
+            {
+                let y = py;
                 connect(&mut lines, (px + BOX_W as i32 - 1, y), (px + BOX_W as i32, y));
                 connect(&mut lines, (px + BOX_W as i32, y), (px + BOX_W as i32 + 1, y));
                 connect(&mut lines, (px + BOX_W as i32 + 1, y), (bus_x, y));
@@ -3649,54 +3650,119 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     }
     f.render_widget(Clear, frame);
     f.render_widget(Block::bordered(), frame);
-    let page_title = match app.book_slug.as_str() {
-        "home" => "Terminactory Wiki",
-        "items" => "Items",
-        "machines" => "Machines",
-        "topics" => "Topics",
-        _ => crate::wiki::page(&app.book_slug).and_then(|md| md.lines().next()).unwrap_or("Page missing").trim_start_matches('#').trim(),
-    };
+    // The title bar: a window's three dots, then the browser's name.
     for (i, color) in [Color::Indexed(167), Color::Indexed(221), Color::Indexed(114)].into_iter().enumerate() {
         f.buffer_mut().set_string(frame.x + 2 + i as u16 * 2, frame.y, "●", Style::new().fg(color));
     }
-    for x in [frame.x + 3, frame.x + 5, frame.x + 7, frame.x + 8] {
-        f.buffer_mut().set_string(x, frame.y, " ", Style::default());
-    }
-    let tab = if app.book_slug == "home" {
-        "╭ Terminactory Wiki ╮".to_string()
-    } else {
-        format!("╭ {page_title} — Terminactory Wiki ╮")
-    };
-    let tab_width = frame.width.saturating_sub(12) as usize;
-    let tab: String = if tab.chars().count() > tab_width {
-        tab.chars().take(tab_width.saturating_sub(1)).chain(std::iter::once('…')).collect()
-    } else {
-        tab
-    };
-    f.buffer_mut().set_stringn(frame.x + 9, frame.y, &tab, tab_width, Style::new().fg(Color::Cyan).bold());
+    f.buffer_mut().set_stringn(frame.x + 8, frame.y, " T Web ", 7, Style::new().fg(Color::Indexed(249)).bold());
     let inner = Block::bordered().inner(frame);
+    app.book_buttons.clear();
+    // The tab strip: a chip per tab, above the toolbar.
+    app.book_tab_hits.clear();
+    app.book_tab_close.clear();
+    let close_chips = inner.width >= 80;
+    let mut chip_x = inner.x + 1;
+    for (i, tab) in app.book_tabs.clone().iter().enumerate() {
+        let room = inner.right().saturating_sub(chip_x + 3) as usize;
+        if room < 6 {
+            break;
+        }
+        let title = tab.title();
+        let tail = if close_chips { " ✕ " } else { " " };
+        let fixed = 2 + tail.chars().count();
+        let mut label: String = title.chars().take(room.saturating_sub(fixed).max(1)).collect();
+        if label.chars().count() < title.chars().count() {
+            label.push('…');
+        }
+        let chip = format!("╭ {label}{tail}╮");
+        let w = chip.chars().count() as u16;
+        let active = i == app.book_active;
+        let style = if active {
+            Style::new().fg(Color::Indexed(255)).bg(Color::Indexed(238)).bold()
+        } else {
+            Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(234))
+        };
+        f.buffer_mut().set_stringn(chip_x, inner.y, &chip, w as usize, style);
+        app.book_tab_hits.push((Rect::new(chip_x, inner.y, w, 1), i));
+        if close_chips {
+            app.book_tab_close.push((Rect::new(chip_x + w - 3, inner.y, 1, 1), i));
+        }
+        chip_x += w;
+    }
+    if inner.right().saturating_sub(chip_x) > 3 {
+        f.buffer_mut().set_string(chip_x + 1, inner.y, "+", Style::new().fg(Color::Indexed(245)));
+        app.book_buttons.push((Rect::new(chip_x + 1, inner.y, 1, 1), crate::app::BookButton::NewTab));
+    }
+    // The toolbar: back, forward, reload and home, each two cells wide.
+    let bar_y = inner.y + 1;
+    let dim = |on: bool| Style::new().fg(if on { Color::Indexed(250) } else { Color::Indexed(240) }).bg(Color::Indexed(236));
+    for (i, (glyph, on, button)) in [
+        ('◀', !app.book_history.is_empty(), crate::app::BookButton::Back),
+        ('▶', !app.book_forward.is_empty(), crate::app::BookButton::Forward),
+        ('⟳', true, crate::app::BookButton::Reload),
+        ('⌂', true, crate::app::BookButton::Home),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let x = inner.x + i as u16 * 2;
+        f.buffer_mut().set_string(x, bar_y, glyph.to_string(), dim(on));
+        app.book_buttons.push((Rect::new(x, bar_y, 1, 1), button));
+    }
+    // The address field, a rounded box with a lock and no https://.
+    // Below 40 columns the lock and the star step aside so the address itself still fits.
+    let phone = inner.width < 40;
     let url = format!(
-        "https://terminactory.wiki/{}{}",
+        "{}terminactory.wiki/{}{}",
+        if phone { "" } else { "🔒 " },
         app.book_slug,
         if app.book_typing { format!("?{}▏", app.book_query) } else { String::new() }
     );
-    let bar = Rect::new(inner.x, inner.y, inner.width, 1);
-    let url_fit = fit_left(&url, inner.width.saturating_sub(6) as usize);
-    f.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled("◀", Style::new().fg(if app.book_history.is_empty() { Color::DarkGray } else { Color::Gray })),
-            Span::raw(" "),
-            Span::styled("▶", Style::new().fg(if app.book_forward.is_empty() { Color::DarkGray } else { Color::Gray })),
-            Span::raw(format!("  {url_fit}")),
-        ]))
-        .style(Style::new().bg(Color::Indexed(236))),
-        bar,
-    );
-    let content = Rect::new(inner.x, inner.y.saturating_add(2), inner.width, inner.height.saturating_sub(3));
+    let field_x = inner.x + 9;
+    let field_w = inner.width.saturating_sub(if phone { 9 } else { 13 });
+    if field_w >= 4 {
+        let y = bar_y;
+        f.buffer_mut().set_string(field_x, y, "╭", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
+        f.buffer_mut().set_string(field_x + field_w - 1, y, "╮", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
+        for x in field_x + 1..field_x + field_w - 1 {
+            f.buffer_mut().set_string(x, y, "─", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
+        }
+        let text = fit_left(&url, field_w.saturating_sub(3) as usize);
+        f.buffer_mut().set_stringn(
+            field_x + 2,
+            y,
+            &text,
+            field_w.saturating_sub(3) as usize,
+            Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(236)),
+        );
+    }
+    // The star that toggles a bookmark (bookmarks arrive with the bookmarks bar).
+    if !phone && inner.width >= 14 {
+        f.buffer_mut().set_string(
+            inner.right().saturating_sub(2),
+            bar_y,
+            "☆",
+            Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(236)),
+        );
+    }
+    f.buffer_mut().set_string(inner.x, bar_y, " ", Style::new().bg(Color::Indexed(236)));
+    let content = Rect::new(inner.x, inner.y.saturating_add(3), inner.width, inner.height.saturating_sub(4));
+    // A thin rule under the address, which the load bar fills for a moment after a page opens.
+    let rule_y = inner.y + 2;
     f.render_widget(
         Paragraph::new("─".repeat(inner.width as usize)).style(Style::new().fg(Color::DarkGray)),
-        Rect::new(inner.x, inner.y + 1, inner.width, 1),
+        Rect::new(inner.x, rule_y, inner.width, 1),
     );
+    if let Some(opened) = app.book_opened {
+        let part = opened.elapsed().as_secs_f32() / 0.3;
+        if part < 1.0 {
+            let done = (inner.width as f32 * part) as u16;
+            f.render_widget(
+                Paragraph::new("━".repeat(done as usize)).style(Style::new().fg(Color::Indexed(117))),
+                Rect::new(inner.x, rule_y, done, 1),
+            );
+        }
+    }
     app.book_links.clear();
     app.book_urls.clear();
     app.book_max_scroll = u16::MAX;
@@ -3788,13 +3854,34 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     if !app.book_urls.is_empty() && app.book_query.is_empty() {
         app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
     }
+    // The status bar: where the selected link goes, and that the page has loaded.
     let foot = Rect::new(inner.x, inner.bottom().saturating_sub(1), inner.width, 1);
-    let footer = if app.book_typing {
-        "Type to search · Enter opens result · Esc stops"
+    f.buffer_mut().set_stringn(foot.x, foot.y, " ".repeat(foot.width as usize), foot.width as usize, Style::new().bg(Color::Indexed(236)));
+    let left = if app.book_typing {
+        "Type to search · Enter opens · Esc stops".to_string()
     } else {
-        "↑↓ lines · ←→ along a line · Enter · Backspace · ] · PgUp/PgDn · b/Esc close"
+        let slug = app.book_urls.get(app.book_selected).map_or(app.book_slug.clone(), |(_, s)| s.clone());
+        format!("terminactory.wiki/{slug}")
     };
-    f.render_widget(Paragraph::new(footer).style(Style::new().fg(Color::DarkGray)), foot);
+    // The close hint shares the right end where there is room for it.
+    let right = if foot.width >= 44 {
+        "Done · b/Esc close"
+    } else if foot.width >= 30 {
+        "Done"
+    } else {
+        "b/Esc close"
+    };
+    let left_room = foot.width.saturating_sub(right.chars().count() as u16 + 2) as usize;
+    let left = fit_left(&left, left_room);
+    f.buffer_mut().set_stringn(foot.x + 1, foot.y, &left, left_room, Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(236)));
+    if foot.width as usize > right.chars().count() + 8 {
+        f.buffer_mut().set_string(
+            foot.right().saturating_sub(right.chars().count() as u16 + 1),
+            foot.y,
+            right,
+            Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(236)),
+        );
+    }
 }
 
 fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
@@ -3825,7 +3912,7 @@ fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
     f.buffer_mut().set_stringn(
         area.x + 1,
         area.y + 4,
-        &"┄".repeat(area.width.saturating_sub(2) as usize),
+        "┄".repeat(area.width.saturating_sub(2) as usize),
         area.width.saturating_sub(2) as usize,
         Style::new().fg(Color::DarkGray),
     );
@@ -3966,7 +4053,7 @@ fn wiki_recipe_cards(world: &World, entry: Entry, width: usize) -> String {
         for (r, k) in &makes {
             out.push_str(&render_recipe_card(world, *r, *k, width));
         }
-        return out;
+        out
     } else {
         let mut out = String::from("## Recipes\n\n### Sources\n");
         for (r, k) in &sources {
@@ -3979,7 +4066,7 @@ fn wiki_recipe_cards(world: &World, entry: Entry, width: usize) -> String {
         for (r, k) in &uses {
             out.push_str(&render_recipe_card(world, *r, *k, width));
         }
-        return out;
+        out
     }
 }
 
@@ -4072,7 +4159,7 @@ fn book_home_markdown(_w: &World, seed: usize) -> String {
     let items = Item::ALL.len();
     let machines = Kind::ALL.iter().filter(|k| crate::wiki::page(&crate::wiki::slug(k.name())).is_some()).count();
     let recipes = CRAFTERS.iter().map(|k| k.recipes().len()).sum::<usize>();
-    let facts = vec![
+    let facts = [
         "…that [[copper-coil]] can be made in a [[press]] or a [[winder]]?".to_string(),
         "…that [[stone]] goes into [[concrete]], [[sand]] and [[brick]]?".to_string(),
         "…that the most valuable item is the [[computer]]?".to_string(),
@@ -4221,11 +4308,9 @@ fn render_wiki_text(f: &mut Frame, area: Rect, md: &str, app: &mut App, info_are
         }
     }
 
-    if narrow {
-        if entry.is_some() {
-            let info_top = 2.min(rows.len());
-            rows.splice(info_top..info_top, std::iter::repeat_n((Vec::new(), false, false, false), 12));
-        }
+    if narrow && entry.is_some() {
+        let info_top = 2.min(rows.len());
+        rows.splice(info_top..info_top, std::iter::repeat_n((Vec::new(), false, false, false), 12));
     }
     let info_total = entry.map_or(0, |_| if narrow { 14 } else { 11 });
     let total_rows = rows.len().max(info_total);
