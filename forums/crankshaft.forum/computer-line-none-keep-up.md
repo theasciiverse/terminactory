@@ -37,6 +37,6 @@ board: Troubleshooting   date: Y157-10-23   author: halverson_adjacent   status:
     - clean_melt | Y157-11-04 | And the scrap?
       - halverson_adjacent | Y157-11-05 | Remelted. We are getting two silicon from three scrap and it has changed the whole floor.
         - scrap_king_pell | Y157-11-05 | I have lost a customer and gained a convert. I will take that trade.
-  - [Deleted User #3312] | Y158-02-14 | The line is not six machines. It is one machine with six parts, and the slowest part is the machine. Fix the slowest part.
-    - halverson_adjacent | Y158-02-14 | I have printed that and put it on the wall.
-    - pinch_point | Y158-02-15 | I have been saying that for years and nobody prints it.
+  - [Deleted User #3312] | Y158-02-14 | Put a crate behind each of the six and weigh what is in them at the end of a shift. The fullest crate is downstream of the problem and the emptiest is upstream of it. We found our etcher that way in a day.
+    - halverson_adjacent | Y158-02-14 | Six crates and a shift of counting. That is cheaper than the argument we have been having.
+    - pinch_point | Y158-02-15 | And you can leave the crates in afterwards. They are buffers.

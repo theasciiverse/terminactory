@@ -82,6 +82,7 @@ Asks the questions the megathread exists for. Thanks everybody, twice. Her later
 **kiln_marit** — Y140, CS. Kiln operator. 720. Sig: *Twenty seconds a batch.* Young, precise, owes halvard_k a debt.
 **west_gate_pat** — Y125, CS. Gatehouse. 1,540. Sig: *Sign in, please.* Knows every delivery and every retirement.
 **second_floor_ivy** — Y139, CS. Elevators and floors. 860. Sig: *Full car or no car.* Fixes elevator threads.
+**apprentice_kit** — Y124, CS. Apprentice on Line 2 at sixteen, operator Y129, stores Y135, left the plant Y147. 3,680. Sig: *Still the new one, some days.* Asked plainly, wrote the answers down, never pretended to know more than he did.
 **molder_max** — Y130, CS. Molder operator. 1,290. Sig: *One metal, one molder.*
 **belt_end_bram** — Y127, CS. Trade post operator. 1,880. Sig: *Somebody has to count it.*
 **slow_steam** — Y130, CS. Boiler engineer. 1,450. Sig: *Size the grid for the busy minute.*
@@ -173,7 +174,7 @@ Funny, superstitious about the radio.
 **greasy_hands** — Y120, OP. Fitter. Last post Y138. 4,120. Sig: *Grease is honest.*
 **Voss_shift** — Y120, OP. Coal man. Last post Y141. 2,880. Sig: *Coal built this place.*
 **eldermill** — Y119, OP. Millwright. Last post Y134. 1,940. Sig: *Mind the mill.*
-**Marnie_Q** — Y121, OP. Canteen and stores. Last post Y147. 3,050. Sig: *Put it back where you found it.*
+**Marnie_Q** — Y121, OP. Canteen and stores. Last post Y148. 3,050. Sig: *Put it back where you found it.*
 **the_first_drill** — Y118, OP. Driller, the first. Last post Y130. 1,210. Sig: *Somebody has to start.*
 **archive_clerk** — Y126, OP. Active; keeps the archive. 2,400. Sig: *The record does not need you to agree with it.*
 **otto_bench** — Y123, OP. Bench hand. Last post Y145. 1,700. Sig: *Bench, vice, patience.*
@@ -186,14 +187,14 @@ Funny, superstitious about the radio.
 **[Deleted User #209]** — posts Y121–Y129. Speaks in short, careful sentences. Referenced by old timers as "the one who started the waste thread".
 **[Deleted User #4471]** — posts Y128–Y152. Answered beginner questions thoroughly; several old answers are quoted long after the account is gone.
 **[Deleted User #1180]** — posts Y133–Y155. Fond of the phrase "it evens out".
-**[Deleted User #3312]** — posts Y146–Y158. Very calm. Sometimes quoted by people who cannot say who said it.
+**[Deleted User #3312]** — posts Y146–Y158. A line hand. Answers with the count and the name of the machine, no flourishes, and will ask a question when he has one. Sometimes quoted by people who cannot say who said it.
 
 ---
 
 ## Notes on consistency
 
 - brass_tally retires in Y152; after that he posts as a retired man, never as a working foreman.
-- TamsinR is an apprentice Y127–Y130, operator Y131–Y143, shift lead Y144 onward.
+- TamsinR is an apprentice Y127–Y130, operator Y131–Y143, shift lead Y144 onward. She was not on the board before Y127; the apprentice on Line 2 in Y124 was apprentice_kit.
 - halvard_k trains kiln_marit in Y142 and mentions it once, in Y143.
 - canteen_agnes retires Y150; her last posts are about handing the ladle over to soup_ladle.
 - Dorn never writes more than eight words before Y150; the long post in Y153 is remarked on by three people.

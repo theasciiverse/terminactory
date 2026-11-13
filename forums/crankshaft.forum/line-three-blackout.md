@@ -1,0 +1,41 @@
+# Line 3 loses power for a second, twice a week
+board: Troubleshooting   date: Y157-11-02   author: ivo_p   status: open
+
+- ivo_p | Y157-11-02 | Line 3 drops for about a second, twice a week, always around half three in the morning. Every machine on the floor stops and restarts. The EC readout goes to nothing and comes back. I have changed the poles, the panels and the engine, and it still happens.
+  - slow_steam | Y157-11-02 | If the readout goes to nothing, the supply is going, not the machines. What else is on that grid?
+    - ivo_p | Y157-11-02 | The floor, the boiler house pump, and the corridor lights.
+      - slow_steam | Y157-11-02 | The pump is on the same grid as the line?
+        - ivo_p | Y157-11-03 | It is. It has been since the boiler house was rebuilt.
+          - slow_steam | Y157-11-03 | Then look at the pump before you look at anything clever. A pump that starts against a full pipe pulls hard for a moment.
+            - ivo_p | Y157-11-03 | A pump draws water, not EC.
+              - slow_steam | Y157-11-03 | The pump draws EC to turn. The water is what it moves.
+                - ivo_p | Y157-11-03 | That is a distinction I have never had to make.
+                  - slow_steam | Y157-11-04 | Make it now. Is the pump on a pole of its own?
+                    - ivo_p | Y157-11-04 | No. It shares a pole with the corridor lights and the lift.
+                      - slow_steam | Y157-11-04 | How far is the pole from the pump?
+                        - ivo_p | Y157-11-04 | Three tiles. Exactly three.
+                          - slow_steam | Y157-11-04 | Exactly three is fine. Exactly three with a lift added is not. A pole reaches three and a machine at the edge of that reach is on the grid by a hair.
+                            - ivo_p | Y157-11-05 | I do not follow.
+                              - slow_steam | Y157-11-05 | You will when the lift starts.
+                                - ivo_p | Y157-11-05 | The lift runs every four minutes all night.
+                                  - slow_steam | Y157-11-05 | Does it run at half three?
+                                    - ivo_p | Y157-11-06 | It runs when it is full.
+                                      - slow_steam | Y157-11-06 | Then it runs when the night shift empties a crate, and the night shift empties a crate when it has filled one, and that is not a clock. But it will be regular.
+                                        - ivo_p | Y157-11-06 | Twice a week is regular.
+                                          - slow_steam | Y157-11-06 | Twice a week is a lift with two crates a week.
+                                            - ivo_p | Y157-11-07 | I have watched the lift for two nights. It went up at 03:41 on Tuesday and 03:39 on Friday.
+                                              - slow_steam | Y157-11-07 | Then you have found it and you do not need me.
+                                                - ivo_p | Y157-11-07 | I have found a coincidence.
+                                                  - slow_steam | Y157-11-08 | Move the pump's pole one tile closer and see whether the coincidence survives.
+                                                    - ivo_p | Y157-11-08 | That is not an explanation.
+                                                      - slow_steam | Y157-11-08 | No. It is a test. There is a difference and you of all people know it.
+                                                        - ivo_p | Y157-11-09 | I have moved the pole. I will report in a fortnight.
+                                                          - slow_steam | Y157-11-09 | Please do. If it holds, I will want the count.
+                                                            - ivo_p | Y157-11-20 | Two weeks, no drop. The lift still runs at half three and the line does not notice. The pole is one tile closer and I have written it in the file.
+                                                              - slow_steam | Y157-11-20 | Then the count was right and the explanation can wait.
+                                                                - ivo_p | Y157-11-21 | I would still like to know why.
+                                                                  - slow_steam | Y157-11-21 | So would I. Put it in the file as unexplained and working. That is more honest than most files.
+  - ivo_p | Y157-11-22 | To close the thread for anybody finding it later: the fault was a pole at the exact edge of its reach, shared by a pump, a lift and a corridor. Moving it one tile fixed it. I do not have a better account of it than that and I have stopped looking for one. Edit: solved.
+  - six_belts | Y157-11-22 | One fault. One fix. Written down.
+  - apprentice_tomas | Y157-11-23 | I have read this thread three times and I am going to check every pole on our floor tomorrow.
+    - ivo_p | Y157-11-23 | Check the ones at exactly three tiles first.

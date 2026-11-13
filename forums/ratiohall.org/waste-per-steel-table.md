@@ -17,7 +17,7 @@ board: Cost   date: Y148-04-22   author: slag_accountant   status: open
   - pinch_point | Y149-02-07 | The direct recipe deserves a longer note. Three molten iron and one coke give one steel and two waste. The plate route is two iron plate and one coke for one steel and one waste, but the plate route costs you a molder, a press, and the EC for both. If your plant is new, direct is cheaper. If your plant already has the plate line, direct is a waste of a good line.
     - slag_accountant | Y149-02-07 | That is the most useful thing anyone has said in this thread. It is a cost of capital, not a cost of waste.
       - foreman_ferro | Y149-02-08 | And capital is the number nobody on this board counts.
-  - [Deleted User #3312] | Y150-09-14 | Waste is a line item. Put it in the line file with the coal and the EC and it stops being a surprise.
-    - slag_accountant | Y150-09-14 | I have been saying that for twenty years and I have never said it that well.
+  - [Deleted User #3312] | Y150-09-14 | We put the waste count on the same sheet as the coal, in a column of its own, and it goes to the foreman on Fridays. It was resented for a month and then it was just the sheet.
+    - slag_accountant | Y150-09-14 | A column of its own. I have been asking for that for twenty years and being told it was the same column.
   - half_belt_hana | Y151-06-03 | I showed this table to my foreman and he said the fee was too small to plan around. Then we counted a month. It was not too small to plan around.
     - slag_accountant | Y151-06-03 | Nobody believes the fee until they have counted a month. Then they believe it forever.
