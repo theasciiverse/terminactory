@@ -1,0 +1,42 @@
+# Computer line: six machines and none of them keep up
+board: Troubleshooting   date: Y157-10-23   author: halverson_adjacent   status: open
+
+- halverson_adjacent | Y157-10-23 | We have finally got the large precision assembler and a computer order. The line is a disaster. The crystal grower is the slowest thing I have ever seen, the fine etcher eats EC like a furnace, the kiln waits, and the fine wire is always short. I am not asking for a miracle, I am asking which of these to fix first.
+  - clean_melt | Y157-10-23 | Fix the grower last, because you cannot fix it. Three silicon ingots for one crystal, twenty seconds each, and there is no faster version. You build more growers. That is the whole answer.
+    - halverson_adjacent | Y157-10-24 | More growers means more ingots. We are already short of silicon.
+      - clean_melt | Y157-10-24 | Then your problem is silicon, not crystals. Are you on an arc furnace or a blast furnace?
+        - halverson_adjacent | Y157-10-24 | Blast furnace, coke recipe. Three sand and one coke for one silicon and two waste.
+          - clean_melt | Y157-10-24 | An arc furnace gives you two silicon and one waste from the same sand and coke, and it burns no fuel, only EC. It also takes silicon scrap back with no waste at all. If you are building computers you have scrap by the crate.
+            - halverson_adjacent | Y157-10-25 | We have been selling the scrap.
+              - clean_melt | Y157-10-25 | Stop selling it. Remelt it. Three scrap make two silicon with nothing out the back. That is the cheapest silicon in the plant.
+              - scrap_king_pell | Y157-10-26 | I will buy the scrap if you insist. But he is right. Remelt first, sell the surplus.
+  - ivo_p | Y157-10-24 | The fine etcher is not a fault, it is a specification. It is very hungry on purpose. If it is browning out the grid, the grid is too small. Size the grid for the etcher and the grower together, because they do not take turns.
+    - halverson_adjacent | Y157-10-24 | We have two steam engines on that floor.
+      - ivo_p | Y157-10-24 | Then check they are on the same grid as the etcher, and check the poles reach. A machine outside every pole's reach is not on the grid at all, and it will not always say so in a way you notice.
+        - halverson_adjacent | Y157-10-25 | I will walk it with a lamp and a pole in hand.
+          - second_floor_ivy | Y157-10-25 | Take the lamp. You will find it in the corner where the pipe run turns.
+  - kiln_marit | Y157-10-24 | The kiln is waiting because you are feeding it a trickle. Doped wafers take a wafer and two dopant, and dopant is four stone, and both are kiln batches. If you are feeding one kiln from one stone line, it will wait for every batch. Give the dopant its own kiln and its own stone.
+    - halverson_adjacent | Y157-10-25 | We have one kiln for dopant, doped wafers and ceramic.
+      - kiln_marit | Y157-10-25 | That is three batches in one machine, and each one waits for the other. Split them. Dopant on one, wafers on another, ceramic on a third if you can spare it.
+        - halvard_k | Y157-10-26 | Hello. She is right. A kiln that changes recipe is a kiln that spends its life filling.
+          - halverson_adjacent | Y157-10-26 | Three kilns. I will ask for three kilns.
+  - tiny_lathe | Y157-10-26 | Fine wire. One copper wire draws to two fine wire, and fine wire goes into everything at the top of the tree: masks, microprocessor, ceramic boards, tube boards. A single drawer will never keep up. You want a drawer per consumer, or a drawer and a warehouse.
+    - halverson_adjacent | Y157-10-26 | We have one drawer.
+      - tiny_lathe | Y157-10-26 | Then that is your bottleneck, not the grower. Everything at the top of the tree eats fine wire. Count it before you count anything else.
+        - tilda_m | Y157-10-27 | Count it twice. And count the scrap, which is a product and not a waste, so do not put it behind the machine.
+  - throughput_tony | Y157-10-27 | A method, since nobody has offered one. Do not fix six things. Put a crate on the output of each machine for one shift and count what is in it. The machine with the smallest pile relative to what the next machine wants is your bottleneck. Fix that one. Then count again.
+    - halverson_adjacent | Y157-10-27 | That will take a week.
+      - throughput_tony | Y157-10-27 | It will take a week and then you will know. Guessing has already taken you a month.
+        - ratio_warden | Y157-10-28 | This is the correct method and it is the one I would have given. Note that a crate on the output of a machine with a full front measures nothing. Clear the front first.
+  - ferrous_ann | Y157-10-28 | One more. The large precision assembler runs the large advanced recipes twice as fast as well as the computer. If you are also making generators or steam tractors on it, the computer is waiting behind them. Give the computer its own machine or give it priority.
+    - halverson_adjacent | Y157-10-28 | It is doing generators in the day and computers at night.
+      - ferrous_ann | Y157-10-28 | Then the day shift is eating your computer line. That is a scheduling problem and no amount of belt will fix it.
+        - ForemanEllis | Y157-10-29 | Please put that in the line file, with the hours. A machine that changes job at shift change is a machine that loses an hour at each change.
+  - halverson_adjacent | Y157-11-04 | An update. We did the counting. The bottleneck was the fine wire drawer, as tiny_lathe said, and the second was the single kiln doing three recipes. We have two drawers and three kilns now. The grower is still the slowest machine and we have stopped fighting it. We are building a fourth.
+    - tiny_lathe | Y157-11-04 | Good. The grower is a machine you build more of, not a machine you speed up.
+    - clean_melt | Y157-11-04 | And the scrap?
+      - halverson_adjacent | Y157-11-05 | Remelted. We are getting two silicon from three scrap and it has changed the whole floor.
+        - scrap_king_pell | Y157-11-05 | I have lost a customer and gained a convert. I will take that trade.
+  - [Deleted User #3312] | Y158-02-14 | The line is not six machines. It is one machine with six parts, and the slowest part is the machine. Fix the slowest part.
+    - halverson_adjacent | Y158-02-14 | I have printed that and put it on the wall.
+    - pinch_point | Y158-02-15 | I have been saying that for years and nobody prints it.
