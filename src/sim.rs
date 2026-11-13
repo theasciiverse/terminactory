@@ -73,7 +73,7 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 6;
+pub const SAVE_VERSION: u32 = 7;
 /// The game version, saved in every file.
 pub const GAME_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -956,7 +956,7 @@ pub enum St {
         #[serde(default)]
         fluid: u32,
         #[serde(default)]
-        fluid_out: u32,
+        fluid_out: [u32; 2],
     },
     Crate {
         items: VecDeque<Item>,
@@ -1062,7 +1062,7 @@ impl Building {
                 busy: false,
                 out: VecDeque::new(),
                 fluid: 0,
-                fluid_out: 0,
+                fluid_out: [0; 2],
             },
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
@@ -2197,7 +2197,7 @@ impl World {
             {
                 *recipe = v;
                 *fluid = 0;
-                *fluid_out = 0;
+                *fluid_out = [0; 2];
             }
             _ => {}
         }
@@ -2257,7 +2257,7 @@ impl World {
                 *p = 0.0;
                 // Fluid held for the old recipe is let go.
                 *fluid = 0;
-                *fluid_out = 0;
+                *fluid_out = [0; 2];
                 Some(format!("{} now makes {}", kind.name(), list[n].name))
             }
             St::Elevator { mode, .. } => {
@@ -2978,7 +2978,10 @@ impl World {
             St::Crafter { busy: false, stock, fuel, out, fluid, fluid_out, .. } => {
                 let r = b.recipe()?;
                 let batch = b.kind.batch();
-                let fluid_full = r.fluid_out.is_some_and(|(_, n)| *fluid_out + n * batch > fluid_out_cap(n * batch));
+                let fluid_full = [r.fluid_out, r.fluid_out2]
+                    .iter()
+                    .enumerate()
+                    .any(|(i, output)| output.is_some_and(|(_, n)| fluid_out[i] + n * batch > fluid_out_cap(n * batch)));
                 let (products_fit, waste_fits) = outputs_fit(r, batch, out, b.kind.out_cap());
                 if !products_fit || fluid_full {
                     Some(self.full_word(f, a, Port::Front, "FULL"))
@@ -3063,10 +3066,10 @@ struct Ctx<'a> {
 }
 
 /// The pipe networks touching a building's edges, optionally skipping one side.
-fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, dims: (i32, i32), skip: Option<Dir>) -> Vec<usize> {
+fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, dims: (i32, i32), skip: Option<Dir>, skip_back: bool) -> Vec<usize> {
     let mut out = Vec::new();
     for d in Dir::ALL {
-        if Some(d) == skip {
+        if Some(d) == skip || (skip_back && skip.is_some_and(|side| d == side.opposite())) {
             continue;
         }
         for j in 0..edge_len(dims, d) {
@@ -3163,7 +3166,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             *busy = false;
             // A fluid input comes from pipes on any side but the front.
             if let Some((fl, n)) = r.fluid_in {
-                for p in pools_around(pipe_pool, x, y, dims, Some(dir)) {
+                for p in pools_around(pipe_pool, x, y, dims, Some(dir), r.fluid_out2.is_some()) {
                     while *fluid < fluid_cap(n * batch) && pools[p].fluid == Some(fl) && pools[p].amount >= 1.0 {
                         pools[p].take(fl, 1.0);
                         *fluid += 1;
@@ -3174,7 +3177,11 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             let have = r.inputs.iter().all(|(it, n)| stock[it.idx()] >= *n * batch) && r.fluid_in.is_none_or(|(_, n)| *fluid >= n * batch);
             // Every output needs room: products (out the front), waste (out the back) and fluid.
             let (products_fit, waste_fits) = outputs_fit(r, batch, out, kind.out_cap());
-            let room = products_fit && waste_fits && r.fluid_out.is_none_or(|(_, n)| *fluid_out + n * batch <= fluid_out_cap(n * batch));
+            let fluid_room = [r.fluid_out, r.fluid_out2]
+                .iter()
+                .enumerate()
+                .all(|(i, output)| output.is_none_or(|(_, n)| fluid_out[i] + n * batch <= fluid_out_cap(n * batch)));
+            let room = products_fit && waste_fits && fluid_room;
             if have && room {
                 let speed = match r.fuel {
                     Some(f) => {
@@ -3205,9 +3212,11 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                         if let Some((_, n)) = r.fluid_in {
                             *fluid -= n * batch;
                         }
-                        if let Some((fl, n)) = r.fluid_out {
-                            *fluid_out += n * batch;
-                            econ.made_fluid[fl] += (n * batch) as u64;
+                        for (i, output) in [r.fluid_out, r.fluid_out2].into_iter().enumerate() {
+                            if let Some((fl, n)) = output {
+                                fluid_out[i] += n * batch;
+                                econ.made_fluid[fl] += (n * batch) as u64;
+                            }
                         }
                         for (it, n) in r.outputs {
                             for _ in 0..*n * batch {
@@ -3218,8 +3227,11 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                     }
                 }
             }
-            if let (Some((fl, _)), true) = (r.fluid_out, *fluid_out > 0) {
-                *fluid_out -= push_fluid(tiles, owner, pipe_pool, pools, x, y, dims, dir, fl, *fluid_out);
+            for (i, output) in [r.fluid_out, r.fluid_out2].into_iter().enumerate() {
+                if let (Some((fl, _)), true) = (output, fluid_out[i] > 0) {
+                    let port = if i == 0 { dir } else { dir.opposite() };
+                    fluid_out[i] -= push_fluid(tiles, owner, pipe_pool, pools, x, y, dims, port, fl, fluid_out[i]);
+                }
             }
             push_port(tiles, owner, econ, x, y, dims, dir, Port::Front, out, rr);
             push_port(tiles, owner, econ, x, y, dims, dir, Port::Back, out, rr);
@@ -3227,7 +3239,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Pump { busy } => {
             *busy = false;
             if ratio > 0.0 {
-                for p in pools_around(pipe_pool, x, y, dims, None) {
+                for p in pools_around(pipe_pool, x, y, dims, None, false) {
                     if pools[p].add(Fluid::Water, kind.pump_rate() * ratio / TPS as f64) > 0.0 {
                         *busy = true;
                         break;
@@ -3244,7 +3256,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 *fuel = Item::Coal.burn_ticks().unwrap_or(0);
             }
             // Water comes from pipes on any side but the front.
-            let source = pools_around(pipe_pool, x, y, dims, Some(dir))
+            let source = pools_around(pipe_pool, x, y, dims, Some(dir), false)
                 .into_iter()
                 .find(|&p| pools[p].fluid == Some(Fluid::Water) && pools[p].amount >= step);
             if *fuel > 0 {
@@ -3281,7 +3293,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         }
         St::Engine { steam, .. } => {
             // Tops up from steam pipes touching it; boilers can also feed it directly.
-            for p in pools_around(pipe_pool, x, y, dims, None) {
+            for p in pools_around(pipe_pool, x, y, dims, None, false) {
                 if *steam < ENGINE_BUF {
                     *steam += pools[p].take(Fluid::Steam, ENGINE_BUF - *steam);
                 }

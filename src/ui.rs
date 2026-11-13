@@ -1373,6 +1373,10 @@ fn fluid_colour(fl: Fluid) -> u8 {
         Fluid::MoltenIron => 160,
         Fluid::MoltenSteel => 229,
         Fluid::MoltenSilicon => 117,
+        Fluid::CrudeOil => 130,
+        Fluid::Naphtha => 220,
+        Fluid::FuelOil => 94,
+        Fluid::Ethylene => 201,
     }
 }
 
@@ -2020,7 +2024,10 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
                     v.push(format!("fluid comes from pipes (not the {} side)", b.dir.arrow()));
                 }
                 if let Some((fl, n)) = r.fluid_out {
-                    v.push(format!("gives {n} {}  ({}/{} held)", fl.name(), fluid_out, CRAFTER_FLUID_OUT_CAP));
+                    v.push(format!("gives {n} {}  ({}/{} held)", fl.name(), fluid_out[0], CRAFTER_FLUID_OUT_CAP));
+                }
+                if let Some((fl, n)) = r.fluid_out2 {
+                    v.push(format!("gives {n} {} out the back  ({}/{} held)", fl.name(), fluid_out[1], CRAFTER_FLUID_OUT_CAP));
                 }
                 let waste = r.outputs.iter().any(|o| o.0 == Item::Waste);
                 if waste {
@@ -3241,7 +3248,12 @@ fn equation(r: &Recipe, here: Entry) -> Vec<Seg> {
     out.push(seg(arrow, Style::new().fg(Color::Indexed(244))));
     // A fluid product comes first, then the items (molten steel + waste).
     out.extend(fluid(r.fluid_out, false));
-    if r.fluid_out.is_some() && !r.outputs.is_empty() {
+    if r.fluid_out2.is_some() {
+        out.push(seg(" + ", Style::new().fg(Color::DarkGray)));
+        out.extend(fluid(r.fluid_out2, false));
+        out.push(seg(" (back)", Style::new().fg(Color::DarkGray)));
+    }
+    if (r.fluid_out.is_some() || r.fluid_out2.is_some()) && !r.outputs.is_empty() {
         out.push(seg(" + ", Style::new().fg(Color::DarkGray)));
     }
     out.extend(side(r.outputs));
@@ -3260,7 +3272,12 @@ fn recipe_lock(w: &World, k: Kind, r: &Recipe) -> Option<String> {
 
 /// The same recipe (what goes in and out), whatever machine runs it or how fast.
 fn same_recipe(a: &Recipe, b: &Recipe) -> bool {
-    a.name == b.name && a.inputs == b.inputs && a.outputs == b.outputs && a.fluid_in == b.fluid_in && a.fluid_out == b.fluid_out
+    a.name == b.name
+        && a.inputs == b.inputs
+        && a.outputs == b.outputs
+        && a.fluid_in == b.fluid_in
+        && a.fluid_out == b.fluid_out
+        && a.fluid_out2 == b.fluid_out2
 }
 
 #[allow(dead_code)]
@@ -3354,10 +3371,13 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let mut uses: Vec<(&'static Recipe, Vec<Kind>)> = Vec::new();
             for k in CRAFTERS {
                 for r in k.recipes().iter().filter(|r| r.inputs.iter().any(|i| i.0 == item)) {
-                    match uses
-                        .iter_mut()
-                        .find(|u| u.0.name == r.name && u.0.inputs == r.inputs && u.0.outputs == r.outputs && u.0.fluid_out == r.fluid_out)
-                    {
+                    match uses.iter_mut().find(|u| {
+                        u.0.name == r.name
+                            && u.0.inputs == r.inputs
+                            && u.0.outputs == r.outputs
+                            && u.0.fluid_out == r.fluid_out
+                            && u.0.fluid_out2 == r.fluid_out2
+                    }) {
                         Some(u) => u.1.push(k),
                         None => uses.push((r, vec![k])),
                     }
@@ -3519,7 +3539,8 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 _ => {
                     let mut first = true;
                     for r in k.recipes() {
-                        let made = r.outputs.first().map(|o| o.1).or(r.fluid_out.map(|f| f.1)).unwrap_or(1) * k.batch();
+                        let made = r.outputs.first().map(|o| o.1).or(r.fluid_out.map(|f| f.1)).or(r.fluid_out2.map(|f| f.1)).unwrap_or(1)
+                            * k.batch();
                         let mut segs = equation(r, e);
                         segs.push(seg(format!("   {}", timing(r, made)), dim));
                         if let Some(l) = r.needs.filter(|t| !w.progress.has(*t)).map(|t| format!("needs {}", t.name())) {

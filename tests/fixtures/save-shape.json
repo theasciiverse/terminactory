@@ -46,7 +46,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -98,7 +103,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -134,7 +144,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -201,7 +216,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -237,7 +257,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -291,7 +316,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -314,7 +344,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -337,7 +372,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -397,7 +437,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -420,7 +465,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -457,7 +507,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -480,7 +535,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -503,7 +563,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -526,7 +591,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -567,7 +637,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -608,7 +683,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -631,7 +711,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -654,7 +739,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -690,7 +780,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -713,7 +808,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -750,7 +850,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -773,7 +878,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -807,7 +917,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -917,7 +1032,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -954,7 +1074,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -977,7 +1102,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,
@@ -1000,7 +1130,12 @@
                 "Crafter": {
                   "busy": "bool",
                   "fluid": "int",
-                  "fluid_out": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
                   "fuel": "int",
                   "out": {
                     "len": 0,

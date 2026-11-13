@@ -5,9 +5,10 @@ version are refused, never deleted.
 
 ## Unreleased
 
-Saves: format version 6 (older saves are refused; start a fresh game with `tfac --new`).
+Saves: format version 7 (older saves are refused; start a fresh game with `tfac --new`).
 
 ### Added
+- Four oil fluids and a second fluid output on the back of a machine. Both fluid outputs are saved, counted, and must have room before a recipe runs. Saves are format version 7.
 - Earnings history: a History tab in the production panel, and a compact earnings graph under the build menu.
 - Settings pane (`g`): the sidebar graph and its range, the small-pane view and width, the telegram style (Sidebar, Note, Ticker) and Hints.
 - Telegram log (`i`) with unread marks, a scrollbar for long telegrams, and company letters that arrive as telegrams and never pause the game.

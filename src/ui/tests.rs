@@ -31,6 +31,18 @@ fn text(buf: &Buffer) -> String {
     out
 }
 
+#[test]
+fn every_fluid_has_a_name_and_distinct_colour_and_sellable_fluids_have_prices() {
+    let names: std::collections::HashSet<_> = Fluid::ALL.iter().map(|f| f.name()).collect();
+    let colours: std::collections::HashSet<_> = Fluid::ALL.iter().map(|f| fluid_colour(*f)).collect();
+    assert_eq!(names.len(), FLUIDS);
+    assert_eq!(colours.len(), FLUIDS);
+    assert!(Fluid::ALL.iter().all(|f| !f.name().is_empty()));
+    assert!(Fluid::ALL.iter().filter_map(|f| f.price()).all(|price| price > 0.0));
+    assert_eq!(Fluid::Water.price(), None);
+    assert_eq!(Fluid::Steam.price(), None);
+}
+
 fn tech_node(t: Tech) -> usize {
     crate::research::node_id_for_tech(t).unwrap()
 }

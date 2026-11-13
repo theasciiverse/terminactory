@@ -143,6 +143,7 @@ const fn test_recipe(name: &'static str, tag: char) -> Recipe {
         outputs: &[(Item::Coke, 1)],
         fluid_in: None,
         fluid_out: None,
+        fluid_out2: None,
         ticks: 60,
         fuel: None,
         needs: None,

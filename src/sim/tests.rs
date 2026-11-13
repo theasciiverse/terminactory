@@ -107,7 +107,7 @@ fn set_stock(w: &mut World, x: i32, y: i32, item: Item, n: u32) {
 /// (fluid taken in, fluid waiting to leave) of a machine.
 fn crafter_fluid(w: &World, x: i32, y: i32) -> (u32, u32) {
     match &w.tile(0, x, y).unwrap().st {
-        St::Crafter { fluid, fluid_out, .. } => (*fluid, *fluid_out),
+        St::Crafter { fluid, fluid_out, .. } => (*fluid, fluid_out[0]),
         _ => panic!("not a machine"),
     }
 }
@@ -202,6 +202,7 @@ fn a_machine_with_two_outputs_needs_room_for_both() {
         outputs: &[(Coke, 1)],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenCopper, 1)),
+        fluid_out2: None,
         ticks: 60,
         fuel: None,
         needs: None,

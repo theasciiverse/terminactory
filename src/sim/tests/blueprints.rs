@@ -551,6 +551,7 @@ fn a_recipe_travels_by_name_even_when_the_list_is_reordered() {
             outputs: &[(Item::Coke, 1)],
             fluid_in: None,
             fluid_out: None,
+            fluid_out2: None,
             ticks: 60,
             fuel: None,
             needs: None,

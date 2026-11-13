@@ -70,6 +70,7 @@ fn a_fluid_key_opens_a_company() {
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenCopper, 2)),
+        fluid_out2: None,
         ticks: 60,
         fuel: None,
         needs: None,

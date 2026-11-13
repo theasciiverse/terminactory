@@ -80,10 +80,12 @@ fn changing_a_recipe_lets_go_of_held_fluid() {
     w.place(0, 10, 10, Kind::Molder, Dir::E).unwrap();
     if let Some(Building { st: St::Crafter { fluid, fluid_out, .. }, .. }) = w.floors[0].tiles[idx(10, 10)].as_mut() {
         *fluid = 5;
-        *fluid_out = 3;
+        fluid_out[0] = 3;
+        fluid_out[1] = 4;
     }
     w.configure(0, 10, 10).unwrap();
     assert_eq!(crafter_fluid(&w, 10, 10), (0, 0));
+    assert!(matches!(&w.tile(0, 10, 10).unwrap().st, St::Crafter { fluid_out, .. } if *fluid_out == [0, 0]));
 }
 
 #[test]
@@ -125,11 +127,146 @@ static TWO_OUT: [Recipe; 1] = [Recipe {
     outputs: &[(Item::Coke, 1)],
     fluid_in: None,
     fluid_out: Some((Fluid::MoltenCopper, 1)),
+    fluid_out2: None,
     ticks: 60,
     fuel: None,
     needs: None,
     tag: 'T',
 }];
+
+static TWO_FLUIDS: [Recipe; 1] = [Recipe {
+    name: "two fluids",
+    inputs: &[(Item::Coal, 1)],
+    outputs: &[],
+    fluid_in: None,
+    fluid_out: Some((Fluid::MoltenCopper, 1)),
+    fluid_out2: Some((Fluid::CrudeOil, 1)),
+    ticks: 60,
+    fuel: None,
+    needs: None,
+    tag: 'F',
+}];
+
+#[test]
+fn two_fluid_outputs_use_separate_front_and_back_pipes_and_are_counted() {
+    RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &TWO_FLUIDS))));
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Molder, Dir::E).unwrap();
+    w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 4, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+    set_stock(&mut w, 5, 5, Item::Coal, 5);
+    run(&mut w, 3);
+    assert_eq!(w.fluids.pools.len(), 2);
+    assert_eq!(w.fluids.pools[0].fluid, Some(Fluid::CrudeOil));
+    assert_eq!(w.fluids.pools[1].fluid, Some(Fluid::MoltenCopper));
+    assert_eq!(w.fluids.pools.iter().map(|p| p.amount).sum::<f64>(), 6.0);
+    assert_eq!(w.econ.made_fluid[Fluid::MoltenCopper], 3);
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 3);
+    let path = std::env::temp_dir().join(format!("factory-test-fluid-made-{}.json", std::process::id()));
+    w.save(&path).unwrap();
+    let loaded = World::load(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+    assert_eq!(loaded.econ.made_fluid, w.econ.made_fluid);
+    RECIPE_OVERRIDE.with(|o| o.set(None));
+}
+
+#[test]
+fn full_back_fluid_output_stops_then_resumes_when_drained() {
+    RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &TWO_FLUIDS))));
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Molder, Dir::E).unwrap();
+    w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 4, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+    w.fluids.pools[0].add(Fluid::Water, 20.0);
+    set_stock(&mut w, 5, 5, Item::Coal, 30);
+    run(&mut w, 15);
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"));
+    let used = w.econ.used[Item::Coal.idx()];
+    w.fluids.pools[0].take(Fluid::Water, 20.0);
+    run(&mut w, 3);
+    assert!(w.econ.used[Item::Coal.idx()] > used);
+    RECIPE_OVERRIDE.with(|o| o.set(None));
+}
+
+#[test]
+fn two_outputs_refuse_wrong_fluids_and_back_pipe_is_not_an_input() {
+    static INPUT_AND_TWO_OUT: [Recipe; 1] = [Recipe {
+        name: "input and two fluids",
+        inputs: &[(Item::Coal, 1)],
+        outputs: &[],
+        fluid_in: Some((Fluid::Water, 1)),
+        fluid_out: Some((Fluid::MoltenCopper, 1)),
+        fluid_out2: Some((Fluid::CrudeOil, 1)),
+        ticks: 60,
+        fuel: None,
+        needs: None,
+        tag: 'I',
+    }];
+    // Both output pipes hold a different fluid, so neither output can leave. The machine
+    // fills its own output buffers, then stops full.
+    RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &TWO_FLUIDS))));
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Molder, Dir::E).unwrap();
+    w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 4, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+    w.fluids.pools[0].add(Fluid::Water, 20.0);
+    w.fluids.pools[1].add(Fluid::Steam, 20.0);
+    set_stock(&mut w, 5, 5, Item::Coal, 30);
+    run(&mut w, 15);
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FULL"));
+    assert_eq!(w.econ.used[Item::Coal.idx()], 10, "both mismatched output pools fill their machine buffers");
+    assert!(
+        matches!(&w.tile(0, 5, 5).unwrap().st, St::Crafter { fluid_out, .. } if *fluid_out == [CRAFTER_FLUID_OUT_CAP; 2]),
+        "each output sits at its buffer cap"
+    );
+    assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[1].fluid), (Some(Fluid::Water), Some(Fluid::Steam)));
+    assert_eq!(pool_total(&w), 40.0, "neither pipe took a drop");
+
+    // A back pipe is ignored for fluid input when the recipe has a second output.
+    let mut w = World::blank();
+    RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &INPUT_AND_TWO_OUT))));
+    w.place(0, 5, 5, Kind::Molder, Dir::E).unwrap();
+    w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 4, 5, Kind::Pipe, Dir::E).unwrap();
+    w.fluids.pools[0].add(Fluid::Water, 10.0);
+    set_stock(&mut w, 5, 5, Item::Coal, 10);
+    run(&mut w, 2);
+    assert_eq!(crafter_fluid(&w, 5, 5).0, 0, "the back pipe is reserved for the second output");
+    assert_eq!(w.econ.used[Item::Coal.idx()], 0);
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FLUD"));
+    RECIPE_OVERRIDE.with(|o| o.set(None));
+}
+
+#[test]
+fn reactor_sized_fluid_batch_fits_the_buffer_and_fires() {
+    static LARGE_FLUID: [Recipe; 1] = [Recipe {
+        name: "large fluid batch",
+        inputs: &[(Item::Coal, 1)],
+        outputs: &[],
+        fluid_in: Some((Fluid::Ethylene, 16)),
+        fluid_out: Some((Fluid::MoltenSilicon, 16)),
+        fluid_out2: None,
+        ticks: 60,
+        fuel: None,
+        needs: None,
+        tag: 'L',
+    }];
+    RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &LARGE_FLUID))));
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Molder, Dir::E).unwrap();
+    w.place(0, 7, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 5, 4, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 5, 7, Kind::Solar, Dir::E).unwrap();
+    w.fluids.pools[0].add(Fluid::Ethylene, 16.0);
+    set_stock(&mut w, 5, 5, Item::Coal, 1);
+    run(&mut w, 2);
+    assert_eq!(w.econ.used[Item::Coal.idx()], 1);
+    assert_eq!(w.econ.made_fluid[Fluid::MoltenSilicon], 16);
+    RECIPE_OVERRIDE.with(|o| o.set(None));
+}
 
 #[test]
 fn a_machine_stops_when_the_items_are_full_even_if_the_pipe_has_room() {
@@ -158,6 +295,7 @@ static KILN_TWO_OUT: [Recipe; 1] = [Recipe {
     outputs: &[(Item::Brick, 1), (Item::Waste, 1)],
     fluid_in: None,
     fluid_out: None,
+    fluid_out2: None,
     ticks: 300,
     fuel: Some(Item::Coal),
     needs: None,

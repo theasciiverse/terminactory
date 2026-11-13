@@ -1130,7 +1130,7 @@ pub fn tree_children(i: usize) -> Vec<usize> {
 }
 
 /// How many fluids there are.
-pub const FLUIDS: usize = 6;
+pub const FLUIDS: usize = 10;
 
 /// Something a machine can make that opens a company: an item, or a fluid (crude oil, later).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -1173,11 +1173,25 @@ pub enum Fluid {
     MoltenIron,
     MoltenSteel,
     MoltenSilicon,
+    CrudeOil,
+    Naphtha,
+    FuelOil,
+    Ethylene,
 }
 
 impl Fluid {
-    pub const ALL: [Fluid; FLUIDS] =
-        [Fluid::Water, Fluid::Steam, Fluid::MoltenCopper, Fluid::MoltenIron, Fluid::MoltenSteel, Fluid::MoltenSilicon];
+    pub const ALL: [Fluid; FLUIDS] = [
+        Fluid::Water,
+        Fluid::Steam,
+        Fluid::MoltenCopper,
+        Fluid::MoltenIron,
+        Fluid::MoltenSteel,
+        Fluid::MoltenSilicon,
+        Fluid::CrudeOil,
+        Fluid::Naphtha,
+        Fluid::FuelOil,
+        Fluid::Ethylene,
+    ];
     pub fn idx(self) -> usize {
         self as usize
     }
@@ -1189,7 +1203,40 @@ impl Fluid {
             Fluid::MoltenIron => "molten iron",
             Fluid::MoltenSteel => "molten steel",
             Fluid::MoltenSilicon => "molten silicon",
+            Fluid::CrudeOil => "crude oil",
+            Fluid::Naphtha => "naphtha",
+            Fluid::FuelOil => "fuel oil",
+            Fluid::Ethylene => "ethylene",
         }
+    }
+
+    // Used by the Liquid Trader, which arrives in a later step.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn price(self) -> Option<f64> {
+        match self {
+            Fluid::Water | Fluid::Steam => None,
+            Fluid::MoltenCopper => Some(0.50),
+            Fluid::MoltenIron => Some(1.00),
+            Fluid::MoltenSteel => Some(20.0),
+            Fluid::MoltenSilicon => Some(4.0),
+            Fluid::CrudeOil => Some(2.0),
+            Fluid::Naphtha => Some(7.0),
+            Fluid::FuelOil => Some(2.0),
+            Fluid::Ethylene => Some(11.0),
+        }
+    }
+
+    /// Research worth per unit; twice the price, fading as more are sold.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn curve(self) -> Option<Curve> {
+        let price = self.price()?;
+        let c = |worth, decay, floor| Curve { worth, decay, floor };
+        Some(match self {
+            Fluid::MoltenCopper | Fluid::MoltenIron | Fluid::CrudeOil | Fluid::FuelOil => c(price * 2.0, 0.99, 0.02),
+            Fluid::MoltenSteel | Fluid::Ethylene => c(price * 2.0, 0.995, 0.03),
+            Fluid::MoltenSilicon | Fluid::Naphtha => c(price * 2.0, 0.995, 0.03),
+            Fluid::Water | Fluid::Steam => return None,
+        })
     }
 }
 
@@ -1202,6 +1249,8 @@ pub struct Recipe {
     pub fluid_in: Option<(Fluid, u32)>,
     /// A fluid pushed out of the front, into a pipe or straight into a machine.
     pub fluid_out: Option<(Fluid, u32)>,
+    /// A second fluid pushed out of the back.
+    pub fluid_out2: Option<(Fluid, u32)>,
     pub ticks: u32,
     /// What it burns while working, if anything.
     pub fuel: Option<Item>,
@@ -1220,7 +1269,7 @@ const fn item_recipe(
     needs: Option<Tech>,
     tag: char,
 ) -> Recipe {
-    Recipe { name, inputs, outputs, fluid_in: None, fluid_out: None, ticks, fuel, needs, tag }
+    Recipe { name, inputs, outputs, fluid_in: None, fluid_out: None, fluid_out2: None, ticks, fuel, needs, tag }
 }
 
 /// Furnaces melt ore into molten metal (5 s each; iron is slow) and bake coal into coke.
@@ -1231,6 +1280,7 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenCopper, 1)),
+        fluid_out2: None,
         ticks: 300,
         fuel: Some(Item::Coal),
         needs: None,
@@ -1242,6 +1292,7 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 2)),
+        fluid_out2: None,
         ticks: 600,
         fuel: Some(Item::Coal),
         needs: None,
@@ -1254,6 +1305,7 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenCopper, 2)),
+        fluid_out2: None,
         ticks: 150,
         fuel: Some(Item::Coal),
         needs: None,
@@ -1265,6 +1317,7 @@ pub const FURNACE_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 1)),
+        fluid_out2: None,
         ticks: 300,
         fuel: Some(Item::Coal),
         needs: None,
@@ -1280,6 +1333,7 @@ pub const MOLDER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::CopperIngot, 1)],
         fluid_in: Some((Fluid::MoltenCopper, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 150,
         fuel: None,
         needs: None,
@@ -1291,6 +1345,7 @@ pub const MOLDER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::IronIngot, 1)],
         fluid_in: Some((Fluid::MoltenIron, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 150,
         fuel: None,
         needs: None,
@@ -1302,6 +1357,7 @@ pub const MOLDER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::Steel, 1)],
         fluid_in: Some((Fluid::MoltenSteel, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 150,
         fuel: None,
         needs: None,
@@ -1313,6 +1369,7 @@ pub const MOLDER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::SiliconIngot, 1)],
         fluid_in: Some((Fluid::MoltenSilicon, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 150,
         fuel: None,
         needs: None,
@@ -1344,6 +1401,7 @@ const fn molten_steel(name: &'static str, inputs: &'static [(Item, u32)], waste:
         outputs: waste,
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenSteel, 1)),
+        fluid_out2: None,
         ticks,
         fuel: None,
         needs: None,
@@ -1366,6 +1424,7 @@ const fn molten_silicon(
         outputs: waste,
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenSilicon, melt)),
+        fluid_out2: None,
         ticks,
         fuel: None,
         needs: None,
@@ -1383,6 +1442,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 1)),
+        fluid_out2: None,
         ticks: 150,
         fuel: Some(Item::Coke),
         needs: None,
@@ -1394,6 +1454,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         outputs: &[],
         fluid_in: None,
         fluid_out: Some((Fluid::MoltenIron, 2)),
+        fluid_out2: None,
         ticks: 150,
         fuel: Some(Item::Coke),
         needs: None,
@@ -1422,6 +1483,7 @@ pub const BLAST_RECIPES: &[Recipe] = &[
         outputs: &[(Item::Waste, 2)],
         fluid_in: Some((Fluid::MoltenIron, 3)),
         fluid_out: Some((Fluid::MoltenSteel, 1)),
+        fluid_out2: None,
         ticks: 600,
         fuel: None,
         needs: None,
@@ -1782,6 +1844,7 @@ pub const EVACUATOR_RECIPES: &[Recipe] = &[Recipe {
     outputs: &[(Item::Tube, 2)],
     fluid_in: Some((Fluid::Water, 1)),
     fluid_out: None,
+    fluid_out2: None,
     ticks: 480,
     fuel: None,
     needs: None,
@@ -1838,6 +1901,7 @@ pub const MIXER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::Concrete, 1)],
         fluid_in: Some((Fluid::Water, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 300,
         fuel: None,
         needs: None,
@@ -1849,6 +1913,7 @@ pub const MIXER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::ReinforcedConcrete, 1)],
         fluid_in: Some((Fluid::Water, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 300,
         fuel: None,
         needs: None,
@@ -1861,6 +1926,7 @@ pub const MIXER_RECIPES: &[Recipe] = &[
         outputs: &[(Item::Etchant, 2), (Item::Waste, 1)],
         fluid_in: Some((Fluid::Water, 1)),
         fluid_out: None,
+        fluid_out2: None,
         ticks: 300,
         fuel: None,
         needs: None,
