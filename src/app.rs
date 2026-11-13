@@ -207,6 +207,7 @@ pub enum BookButton {
     Reload,
     Home,
     NewTab,
+    Star,
 }
 
 /// One browser tab: a page, its own history and where it was scrolled and picked.
@@ -311,6 +312,9 @@ pub struct App {
     /// The tab strip's chips and their close crosses, for clicks.
     pub book_tab_hits: Vec<(Rect, usize)>,
     pub book_tab_close: Vec<(Rect, usize)>,
+    /// The bookmarks bar's links, where they were drawn, and whether the page has a scrollbar column.
+    pub book_mark_hits: Vec<(Rect, String)>,
+    pub book_scrollbar: bool,
     /// When the page last opened: the load bar fills for a moment after it.
     pub book_opened: Option<std::time::Instant>,
     pub book_slug: String,
@@ -435,6 +439,8 @@ impl App {
             book_active: 0,
             book_tab_hits: Vec::new(),
             book_tab_close: Vec::new(),
+            book_mark_hits: Vec::new(),
+            book_scrollbar: false,
             book_opened: None,
             book_slug: "home".into(),
             book_history: Vec::new(),
@@ -1105,6 +1111,19 @@ impl App {
         true
     }
 
+    /// Adds the page being read to the bookmarks bar, or takes it off, and saves the list.
+    pub fn book_toggle_mark(&mut self) {
+        let slug = self.book_slug.clone();
+        if let Some(i) = self.settings.bookmarks.iter().position(|s| *s == slug) {
+            self.settings.bookmarks.remove(i);
+        } else {
+            self.settings.bookmarks.push(slug);
+        }
+        if let Some(path) = &self.settings_path {
+            let _ = self.settings.save(path);
+        }
+    }
+
     #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
         if self.book_typing {
@@ -1167,6 +1186,9 @@ impl App {
             }
             (KeyCode::Char('+'), _) => {
                 self.book_new_tab("home");
+            }
+            (KeyCode::Char('*'), _) => {
+                self.book_toggle_mark();
             }
             (KeyCode::Char('/'), _) => {
                 self.book_typing = true;
@@ -1309,7 +1331,12 @@ impl App {
                         BookButton::Reload => self.book_reload(),
                         BookButton::Home => self.book_go_slug("home"),
                         BookButton::NewTab => self.book_new_tab("home"),
+                        BookButton::Star => self.book_toggle_mark(),
                     }
+                    return;
+                }
+                if let Some(slug) = self.book_mark_hits.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
+                    self.book_go_slug(&slug);
                     return;
                 }
                 if let Some(slug) = self.book_urls.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {

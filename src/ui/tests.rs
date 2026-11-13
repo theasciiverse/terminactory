@@ -1773,8 +1773,8 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     let mut narrow = App::new(World::new());
     narrow.book = true;
     narrow.book_slug = "copper-coil".into();
-    // The tab strip takes a row of its own, so the first screen is one line shorter.
-    narrow.book_scroll = 1;
+    // The tab strip and the bookmarks bar take a row each, so the first screen is two lines shorter.
+    narrow.book_scroll = 2;
     let narrow_top = text(&render(&mut narrow, 60, 30));
     assert!(narrow_top.contains("Recipes"), "{narrow_top}");
     narrow.book_scroll = 0;
@@ -1855,7 +1855,7 @@ fn wiki_arrows_roll_over_at_the_edges() {
     render(&mut app, 60, 30);
     app.on_key(KeyEvent::from(KeyCode::Up));
     let t = text(&render(&mut app, 60, 30));
-    assert!(app.book_scroll > 0 && t.contains("Category: Items"), "{t}");
+    assert!(app.book_scroll > 0 && t.contains("See also"), "{t}");
     // The item index rolls over without breaking either.
     app.book_slug = "items".into();
     app.book_scroll = 0;
@@ -1885,4 +1885,35 @@ fn wiki_item_grid_scrolls_by_rows_and_rolls_over() {
     }
     assert!(seen_scroll, "the grid never scrolled");
     assert_eq!((app.book_scroll, app.book_selected), (0, 0), "it rolled over to the top");
+}
+
+/// T Web: the bookmarks bar starts with three pages, `*` adds and removes the current one, and
+/// a long page gets a scrollbar down its right edge.
+#[test]
+fn t_web_bookmarks_and_scrollbar() {
+    use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    let t = text(&render(&mut app, 100, 36));
+    assert!(t.contains("★ Getting started") && t.contains("★ Machines") && t.contains("★ Items"), "{t}");
+    // A page that is not bookmarked has an empty star; `*` fills it and puts it on the bar.
+    app.book_slug = "copper-coil".into();
+    assert!(text(&render(&mut app, 100, 36)).contains('☆'));
+    app.on_key(KeyEvent::from(KeyCode::Char('*')));
+    let t = text(&render(&mut app, 100, 36));
+    assert!(t.contains("★ Copper coil"), "{t}");
+    assert_eq!(app.settings.bookmarks.last().map(String::as_str), Some("copper-coil"));
+    // Clicking a bookmark opens it.
+    let (r, _) = app.book_mark_hits.iter().find(|(_, s)| s == "getting-started").cloned().unwrap();
+    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
+    assert_eq!(app.book_slug, "getting-started");
+    // And `*` again takes the page off.
+    app.book_slug = "copper-coil".into();
+    app.on_key(KeyEvent::from(KeyCode::Char('*')));
+    assert!(!app.settings.bookmarks.iter().any(|s| s == "copper-coil"));
+    // A tall page in a short window shows the scrollbar (it appears on the second frame).
+    app.book_slug = "copper-coil".into();
+    render(&mut app, 60, 30);
+    let t = text(&render(&mut app, 60, 30));
+    assert!(t.contains('▲') && t.contains('▼') && t.contains('█'), "{t}");
 }

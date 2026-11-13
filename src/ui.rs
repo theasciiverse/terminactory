@@ -3736,17 +3736,22 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
             Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(236)),
         );
     }
-    // The star that toggles a bookmark (bookmarks arrive with the bookmarks bar).
+    // The star that toggles a bookmark: filled when this page is on the bar.
     if !phone && inner.width >= 14 {
+        let marked = app.settings.bookmarks.contains(&app.book_slug);
+        let star = Rect::new(inner.right().saturating_sub(2), bar_y, 1, 1);
         f.buffer_mut().set_string(
-            inner.right().saturating_sub(2),
-            bar_y,
-            "☆",
-            Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(236)),
+            star.x,
+            star.y,
+            if marked { "★" } else { "☆" },
+            Style::new().fg(if marked { Color::Indexed(221) } else { Color::Indexed(245) }).bg(Color::Indexed(236)),
         );
+        app.book_buttons.push((star, crate::app::BookButton::Star));
     }
     f.buffer_mut().set_string(inner.x, bar_y, " ", Style::new().bg(Color::Indexed(236)));
-    let content = Rect::new(inner.x, inner.y.saturating_add(3), inner.width, inner.height.saturating_sub(4));
+    // The page sits under the bookmarks bar, with a column kept free for the scrollbar when it has one.
+    let bar_col = u16::from(app.book_scrollbar && inner.width > 20);
+    let content = Rect::new(inner.x, inner.y.saturating_add(4), inner.width.saturating_sub(bar_col), inner.height.saturating_sub(5));
     // A thin rule under the address, which the load bar fills for a moment after a page opens.
     let rule_y = inner.y + 2;
     f.render_widget(
@@ -3761,6 +3766,33 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
                 Paragraph::new("━".repeat(done as usize)).style(Style::new().fg(Color::Indexed(117))),
                 Rect::new(inner.x, rule_y, done, 1),
             );
+        }
+    }
+    // The bookmarks bar: a star and the page's name for each bookmark.
+    app.book_mark_hits.clear();
+    {
+        let y = inner.y + 3;
+        let mut x = inner.x + 1;
+        let style = Style::new().fg(Color::Indexed(250));
+        for slug in app.settings.bookmarks.clone() {
+            let title = match crate::wiki::page(&slug).and_then(|p| p.lines().next()) {
+                Some(line) => line.trim_start_matches('#').trim().to_string(),
+                None => slug.chars().next().map_or(String::new(), |c| c.to_uppercase().chain(slug.chars().skip(1)).collect()),
+            };
+            let room = inner.right().saturating_sub(x + 1) as usize;
+            if room < 6 {
+                break;
+            }
+            let mut label: String = format!("★ {title}").chars().take(room).collect();
+            if label.chars().count() < title.chars().count() + 2 {
+                label.pop();
+                label.push('…');
+            }
+            let w = label.chars().count() as u16;
+            let active = slug == app.book_slug;
+            f.buffer_mut().set_string(x, y, &label, if active { style.underlined() } else { style });
+            app.book_mark_hits.push((Rect::new(x, y, w, 1), slug));
+            x += w + 2;
         }
     }
     app.book_links.clear();
@@ -3854,6 +3886,32 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     if !app.book_urls.is_empty() && app.book_query.is_empty() {
         app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
     }
+    // The scrollbar down the right edge, whenever the page is taller than the view.
+    let scrollable = app.book_max_scroll > 0 && app.book_max_scroll != u16::MAX && content.height >= 4;
+    if scrollable && bar_col == 1 {
+        let x = inner.right().saturating_sub(1);
+        let track = content.height.saturating_sub(2) as u32;
+        let total = app.book_max_scroll as u32 + content.height as u32;
+        let thumb = (track * content.height as u32 / total).max(1).min(track);
+        let pos = if app.book_max_scroll == 0 {
+            0
+        } else {
+            (track - thumb) * app.book_scroll.min(app.book_max_scroll) as u32 / app.book_max_scroll as u32
+        };
+        let dim = Style::new().fg(Color::Indexed(240));
+        f.buffer_mut().set_string(x, content.y, "▲", dim);
+        f.buffer_mut().set_string(x, content.bottom().saturating_sub(1), "▼", dim);
+        for i in 0..track {
+            let on = i >= pos && i < pos + thumb;
+            f.buffer_mut().set_string(
+                x,
+                content.y + 1 + i as u16,
+                if on { "█" } else { "░" },
+                if on { Style::new().fg(Color::Indexed(250)) } else { dim },
+            );
+        }
+    }
+    app.book_scrollbar = scrollable;
     // The status bar: where the selected link goes, and that the page has loaded.
     let foot = Rect::new(inner.x, inner.bottom().saturating_sub(1), inner.width, 1);
     f.buffer_mut().set_stringn(foot.x, foot.y, " ".repeat(foot.width as usize), foot.width as usize, Style::new().bg(Color::Indexed(236)));
