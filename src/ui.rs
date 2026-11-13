@@ -4201,18 +4201,18 @@ pub(crate) fn book_url(slug: &str) -> String {
     }
 }
 
-/// The letters of the termweb logo in block capitals: "term" in grey, "web" in white.
-const LOGO: [[&str; 5]; 7] = [
-    ["████", " ██ ", " ██ ", " ██ ", " ██ "],
-    ["████", "█   ", "███ ", "█   ", "████"],
-    ["███ ", "█  █", "███ ", "█ █ ", "█  █"],
-    ["█  █", "████", "████", "█  █", "█  █"],
-    ["█  █", "█  █", "████", "████", "█  █"],
-    ["████", "█   ", "███ ", "█   ", "████"],
-    ["███ ", "█  █", "███ ", "█  █", "███ "],
+/// The letters of the termweb logo, lower case: seven pixel rows each, "term" in grey and "web" in white.
+const LOGO: [[&str; 7]; 7] = [
+    [" █  ", " █  ", "████", " █  ", " █  ", " █  ", " ███"],
+    ["    ", "    ", "████", "█  █", "████", "█   ", "████"],
+    ["    ", "    ", "█ ██", "██  ", "█   ", "█   ", "█   "],
+    ["     ", "     ", "████ ", "█ █ █", "█ █ █", "█ █ █", "█ █ █"],
+    ["     ", "     ", "█   █", "█   █", "█ █ █", "█ █ █", " █ █ "],
+    ["    ", "    ", "████", "█  █", "████", "█   ", "████"],
+    ["█   ", "█   ", "███ ", "█  █", "█  █", "█  █", "███ "],
 ];
-/// The logo's width in pixels: seven letters of four, with a pixel between them.
-const LOGO_WIDTH: u16 = 7 * 4 + 6;
+/// The logo's width in pixels: the seven letters, with a pixel between each.
+const LOGO_WIDTH: u16 = 4 + 4 + 4 + 5 + 5 + 4 + 4 + 6;
 const LOGO_GREY: u8 = 245;
 const LOGO_WHITE: u8 = 255;
 
@@ -4243,12 +4243,12 @@ fn search_box(f: &mut Frame, r: Rect, text: &str, placeholder: &str, focused: bo
 fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
     // Terminal cells are twice as tall as they are wide, so a logo pixel is two columns wide in
     // the large size and half a row tall in the compact one; either way the pixels are square.
-    let large = area.height >= 18 && area.width >= 2 * LOGO_WIDTH + 4;
-    let compact = !large && area.height >= 14 && area.width >= LOGO_WIDTH + 4;
+    let large = area.height >= 20 && area.width >= 2 * LOGO_WIDTH + 4;
+    let compact = !large && area.height >= 15 && area.width >= LOGO_WIDTH + 4;
     let logo_h: u16 = if large {
-        5
+        7
     } else if compact {
-        3
+        4
     } else {
         1
     };
@@ -4259,6 +4259,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
         let mut x = area.x + area.width.saturating_sub(LOGO_WIDTH * scale) / 2;
         for (i, glyph) in LOGO.iter().enumerate() {
             let style = Style::new().fg(Color::Indexed(if i < 4 { LOGO_GREY } else { LOGO_WHITE }));
+            let width = glyph[0].chars().count();
             let on = |row: usize, col: usize| glyph.get(row).and_then(|l| l.chars().nth(col)) == Some('█');
             if large {
                 for (row, line) in glyph.iter().enumerate() {
@@ -4266,8 +4267,8 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
                     f.buffer_mut().set_string(x, y + row as u16, doubled, style);
                 }
             } else {
-                for text_row in 0..3usize {
-                    let line: String = (0..4)
+                for text_row in 0..4usize {
+                    let line: String = (0..width)
                         .map(|col| match (on(text_row * 2, col), on(text_row * 2 + 1, col)) {
                             (true, true) => '█',
                             (true, false) => '▀',
@@ -4278,7 +4279,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
                     f.buffer_mut().set_string(x, y + text_row as u16, line, style);
                 }
             }
-            x += 5 * scale;
+            x += (width as u16 + 1) * scale;
         }
     } else {
         draw_wordmark(f, area.x + area.width.saturating_sub(7) / 2, y);
