@@ -60,7 +60,7 @@ Two of the three also have a worked example on an open page:
 
 ## portal.plant3.lan
 
-Twenty accounts, all Plant 3. The password is the badge number out of the open staff directory, except Percy Ilott, who never changed his word and who has it written down for him.
+The first twenty accounts, all Plant 3 (the account file now holds twenty-three; the later ones are in the tables at the end). The password is the badge number out of the open staff directory, except Percy Ilott, who never changed his word and who has it written down for him.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
@@ -89,7 +89,7 @@ Twenty accounts, all Plant 3. The password is the badge number out of the open s
 
 ## selfservice.plant1.lan
 
-Twenty-five accounts, all Plant 1. The password is the staff number out of the open list, except the three who were given a word at issue and who use the same word on the message service.
+The first twenty-five accounts, all Plant 1 (the account file now holds twenty-six; the later one is in the tables at the end). The password is the staff number out of the open list, except the three who were given a word at issue and who use the same word on the message service.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
@@ -123,7 +123,7 @@ Twenty-five accounts, all Plant 1. The password is the staff number out of the o
 
 ## msg.plant7.lan
 
-Seventy-four accounts, all nine plants. Fifty-four are the staff number off the open day sheet. Twenty are a word, and each word is spoken aloud in a thread by the man who owns it.
+The first seventy-four accounts, all nine plants (the account file now holds ninety-one; the rest are in the tables at the end). Of the first seventy-four, fifty-four are the staff number off the open day sheet. Twenty are a word, and each word is spoken aloud in a thread by the man who owns it.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
