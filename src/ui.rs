@@ -2103,9 +2103,9 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         }
         St::Boiler { coal, fuel, busy } => {
             v.push(format!("coal {}/{}   {}", coal, BOILER_COAL_CAP, if *fuel > 0 { "burning" } else { "no fire" }));
-            v.push(format!("burns waste too: {WASTE_PER_COAL} = 1 coal   fire {}s", fuel / TPS as u32));
+            v.push(format!("fire {}s", fuel / TPS as u32));
             v.push(format!("water in from pipes, steam out the {} side", b.dir.arrow()));
-            v.push(if *busy { "making steam".into() } else { "waiting: needs coal or waste, water, room for steam".into() });
+            v.push(if *busy { "making steam".into() } else { "waiting: needs coal, water, room for steam".into() });
         }
         St::Engine { steam, output } => {
             v.push(format!("steam {:.1}/{:.0}", steam, ENGINE_BUF));
@@ -3378,7 +3378,6 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
             let fuel: Option<(Vec<Kind>, &str)> = match item {
                 Item::Coal => Some((vec![Kind::Drill, Kind::Furnace, Kind::Boiler, Kind::Kiln, Kind::LargeKiln], "")),
                 Item::Coke => Some((vec![Kind::BlastFurnace], " (burns twice as long as coal)")),
-                Item::Waste => Some((vec![Kind::Boiler], " (4 waste burn like 1 coal; only as much as the grid needs)")),
                 _ => None,
             };
             if let Some((kinds, note)) = fuel {
@@ -4077,7 +4076,7 @@ fn book_home_markdown(_w: &World, seed: usize) -> String {
         "…that [[copper-coil]] can be made in a [[press]] or a [[winder]]?".to_string(),
         "…that [[stone]] goes into [[concrete]], [[sand]] and [[brick]]?".to_string(),
         "…that the most valuable item is the [[computer]]?".to_string(),
-        "…that [[waste]] can fuel a [[boiler]]?".to_string(),
+        "…that a [[boiler]] burns only as much [[coal]] as its grid needs?".to_string(),
     ];
     let mut out = format!("## ⚙\n## Welcome to the\n**Terminactory Wiki!**\n────────────────────────────────\n## about\n{}\n\n[[getting-started|New here? Start with Getting started]]\n## statistics\n**{} pages**  ·  **{} items · {} machines · {} recipes**\n## navigation\n╭──────────╮ ╭──────────╮ ╭──────────╮ ╭───────────╮\n│ [[machines|Machines]] │ │  [[items|Items]]   │ │  [[topics|Topics]]  │ │ [[companies|Companies]] │\n╰──────────╯ ╰──────────╯ ╰──────────╯ ╰───────────╯\n## did you know?\n", crate::wiki::page("home").unwrap_or("").lines().find(|l| l.starts_with("**Terminactory Wiki**")).unwrap_or("A factory building game about making things, one recipe at a time."), crate::wiki::PAGES.len() + 3, items, machines, recipes);
     out.push('\n');
@@ -4602,7 +4601,7 @@ HOW IT WORKS
     it); overlapping ranges join into one grid that shares only its own
     EC. Panels never join each other directly: put poles between them.
   Pumps draw water anywhere on the ground. Pipes join into networks, each holding one fluid.
-    Boilers burn coal, or waste (4 waste = 1 coal), to turn water into steam
+    Boilers burn coal to turn water into steam
     (out their front); steam engines turn steam into EC, only as much as
     their grid needs, and a boiler burns only what its engines call for.
   Blast furnaces make molten steel (a molder casts it) and hardened plate

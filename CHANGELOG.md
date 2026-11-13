@@ -13,7 +13,7 @@ Saves: format version 6 (older saves are refused; start a fresh game with `tfac 
 - Telegram log (`i`) with unread marks, a scrollbar for long telegrams, and company letters that arrive as telegrams and never pause the game.
 - A welcome telegram on a new game, and quiet hints on the idle status line (Hints setting).
 - Small-pane view for narrow splits next to an agent, with the stuck-machine reason first.
-- Boilers burn waste (4 waste give the fire of 1 coal); waste leaves a machine by its back edge.
+- Waste leaves a machine by its back edge. It is never fuel: boilers refuse it like every other fire.
 - `tfac --version` / `-V`.
 - Apache-2.0 license and package metadata.
 - Basic solar panel (2×2, 20 EC, reach 4, $300, Kettering & Vane; research 1,800 RP or make 60 glass): the second version in the solar slot. Panels still link only through poles.

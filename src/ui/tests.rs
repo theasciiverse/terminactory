@@ -1597,11 +1597,11 @@ fn machines_say_waste_leaves_by_the_back() {
     // (A tall pane: the page of waste has grown with every machine that leaves some.)
     app.book_go(Entry::Item(Item::Waste));
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("https://terminactory.wiki/waste") && t.contains("fuel"), "{t}");
-    // And a placed boiler says it burns waste too.
+    assert!(t.contains("https://terminactory.wiki/waste") && !t.contains("fuel for"), "{t}");
+    // And a placed boiler says nothing of burning waste.
     let mut w = World::blank();
     w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();
-    assert!(inspect(&w, 0, 20, 20).join("\n").contains("burns waste too: 4 = 1 coal"));
+    assert!(!inspect(&w, 0, 20, 20).join("\n").contains("waste"));
 }
 
 /// A long telegram has a thin scrollbar beside its text; a short one has none.

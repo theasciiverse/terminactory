@@ -462,13 +462,11 @@ impl Item {
             Item::Computer => c(22_000.0, 0.99, 0.3),
         }
     }
-    /// Fuel items and how many ticks one keeps a fire going. Waste burns in boilers only:
-    /// `WASTE_PER_COAL` of it make the fire of one coal.
+    /// Fuel items and how many ticks one keeps a fire going. Waste is never fuel.
     pub fn burn_ticks(self) -> Option<u32> {
         match self {
             Item::Coal => Some(4 * 60),
             Item::Coke => Some(8 * 60),
-            Item::Waste => Some(4 * 60 / crate::sim::WASTE_PER_COAL),
             _ => None,
         }
     }

@@ -6,8 +6,8 @@ Furnaces and kilns burn coal while they work, and boilers burn it to make steam.
 
 ## Tips
 - Keep a coal belt running to every fire; a machine with no fuel simply stops.
-- Coke burns for longer than coal, so it makes the better boiler fuel per piece.
-- [[waste]] can also be burned in a boiler, which helps when coal runs short.
+- Coke burns twice as long as coal, but only the blast furnace burns it; boilers take coal alone.
+- [[waste]] is never fuel.
 
 ## See also
 - [[coke]]

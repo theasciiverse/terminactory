@@ -71,9 +71,6 @@ pub const ENGINE_POWER: f64 = 100.0; // power at full steam
 const STEAM_PER_TICK: f64 = 10.0 / TPS as f64; // steam an engine burns per tick at full power
 pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
-/// How much waste makes the fire of one coal in a boiler. A boiler holds the fire of
-/// `BOILER_COAL_CAP` coal, whatever mix of coal and waste made it.
-pub const WASTE_PER_COAL: u32 = 4;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
 pub const SAVE_VERSION: u32 = 6;
@@ -3694,19 +3691,12 @@ fn try_insert(tiles: &mut [Option<Building>], owner: &[Option<u32>], econ: &mut 
                 false
             }
         }
-        St::Boiler { coal, fuel, .. } => match item {
+        St::Boiler { coal, .. } => match item {
             Item::Coal if *coal < BOILER_COAL_CAP => {
                 *coal += 1;
                 true
             }
-            // Waste goes straight into the fire, a quarter of a coal's worth each, up to a full
-            // store. The fire only burns down while steam is wanted, so a boiler burns what its
-            // grid needs and no more; the rest waits on the belt.
-            Item::Waste if *fuel + Item::Waste.burn_ticks().unwrap_or(0) <= BOILER_COAL_CAP * Item::Coal.burn_ticks().unwrap_or(0) => {
-                *fuel += Item::Waste.burn_ticks().unwrap_or(0);
-                econ.used[Item::Waste.idx()] += 1;
-                true
-            }
+            // Waste is never fuel: it waits on the belt.
             _ => false,
         },
         St::Arm { .. } | St::Solar | St::Pole | St::Pipe | St::Pump { .. } | St::Engine { .. } => false,
