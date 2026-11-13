@@ -17,8 +17,8 @@ board: The Lounge   date: Y154-09-08   author: kettlekeeper   status: open
     - kettlekeeper | Y154-09-11 | The young porter. He has been watching me do it for a year and he has not once asked a question, which I take as a good sign.
       - night_porter_iss | Y154-09-11 | I have been watching. I did not want to interrupt.
         - kettlekeeper | Y154-09-11 | You will do.
-  - [Deleted User #3312] | Y154-10-02 | A kettle is a small machine that makes a shift possible.
-    - kettlekeeper | Y154-10-02 | It is.
+  - [Deleted User #3312] | Y154-10-02 | Ours is on a timer plug and nobody has ever tried to improve it. Two hundred and eleven steps is a fair walk for a hot cup.
+    - kettlekeeper | Y154-10-02 | Two hundred and eleven. I have never timed the plug.
   - night_porter_iss | Y156-01-15 | A year on. The kettle is on at half two and ready by three. I fill it from the tap. It has not cracked.
     - MillaOnNights | Y156-01-15 | Good.
       - third_shift_tom | Y156-01-15 | The kettle is the shift.

@@ -10,10 +10,9 @@ board: Troubleshooting   date: Y141-12-03   author: kiln_marit   status: solved
             - kiln_marit | Y141-12-05 | It is running. Twenty seconds a batch. Thank you. Edit: solved.
               - halvard_k | Y141-12-05 | Good. You will be teaching this in a year.
                 - kiln_marit | Y142-03-11 | I have taught it twice already. You were right.
-- noon_shift_nils | Y141-12-07 | Mine did the same and I had convinced myself the kiln was broken. It was waiting for the eighth run. I have put a crate in front of it and it has not waited since.
-  - kiln_marit | Y141-12-07 | A crate in front. That is what halvard_k told me and I did not believe it either.
-
   - tilda_m | Y141-12-06 | A counting note for the batch. Eight runs of brick is sixteen stone for eight brick, every twenty seconds. If you are planning a brick line, plan the stone at that rate, not at the kiln's theoretical best.
     - kiln_marit | Y141-12-06 | I have written it in the kiln book.
   - second_floor_ivy | Y141-12-07 | And the back. If you are baking tubes, waste comes out the back. Brick and glass do not. Do not build a tube kiln without a way out at the back, and do not assume every kiln needs one.
     - kiln_marit | Y141-12-07 | We are on brick. I will remember it for tubes.
+- noon_shift_nils | Y141-12-07 | Mine did the same and I had convinced myself the kiln was broken. It was waiting for the eighth run. I have put a crate in front of it and it has not waited since.
+  - kiln_marit | Y141-12-07 | A crate in front. That is what halvard_k told me and I did not believe it either.

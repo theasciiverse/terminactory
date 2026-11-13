@@ -8,7 +8,7 @@ board: Archive   date: Y155-03-22   author: young_hal   status: open
   - sign_writer | Y155-03-22 | And you cannot message a number. That is the practical difference. If a thread quotes [Deleted User #4471] and you want to ask him a question, you cannot.
     - young_hal | Y155-03-22 | That is a strange feeling.
       - GerdV | Y155-03-22 | It is. I have wanted to ask him three things in twenty years.
-  - brass_tally | Y155-03-23 | Some numbers are consistent. #4471 answered beginner questions for years and his answers are quoted all over the board. #209 was here before most of us and posted very little. #1180 was fond of a phrase and #3312 is calm about everything. You will learn them the way you learn a face.
+  - brass_tally | Y155-03-23 | Some numbers are consistent. #4471 answered beginner questions for years and his answers are quoted all over the board. #209 was here before most of us and posted very little. #1180 was fond of a phrase and #3312 answered questions like a man who had already done the job. You will learn them the way you learn a face.
     - young_hal | Y155-03-23 | Is there a list?
       - archive_clerk | Y155-03-23 | There is a page. It has four entries and no names.
         - brass_tally | Y155-03-23 | Four is enough.

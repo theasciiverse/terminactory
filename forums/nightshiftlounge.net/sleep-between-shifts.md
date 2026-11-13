@@ -22,6 +22,6 @@ board: Health   date: Y136-02-09   author: NurseOdile   status: open
   - NurseOdile | Y149-10-05 | Thirteen years of this thread. I am going to add one line that I have never written. If you are not sleeping and it has been months and not weeks, come and see me. Not because there is something wrong with you. Because there is something we can do about it.
     - MillaOnNights | Y149-10-05 | I came to see you in Y140 and you did not make a fuss.
       - NurseOdile | Y149-10-05 | There is never any need for a fuss.
-  - [Deleted User #3312] | Y156-02-19 | Sleep is a machine too. Feed it at the same time every day.
-    - NurseOdile | Y156-02-19 | I wish I had written that. I am putting it on the notice board, with your number on it.
-      - [Deleted User #3312] | Y156-02-19 | The number is enough.
+  - [Deleted User #3312] | Y156-02-19 | What worked for me was the walk, not the sleep. Twenty minutes outside before bed, whatever the weather, at the same time every day. The first fortnight was worse. After that it was better.
+    - NurseOdile | Y156-02-19 | That is the first honest account of the first fortnight I have read on this thread. I am putting it on the notice board, with your number on it.
+      - [Deleted User #3312] | Y156-02-19 | Put the fortnight in. People stop at the second week and say it did not work.

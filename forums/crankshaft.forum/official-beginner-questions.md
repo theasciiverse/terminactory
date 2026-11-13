@@ -9,7 +9,7 @@ board: Beginner Questions   date: Y124-02-11   author: brass_tally   status: ope
   5. Ore sells for almost nothing. Melt it, cast it, press it, and sell that.
   Ask away. Someone here is always awake.
   - OldHollowmere | Y124-02-11 | And read the front of the machine before you ask why it stopped. It is usually the front.
-  - TamsinR | Y124-02-12 | I am an apprentice on Line 1 and I will probably be asking most of the questions in here. Sorry in advance.
+  - apprentice_kit | Y124-02-12 | I am an apprentice on Line 2 and I will probably be asking most of the questions in here. Sorry in advance.
     - brass_tally | Y124-02-12 | No apologies needed. Ask the question properly and you will get a proper answer.
 
 - west_gate_pat | Y126-08-30 | Not a question, just a note that the north gate is closed for the pipe works until Friday. Use the west gate and sign in. I am not chasing anybody across the yard again.
@@ -58,7 +58,7 @@ board: Beginner Questions   date: Y124-02-11   author: brass_tally   status: ope
   - TamsinR | Y136-05-20 | I am writing that on the board by the line.
 
 - crated_up | Y137-04-11 | Removed a crate and lost four hundred coal. Is there a way to get it back?
-  - browncoat_bex | Y137-04-11 | No. Items inside a crate or a warehouse are gone when you remove it. Empty it first, always. The game will not stop you.
+  - browncoat_bex | Y137-04-11 | No. Items inside a crate or a warehouse are gone when you remove it. Empty it first, always. Nothing will stop you.
   - crated_up | Y137-04-12 | Lesson learned. I have started putting an arm on the crate and a belt to a trade post before I move anything.
 
 - brass_tally | Y141-01-08 | A note for the new arrivals, since we are at eleven pages. If your line has stopped and you cannot see why, check these in order: is the machine's front clear, is its back clear, has it got coal, has it got EC, and is the belt behind it full. Nine times in ten it is one of those five, and the machine will tell you which one if you look at it.
