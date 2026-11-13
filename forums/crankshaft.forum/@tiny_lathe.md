@@ -1,6 +1,6 @@
 # @tiny_lathe
 
-**Joined** Y137 · **Posts** 1,010 · **Home board** crankshaft.forum
+**Joined** Y134 · **Posts** 1,010 · **Home board** crankshaft.forum
 **Status** lathe hand. Rods first, screws after.
 
 **Signature:** *Rods first, screws after.*

@@ -1,6 +1,6 @@
 # @crated_up
 
-**Joined** Y137 · **Posts** 1,120 · **Home board** crankshaft.forum
+**Joined** Y133 · **Posts** 1,120 · **Home board** crankshaft.forum
 **Status** stores, crate line.
 
 **Signature:** *Mind the corners.*

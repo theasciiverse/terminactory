@@ -1,6 +1,6 @@
 # @kettle_ron
 
-**Joined** Y126 · **Posts** 2,470 · **Home board** crankshaft.forum
+**Joined** Y124 · **Posts** 2,470 · **Home board** crankshaft.forum
 **Status** boiler operator, boiler house.
 
 **Signature:** *Steam forgives nothing.*

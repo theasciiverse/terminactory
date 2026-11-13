@@ -1,6 +1,6 @@
 # @apprentice_tomas
 
-**Joined** Y152 · **Posts** 260 · **Home board** crankshaft.forum
+**Joined** Y150 · **Posts** 260 · **Home board** crankshaft.forum
 **Status** apprentice; on nights since Y150.
 
 **Signature:** *Ask first, build second.*

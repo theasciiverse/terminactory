@@ -2,7 +2,7 @@
 board: Off Topic   date: Y149-03-04   author: ferrous_ann   status: open
 
 - ferrous_ann | Y149-03-04 | Line 3 at Ashgrove stopped on Friday and it is not starting again. Eleven of us have been offered the Cinderhall site, which is a longer walk and the same money. Has anyone here made that move? I would like to know what the floor is like before I say yes.
-  - OldHollowmere | Y149-03-04 | I worked Cinderhall for nine years in the seventies. It is a good floor. The blast furnaces are loud and the coke ovens are worse. Wear the boots they give you and do not argue about the boots.
+  - OldHollowmere | Y149-03-04 | I worked Cinderhall for nine years as a young man. It is a good floor. The blast furnaces are loud and the coke ovens are worse. Wear the boots they give you and do not argue about the boots.
     - ferrous_ann | Y149-03-04 | Nine years. Why did you leave?
       - OldHollowmere | Y149-03-04 | I came back to the hill. It was not the floor's fault.
   - molder_max | Y149-03-05 | I moved from Ashgrove to here in Y132 when they closed the molder line. The first month is the walk. After that it is a floor like any other. The men are the same men.

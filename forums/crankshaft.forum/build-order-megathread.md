@@ -14,7 +14,7 @@ board: Build Orders & Layouts   date: Y128-09-17   author: six_belts   status: o
     - OldHollowmere | Y128-09-18 | Then we agree and are arguing about the order of the words.
 
 - TamsinR | Y128-10-02 | I am an apprentice and I have been told to build a line that makes copper wire. My order was drill, furnace, molder, press, press. The second press was set to wire. It worked but the second press starved until I put a crate between the two.
-  - brass_tally | Y128-10-02 | That is a good build and a good fix. A crate between two presses is the cheapest thing in the game and it solves half of these problems. Write down what the crate did so you remember.
+  - brass_tally | Y128-10-02 | That is a good build and a good fix. A crate between two presses is the cheapest thing in the plant and it solves half of these problems. Write down what the crate did so you remember.
     - TamsinR | Y128-10-03 | I have written it in my book. "Crate between press and press. Wire starves without it."
 
 - molder_max | Y130-04-11 | Question from a man who runs a molder all day. Why does everybody build the furnace facing the molder with a pipe between them? Just put the molder in front of the furnace. The metal goes straight in.

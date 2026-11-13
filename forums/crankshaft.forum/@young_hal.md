@@ -1,6 +1,6 @@
 # @young_hal
 
-**Joined** Y149 · **Posts** 380 · **Home board** crankshaft.forum
+**Joined** Y140 · **Posts** 380 · **Home board** crankshaft.forum
 **Status** apprentice; carried the concrete for the plant's first drilling rig.
 
 **Signature:** *Learning the ropes, literally.*

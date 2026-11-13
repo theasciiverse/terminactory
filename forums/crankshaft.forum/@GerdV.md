@@ -1,6 +1,6 @@
 # @GerdV
 
-**Joined** Y128 · **Posts** 3,401 · **Home board** crankshaft.forum
+**Joined** Y124 · **Posts** 3,401 · **Home board** crankshaft.forum
 **Status** welder. Welds frames for the upper floors and has opinions about jigs.
 
 **Signature:** *A good seam is a quiet seam.*

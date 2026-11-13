@@ -1,6 +1,6 @@
 # @slow_steam
 
-**Joined** Y139 · **Posts** 1,450 · **Home board** crankshaft.forum
+**Joined** Y130 · **Posts** 1,450 · **Home board** crankshaft.forum
 **Status** boiler engineer.
 
 **Signature:** *Size the grid for the busy minute.*

@@ -1,6 +1,6 @@
 # @kiln_marit
 
-**Joined** Y141 · **Posts** 720 · **Home board** crankshaft.forum
+**Joined** Y140 · **Posts** 720 · **Home board** crankshaft.forum
 **Status** kiln operator. Trained by halvard_k in Y142.
 
 **Signature:** *Twenty seconds a batch.*

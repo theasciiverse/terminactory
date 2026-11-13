@@ -20,7 +20,7 @@ board: Troubleshooting   date: Y157-10-23   author: halverson_adjacent   status:
       - kiln_marit | Y157-10-25 | That is three batches in one machine, and each one waits for the other. Split them. Dopant on one, wafers on another, ceramic on a third if you can spare it.
         - halvard_k | Y157-10-26 | Hello. She is right. A kiln that changes recipe is a kiln that spends its life filling.
           - halverson_adjacent | Y157-10-26 | Three kilns. I will ask for three kilns.
-  - tiny_lathe | Y157-10-26 | Fine wire. One copper wire draws to two fine wire, and fine wire goes into everything at the top of the tree: masks, microprocessor, ceramic boards, tube boards. A single drawer will never keep up. You want a drawer per consumer, or a drawer and a warehouse.
+  - tiny_lathe | Y157-10-26 | Fine wire. One copper wire draws to two fine wire, and fine wire goes into everything at the top of the tree: masks, microprocessors and ceramic boards. A single drawer will never keep up. You want a drawer per consumer, or a drawer and a warehouse.
     - halverson_adjacent | Y157-10-26 | We have one drawer.
       - tiny_lathe | Y157-10-26 | Then that is your bottleneck, not the grower. Everything at the top of the tree eats fine wire. Count it before you count anything else.
         - tilda_m | Y157-10-27 | Count it twice. And count the scrap, which is a product and not a waste, so do not put it behind the machine.

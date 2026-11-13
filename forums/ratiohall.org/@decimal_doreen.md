@@ -1,6 +1,6 @@
 # @decimal_doreen
 
-**Joined** Y129 · **Posts** 3,145 · **Home board** ratiohall.org
+**Joined** Y126 · **Posts** 3,145 · **Home board** ratiohall.org
 **Status** planner.
 
 **Signature:** *Two places is enough.*

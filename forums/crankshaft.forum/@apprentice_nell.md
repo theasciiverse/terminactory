@@ -1,6 +1,6 @@
 # @apprentice_nell
 
-**Joined** Y144 · **Posts** 900 · **Home board** crankshaft.forum
+**Joined** Y141 · **Posts** 900 · **Home board** crankshaft.forum
 **Status** apprentice, Line 1.
 
 **Signature:** *Still learning. Please be gentle.*

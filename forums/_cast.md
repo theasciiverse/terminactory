@@ -36,7 +36,7 @@ No signature. Posts perhaps twenty times a year. Every one of them is correct. N
 Signature changes four times: *Apprentice, Line 1* → *Operator, Line 1* → *Shift lead, nights* → *Nothing to add.*
 Starts apologetic and eager, becomes dry and funny, then very quiet and very certain. Keeps a list of "things I got wrong" until Y143 and then stops updating it.
 
-**GerdV** — joined Y128, CS. Welder. 3,401 posts.
+**GerdV** — joined Y124, CS. Welder. 3,401 posts.
 Signature: *A good seam is a quiet seam.*
 Warm, digressive, tells stories about people who have left. The only poster who consistently remembers who used to work where.
 
@@ -56,11 +56,11 @@ Cheerful, answers questions about what a part costs and how long a delivery take
 Signature: *Drill. Belt. Next.*
 One or two words per post. Occasionally a whole paragraph, which frightens everyone.
 
-**ivo_p** — joined Y133, CS and NS. Electrician. 4,308 posts.
+**ivo_p** — joined Y130, CS and NS. Electrician. 4,308 posts.
 Signature: *Check the pole before the machine.*
 Technical, impatient with hand-waving, generous with a real question. Uses "EC" as a mass noun.
 
-**apprentice_nell** — joined Y144, CS. Apprentice. 900 posts.
+**apprentice_nell** — joined Y141, CS. Apprentice. 900 posts.
 Signature: *Still learning. Please be gentle.*
 Asks the questions the megathread exists for. Thanks everybody, twice. Her later posts (Y155+) lose the apology and gain a certain flat confidence.
 
@@ -68,33 +68,33 @@ Asks the questions the megathread exists for. Thanks everybody, twice. Her later
 
 ## Crankshaft regulars
 
-**kettle_ron** — Y126, CS. Boiler operator. 2,470. Sig: *Steam forgives nothing.* Gruff, suspicious of solar.
-**ferrous_ann** — Y135, CS. Steel line. 1,730. Sig: *Two plate, one coke.* Dry, corrects people about waste.
-**mateo_belts** — Y146, CS. Belt fitter. 640. No sig. Young, enthusiastic, over-explains.
+**kettle_ron** — Y124, CS. Boiler operator. 2,470. Sig: *Steam forgives nothing.* Gruff, suspicious of solar.
+**ferrous_ann** — Y133, CS. Steel line. 1,730. Sig: *Two plate, one coke.* Dry, corrects people about waste.
+**mateo_belts** — Y143, CS. Belt fitter. 640. No sig. Young, enthusiastic, over-explains.
 **the_quiet_shift** — Y138, CS. Operator. 210. No sig. Posts once a season, always solves the thread.
-**young_hal** — Y149, CS. Apprentice. 380. Sig: *Learning the ropes, literally.* Cheerful, asks about everything.
-**crated_up** — Y137, CS. Stores. 1,120. Sig: *Mind the corners.* Practical about buffers and crate losses.
+**young_hal** — Y140, CS. Apprentice. 380. Sig: *Learning the ropes, literally.* Cheerful, asks about everything.
+**crated_up** — Y133, CS. Stores. 1,120. Sig: *Mind the corners.* Practical about buffers and crate losses.
 **old_bert_hands** — Y122, CS. Fitter, retired Y148. 2,880. Sig: *If it rattles, it is loose.* Storyteller; remembers the first furnaces.
 **sign_writer** — Y128, CS. Clerk and signwriter. 1,340. Sig: *Please read the notice.* Pedantic about labels and post titles.
 **anvil_jo** — Y129, CS. Forge hand. 2,010. Sig: *Hot metal has no friends.* Blunt, occasionally very funny.
 **tilda_m** — Y134, CS. Quality. 1,660. Sig: *Count it twice.* Checks other people's numbers.
 **sand_and_stone** — Y136, CS. Crusher operator. 980. Sig: *Everything starts as rock.* Quiet, loves grit recipes.
-**kiln_marit** — Y142, CS. Kiln operator. 720. Sig: *Twenty seconds a batch.* Young, precise, owes halvard_k a debt.
+**kiln_marit** — Y140, CS. Kiln operator. 720. Sig: *Twenty seconds a batch.* Young, precise, owes halvard_k a debt.
 **west_gate_pat** — Y125, CS. Gatehouse. 1,540. Sig: *Sign in, please.* Knows every delivery and every retirement.
-**second_floor_ivy** — Y141, CS. Elevators and floors. 860. Sig: *Full car or no car.* Fixes elevator threads.
-**molder_max** — Y132, CS. Molder operator. 1,290. Sig: *One metal, one molder.*
+**second_floor_ivy** — Y139, CS. Elevators and floors. 860. Sig: *Full car or no car.* Fixes elevator threads.
+**molder_max** — Y130, CS. Molder operator. 1,290. Sig: *One metal, one molder.*
 **belt_end_bram** — Y127, CS. Trade post operator. 1,880. Sig: *Somebody has to count it.*
-**slow_steam** — Y139, CS. Boiler engineer. 1,450. Sig: *Size the grid for the busy minute.*
+**slow_steam** — Y130, CS. Boiler engineer. 1,450. Sig: *Size the grid for the busy minute.*
 **night_fitter_cato** — Y143, CS and NS. Fitter. 690. Sig: *Nothing breaks at a convenient time.*
 **green_helmet** — Y130, CS. Safety officer. 1,720. Sig: *Clear the back of the machine.*
 **halverson_adjacent** — Y147, CS. Silicon line. 540. Sig: *Scrap is not waste.*
-**tiny_lathe** — Y137, CS. Lathe hand. 1,010. Sig: *Rods first, screws after.*
+**tiny_lathe** — Y134, CS. Lathe hand. 1,010. Sig: *Rods first, screws after.*
 **hem_of_the_line** — Y150, CS. Line hand. 300. No sig.
 **rivet_pete** — Y134, CS. Fitter. 1,220. Sig: *Hit it once, properly.*
 **grey_belt** — Y131, CS. Operator. 940. No sig. Agrees with whoever spoke last, until Y149.
 **noon_shift_nils** — Y136, CS. Operator. 1,090. Sig: *Day shift, unfortunately.*
-**apprentice_tomas** — Y152, CS. Apprentice. 260. Sig: *Ask first, build second.*
-**foreman_hale** — Y145, CS. Foreman, Line 4. 760. Sig: *The line runs at the speed of its slowest hand.*
+**apprentice_tomas** — Y150, CS. Apprentice. 260. Sig: *Ask first, build second.*
+**foreman_hale** — Y140, CS. Foreman, Line 4. 760. Sig: *The line runs at the speed of its slowest hand.*
 
 ## Ratio Hall
 
@@ -104,7 +104,7 @@ Pedantic to the point of comedy, but fair. Locks threads rather than argue. Corr
 **throughput_tony** — Y126, RH. Process engineer. 6,612. Sig: *Per minute, or it did not happen.*
 Confident, likes tables, wrong about once a year and does not enjoy it.
 
-**decimal_doreen** — Y129, RH. Planner. 3,145. Sig: *Two places is enough.*
+**decimal_doreen** — Y126, RH. Planner. 3,145. Sig: *Two places is enough.*
 Quiet, exact, ends arguments by posting the arithmetic everyone was avoiding.
 
 **slag_accountant** — Y128, RH. Cost analyst. 4,206. Sig: *Waste is a line item.*
@@ -126,7 +126,7 @@ Posts hand-drawn tables in monospace. Very old-fashioned, very precise.
 Checks claims against her own line; often the only person who has actually built the thing being argued about.
 
 **margin_mo** — Y145, RH. Analyst. 620. Sig: *The second decimal is where the money is.*
-**clean_melt** — Y151, RH. Silicon. 290. Sig: *No waste, no fee.*
+**clean_melt** — Y149, RH. Silicon. 290. Sig: *No waste, no fee.*
 **the_third_decimal** — Y148, RH. 410. No sig. Posts only numbers.
 **old_slide_rule** — Y121, RH. Retired engineer. 2,220. Sig: *It was good enough then.*
 Long, fond, slightly melancholy posts about doing sums by hand.
@@ -144,7 +144,7 @@ Unbothered, cheerful about a negative price. The only man who says "waste" fondl
 **old_ferrous** — Y121, TF. Retired trader. 1,905. Sig: *I sold my last girder in Y144.*
 **greta_sells** — Y136, TF. Broker. 1,240. Sig: *Ask, and I will tell you the price.*
 **cart_and_crate** — Y143, TF. Hauler. 580. Sig: *Two crates, one cart.*
-**noon_market_mira** — Y147, TF. Trader. 430. Sig: *Midday is the honest hour.*
+**noon_market_mira** — Y142, TF. Trader. 430. Sig: *Midday is the honest hour.*
 **scrap_king_pell** — Y129, TF. Scrap. 1,720. Sig: *Scrap is not waste. Say it with me.*
 **freight_fen** — Y138, TF. 760. Sig: *Weight, then words.*
 
@@ -184,9 +184,9 @@ Funny, superstitious about the radio.
 ## Deleted accounts
 
 **[Deleted User #209]** — posts Y121–Y129. Speaks in short, careful sentences. Referenced by old timers as "the one who started the waste thread".
-**[Deleted User #4471]** — posts Y128–Y144. Answered beginner questions thoroughly; several old answers are quoted long after the account is gone.
-**[Deleted User #1180]** — posts Y133–Y151. Fond of the phrase "it evens out".
-**[Deleted User #3312]** — posts Y146–Y157. Very calm. Sometimes quoted by people who cannot say who said it.
+**[Deleted User #4471]** — posts Y128–Y152. Answered beginner questions thoroughly; several old answers are quoted long after the account is gone.
+**[Deleted User #1180]** — posts Y133–Y155. Fond of the phrase "it evens out".
+**[Deleted User #3312]** — posts Y146–Y158. Very calm. Sometimes quoted by people who cannot say who said it.
 
 ---
 

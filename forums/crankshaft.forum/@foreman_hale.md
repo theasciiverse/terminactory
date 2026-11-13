@@ -1,6 +1,6 @@
 # @foreman_hale
 
-**Joined** Y145 · **Posts** 760 · **Home board** crankshaft.forum
+**Joined** Y140 · **Posts** 760 · **Home board** crankshaft.forum
 **Status** foreman, Line 4. Took on the tractor order in Y156 and has not stopped hearing about it.
 
 **Signature:** *The line runs at the speed of its slowest hand.*

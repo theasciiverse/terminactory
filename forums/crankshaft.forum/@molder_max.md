@@ -1,6 +1,6 @@
 # @molder_max
 
-**Joined** Y132 · **Posts** 1,290 · **Home board** crankshaft.forum
+**Joined** Y130 · **Posts** 1,290 · **Home board** crankshaft.forum
 **Status** molder operator. Two furnaces, one molder, six years of watching it.
 
 **Signature:** *One metal, one molder.*

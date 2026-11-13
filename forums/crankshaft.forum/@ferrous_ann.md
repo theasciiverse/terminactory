@@ -1,6 +1,6 @@
 # @ferrous_ann
 
-**Joined** Y135 · **Posts** 1,730 · **Home board** crankshaft.forum
+**Joined** Y133 · **Posts** 1,730 · **Home board** crankshaft.forum
 **Status** steel line operator; moved from Ashgrove to Cinderhall in Y149.
 
 **Signature:** *Two plate, one coke.*

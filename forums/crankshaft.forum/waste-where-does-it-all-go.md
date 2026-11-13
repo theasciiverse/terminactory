@@ -7,7 +7,7 @@ board: Waste & Byproducts   date: Y133-06-02   author: pipefitter_uri   status: 
   - Nothing burns it. Boilers refuse it, furnaces refuse it, kilns refuse it. Do not build a line that assumes otherwise.
   - A trade post set to sell for money will take it, and charge a small fee for each one. A post set to research, or split, refuses it.
   - Research earns nothing from waste. It has no research value at all.
-  - Removing a part that still holds waste costs the same fee, and the game will ask before an expensive removal.
+  - Removing a part that still holds waste costs the same fee, and the machine will ask before an expensive removal.
   Post what you have learned. Keep it civil. Some of us are being paid to deal with this.
   - slag_accountant | Y133-06-02 | The fee is the point. Every steel recipe that uses coal makes more waste than the coke one, so the "cheaper" coal recipe is not always cheaper once you have paid to have the waste taken away. I will post the numbers when I have them.
     - pipefitter_uri | Y133-06-03 | Please do. That is exactly the kind of thing this thread is for.

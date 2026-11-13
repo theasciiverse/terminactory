@@ -1,6 +1,6 @@
 # @noon_market_mira
 
-**Joined** Y147 · **Posts** 430 · **Home board** tradefloor.net
+**Joined** Y142 · **Posts** 430 · **Home board** tradefloor.net
 **Status** trader. Brick, and now a computer order.
 
 **Signature:** *Midday is the honest hour.*

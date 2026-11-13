@@ -1,6 +1,6 @@
 # @second_floor_ivy
 
-**Joined** Y141 · **Posts** 860 · **Home board** crankshaft.forum
+**Joined** Y139 · **Posts** 860 · **Home board** crankshaft.forum
 **Status** floors and elevators. Runs the first floor above the ground.
 
 **Signature:** *Full car or no car.*

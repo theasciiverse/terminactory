@@ -1,6 +1,6 @@
 # @ivo_p
 
-**Joined** Y133 · **Posts** 4,308 · **Home board** crankshaft.forum (also nightshiftlounge.net)
+**Joined** Y130 · **Posts** 4,308 · **Home board** crankshaft.forum (also nightshiftlounge.net)
 **Status** electrician.
 
 **Signature:** *Check the pole before the machine.*

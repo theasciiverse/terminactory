@@ -39,7 +39,7 @@ board: Guides & Sticky   date: Y129-04-03   author: six_belts   status: open
   - brass_tally | Y138-05-04 | That is the clearest explanation of it I have read, and I have written one myself.
 
 - crated_up | Y140-07-22 | A warning about crates, since this guide recommends them. Items inside a crate are lost if you remove it. Empty it first. A full crate removed in a hurry is a day of coal on the floor.
-  - browncoat_bex | Y140-07-22 | And the game will not stop you. It will ask about expensive removals, but it will not ask about a crate full of plate.
+  - browncoat_bex | Y140-07-22 | And the machine will not stop you. It will ask about expensive removals, but it will not ask about a crate full of plate.
     - crated_up | Y140-07-23 | It asked me once. I said yes. I regret it.
 
 - second_floor_ivy | Y142-03-16 | Elevators belong in this guide. A car leaves only when it is full, so a trickle of items will sit in it and look like a fault. Feed it in batches and it runs. And plan its spot before you fill the floor, because it needs room on every floor it serves.

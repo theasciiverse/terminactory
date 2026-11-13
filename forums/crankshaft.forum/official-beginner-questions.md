@@ -91,9 +91,8 @@ board: Beginner Questions   date: Y124-02-11   author: brass_tally   status: ope
       - ivo_p | Y150-11-05 | It is the rule. Once you have laid a hundred poles you will stop noticing it. Put a line of poles along the machines and a panel at each end and you will never think about it again.
       - second_floor_ivy | Y150-11-05 | Also, panels cannot go underground. Sunlight, or nothing. If you dig a floor, the elevator carries power down for you.
 
-- apprentice_tomas | Y152-04-22 | Why can I not put a drill on the upper floor? The game will not let me place it.
+- apprentice_tomas | Y152-04-22 | Why can I not put a drill on the upper floor? It will not let me place it.
   - second_floor_ivy | Y152-04-22 | Drills and pumps need ground under them. An upper floor is a floor, not ground. The floor below is a different matter: ore down there is richer the deeper you go, so that is where the drills belong.
-  - six_belts | Y152-04-23 | Six belts, six faults. That one is not a fault. That one is the ground.
 
 - the_quiet_shift | Y152-04-23 | Six belts, six faults. That one is not a fault. That one is the ground.
   - apprentice_tomas | Y152-04-23 | You are right and I feel foolish.
