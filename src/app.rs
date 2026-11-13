@@ -208,6 +208,10 @@ pub enum BookButton {
     Home,
     NewTab,
     Star,
+    /// The start page's Search and Lucky buttons, and the box on the results page.
+    Search,
+    Lucky,
+    Edit,
 }
 
 /// One browser tab: a page, its own history and where it was scrolled and picked.
@@ -222,13 +226,15 @@ pub struct Tab {
 
 impl Tab {
     pub fn home() -> Self {
-        Tab { slug: "home".into(), history: Vec::new(), forward: Vec::new(), selected: 0, scroll: 0 }
+        Tab { slug: "start".into(), history: Vec::new(), forward: Vec::new(), selected: 0, scroll: 0 }
     }
 
     /// The page's title, for the tab strip.
     pub fn title(&self) -> String {
         match self.slug.as_str() {
+            "start" => "T Web".into(),
             "home" => "Home".into(),
+            s if s.starts_with("search?q=") => format!("{} - T Web", &s["search?q=".len()..]),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
             "topics" => "Topics".into(),
@@ -315,6 +321,8 @@ pub struct App {
     /// The bookmarks bar's links, where they were drawn, and whether the page has a scrollbar column.
     pub book_mark_hits: Vec<(Rect, String)>,
     pub book_scrollbar: bool,
+    /// The last search drawn: its words and its results.
+    pub book_hits: Option<(String, Vec<crate::search::Hit>)>,
     /// When the page last opened: the load bar fills for a moment after it.
     pub book_opened: Option<std::time::Instant>,
     pub book_slug: String,
@@ -441,6 +449,7 @@ impl App {
             book_tab_close: Vec::new(),
             book_mark_hits: Vec::new(),
             book_scrollbar: false,
+            book_hits: None,
             book_opened: None,
             book_slug: "home".into(),
             book_history: Vec::new(),
@@ -890,7 +899,7 @@ impl App {
             self.book_query.clear();
             self.book_show(e);
         } else {
-            self.book_slug = "home".into();
+            self.book_slug = "start".into();
             self.book_scroll = 0;
         }
         self.book_scroll = 0;
@@ -898,6 +907,7 @@ impl App {
         self.book_forward.clear();
         self.book_opened = Some(std::time::Instant::now());
         self.book = true;
+        self.book_land();
     }
 
     /// Shows a page (and so its tab), remembering it as that tab's last page.
@@ -933,6 +943,7 @@ impl App {
             self.book_entry = e;
         }
         self.book_opened = Some(std::time::Instant::now());
+        self.book_land();
     }
 
     /// Opens a page in a new tab and switches to it.
@@ -995,6 +1006,7 @@ impl App {
             }
             self.book_scroll = 0;
             self.book_opened = Some(std::time::Instant::now());
+            self.book_land();
         }
     }
 
@@ -1008,6 +1020,7 @@ impl App {
             }
             self.book_scroll = 0;
             self.book_opened = Some(std::time::Instant::now());
+            self.book_land();
         }
     }
 
@@ -1048,7 +1061,7 @@ impl App {
             return;
         }
         // Home and the index pages are generated, so they have no markdown file.
-        let generated = matches!(slug, "home" | "items" | "machines" | "topics");
+        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics") || slug.starts_with("search?q=");
         if (crate::wiki::page(slug).is_none() && !generated) || slug == self.book_slug {
             return;
         }
@@ -1061,6 +1074,32 @@ impl App {
         if let Some(e) = Self::book_entry_for_slug(slug) {
             self.book_entry = e;
         }
+        self.book_land();
+    }
+
+    /// Where the typing cursor goes when a page opens: into the box on the start page, nowhere else.
+    fn book_land(&mut self) {
+        self.book_typing = self.book_slug == "start";
+        self.book_query.clear();
+        self.book_results.clear();
+    }
+
+    /// Runs a search: the results page for these words.
+    pub fn book_submit_search(&mut self, query: &str) {
+        let q = query.split_whitespace().collect::<Vec<_>>().join(" ");
+        if q.is_empty() {
+            return;
+        }
+        self.book_go_slug(&format!("search?q={q}"));
+    }
+
+    /// The slug of the best result for these words, or a random wiki page for an empty search.
+    fn book_lucky(&self, query: &str) -> Option<String> {
+        if let Some(hit) = crate::search::search(query).into_iter().next() {
+            return Some(hit.slug);
+        }
+        let pages = crate::wiki::PAGES;
+        (query.trim().is_empty() && !pages.is_empty()).then(|| pages[self.book_seed % pages.len()].0.to_string())
     }
 
     fn book_entry_for_slug(slug: &str) -> Option<Entry> {
@@ -1077,19 +1116,11 @@ impl App {
 
     fn book_search(&mut self) {
         let q = self.book_query.to_lowercase();
-        self.book_results = if q.is_empty() {
+        // Only the item and machine grids filter as you type; every other page searches on Enter.
+        self.book_results = if q.is_empty() || !(self.book_slug == "items" || self.book_slug == "machines") {
             Vec::new()
-        } else if self.book_slug == "items" || self.book_slug == "machines" {
-            Entry::list(&q, self.book_slug == "machines").into_iter().map(|e| crate::wiki::slug(e.name())).collect()
         } else {
-            crate::wiki::PAGES
-                .iter()
-                .filter(|(slug, md)| {
-                    let title = md.lines().next().unwrap_or("");
-                    slug.contains(&q) || title.to_lowercase().contains(&q)
-                })
-                .map(|(s, _)| (*s).to_string())
-                .collect()
+            Entry::list(&q, self.book_slug == "machines").into_iter().map(|e| crate::wiki::slug(e.name())).collect()
         };
         self.book_selected = self.book_selected.min(self.book_results.len().saturating_sub(1));
     }
@@ -1130,16 +1161,31 @@ impl App {
             match k.code {
                 KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => self.book_query.push(c),
                 KeyCode::Backspace => {
-                    self.book_query.pop();
+                    // With nothing typed on the start page, Backspace goes back like anywhere else.
+                    if self.book_query.is_empty() && self.book_slug == "start" {
+                        self.book_back();
+                    } else {
+                        self.book_query.pop();
+                    }
                 }
                 KeyCode::Enter => {
-                    if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
-                        self.book_go_slug(&slug);
+                    let grid = self.book_slug == "items" || self.book_slug == "machines";
+                    if grid {
+                        if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
+                            self.book_go_slug(&slug);
+                            self.book_query.clear();
+                            self.book_results.clear();
+                        }
+                        self.book_typing = false;
+                    } else {
+                        let q = self.book_query.clone();
+                        self.book_typing = false;
                         self.book_query.clear();
-                        self.book_results.clear();
+                        self.book_submit_search(&q);
                     }
-                    self.book_typing = false;
                 }
+                KeyCode::Tab => self.book_cycle_tab(true),
+                KeyCode::BackTab => self.book_cycle_tab(false),
                 KeyCode::Up => {
                     self.book_selected = self.book_selected.saturating_sub(1);
                     if self.book_selected < self.book_scroll as usize {
@@ -1152,7 +1198,13 @@ impl App {
                         self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
                     }
                 }
-                KeyCode::Esc => self.book_typing = false,
+                KeyCode::Esc => {
+                    self.book_typing = false;
+                    if !(self.book_slug == "items" || self.book_slug == "machines") {
+                        self.book_query.clear();
+                        self.book_results.clear();
+                    }
+                }
                 _ => {}
             }
             self.book_search();
@@ -1185,14 +1237,14 @@ impl App {
                 self.book_cycle_tab(false);
             }
             (KeyCode::Char('+'), _) => {
-                self.book_new_tab("home");
+                self.book_new_tab("start");
             }
             (KeyCode::Char('*'), _) => {
                 self.book_toggle_mark();
             }
             (KeyCode::Char('/'), _) => {
                 self.book_typing = true;
-                self.book_query.clear();
+                self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
                 self.book_search();
             }
             (KeyCode::PageUp, _) => {
@@ -1329,9 +1381,23 @@ impl App {
                         BookButton::Back => self.book_back(),
                         BookButton::Forward => self.book_forward(),
                         BookButton::Reload => self.book_reload(),
-                        BookButton::Home => self.book_go_slug("home"),
-                        BookButton::NewTab => self.book_new_tab("home"),
+                        BookButton::Home => self.book_go_slug("start"),
+                        BookButton::NewTab => self.book_new_tab("start"),
                         BookButton::Star => self.book_toggle_mark(),
+                        BookButton::Search => {
+                            let q = self.book_query.clone();
+                            self.book_submit_search(&q);
+                        }
+                        BookButton::Lucky => {
+                            let q = self.book_query.clone();
+                            if let Some(slug) = self.book_lucky(&q) {
+                                self.book_go_slug(&slug);
+                            }
+                        }
+                        BookButton::Edit => {
+                            self.book_typing = true;
+                            self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
+                        }
                     }
                     return;
                 }

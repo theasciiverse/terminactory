@@ -10,6 +10,7 @@ mod library;
 mod mail;
 mod research;
 mod saves;
+mod search;
 mod settings;
 mod sim;
 mod ui;

@@ -303,11 +303,10 @@ fn recipe_book() {
     let key = |app: &mut App, c: KeyCode| app.on_key(KeyEvent::from(c));
     key(&mut app, KeyCode::Char('b'));
     assert!(app.book);
-    assert_eq!(app.book_slug, "home");
+    assert_eq!(app.book_slug, "start");
     let t = text(&render(&mut app, 80, 40));
-    assert!(t.contains("terminactory.wiki/home"), "{t}");
-    assert!(t.contains("T Web"), "{t}");
-    assert!(t.contains("New here? Start with Getting started") && !t.contains("Raw materials:"), "{t}");
+    assert!(t.contains("tweb.search") && t.contains("T Web Search") && t.contains("I'm Feeling Lucky"), "{t}");
+    // A link under the search box opens a wiki page; Backspace comes back to the start page.
     let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
     app.on_mouse(MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
@@ -316,28 +315,41 @@ fn recipe_book() {
         modifiers: ratatui::crossterm::event::KeyModifiers::NONE,
     });
     assert_eq!(app.book_slug, "getting-started");
+    let t = text(&render(&mut app, 80, 40));
+    assert!(t.contains("terminactory.wiki/getting-started"), "{t}");
     key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
-    key(&mut app, KeyCode::Enter);
-    assert_eq!(app.book_slug, "getting-started");
-    key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
-    // Type a query in the URL bar, select a result, then use browser history.
-    key(&mut app, KeyCode::Char('/'));
+    assert_eq!(app.book_slug, "start");
+    // Type in the search box and press Enter: a page of results, then a result opens.
     for c in "coil".chars() {
         key(&mut app, KeyCode::Char(c));
     }
-    assert!(app.book_results.iter().any(|s| s == "copper-coil"));
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.book_slug, "search?q=coil");
+    let t = text(&render(&mut app, 100, 40));
+    assert!(t.contains("tweb.search/search?q=coil") && t.contains("Copper coil - Terminactory Wiki") && t.contains("About "), "{t}");
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").unwrap();
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.book_slug, "copper-coil");
-    assert_eq!(app.book_history, ["home"]);
+    assert_eq!(app.book_history, ["start", "search?q=coil"]);
     key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
+    assert_eq!(app.book_slug, "search?q=coil");
+    key(&mut app, KeyCode::Backspace);
+    assert_eq!(app.book_slug, "start");
+    // Esc leaves the search box, and then `]` goes forward.
+    key(&mut app, KeyCode::Esc);
+    assert!(app.book && !app.book_typing);
     key(&mut app, KeyCode::Char(']'));
-    assert_eq!(app.book_slug, "copper-coil");
+    assert_eq!(app.book_slug, "search?q=coil");
+    // A search with no match says so.
+    key(&mut app, KeyCode::Char('/'));
+    for c in "zzzqqq".chars() {
+        key(&mut app, KeyCode::Char(c));
+    }
+    key(&mut app, KeyCode::Enter);
+    let t = text(&render(&mut app, 100, 40));
+    assert!(t.contains("did not match any pages"), "{t}");
     let t = text(&render(&mut app, 50, 34));
-    assert!(t.contains("terminactory.wiki/copper-coil"), "{t}");
-    assert!(text(&render(&mut app, 100, 40)).contains("terminactory.wiki/copper-coil"));
+    assert!(t.contains("tweb.search"), "{t}");
     key(&mut app, KeyCode::Esc);
     assert!(!app.book);
     app.book = true;
@@ -379,12 +391,7 @@ fn wiki_floating_window_behavior() {
 fn wiki_infobox_and_page_sections_render_in_narrow_and_wide_panes() {
     let mut app = App::new(World::new());
     app.on_key(KeyEvent::from(KeyCode::Char('b')));
-    app.on_key(KeyEvent::from(KeyCode::Char('/')));
-    for c in "copper-coil".chars() {
-        app.on_key(KeyEvent::from(KeyCode::Char(c)));
-    }
-    app.book_selected = app.book_results.iter().position(|s| s == "copper-coil").unwrap();
-    app.on_key(KeyEvent::from(KeyCode::Enter));
+    app.book_go(Entry::Item(Item::CopperCoil));
     let top = text(&render(&mut app, 50, 34));
     assert!(top.find("Copper coil").unwrap() < top.find("Money").unwrap(), "{top}");
     for _ in 0..30 {
@@ -1798,6 +1805,8 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
 fn did_you_know_facts_hold_still_while_the_game_runs() {
     let mut app = App::new(World::new());
     app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "home".into();
+    app.book_typing = false;
     let before = text(&render(&mut app, 140, 45));
     for _ in 0..37 {
         app.world.tick();
@@ -1814,6 +1823,8 @@ fn home_navigation_tiles_open_their_pages() {
     for (slug, shows) in [("machines", "Press"), ("items", "Copper ore"), ("topics", "Power"), ("companies", "Companies")] {
         let mut app = App::new(World::new());
         app.on_key(KeyEvent::from(KeyCode::Char('b')));
+        app.book_slug = "home".into();
+        app.book_typing = false;
         render(&mut app, 140, 45);
         app.book_selected = app.book_urls.iter().position(|(_, s)| s == slug).unwrap_or_else(|| panic!("no {slug} link on home"));
         app.on_key(KeyEvent::from(KeyCode::Enter));
@@ -1898,6 +1909,7 @@ fn t_web_bookmarks_and_scrollbar() {
     assert!(t.contains("★ Getting started") && t.contains("★ Machines") && t.contains("★ Items"), "{t}");
     // A page that is not bookmarked has an empty star; `*` fills it and puts it on the bar.
     app.book_slug = "copper-coil".into();
+    app.book_typing = false;
     assert!(text(&render(&mut app, 100, 36)).contains('☆'));
     app.on_key(KeyEvent::from(KeyCode::Char('*')));
     let t = text(&render(&mut app, 100, 36));
@@ -1909,6 +1921,7 @@ fn t_web_bookmarks_and_scrollbar() {
     assert_eq!(app.book_slug, "getting-started");
     // And `*` again takes the page off.
     app.book_slug = "copper-coil".into();
+    app.book_typing = false;
     app.on_key(KeyEvent::from(KeyCode::Char('*')));
     assert!(!app.settings.bookmarks.iter().any(|s| s == "copper-coil"));
     // A tall page in a short window shows the scrollbar (it appears on the second frame).

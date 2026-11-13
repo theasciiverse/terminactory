@@ -204,7 +204,7 @@ impl Default for Settings {
 }
 
 /// The bookmarks a new settings file starts with.
-pub const DEFAULT_BOOKMARKS: &[&str] = &["getting-started", "machines", "items"];
+pub const DEFAULT_BOOKMARKS: &[&str] = &["home", "getting-started", "machines", "items"];
 
 impl Settings {
     /// Whether a pane of this size gets the small-pane view (before `m`'s session override).
