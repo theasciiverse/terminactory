@@ -3654,7 +3654,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     for (i, color) in [Color::Indexed(167), Color::Indexed(221), Color::Indexed(114)].into_iter().enumerate() {
         f.buffer_mut().set_string(frame.x + 2 + i as u16 * 2, frame.y, "●", Style::new().fg(color));
     }
-    f.buffer_mut().set_stringn(frame.x + 8, frame.y, " T Web ", 7, Style::new().fg(Color::Indexed(249)).bold());
+    f.buffer_mut().set_stringn(frame.x + 8, frame.y, " termweb ", 9, Style::new().fg(Color::Indexed(249)).bold());
     let inner = Block::bordered().inner(frame);
     app.book_buttons.clear();
     // The tab strip: a chip per tab, above the toolbar.
@@ -3669,12 +3669,12 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         }
         let title = tab.title();
         let tail = if close_chips { " ✕ " } else { " " };
-        let fixed = 2 + tail.chars().count();
+        let fixed = 1 + tail.chars().count();
         let mut label: String = title.chars().take(room.saturating_sub(fixed).max(1)).collect();
         if label.chars().count() < title.chars().count() {
             label.push('…');
         }
-        let chip = format!("╭ {label}{tail}╮");
+        let chip = format!(" {label}{tail}");
         let w = chip.chars().count() as u16;
         let active = i == app.book_active;
         let style = if active {
@@ -3685,9 +3685,9 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         f.buffer_mut().set_stringn(chip_x, inner.y, &chip, w as usize, style);
         app.book_tab_hits.push((Rect::new(chip_x, inner.y, w, 1), i));
         if close_chips {
-            app.book_tab_close.push((Rect::new(chip_x + w - 3, inner.y, 1, 1), i));
+            app.book_tab_close.push((Rect::new(chip_x + w - 2, inner.y, 1, 1), i));
         }
-        chip_x += w;
+        chip_x += w + 1;
     }
     if inner.right().saturating_sub(chip_x) > 3 {
         f.buffer_mut().set_string(chip_x + 1, inner.y, "+", Style::new().fg(Color::Indexed(245)));
@@ -3713,8 +3713,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     // Below 40 columns the lock and the star step aside so the address itself still fits.
     let phone = inner.width < 40;
     let url = format!(
-        "{}{}{}",
-        if phone { "" } else { "🔒 " },
+        "{}{}",
         book_url(&app.book_slug),
         if app.book_typing && app.book_slug != "start" && !app.book_slug.starts_with("search?q=") {
             format!("?{}▏", app.book_query)
@@ -3725,20 +3724,10 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     let field_x = inner.x + 9;
     let field_w = inner.width.saturating_sub(if phone { 9 } else { 13 });
     if field_w >= 4 {
-        let y = bar_y;
-        f.buffer_mut().set_string(field_x, y, "╭", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
-        f.buffer_mut().set_string(field_x + field_w - 1, y, "╮", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
-        for x in field_x + 1..field_x + field_w - 1 {
-            f.buffer_mut().set_string(x, y, "─", Style::new().fg(Color::Indexed(243)).bg(Color::Indexed(236)));
-        }
-        let text = fit_left(&url, field_w.saturating_sub(3) as usize);
-        f.buffer_mut().set_stringn(
-            field_x + 2,
-            y,
-            &text,
-            field_w.saturating_sub(3) as usize,
-            Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(236)),
-        );
+        let field = Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(238));
+        f.buffer_mut().set_string(field_x, bar_y, " ".repeat(field_w as usize), field);
+        let text = fit_left(&url, field_w.saturating_sub(2) as usize);
+        f.buffer_mut().set_stringn(field_x + 1, bar_y, &text, field_w.saturating_sub(2) as usize, field);
     }
     // The star that toggles a bookmark: filled when this page is on the bar.
     if !phone && inner.width >= 14 {
@@ -3802,6 +3791,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     }
     app.book_links.clear();
     app.book_urls.clear();
+    app.book_click_only.clear();
     app.book_max_scroll = u16::MAX;
     app.book_scroll_step = 1;
     if app.book_slug == "start" {
@@ -4184,7 +4174,7 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
         Entry::Part(_) => ("Machines", "Machines"),
     };
     let width = width.max(24);
-    let links = "[[items|Items]]  ·  [[machines|Machines]]  ·  [[topics|Topics]]";
+    let links = "[[~items|Items]]  ·  [[~machines|Machines]]  ·  [[~topics|Topics]]";
     let title = format!(" {nav_title} ");
     let sides = width.saturating_sub(title.chars().count() + 2);
     out.push_str(&format!(
@@ -4203,71 +4193,77 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
 /// The address a page shows in the address field and the status bar.
 pub(crate) fn book_url(slug: &str) -> String {
     if slug == "start" {
-        "tweb.search".into()
+        "termweb.search".into()
     } else if slug.starts_with("search?q=") {
-        format!("tweb.search/{slug}")
+        format!("termweb.search/{slug}")
     } else {
         format!("terminactory.wiki/{slug}")
     }
 }
 
-/// The four letters of the T Web logo, in the colours of its letters.
-const LOGO: [[&str; 5]; 4] = [
+/// The letters of the termweb logo in block capitals: "term" in grey, "web" in white.
+const LOGO: [[&str; 5]; 7] = [
     ["█████", "  █  ", "  █  ", "  █  ", "  █  "],
+    ["█████", "█    ", "████ ", "█    ", "█████"],
+    ["████ ", "█   █", "████ ", "█  █ ", "█   █"],
+    ["█   █", "██ ██", "█ █ █", "█   █", "█   █"],
     ["█   █", "█   █", "█ █ █", "██ ██", "█   █"],
     ["█████", "█    ", "████ ", "█    ", "█████"],
     ["████ ", "█   █", "████ ", "█   █", "████ "],
 ];
-const LOGO_COLOURS: [u8; 4] = [75, 203, 221, 77];
+const LOGO_WIDTH: u16 = 7 * 5 + 6;
+const LOGO_GREY: u8 = 245;
+const LOGO_WHITE: u8 = 255;
+
+/// The name in one line, for small panes and the results page: "term" in grey, "web" in white.
+fn draw_wordmark(f: &mut Frame, x: u16, y: u16) {
+    f.buffer_mut().set_string(x, y, "term", Style::new().fg(Color::Indexed(LOGO_GREY)).bold());
+    f.buffer_mut().set_string(x + 4, y, "web", Style::new().fg(Color::Indexed(LOGO_WHITE)).bold());
+}
 
 /// A rounded box of one line of text, as the search fields are: returns the text's room.
 fn search_box(f: &mut Frame, r: Rect, text: &str, placeholder: &str, focused: bool) {
-    let border = Style::new().fg(Color::Indexed(if focused { 75 } else { 243 }));
+    let border = Style::new().fg(Color::Indexed(if focused { 255 } else { 243 }));
     let inner_w = r.width.saturating_sub(2) as usize;
     f.buffer_mut().set_string(r.x, r.y, format!("╭{}╮", "─".repeat(inner_w)), border);
     f.buffer_mut().set_string(r.x, r.y + 1, "│", border);
     f.buffer_mut().set_string(r.right().saturating_sub(1), r.y + 1, "│", border);
     f.buffer_mut().set_string(r.x, r.y + 2, format!("╰{}╯", "─".repeat(inner_w)), border);
-    f.buffer_mut().set_string(r.x + 2, r.y + 1, "🔍", Style::new());
-    let room = inner_w.saturating_sub(5);
+    let room = inner_w.saturating_sub(3);
     let (shown, style) = if text.is_empty() && !focused {
         (placeholder.to_string(), Style::new().fg(Color::Indexed(243)))
     } else {
         (format!("{text}{}", if focused { "▏" } else { "" }), Style::new().fg(Color::Indexed(255)))
     };
-    f.buffer_mut().set_stringn(r.x + 5, r.y + 1, fit_left(&shown, room), room, style);
+    f.buffer_mut().set_stringn(r.x + 2, r.y + 1, fit_left(&shown, room), room, style);
 }
 
 /// T Web's start page: the logo, one big search box and a few links, as a search engine's front page.
 fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
-    let big = area.height >= 16 && area.width >= 34;
+    let big = area.height >= 16 && area.width >= LOGO_WIDTH + 4;
     let logo_h: u16 = if big { 5 } else { 1 };
     let total = logo_h + 2 + 3 + 1 + 1 + 2 + 1;
     let mut y = area.y + area.height.saturating_sub(total) / 3;
     if big {
-        let width = 25u16;
-        let x0 = area.x + area.width.saturating_sub(width) / 2;
-        let mut x = x0;
+        let mut x = area.x + area.width.saturating_sub(LOGO_WIDTH) / 2;
         for (i, glyph) in LOGO.iter().enumerate() {
+            let grey = if i < 4 { LOGO_GREY } else { LOGO_WHITE };
             for (row, line) in glyph.iter().enumerate() {
-                f.buffer_mut().set_string(x, y + row as u16, line, Style::new().fg(Color::Indexed(LOGO_COLOURS[i])));
+                f.buffer_mut().set_string(x, y + row as u16, line, Style::new().fg(Color::Indexed(grey)));
             }
-            x += if i == 0 { 8 } else { 6 };
+            x += 6;
         }
     } else {
-        let x0 = area.x + area.width.saturating_sub(5) / 2;
-        for (i, (ch, colour)) in ["T", " ", "W", "e", "b"].into_iter().zip([75u8, 0, 203, 221, 77]).enumerate() {
-            f.buffer_mut().set_string(x0 + i as u16, y, ch, Style::new().fg(Color::Indexed(colour)).bold());
-        }
+        draw_wordmark(f, area.x + area.width.saturating_sub(7) / 2, y);
     }
     y += logo_h + 2;
     let box_w = area.width.saturating_sub(4).clamp(10, 56);
     let boxr = Rect::new(area.x + area.width.saturating_sub(box_w) / 2, y, box_w, 3);
     let query = app.book_query.clone();
-    search_box(f, boxr, &query, "Search T Web", app.book_typing);
+    search_box(f, boxr, &query, "Search termweb", app.book_typing);
     app.book_buttons.push((boxr, crate::app::BookButton::Edit));
     y += 4;
-    let labels = [(" T Web Search ", crate::app::BookButton::Search), (" I'm Feeling Lucky ", crate::app::BookButton::Lucky)];
+    let labels = [(" termweb Search ", crate::app::BookButton::Search), (" I'm Feeling Lucky ", crate::app::BookButton::Lucky)];
     let total_w: u16 = labels.iter().map(|(l, _)| l.chars().count() as u16).sum::<u16>() + 2;
     let mut x = area.x + area.width.saturating_sub(total_w) / 2;
     for (label, button) in labels {
@@ -4321,16 +4317,14 @@ fn draw_book_results(f: &mut Frame, area: Rect, app: &mut App) {
     let hits = app.book_hits.as_ref().map(|(_, h)| h.clone()).unwrap_or_default();
     let width = area.width.min(96);
     // The header: the small logo and the search box with the words searched.
-    let logo_w = 8u16;
+    let logo_w = 9u16;
     if area.width >= 30 {
-        for (i, (ch, colour)) in ["T", " ", "W", "e", "b"].into_iter().zip([75u8, 0, 203, 221, 77]).enumerate() {
-            f.buffer_mut().set_string(area.x + 1 + i as u16, area.y + 1, ch, Style::new().fg(Color::Indexed(colour)).bold());
-        }
+        draw_wordmark(f, area.x + 1, area.y + 1);
     }
     let shown = if app.book_typing { app.book_query.clone() } else { query.clone() };
     let hx = area.x + if area.width >= 30 { logo_w } else { 0 };
     let boxr = Rect::new(hx, area.y, width.saturating_sub(hx - area.x).min(60), 3);
-    search_box(f, boxr, &shown, "Search T Web", app.book_typing);
+    search_box(f, boxr, &shown, "Search termweb", app.book_typing);
     app.book_buttons.push((boxr, crate::app::BookButton::Edit));
     let rule_y = area.y + 3;
     f.buffer_mut().set_string(area.x, rule_y, "─".repeat(area.width as usize), Style::new().fg(Color::Indexed(238)));
@@ -4364,6 +4358,37 @@ fn draw_book_results(f: &mut Frame, area: Rect, app: &mut App) {
     app.book_max_scroll = rows.len().saturating_sub(view) as u16;
     app.book_scroll = app.book_scroll.min(app.book_max_scroll);
     app.book_scroll_step = 1;
+    // Which result is picked: the side arrows set it directly and the page scrolls to show it;
+    // otherwise it follows the link the up and down arrows are on.
+    let title_rows: Vec<usize> = rows.iter().enumerate().filter(|(_, r)| r.2.is_some()).map(|(i, _)| i).collect();
+    if !title_rows.is_empty() {
+        app.book_pick = app.book_pick.min(title_rows.len() - 1);
+        if app.book_pick_follow {
+            let row = title_rows[app.book_pick];
+            let scroll = app.book_scroll as usize;
+            if row < scroll + 1 {
+                app.book_scroll = row.saturating_sub(1).min(app.book_max_scroll as usize) as u16;
+            } else if row + 3 > scroll + view {
+                app.book_scroll = (row + 3).saturating_sub(view).min(app.book_max_scroll as usize) as u16;
+            }
+            app.book_pick_follow = false;
+        }
+        let scroll = app.book_scroll as usize;
+        let first = title_rows.iter().position(|r| *r >= scroll).unwrap_or(title_rows.len() - 1);
+        let shown = title_rows.iter().filter(|r| **r >= scroll && **r < scroll + view).count();
+        if app.book_selected != app.book_sel_seen {
+            // The up and down arrows moved the selection: the pick goes with it.
+            app.book_selected = app.book_selected.min(shown.saturating_sub(1));
+            app.book_pick = first + app.book_selected;
+        } else if app.book_pick >= first && app.book_pick < first + shown.max(1) {
+            app.book_selected = app.book_pick - first;
+        } else {
+            app.book_selected = app.book_selected.min(shown.saturating_sub(1));
+            app.book_pick = first + app.book_selected;
+        }
+        app.book_sel_seen = app.book_selected;
+        app.book_first_hit = first;
+    }
     let mut y = area.y + 4;
     for (text, style, link) in rows.iter().skip(app.book_scroll as usize).take(view) {
         let shown = fit_left(text, text_w);
@@ -4618,7 +4643,7 @@ fn draw_wiki_contents(f: &mut Frame, area: Rect, md: &str, app: &mut App) {
             area.width.saturating_sub(u16::from(child)) as usize,
             Style::new().fg(Color::Cyan).underlined(),
         );
-        app.book_urls.push((Rect::new(area.x, y, area.width, 1), slug));
+        app.book_click_only.push((Rect::new(area.x, y, area.width, 1), slug));
         y += 1;
     }
 }
@@ -4642,7 +4667,8 @@ fn draw_wiki_row(
             end += 1;
         }
         let txt: String = line[i..end].iter().map(|x| x.0).collect();
-        let selected = link.is_some() && *link_index == app.book_selected;
+        let click_only = link.as_deref().is_some_and(|l| l.starts_with('~'));
+        let selected = link.is_some() && !click_only && *link_index == app.book_selected;
         let mut style = if let Some(slug) = link.as_deref() {
             if let Some(Entry::Item(item)) = crate::app::App::book_entry_for_slug_for_ui(slug) {
                 let (glyph, glyph_style) = item_cell(item, Color::Reset);
@@ -4666,11 +4692,16 @@ fn draw_wiki_row(
         f.buffer_mut().set_stringn(area.x + x as u16, y, &txt, (area.width as usize).saturating_sub(x), style);
         if let Some(slug) = link {
             let rect = Rect::new(area.x + x as u16, y, txt.chars().count() as u16, 1);
-            app.book_urls.push((rect, slug.clone()));
-            if let Some(e) = crate::app::App::book_entry_for_slug_for_ui(&slug) {
-                app.book_links.push((rect, e));
+            if let Some(real) = slug.strip_prefix('~') {
+                // A link you can click but not step to with the arrows.
+                app.book_click_only.push((rect, real.to_string()));
+            } else {
+                app.book_urls.push((rect, slug.clone()));
+                if let Some(e) = crate::app::App::book_entry_for_slug_for_ui(&slug) {
+                    app.book_links.push((rect, e));
+                }
+                *link_index += 1;
             }
-            *link_index += 1;
         }
         x += txt.chars().count();
         i = end;

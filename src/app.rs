@@ -232,9 +232,9 @@ impl Tab {
     /// The page's title, for the tab strip.
     pub fn title(&self) -> String {
         match self.slug.as_str() {
-            "start" => "T Web".into(),
+            "start" => "termweb".into(),
             "home" => "Home".into(),
-            s if s.starts_with("search?q=") => format!("{} - T Web", &s["search?q=".len()..]),
+            s if s.starts_with("search?q=") => format!("{} - termweb", &s["search?q=".len()..]),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
             "topics" => "Topics".into(),
@@ -307,6 +307,14 @@ pub struct App {
     /// and the pages Backspace goes back to.
     pub book_links: Vec<(Rect, Entry)>,
     pub book_urls: Vec<(Rect, String)>,
+    /// Links that can be clicked but are not stepped to with the arrow keys (the contents list, the category box).
+    pub book_click_only: Vec<(Rect, String)>,
+    /// The results page's pick: which result is selected, counted over all of them, and whether the
+    /// next draw scrolls to it.
+    pub book_pick: usize,
+    pub book_pick_follow: bool,
+    pub book_first_hit: usize,
+    pub book_sel_seen: usize,
     /// The browser window's last drawn bounds, used to dismiss it on an outside click.
     pub book_area: Rect,
     /// The browser's toolbar buttons, with where they were drawn, for clicks.
@@ -441,6 +449,11 @@ impl App {
             book_typing: false,
             book_links: Vec::new(),
             book_urls: Vec::new(),
+            book_click_only: Vec::new(),
+            book_pick: 0,
+            book_pick_follow: false,
+            book_first_hit: 0,
+            book_sel_seen: 0,
             book_area: Rect::default(),
             book_buttons: Vec::new(),
             book_tabs: vec![Tab::home()],
@@ -1080,6 +1093,8 @@ impl App {
     /// Where the typing cursor goes when a page opens: into the box on the start page, nowhere else.
     fn book_land(&mut self) {
         self.book_typing = self.book_slug == "start";
+        self.book_pick = 0;
+        self.book_pick_follow = false;
         self.book_query.clear();
         self.book_results.clear();
     }
@@ -1259,6 +1274,14 @@ impl App {
             (KeyCode::Char(']'), _) => {
                 self.book_forward();
             }
+            (KeyCode::Left | KeyCode::Right, _) if self.book_slug.starts_with("search?q=") => {
+                // On a results page the side arrows jump straight to the previous or next result.
+                let n = self.book_hits.as_ref().map_or(0, |(_, h)| h.len());
+                if n > 0 {
+                    self.book_pick = if k.code == KeyCode::Right { (self.book_pick + 1) % n } else { (self.book_pick + n - 1) % n };
+                    self.book_pick_follow = true;
+                }
+            }
             (KeyCode::Left | KeyCode::Right, _) if self.book_query.is_empty() => {
                 // Along the current line: the nearest link to the left or right on the same row.
                 if let Some(&(cur, _)) = self.book_urls.get(self.book_selected) {
@@ -1399,6 +1422,10 @@ impl App {
                             self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
                         }
                     }
+                    return;
+                }
+                if let Some(slug) = self.book_click_only.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
+                    self.book_go_slug(&slug);
                     return;
                 }
                 if let Some(slug) = self.book_mark_hits.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {

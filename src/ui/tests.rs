@@ -305,7 +305,7 @@ fn recipe_book() {
     assert!(app.book);
     assert_eq!(app.book_slug, "start");
     let t = text(&render(&mut app, 80, 40));
-    assert!(t.contains("tweb.search") && t.contains("T Web Search") && t.contains("I'm Feeling Lucky"), "{t}");
+    assert!(t.contains("termweb.search") && t.contains("termweb Search") && t.contains("I'm Feeling Lucky"), "{t}");
     // A link under the search box opens a wiki page; Backspace comes back to the start page.
     let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
     app.on_mouse(MouseEvent {
@@ -326,7 +326,7 @@ fn recipe_book() {
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.book_slug, "search?q=coil");
     let t = text(&render(&mut app, 100, 40));
-    assert!(t.contains("tweb.search/search?q=coil") && t.contains("Copper coil - Terminactory Wiki") && t.contains("About "), "{t}");
+    assert!(t.contains("termweb.search/search?q=coil") && t.contains("Copper coil - Terminactory Wiki") && t.contains("About "), "{t}");
     app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").unwrap();
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.book_slug, "copper-coil");
@@ -349,7 +349,7 @@ fn recipe_book() {
     let t = text(&render(&mut app, 100, 40));
     assert!(t.contains("did not match any pages"), "{t}");
     let t = text(&render(&mut app, 50, 34));
-    assert!(t.contains("tweb.search"), "{t}");
+    assert!(t.contains("ermweb.search"), "{t}");
     key(&mut app, KeyCode::Esc);
     assert!(!app.book);
     app.book = true;
@@ -371,7 +371,7 @@ fn wiki_floating_window_behavior() {
     });
     assert!(visible_map, "map should remain visible outside the browser window");
     let title = text(&wide);
-    assert!(title.contains("T Web") && title.contains("Copper coil"), "{title}");
+    assert!(title.contains("termweb") && title.contains("Copper coil"), "{title}");
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: 0, row: 0, modifiers: KeyModifiers::NONE });
     assert!(!app.book, "clicking outside the browser closes it");
 
@@ -1707,7 +1707,7 @@ fn wiki_home_has_four_navigation_destinations_and_generated_facts_link_to_pages(
     app.book = true;
     app.book_slug = "home".into();
     let rendered = text(&render(&mut app, 140, 45));
-    assert!(rendered.contains("T Web") && rendered.contains("terminactory.wiki/home"));
+    assert!(rendered.contains("termweb") && rendered.contains("terminactory.wiki/home"));
     assert!(!rendered.contains("Terminactory Wiki — Terminactory Wiki"));
     assert!(rendered.contains("Machines") && rendered.contains("Items") && rendered.contains("Topics") && rendered.contains("Companies"));
     assert!(app.book_urls.iter().any(|(_, slug)| slug == "machines"));
@@ -1746,7 +1746,7 @@ fn wiki_recipe_cards_close_contents_cover_sections_and_home_tiles_keep_borders()
     let _ = render(&mut page_app, 140, 45);
     for section in expected {
         assert!(
-            page_app.book_urls.iter().any(|(_, target)| target == &format!("#{}", section.to_lowercase().replace(' ', "-"))),
+            page_app.book_click_only.iter().any(|(_, target)| target == &format!("#{}", section.to_lowercase().replace(' ', "-"))),
             "Contents links to {section}"
         );
     }
