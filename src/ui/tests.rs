@@ -305,7 +305,8 @@ fn recipe_book() {
     assert!(app.book);
     assert_eq!(app.book_slug, "home");
     let t = text(&render(&mut app, 80, 40));
-    assert!(t.contains("https://terminactory.wiki/home"), "{t}");
+    assert!(t.contains("terminactory.wiki/home"), "{t}");
+    assert!(t.contains("T Web"), "{t}");
     assert!(t.contains("New here? Start with Getting started") && !t.contains("Raw materials:"), "{t}");
     let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
     app.on_mouse(MouseEvent {
@@ -335,8 +336,8 @@ fn recipe_book() {
     key(&mut app, KeyCode::Char(']'));
     assert_eq!(app.book_slug, "copper-coil");
     let t = text(&render(&mut app, 50, 34));
-    assert!(t.contains("https://terminactory.wiki/copper-coil"), "{t}");
-    assert!(text(&render(&mut app, 100, 40)).contains("https://terminactory.wiki/copper-coil"));
+    assert!(t.contains("terminactory.wiki/copper-coil"), "{t}");
+    assert!(text(&render(&mut app, 100, 40)).contains("terminactory.wiki/copper-coil"));
     key(&mut app, KeyCode::Esc);
     assert!(!app.book);
     app.book = true;
@@ -358,7 +359,7 @@ fn wiki_floating_window_behavior() {
     });
     assert!(visible_map, "map should remain visible outside the browser window");
     let title = text(&wide);
-    assert!(title.contains("Copper coil — Terminactory Wiki"), "{title}");
+    assert!(title.contains("T Web") && title.contains("Copper coil"), "{title}");
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: 0, row: 0, modifiers: KeyModifiers::NONE });
     assert!(!app.book, "clicking outside the browser closes it");
 
@@ -393,7 +394,7 @@ fn wiki_infobox_and_page_sections_render_in_narrow_and_wide_panes() {
     assert!(narrow_end.contains("Category: Items"), "{narrow_end}");
     app.book_scroll = 0;
     let wide_top = text(&render(&mut app, 100, 40));
-    assert!(wide_top.contains("https://terminactory.wiki/copper-coil"), "{wide_top}");
+    assert!(wide_top.contains("terminactory.wiki/copper-coil"), "{wide_top}");
     for _ in 0..30 {
         app.on_key(KeyEvent::from(KeyCode::PageDown));
     }
@@ -502,7 +503,7 @@ fn waste_shows_up() {
     app.book = true;
     let buf = render(&mut app, 130, 60);
     let t = text(&buf);
-    assert!(t.contains("https://terminactory.wiki/waste") && t.contains("unwanted leftover"), "{t}");
+    assert!(t.contains("terminactory.wiki/waste") && t.contains("unwanted leftover"), "{t}");
     std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
 }
 
@@ -1220,7 +1221,7 @@ fn silicon_book_pages_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 42));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         // Narrow, tall and zoomed-out panes draw the page without trouble.
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
@@ -1267,7 +1268,7 @@ fn chip_book_pages_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 60));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1275,7 +1276,7 @@ fn chip_book_pages_fit_every_size() {
     }
     // The long item name keeps its code in the grid, and the research list and tree show the etcher.
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("https://terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
+    assert!(t.contains("terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
     app.book = false;
     app.tree = true;
     app.tree_pick = tech_node(Tech::Etcher);
@@ -1347,7 +1348,7 @@ fn computer_pages_rows_and_machine_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 150, 70));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(36, 24), (40, 30), (60, 40), (50, 80), (200, 60), (150, 90)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1402,23 +1403,23 @@ fn book_pages_for_the_new_machines_and_items() {
     app.book = true;
     app.book_go(Entry::Part(Kind::Lathe));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/lathe") && t.contains("Lathe turns plate into rods"), "{t}");
+    assert!(t.contains("terminactory.wiki/lathe") && t.contains("Lathe turns plate into rods"), "{t}");
     std::fs::write("target/snapshot-book-lathe.html", to_html(&render(&mut app, 130, 42))).unwrap();
     std::fs::write("target/snapshot-book-lathe-narrow.html", to_html(&render(&mut app, 60, 40))).unwrap();
     app.book_go(Entry::Part(Kind::CokeOven));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("Coke oven"), "{t}");
+    assert!(t.contains("terminactory.wiki/coke-oven") && t.contains("Coke oven"), "{t}");
     // An item page: where the screw comes from, and what a spring needs.
     app.book_go(Entry::Item(Item::Screw));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/screw") && t.contains("screw"), "{t}");
+    assert!(t.contains("terminactory.wiki/screw") && t.contains("screw"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coal") && t.contains("Coal"), "{t}");
+    assert!(t.contains("terminactory.wiki/coal") && t.contains("Coal"), "{t}");
     // Furnace and blast furnace melt iron differently: both show on the iron ore page.
     app.book_go(Entry::Item(Item::IronOre));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/iron-ore") && t.contains("iron ore"), "{t}");
+    assert!(t.contains("terminactory.wiki/iron-ore") && t.contains("iron ore"), "{t}");
     app.book_go(Entry::Item(Item::Spring));
     std::fs::write("target/snapshot-book-spring.html", to_html(&render(&mut app, 130, 42))).unwrap();
     // The research list has the new machines, locked behind their key items.
@@ -1540,17 +1541,14 @@ fn content_step_screens_fit_every_size() {
     app.book_go(Entry::Item(Item::ControlBoard));
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(
-        t.contains("https://terminactory.wiki/control-board") && t.contains("Advanced assembler") && t.contains("Precision assembler"),
-        "{t}"
-    );
+    assert!(t.contains("terminactory.wiki/control-board") && t.contains("Advanced assembler") && t.contains("Precision assembler"), "{t}");
     assert!(t.contains("relay") && t.contains("fine wire"), "{t}");
     std::fs::write("target/snapshot-book-items.html", to_html(&buf)).unwrap();
     let buf = render(&mut app, 50, 40);
     std::fs::write("target/snapshot-book-items-50.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Item(Item::Gearbox));
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("https://terminactory.wiki/gearbox"), "{}", text(&buf));
+    assert!(text(&buf).contains("terminactory.wiki/gearbox"), "{}", text(&buf));
     std::fs::write("target/snapshot-book-gearbox.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Part(Kind::LargeAdvancedAssembler));
     let buf = render(&mut app, 50, 40);
@@ -1588,16 +1586,16 @@ fn machines_say_waste_leaves_by_the_back() {
     app.book_go(Entry::Part(Kind::CokeOven));
     app.book = true;
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("waste"), "{t}");
+    assert!(t.contains("terminactory.wiki/coke-oven") && t.contains("waste"), "{t}");
     // A machine with no waste has no such line.
     app.book_go(Entry::Part(Kind::Furnace));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/furnace"), "{t}");
+    assert!(t.contains("terminactory.wiki/furnace"), "{t}");
     // The waste page says where it comes from.
     // (A tall pane: the page of waste has grown with every machine that leaves some.)
     app.book_go(Entry::Item(Item::Waste));
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("https://terminactory.wiki/waste") && !t.contains("fuel for"), "{t}");
+    assert!(t.contains("terminactory.wiki/waste") && !t.contains("fuel for"), "{t}");
     // And a placed boiler says nothing of burning waste.
     let mut w = World::blank();
     w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();
@@ -1702,7 +1700,7 @@ fn wiki_home_has_four_navigation_destinations_and_generated_facts_link_to_pages(
     app.book = true;
     app.book_slug = "home".into();
     let rendered = text(&render(&mut app, 140, 45));
-    assert!(rendered.contains("╭ Terminactory Wiki ╮"));
+    assert!(rendered.contains("T Web") && rendered.contains("terminactory.wiki/home"));
     assert!(!rendered.contains("Terminactory Wiki — Terminactory Wiki"));
     assert!(rendered.contains("Machines") && rendered.contains("Items") && rendered.contains("Topics") && rendered.contains("Companies"));
     assert!(app.book_urls.iter().any(|(_, slug)| slug == "machines"));
@@ -1775,8 +1773,11 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     let mut narrow = App::new(World::new());
     narrow.book = true;
     narrow.book_slug = "copper-coil".into();
+    // The tab strip takes a row of its own, so the first screen is one line shorter.
+    narrow.book_scroll = 1;
     let narrow_top = text(&render(&mut narrow, 60, 30));
     assert!(narrow_top.contains("Recipes"), "{narrow_top}");
+    narrow.book_scroll = 0;
     narrow.book_scroll = u16::MAX;
     let narrow_end = text(&render(&mut narrow, 60, 30));
     assert!(narrow_end.contains("See also") && narrow_end.contains("Category: Items"), "{narrow_end}");

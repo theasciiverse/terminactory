@@ -199,6 +199,43 @@ impl Entry {
 /// Removing waste storage that costs more than this takes a second click.
 const WASTE_CONFIRM: f64 = 20.0;
 
+/// A button on the browser's toolbar.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BookButton {
+    Back,
+    Forward,
+    Reload,
+    Home,
+    NewTab,
+}
+
+/// One browser tab: a page, its own history and where it was scrolled and picked.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tab {
+    pub slug: String,
+    pub history: Vec<String>,
+    pub forward: Vec<String>,
+    pub selected: usize,
+    pub scroll: u16,
+}
+
+impl Tab {
+    pub fn home() -> Self {
+        Tab { slug: "home".into(), history: Vec::new(), forward: Vec::new(), selected: 0, scroll: 0 }
+    }
+
+    /// The page's title, for the tab strip.
+    pub fn title(&self) -> String {
+        match self.slug.as_str() {
+            "home" => "Home".into(),
+            "items" => "Items".into(),
+            "machines" => "Machines".into(),
+            "topics" => "Topics".into(),
+            s => crate::wiki::page(s).and_then(|md| md.lines().next()).unwrap_or(s).trim_start_matches('#').trim().to_string(),
+        }
+    }
+}
+
 pub struct App {
     pub world: World,
     /// Waste storage the player was warned about: removing it again confirms the fee.
@@ -265,6 +302,17 @@ pub struct App {
     pub book_urls: Vec<(Rect, String)>,
     /// The browser window's last drawn bounds, used to dismiss it on an outside click.
     pub book_area: Rect,
+    /// The browser's toolbar buttons, with where they were drawn, for clicks.
+    pub book_buttons: Vec<(Rect, BookButton)>,
+    /// The browser's tabs, and which one is showing. The `book_*` page fields below are the
+    /// active tab's live copy; they are saved into its `Tab` whenever another tab takes over.
+    pub book_tabs: Vec<Tab>,
+    pub book_active: usize,
+    /// The tab strip's chips and their close crosses, for clicks.
+    pub book_tab_hits: Vec<(Rect, usize)>,
+    pub book_tab_close: Vec<(Rect, usize)>,
+    /// When the page last opened: the load bar fills for a moment after it.
+    pub book_opened: Option<std::time::Instant>,
     pub book_slug: String,
     pub book_history: Vec<String>,
     pub book_forward: Vec<String>,
@@ -382,6 +430,12 @@ impl App {
             book_links: Vec::new(),
             book_urls: Vec::new(),
             book_area: Rect::default(),
+            book_buttons: Vec::new(),
+            book_tabs: vec![Tab::home()],
+            book_active: 0,
+            book_tab_hits: Vec::new(),
+            book_tab_close: Vec::new(),
+            book_opened: None,
             book_slug: "home".into(),
             book_history: Vec::new(),
             book_forward: Vec::new(),
@@ -836,6 +890,7 @@ impl App {
         self.book_scroll = 0;
         self.book_history.clear();
         self.book_forward.clear();
+        self.book_opened = Some(std::time::Instant::now());
         self.book = true;
     }
 
@@ -845,6 +900,109 @@ impl App {
         self.book_scroll = 0;
         self.book_slug = crate::wiki::slug(e.name());
         self.book_selected = 0;
+        self.book_opened = Some(std::time::Instant::now());
+    }
+
+    /// Saves the live page state into its tab.
+    fn book_store(&mut self) {
+        if let Some(t) = self.book_tabs.get_mut(self.book_active) {
+            t.slug = self.book_slug.clone();
+            t.history = self.book_history.clone();
+            t.forward = self.book_forward.clone();
+            t.selected = self.book_selected;
+            t.scroll = self.book_scroll;
+        }
+    }
+
+    /// Makes a tab the live one, keeping the page state below in step with it.
+    fn book_load_tab(&mut self, i: usize) {
+        let Some(t) = self.book_tabs.get(i).cloned() else { return };
+        self.book_active = i;
+        self.book_slug = t.slug;
+        self.book_history = t.history;
+        self.book_forward = t.forward;
+        self.book_selected = t.selected;
+        self.book_scroll = t.scroll;
+        if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+            self.book_entry = e;
+        }
+        self.book_opened = Some(std::time::Instant::now());
+    }
+
+    /// Opens a page in a new tab and switches to it.
+    pub fn book_new_tab(&mut self, slug: &str) {
+        self.book_store();
+        let mut t = Tab::home();
+        t.slug = slug.to_string();
+        self.book_tabs.push(t);
+        let i = self.book_tabs.len() - 1;
+        self.book_load_tab(i);
+    }
+
+    /// Switches to a tab by its place in the strip.
+    pub fn book_switch(&mut self, i: usize) {
+        if i < self.book_tabs.len() && i != self.book_active {
+            self.book_store();
+            self.book_load_tab(i);
+        }
+    }
+
+    /// Tab and Shift+Tab: round the strip, either way.
+    fn book_cycle_tab(&mut self, forward: bool) {
+        let n = self.book_tabs.len();
+        if n < 2 {
+            return;
+        }
+        let i = if forward { (self.book_active + 1) % n } else { (self.book_active + n - 1) % n };
+        self.book_switch(i);
+    }
+
+    /// w or a chip's ✕: shut this tab. Shutting the last one closes the browser.
+    pub fn book_close_tab(&mut self) {
+        self.book_store();
+        self.book_tabs.remove(self.book_active);
+        if self.book_tabs.is_empty() {
+            self.book_tabs.push(Tab::home());
+            self.book_active = 0;
+            self.book_load_tab(0);
+            self.book = false;
+            return;
+        }
+        let i = self.book_active.min(self.book_tabs.len() - 1);
+        self.book_active = i;
+        self.book_load_tab(i);
+    }
+
+    /// Redraws the page where it is, as the reload button does.
+    pub fn book_reload(&mut self) {
+        self.book_scroll = 0;
+        self.book_opened = Some(std::time::Instant::now());
+    }
+
+    /// Backspace's job: the last page this tab visited.
+    fn book_back(&mut self) {
+        if let Some(slug) = self.book_history.pop() {
+            self.book_forward.push(self.book_slug.clone());
+            self.book_slug = slug;
+            if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                self.book_entry = e;
+            }
+            self.book_scroll = 0;
+            self.book_opened = Some(std::time::Instant::now());
+        }
+    }
+
+    /// ]'s job: the page Backspace last left.
+    fn book_forward(&mut self) {
+        if let Some(slug) = self.book_forward.pop() {
+            self.book_history.push(self.book_slug.clone());
+            self.book_slug = slug;
+            if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                self.book_entry = e;
+            }
+            self.book_scroll = 0;
+            self.book_opened = Some(std::time::Instant::now());
+        }
     }
 
     /// Goes to a page from a link, remembering this one for Backspace.
@@ -893,6 +1051,7 @@ impl App {
         self.book_slug = slug.to_string();
         self.book_scroll = 0;
         self.book_selected = 0;
+        self.book_opened = Some(std::time::Instant::now());
         if let Some(e) = Self::book_entry_for_slug(slug) {
             self.book_entry = e;
         }
@@ -983,43 +1142,48 @@ impl App {
         match (k.code, action) {
             (KeyCode::Char('b'), _) | (_, Some(Action::Book | Action::Back)) => {
                 self.book = false;
-                return;
+            }
+            (KeyCode::Enter, _) if k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::SHIFT) => {
+                // Shift+Enter: the selected link opens in a tab of its own.
+                let slug = if self.book_query.is_empty() {
+                    self.book_urls.get(self.book_selected).map(|(_, s)| s.clone())
+                } else {
+                    self.book_results.get(self.book_selected).cloned()
+                };
+                if let Some(slug) = slug {
+                    self.book_query.clear();
+                    self.book_results.clear();
+                    self.book_new_tab(&slug);
+                }
+            }
+            (KeyCode::Char('w'), _) => {
+                self.book_close_tab();
+            }
+            (KeyCode::Tab, _) => {
+                self.book_cycle_tab(true);
+            }
+            (KeyCode::BackTab, _) => {
+                self.book_cycle_tab(false);
+            }
+            (KeyCode::Char('+'), _) => {
+                self.book_new_tab("home");
             }
             (KeyCode::Char('/'), _) => {
                 self.book_typing = true;
                 self.book_query.clear();
                 self.book_search();
-                return;
             }
             (KeyCode::PageUp, _) => {
                 self.book_scroll = self.book_scroll.saturating_sub(5);
-                return;
             }
             (KeyCode::PageDown, _) => {
                 self.book_scroll += 5;
-                return;
             }
             (KeyCode::Backspace, _) => {
-                if let Some(slug) = self.book_history.pop() {
-                    self.book_forward.push(self.book_slug.clone());
-                    self.book_slug = slug;
-                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
-                        self.book_entry = e;
-                    }
-                    self.book_scroll = 0;
-                }
-                return;
+                self.book_back();
             }
             (KeyCode::Char(']'), _) => {
-                if let Some(slug) = self.book_forward.pop() {
-                    self.book_history.push(self.book_slug.clone());
-                    self.book_slug = slug;
-                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
-                        self.book_entry = e;
-                    }
-                    self.book_scroll = 0;
-                }
-                return;
+                self.book_forward();
             }
             (KeyCode::Left | KeyCode::Right, _) if self.book_query.is_empty() => {
                 // Along the current line: the nearest link to the left or right on the same row.
@@ -1044,7 +1208,6 @@ impl App {
                         self.book_selected = i;
                     }
                 }
-                return;
             }
             (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
                 if !self.book_query.is_empty() {
@@ -1068,7 +1231,6 @@ impl App {
                     self.book_scroll = self.book_max_scroll;
                     self.book_selected = usize::MAX;
                 }
-                return;
             }
             (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
                 if !self.book_query.is_empty() {
@@ -1093,7 +1255,6 @@ impl App {
                     self.book_scroll = 0;
                     self.book_selected = 0;
                 }
-                return;
             }
             (KeyCode::Enter, _) => {
                 if !self.book_query.is_empty() {
@@ -1110,14 +1271,12 @@ impl App {
                         self.book_go_slug(&slug);
                     }
                 }
-                return;
             }
             (KeyCode::Char(c), _) if c.is_alphabetic() => {
                 self.book_typing = true;
                 self.book_query.clear();
                 self.book_query.push(c);
                 self.book_search();
-                return;
             }
             _ => {}
         }
@@ -1132,6 +1291,25 @@ impl App {
             MouseEventKind::Down(MouseButton::Left) => {
                 if !inside {
                     self.book = false;
+                    return;
+                }
+                if let Some((_, i)) = self.book_tab_close.iter().find(|(r, _)| r.contains(at)) {
+                    self.book_switch(*i);
+                    self.book_close_tab();
+                    return;
+                }
+                if let Some((_, i)) = self.book_tab_hits.iter().find(|(r, _)| r.contains(at)) {
+                    self.book_switch(*i);
+                    return;
+                }
+                if let Some((_, button)) = self.book_buttons.iter().find(|(r, _)| r.contains(at)) {
+                    match button {
+                        BookButton::Back => self.book_back(),
+                        BookButton::Forward => self.book_forward(),
+                        BookButton::Reload => self.book_reload(),
+                        BookButton::Home => self.book_go_slug("home"),
+                        BookButton::NewTab => self.book_new_tab("home"),
+                    }
                     return;
                 }
                 if let Some(slug) = self.book_urls.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
@@ -2186,7 +2364,7 @@ fn thousands(n: u64) -> String {
     let digits = n.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
