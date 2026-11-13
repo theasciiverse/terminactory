@@ -14,6 +14,7 @@ mod search;
 mod settings;
 mod sim;
 mod ui;
+mod web;
 mod wiki;
 
 use std::io;

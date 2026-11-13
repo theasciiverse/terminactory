@@ -1898,6 +1898,168 @@ fn wiki_item_grid_scrolls_by_rows_and_rolls_over() {
     assert_eq!((app.book_scroll, app.book_selected), (0, 0), "it rolled over to the top");
 }
 
+/// A link to a page that isn't there still opens: T Web shows its own 404, and Backspace returns.
+#[test]
+fn web_missing_page_shows_a_404_and_backspace_returns() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "example.news/index".into();
+    app.book_typing = false;
+    render(&mut app, 110, 40);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.news/issues/issue-9").expect("the broken link is on the page");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.news/issues/issue-9");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("404") && t.contains("was not found on this server"), "{t}");
+    assert!(t.contains("example.news/index"), "the 404 links back to the domain's index: {t}");
+    app.on_key(KeyEvent::from(KeyCode::Backspace));
+    assert_eq!(app.book_slug, "example.news/index");
+    render(&mut app, 110, 40);
+    // A link to a server that isn't there says so, and has nothing to follow.
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "nowhere.example/lost").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "nowhere.example/lost");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Server not found") && t.contains("nowhere.example"), "{t}");
+}
+
+/// A site page renders as plain text, its links carry full addresses, and a table's cells keep
+/// their links. A wiki link on a web page still opens the wiki.
+#[test]
+fn web_site_page_renders_with_full_address_links() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "example.news/index".into();
+    app.book_typing = false;
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Example News") && t.contains("Issue 1"), "{t}");
+    assert!(t.contains("example.news/index"), "the address field shows the address: {t}");
+    for target in ["example.news/about", "example.news/issues/issue-1", "example.forum", "copper-coil", "example.news/issues/issue-9"] {
+        assert!(app.book_urls.iter().any(|(_, s)| s == target), "{target} is a link: {:?}", app.book_urls);
+    }
+    // A forum link opens the forum's index, its table links to a thread, and that thread's page shows.
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.forum").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Example forum"), "{t}");
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.forum/first-thread").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum/first-thread");
+    // A wiki link on a web page opens the wiki page, with the wiki's address.
+    app.book_slug = "example.news/issues/issue-1".into();
+    app.book_selected = 0;
+    render(&mut app, 110, 40);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "copper-coil");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("terminactory.wiki/copper-coil"), "{t}");
+}
+
+/// A thread nests its replies: a depth-3 post sits further right than its parent, and PgDn
+/// moves down the thread while PgUp comes back to the top.
+#[test]
+fn web_thread_nests_posts_and_scrolls() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("A deep thread") && t.contains("Help · solved · 5 replies"), "{t}");
+    let xs: Vec<u16> = app.book_urls.iter().filter(|(_, s)| s == "lounge.example/@bob").map(|(r, _)| r.x).collect();
+    assert_eq!(xs.len(), 2, "bob's profile is linked on both his posts: {:?}", app.book_urls);
+    assert!(xs[1] > xs[0], "a depth-3 reply sits further right than its parent: {xs:?}");
+    // A short window: the thread is taller than its page.
+    render(&mut app, 60, 22);
+    app.on_key(KeyEvent::from(KeyCode::PageDown));
+    render(&mut app, 60, 22);
+    assert!(app.book_scroll > 0);
+    app.on_key(KeyEvent::from(KeyCode::PageUp));
+    assert_eq!(app.book_scroll, 0);
+}
+
+/// f folds the post whose header is picked and f again brings its replies back; F folds every
+/// top-level post and unfolds everything when anything is folded.
+#[test]
+fn web_thread_folding_hides_and_restores_replies() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    let pick_first_post = |app: &mut App| {
+        render(app, 100, 34);
+        let row = app.book_post_hits.iter().find(|(_, p)| *p == 0).expect("a post header").0.y;
+        app.book_selected = app.book_urls.iter().position(|(r, _)| r.y == row).expect("the author link");
+    };
+    assert!(text(&render(&mut app, 100, 34)).contains("Bottom of this branch"));
+    pick_first_post(&mut app);
+    app.on_key(KeyEvent::from(KeyCode::Char('f')));
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("[+] 5 replies hidden"), "{t}");
+    assert!(!t.contains("Bottom of this branch"), "a folded post hides its replies: {t}");
+    assert!(!app.book_urls.iter().any(|(_, s)| s == "lounge.example/@bob"), "and their links");
+    pick_first_post(&mut app);
+    app.on_key(KeyEvent::from(KeyCode::Char('f')));
+    assert!(text(&render(&mut app, 100, 34)).contains("Bottom of this branch"));
+    // F folds the top-level post; F again unfolds everything.
+    app.on_key(KeyEvent::from(KeyCode::Char('F')));
+    assert_eq!(app.book_folded, vec![0], "the only top-level post");
+    assert!(text(&render(&mut app, 100, 34)).contains("[+] 5 replies hidden"));
+    app.on_key(KeyEvent::from(KeyCode::Char('F')));
+    assert!(app.book_folded.is_empty());
+}
+
+/// Folds belong to their tab, and following a link starts a fresh page.
+#[test]
+fn web_folds_travel_with_their_tab_and_links_clear_them() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    render(&mut app, 100, 34);
+    app.book_folded = vec![1];
+    app.on_key(KeyEvent::from(KeyCode::Char('+')));
+    render(&mut app, 100, 34);
+    app.book_switch(0);
+    assert_eq!(app.book_slug, "example.forum/deep-thread");
+    assert_eq!(app.book_folded, vec![1], "the fold stayed with its tab");
+    // A link in the first post's body still works while another post is folded.
+    render(&mut app, 100, 34);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").expect("the wiki link");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "copper-coil");
+    assert!(app.book_folded.is_empty(), "a new page starts unfolded");
+}
+
+/// Authors link to their profile page, wherever it is, and a profile lists the threads its
+/// author posted in. A name with no profile is plain text.
+#[test]
+fn web_profile_links_open_the_right_page_and_list_its_threads() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    let open = |app: &mut App, target: &str| {
+        app.book_slug = "example.forum/deep-thread".into();
+        render(app, 110, 40);
+        let i = app.book_urls.iter().position(|(_, s)| s == target).unwrap_or_else(|| panic!("no link to {target}"));
+        app.book_selected = i;
+        app.on_key(KeyEvent::from(KeyCode::Enter));
+    };
+    open(&mut app, "example.forum/@alice");
+    assert_eq!(app.book_slug, "example.forum/@alice");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("In this archive") && t.contains("Posts from Y140-08-25 to Y140-09-02."), "{t}");
+    assert!(t.contains("A deep thread") && t.contains("A first thread"), "{t}");
+    assert!(app.book_urls.iter().any(|(_, s)| s == "example.forum/first-thread"));
+    open(&mut app, "lounge.example/@bob");
+    assert_eq!(app.book_slug, "lounge.example/@bob");
+    // carol has no profile page anywhere: her name is not a link.
+    app.book_slug = "example.forum/deep-thread".into();
+    render(&mut app, 110, 40);
+    assert!(!app.book_urls.iter().any(|(_, s)| s.contains("carol")));
+}
+
 /// T Web: the bookmarks bar starts with three pages, `*` adds and removes the current one, and
 /// a long page gets a scrollbar down its right edge.
 #[test]
@@ -1929,4 +2091,174 @@ fn t_web_bookmarks_and_scrollbar() {
     render(&mut app, 60, 30);
     let t = text(&render(&mut app, 60, 30));
     assert!(t.contains('▲') && t.contains('▼') && t.contains('█'), "{t}");
+}
+
+/// A gated page asks for a sign-in and never shows its body until one works. Usernames match
+/// without case, passwords exactly, and a domain stays signed in for its other pages.
+#[test]
+fn web_gated_pages_ask_for_a_sign_in_and_remember_it() {
+    use crate::app::LoginForm;
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    app.book_slug = "portal.example.lan/gate".into();
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("This page needs a sign-in."), "{t}");
+    assert!(t.contains("portal.example.lan"), "{t}");
+    assert!(t.contains("user:") && t.contains("pass:"), "{t}");
+    assert!(!t.contains("Quiet night") && !t.contains("changeover"), "the body must not leak: {t}");
+    assert!(!app.book_urls.iter().any(|(_, s)| s == "portal.example.lan/gate"), "no body links either");
+
+    // A wrong password fails, and says nothing beyond that.
+    app.on_key(KeyEvent::from(KeyCode::Char('i')));
+    assert!(app.book_login_typing, "i starts typing");
+    for c in "MIRA".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Tab));
+    for c in "not copper".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    let typed = text(&render(&mut app, 80, 34));
+    assert!(typed.contains("not copper"), "the password shows as typed, not as dots: {typed}");
+    assert!(!typed.contains('•'), "{typed}");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("Sign-in failed."), "{t}");
+    assert!(!t.contains("Quiet night"), "{t}");
+    assert!(app.book_logins.is_empty());
+
+    // The right one, in either case, signs in and draws the page that was asked for.
+    app.book_login = Some(LoginForm { user: "mira".into(), pass: "copper".into(), on_pass: true, failed: false });
+    app.book_login_typing = true;
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_login, None);
+    assert!(app.book_typing == false);
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("Quiet night") && t.contains("changeover"), "{t}");
+    assert!(t.contains("signed in as mira"), "the status bar says who is reading: {t}");
+    assert_eq!(app.book_logins, vec![("portal.example.lan".to_string(), "mira".to_string())]);
+    assert!(app.book_history.is_empty(), "signing in adds no history entry");
+
+    // `access: all` accepts any account of the domain, without another form.
+    let mut app2 = App::new(World::new());
+    app2.book = true;
+    app2.book_typing = false;
+    app2.book_logins = vec![("portal.example.lan".into(), "otto".into())];
+    app2.book_slug = "portal.example.lan/all".into();
+    let t = text(&render(&mut app2, 80, 34));
+    assert!(t.contains("Anyone with an account here"), "{t}");
+
+    // Signed in, but not on the list: a 403 with nothing of the page.
+    let mut app3 = App::new(World::new());
+    app3.book = true;
+    app3.book_typing = false;
+    app3.book_logins = vec![("portal.example.lan".into(), "otto".into())];
+    app3.book_slug = "portal.example.lan/gate".into();
+    let t = text(&render(&mut app3, 80, 34));
+    assert!(t.contains("403") && t.contains("otto may not read this page."), "{t}");
+    assert!(!t.contains("Quiet night"), "{t}");
+
+    // Another domain still asks, and logout signs this one out and shows its index.
+    app.book_slug = "example.news/login".into();
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("This page needs a sign-in."), "{t}");
+    app.book_submit_search("portal.example.lan/logout");
+    assert_eq!(app.book_slug, "portal.example.lan/index");
+    assert!(app.book_logins.is_empty());
+}
+
+/// Search finds a thread from another site, shows its address, and never reveals a gated page.
+#[test]
+fn web_search_finds_threads_and_never_reveals_gated_pages() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    app.book_slug = "search?q=deep thread".into();
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("example.forum › deep-thread"), "{t}");
+    assert!(t.contains("A deep thread") && !t.contains("A deep thread - Terminactory Wiki"), "{t}");
+    let at = app.book_urls.iter().position(|(_, s)| s == "example.forum/deep-thread").expect("a result link");
+    app.book_selected = at;
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum/deep-thread");
+    assert!(text(&render(&mut app, 100, 34)).contains("First post text."));
+
+    // A gated page's words find nothing at all, in titles, snippets or links.
+    let mut gated = App::new(World::new());
+    gated.book = true;
+    gated.book_typing = false;
+    gated.book_slug = "search?q=changeover".into();
+    let t = text(&render(&mut gated, 100, 34));
+    assert!(!t.contains("Shift notes") && !t.contains("Quiet night"), "{t}");
+    assert!(!gated.book_urls.iter().any(|(_, s)| s == "portal.example.lan/gate"), "{t}");
+
+    // A domain typed into the start page's box opens it instead of searching for it.
+    let mut direct = App::new(World::new());
+    direct.book = true;
+    direct.book_slug = "start".into();
+    direct.book_typing = true;
+    direct.book_query = "example.forum".into();
+    direct.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(direct.book_slug, "example.forum");
+    direct.book_typing = false;
+    let t = text(&render(&mut direct, 100, 34));
+    assert!(t.contains("Example forum") && t.contains("A deep thread"), "{t}");
+}
+
+/// Every page kind draws inside the window at 120, 80, 50 and 30 columns.
+#[test]
+fn web_pages_draw_at_narrow_widths() {
+    for (w, h) in [(120, 40), (80, 34), (50, 34), (30, 20)] {
+        for (slug, fold) in [
+            ("example.forum/deep-thread", true),
+            ("portal.example.lan/gate", false),
+            ("portal.example.lan/nope", false),
+            ("example.forum/index", false),
+            ("search?q=deep thread", false),
+        ] {
+            let mut app = App::new(World::new());
+            app.book = true;
+            app.book_typing = false;
+            app.book_slug = slug.into();
+            if fold {
+                app.book_folded = vec![0];
+            }
+            let buf = render(&mut app, w, h);
+            assert_eq!(buf.area.width, w, "{slug} at {w}x{h}");
+            assert!(!text(&buf).trim().is_empty(), "{slug} at {w}x{h} drew nothing");
+        }
+    }
+}
+
+/// Every `[[domain/path]]` link in `WEB_PAGES` whose target is missing, grouped by page.
+/// Dead links are allowed: this only reports them, for whoever writes the content.
+#[test]
+#[ignore]
+fn web_dead_links_report() {
+    let mut dead = 0;
+    for (addr, md) in crate::web::WEB_PAGES {
+        let mut rest = *md;
+        let mut missing: Vec<String> = Vec::new();
+        while let Some(start) = rest.find("[[") {
+            let after = &rest[start + 2..];
+            let Some(end) = after.find("]]") else { break };
+            let spec = after[..end].split('|').next().unwrap_or("").trim();
+            rest = &after[end + 2..];
+            if spec.is_empty() || spec.starts_with('#') || !spec.contains('/') {
+                continue;
+            }
+            if crate::web::page(spec).is_none() && missing.iter().all(|m| m != spec) {
+                missing.push(spec.to_string());
+            }
+        }
+        if !missing.is_empty() {
+            dead += missing.len();
+            println!("{addr}");
+            for target in missing {
+                println!("  -> {target}");
+            }
+        }
+    }
+    println!("{dead} dead links");
 }
