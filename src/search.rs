@@ -1,5 +1,7 @@
-//! T Web's search: the engine behind the start page. Today it searches the wiki; the pages
-//! of other sites will join the same index when they are built.
+//! T Web's search: the engine behind the start page. It searches the wiki and every open page
+//! of the other sites; a gated page's title and text are never indexed.
+
+use std::sync::LazyLock;
 
 /// One search result, as the results page shows it.
 #[derive(Clone, Debug, PartialEq)]
@@ -70,53 +72,112 @@ fn excerpt(line: &str, words: &[String]) -> String {
     text
 }
 
-/// Every page that has all the words of the query, best first. Title and address matches
-/// count most, then headings, then how often the words appear in the text.
+/// Score a page against the words of the query: every word must match, in the title, the
+/// address or the text. Title and address matches count most.
+fn score_page(slug: &str, title: &str, text: &str, lines: &[&str], words: &[String]) -> Option<(u32, Hit)> {
+    let (title_l, slug_l, body_l) = (title.to_lowercase(), slug.to_lowercase(), text.to_lowercase());
+    let mut score = 0u32;
+    for w in words {
+        let in_title = title_l.contains(w.as_str());
+        let in_slug = slug_l.contains(w.as_str());
+        let count = body_l.matches(w.as_str()).count() as u32;
+        if !(in_title || in_slug || count > 0) {
+            return None;
+        }
+        if title_l == *w {
+            score += 50;
+        }
+        score += if in_title { 30 } else { 0 } + if in_slug { 20 } else { 0 } + count.min(10) * 2;
+    }
+    let clean = |l: &&str| plain(l.trim().trim_start_matches("- ").trim_start_matches('•').trim());
+    let snippet_line = lines
+        .iter()
+        .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('#'))
+        .find(|l| words.iter().any(|w| l.to_lowercase().contains(w.as_str())))
+        .map(clean)
+        .or_else(|| lines.iter().filter(|l| !l.trim().is_empty() && !l.trim().starts_with('#')).map(clean).next())
+        .unwrap_or_default();
+    let snippet = excerpt(&snippet_line, words);
+    Some((score, Hit { slug: slug.to_string(), title: title.to_string(), snippet }))
+}
+
+/// A page of one of T Web's other sites, ready to search: where it is, its title, the text to
+/// score, and the lines a snippet may come from.
+struct WebPage {
+    addr: &'static str,
+    title: String,
+    text: String,
+    lines: Vec<String>,
+}
+
+/// Every open page of the other sites, built once. Gated pages are skipped whole: searching
+/// must never reveal them.
+static WEB_INDEX: LazyLock<Vec<WebPage>> = LazyLock::new(|| {
+    let mut out = Vec::new();
+    for (addr, md) in crate::web::WEB_PAGES {
+        if crate::web::gated(md) {
+            continue;
+        }
+        let title = crate::web::title(addr);
+        let (text, lines) = match crate::web::parse_thread(md) {
+            Some(thread) => {
+                let header = md.lines().nth(1).unwrap_or("");
+                let mut text = format!("{title}\n{header}\n");
+                let mut lines = Vec::new();
+                for post in &thread.posts {
+                    let body = post.body.join(" ");
+                    text.push_str(&body);
+                    text.push('\n');
+                    lines.push(body);
+                }
+                (plain(&text), lines)
+            }
+            None => {
+                let text = plain(&crate::web::prepare(addr, md));
+                let lines = text.lines().skip(1).map(str::to_string).collect();
+                (text, lines)
+            }
+        };
+        out.push(WebPage { addr, title, text, lines });
+    }
+    out
+});
+
+/// Every page that has all the words of the query, best first. A wiki hit beats a web hit of
+/// the same score.
 pub fn search(query: &str) -> Vec<Hit> {
     let words = words(query);
     if words.is_empty() {
         return Vec::new();
     }
-    let mut scored: Vec<(u32, Hit)> = Vec::new();
-    let mut consider = |slug: &str, body: &str| {
-        let title = title_of(slug);
-        let (title_l, slug_l, body_l) = (title.to_lowercase(), slug.to_lowercase(), plain(body).to_lowercase());
-        let mut score = 0u32;
-        for w in &words {
-            let in_title = title_l.contains(w.as_str());
-            let in_slug = slug_l.contains(w.as_str());
-            let count = body_l.matches(w.as_str()).count() as u32;
-            if !(in_title || in_slug || count > 0) {
-                return;
-            }
-            if title_l == *w {
-                score += 50;
-            }
-            score += if in_title { 30 } else { 0 } + if in_slug { 20 } else { 0 } + count.min(10) * 2;
-        }
-        let text = plain(body);
-        let snippet_line = text
-            .lines()
-            .skip(1)
-            .map(|l| l.trim().trim_start_matches("- ").trim_start_matches('•').trim())
-            .filter(|l| !l.is_empty() && !l.starts_with('#'))
-            .find(|l| words.iter().any(|w| l.to_lowercase().contains(w.as_str())))
-            .or_else(|| text.lines().skip(1).map(str::trim).find(|l| !l.is_empty() && !l.starts_with('#')))
-            .unwrap_or("");
-        scored.push((score, Hit { slug: slug.to_string(), title, snippet: excerpt(snippet_line, &words) }));
-    };
+    // (score, is a web page, the hit).
+    let mut scored: Vec<(u32, bool, Hit)> = Vec::new();
     for (slug, md) in crate::wiki::PAGES {
-        consider(slug, md);
+        let text = plain(md);
+        let lines: Vec<&str> = text.lines().skip(1).collect();
+        if let Some((score, hit)) = score_page(slug, &title_of(slug), &text, &lines, &words) {
+            scored.push((score, false, hit));
+        }
     }
     for (slug, blurb) in [
         ("items", "Every item in the game, with its recipes and what it is worth."),
         ("machines", "Every machine, what it makes and how to place it."),
         ("topics", "Guides on power, waste, floors, research, belts, pipes and the area tools."),
     ] {
-        consider(slug, &format!("# {}\n{blurb}", title_of(slug)));
+        let text = format!("# {}\n{blurb}", title_of(slug));
+        let lines: Vec<&str> = text.lines().skip(1).collect();
+        if let Some((score, hit)) = score_page(slug, &title_of(slug), &text, &lines, &words) {
+            scored.push((score, false, hit));
+        }
     }
-    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.title.cmp(&b.1.title)));
-    scored.into_iter().map(|(_, hit)| hit).collect()
+    for page in WEB_INDEX.iter() {
+        let lines: Vec<&str> = page.lines.iter().map(String::as_str).collect();
+        if let Some((score, hit)) = score_page(page.addr, &page.title, &page.text, &lines, &words) {
+            scored.push((score, true, hit));
+        }
+    }
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)).then_with(|| a.2.title.cmp(&b.2.title)));
+    scored.into_iter().map(|(_, _, hit)| hit).collect()
 }
 
 #[cfg(test)]
@@ -135,12 +196,32 @@ mod tests {
     fn every_word_must_match_and_case_does_not_matter() {
         let both = search("COAL waste");
         assert!(both.iter().all(|h| {
-            let md = crate::wiki::page(&h.slug).unwrap_or("").to_lowercase();
-            let all = format!("{} {}", h.slug, md);
+            let md = match crate::web::page(&h.slug) {
+                Some(md) => crate::web::prepare(&h.slug, md),
+                None => crate::wiki::page(&h.slug).unwrap_or("").to_string(),
+            }
+            .to_lowercase();
+            let all = format!("{} {}", h.slug.to_lowercase(), md);
             all.contains("coal") && all.contains("waste")
         }));
         assert!(search("zzzqqq").is_empty());
         assert!(search("   ").is_empty());
+    }
+
+    #[test]
+    fn web_pages_are_found_and_a_gated_page_never_is() {
+        let hits = search("deep thread");
+        assert!(hits.iter().any(|h| h.slug == "example.forum/deep-thread"), "{hits:?}");
+        // Only the gated fixture page has this word.
+        assert!(search("changeover").is_empty(), "a gated page's text is not indexed: {:?}", search("changeover"));
+        assert!(!search("Shift notes").iter().any(|h| h.slug == "portal.example.lan/gate"));
+    }
+
+    #[test]
+    fn a_threads_snippet_comes_from_a_post() {
+        let hits = search("paragraph");
+        let hit = hits.iter().find(|h| h.slug == "example.forum/deep-thread").expect("the thread");
+        assert!(hit.snippet.contains("paragraph"), "{hit:?}");
     }
 
     #[test]
