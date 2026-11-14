@@ -670,16 +670,18 @@ fn hand_line(app: &App, avail: usize) -> Line<'static> {
     let Some(t) = held_text(app) else { return Line::raw("") };
     let c = &app.controls;
     let (rot, place, back) = (c.key(Action::Rotate), c.key(Action::Place), c.key(Action::Back));
+    let mir = c.key(Action::Mirror);
     let (cost, name) = (money_text(t.cost), fit(&t.name, 16));
     let (w, h, n, fits) = (t.w, t.h, t.n, t.fits);
     let options = [
+        format!(" Hand › {name} {w}x{h} · {cost} · {fits}/{n} fit · {rot} turn {mir} mirror  {place} paste  {back}"),
         format!(" Hand › {name} {w}x{h} · {cost} · {fits}/{n} fit · {rot} turn  {place} paste  {back}"),
         format!(" Hand › {name} {w}x{h} · {cost} · {fits}/{n} fit · {rot} {place} {back}"),
         format!(" Hand › {w}x{h} · {cost} · {fits}/{n} fit  {back}"),
         format!(" {cost} · {fits}/{n} fit {back}"),
         format!(" {fits}/{n} {back}"),
     ];
-    let text = options.iter().find(|o| o.chars().count() <= avail).unwrap_or(&options[4]).clone();
+    let text = options.iter().find(|o| o.chars().count() <= avail).unwrap_or(&options[5]).clone();
     Line::styled(fit(&text, avail), Style::new().fg(Color::Cyan))
 }
 
@@ -1931,6 +1933,7 @@ fn held_side(app: &App) -> Vec<Line<'static>> {
         fit(&format!(" {} turn · {} paste · {} drop", c.key(Action::Rotate), c.key(Action::Place), c.key(Action::Back)), 34),
         dim,
     ));
+    lines.push(Line::styled(fit(&format!(" {} mirrors  (Shift: top to bottom)", c.key(Action::Mirror)), 34), dim));
     lines
 }
 

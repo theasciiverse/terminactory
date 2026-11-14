@@ -440,7 +440,7 @@ pub struct App {
     pub save_requested: bool,
     pub drag_last: Option<(i32, i32)>,
     pub quit: bool,
-    /// Small-pane view: None follows the terminal size, Some forces it on or off (m).
+    /// Small-pane view: None follows the terminal size, Some forces it on or off (tests).
     pub compact: Option<bool>,
     /// Whether the last frame was drawn in the small-pane view.
     pub compact_now: bool,
@@ -815,10 +815,7 @@ impl App {
                     self.dismiss_mail();
                 }
             }
-            Action::Compact => {
-                self.compact = Some(!self.compact_now);
-                self.say(if self.compact_now { "Full view" } else { "Small-pane view (m switches back)" });
-            }
+            Action::Mirror => self.mirror(shift),
             Action::Power => {
                 self.power_view = !self.power_view;
                 self.say(if self.power_view { "Showing EC range (blue)" } else { "EC range hidden" });
@@ -2963,6 +2960,32 @@ impl App {
 
     /// Turns what is in the hand a quarter (a blueprint: counter-clockwise with Shift), or the
     /// part under the cursor.
+    /// Flips what is in the hand left to right (top to bottom with Shift): a blueprint, or a part
+    /// that faces. Without either, the part under the cursor.
+    fn mirror(&mut self, vertical: bool) {
+        let flip = |d: Dir| if vertical { d.flip_v() } else { d.flip_h() };
+        if let Some(bp) = self.held.as_ref() {
+            self.held = Some(bp.mirrored(vertical));
+            self.say(if vertical { "Blueprint flipped top to bottom" } else { "Blueprint mirrored left to right" });
+            return;
+        }
+        if self.selected.is_some_and(|k| k.directional()) {
+            self.dir = flip(self.dir);
+            return;
+        }
+        let (x, y) = self.cursor;
+        if let Some(b) = self.world.tile(self.floor, x, y) {
+            if b.kind.directional() {
+                let nd = flip(b.dir);
+                if let Err(e) = self.world.set_dir(self.floor, x, y, nd) {
+                    self.say(e);
+                }
+            }
+        } else {
+            self.dir = flip(self.dir);
+        }
+    }
+
     fn rotate(&mut self, counter_clockwise: bool) {
         if let Some(bp) = self.held.as_ref() {
             self.held = Some(bp.rotated(if counter_clockwise { 3 } else { 1 }));

@@ -125,6 +125,28 @@ impl Blueprint {
         bp
     }
 
+    /// Flipped left to right (or top to bottom with `vertical`): every part keeps its footprint and
+    /// moves to the other side of the box, and facing parts face the other way, so outputs and
+    /// tunnel pairs still line up.
+    pub fn mirrored(&self, vertical: bool) -> Blueprint {
+        let mut parts: Vec<BpPart> = self
+            .parts
+            .iter()
+            .map(|p| {
+                let (pw, ph) = p.dims();
+                let dir = match (p.kind.directional(), vertical) {
+                    (false, _) => p.dir,
+                    (true, false) => p.dir.flip_h(),
+                    (true, true) => p.dir.flip_v(),
+                };
+                let (dx, dy) = if vertical { (p.dx, self.h - p.dy - ph) } else { (self.w - p.dx - pw, p.dy) };
+                BpPart { dx, dy, dir, ..p.clone() }
+            })
+            .collect();
+        parts.sort_by_key(|p| (p.dy, p.dx));
+        Blueprint { parts, ..self.clone() }
+    }
+
     fn quarter_turn(&self) -> Blueprint {
         let mut parts: Vec<BpPart> = self
             .parts

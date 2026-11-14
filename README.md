@@ -61,6 +61,7 @@ Machines need **EC** (electric charge): solar panels and EC poles first, steam e
 | `o` | production and earnings history |
 | `b` | the in-game browser, on whatever is under the cursor |
 | `c` | area tool: copy, remove or upgrade a rectangle |
+| `m` | mirror what is in your hand, such as a copied blueprint (Shift: top to bottom) |
 | `g` | settings |
 | `p`, `[` `]` | pause, speed |
 | `?` | help |

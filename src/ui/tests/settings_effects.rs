@@ -116,22 +116,6 @@ fn small_pane_width_moves_the_auto_cut_off() {
 }
 
 #[test]
-fn m_still_toggles_for_the_session_whatever_the_setting() {
-    for view in [SmallView::Auto, SmallView::Always, SmallView::Never] {
-        let mut app = app();
-        app.settings.small_view = view;
-        render(&mut app, 130, 40);
-        let before = app.compact_now;
-        press(&mut app, 'm');
-        render(&mut app, 130, 40);
-        assert_eq!(app.compact_now, !before, "{view:?}");
-        press(&mut app, 'm');
-        render(&mut app, 130, 40);
-        assert_eq!(app.compact_now, before, "{view:?}");
-    }
-}
-
-#[test]
 fn changing_the_view_in_the_pane_takes_effect_at_once() {
     let mut app = app();
     press(&mut app, 'g');

@@ -13,7 +13,7 @@ First public version. Saves are format version 7.
 - Phase 3: floors and elevators, assemblers from crude to precision (and large ones), kilns, mixers, welders, belt tunnels, long arms, filter splitters and warehouses.
 - Silicon, chips and computers: wafers, etchers, microprocessors, and the computer as the branch's crown item.
 - Oil: crude oil, naphtha, fuel oil and ethylene, the oil extractor, the still and the liquid trader, and a seventh Create slot for chemistry.
-- Tools: the area tool (`c`) to remove, copy or upgrade a rectangle, blueprints saved to `~/.terminactory/blueprints`, and the upgrade planner (`u`).
+- Tools: the area tool (`c`) to remove, copy or upgrade a rectangle, blueprints saved to `~/.terminactory/blueprints` that can be turned (`r`) and mirrored (`m`), and the upgrade planner (`u`).
 - Offline earnings: the factory earns while the game is closed, with no cap.
 
 ### The interface

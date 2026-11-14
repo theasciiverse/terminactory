@@ -3923,3 +3923,34 @@ fn a_splitter_feeds_a_belt_lying_beside_it_but_not_one_facing_it() {
     assert!(beyond > 0, "the coal went onto the belt beside the splitter");
     assert_eq!(items(11, 10), 0, "nothing went back into the belt facing it");
 }
+
+#[test]
+fn a_mirrored_blueprint_swaps_sides_and_facings_and_mirroring_twice_is_the_identity() {
+    use crate::sim::blueprint::{Blueprint, BpPart};
+    let part = |dx, dy, kind, dir| BpPart { dx, dy, kind, dir, size: 0, set: None, exit: None };
+    let bp = Blueprint::from_parts(
+        "line",
+        0,
+        vec![
+            part(0, 0, Kind::Drill, Dir::E),
+            part(2, 0, Kind::Belt, Dir::E),
+            part(3, 0, Kind::Belt, Dir::E),
+            part(2, 1, Kind::Belt, Dir::S),
+        ],
+    );
+    let m = bp.mirrored(false);
+    assert_eq!((m.w, m.h), (bp.w, bp.h));
+    let at = |b: &Blueprint, dx, dy| b.parts.iter().find(|p| p.dx == dx && p.dy == dy).map(|p| (p.kind, p.dir));
+    // The 2x2 drill moves to the right edge and faces west; the belts swap ends and face west.
+    assert_eq!(at(&m, 2, 0), Some((Kind::Drill, Dir::W)));
+    assert_eq!(at(&m, 1, 0), Some((Kind::Belt, Dir::W)));
+    assert_eq!(at(&m, 0, 0), Some((Kind::Belt, Dir::W)));
+    assert_eq!(at(&m, 1, 1), Some((Kind::Belt, Dir::S)), "north and south facings stay in a left-right mirror");
+    assert_eq!(m.mirrored(false), bp);
+    // Top to bottom: south and north swap, east and west stay.
+    let v = bp.mirrored(true);
+    assert_eq!(at(&v, 2, 0), Some((Kind::Belt, Dir::N)));
+    assert_eq!(v.mirrored(true), bp);
+    // A mirrored copy still pastes cleanly.
+    assert!(m.check().is_ok() && v.check().is_ok());
+}

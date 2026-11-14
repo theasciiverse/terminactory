@@ -27,7 +27,7 @@ pub enum Action {
     Help,
     Bigger,
     Smaller,
-    Compact,
+    Mirror,
     Mail,
     MailLog,
     Book,
@@ -60,7 +60,7 @@ impl Action {
         Action::Help,
         Action::Bigger,
         Action::Smaller,
-        Action::Compact,
+        Action::Mirror,
         Action::Mail,
         Action::MailLog,
         Action::Book,
@@ -93,7 +93,7 @@ impl Action {
             Action::Help => "help",
             Action::Bigger => "elevator_bigger",
             Action::Smaller => "elevator_smaller",
-            Action::Compact => "small_pane",
+            Action::Mirror => "mirror",
             Action::Mail => "telegram",
             Action::MailLog => "telegram_log",
             Action::Book => "recipe_book",
@@ -126,7 +126,8 @@ impl Action {
             Action::Help => &["?", "h"],
             Action::Bigger => &["+", "="],
             Action::Smaller => &["-", "_"],
-            Action::Compact => &["m"],
+            // Flips the part or blueprint in hand (Shift: top to bottom), or the part under the cursor.
+            Action::Mirror => &["m"],
             Action::Mail => &["n"],
             Action::MailLog => &["i"],
             Action::Book => &["b"],
@@ -228,8 +229,8 @@ impl Controls {
         let mut c = Self::defaults();
         let mut problems = Vec::new();
         for (name, keys) in &map {
-            // "quit" was retired: Ctrl+C quits (and saves).
-            if name.starts_with('_') || name == "quit" {
+            // "quit" and "small_pane" were retired: Ctrl+C quits (and saves), and `m` mirrors now.
+            if name.starts_with('_') || name == "quit" || name == "small_pane" {
                 continue;
             }
             let Some(action) = Action::ALL.iter().find(|a| a.id() == name) else {

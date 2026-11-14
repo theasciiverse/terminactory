@@ -223,7 +223,7 @@ When nothing else is on the bottom line, the game may say one quiet thing about 
 | Elevator size | + / - |
 | Pause / speed | p / [ ] |
 | Browser (opens on what's under the cursor) | b |
-| Small-pane view on/off (for this session) | m |
+| Mirror what is in your hand, a blueprint or a part (Shift: top to bottom); with nothing in hand, the part under the cursor | m |
 | Next telegram / dismiss all | n / Shift+N (PgUp/PgDn scroll; Esc also closes) |
 | Telegram log | i (Enter reads one again) |
 | Help | ? (arrows scroll it in a small pane) |

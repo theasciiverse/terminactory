@@ -2731,3 +2731,25 @@ fn f_with_a_part_in_hand_changes_what_it_will_be_when_placed() {
     key(&mut app, 'f');
     assert!(app.paste.is_none());
 }
+
+#[test]
+fn m_mirrors_the_part_or_blueprint_in_hand_and_no_longer_toggles_the_small_pane() {
+    let mut app = App::new(World::new());
+    app.world.progress.researched = [true; crate::sim::TECHS];
+    let key = |app: &mut App, c: char| app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    // A part facing east flips west, and Shift+M flips north and south.
+    app.selected = Some(Kind::Belt);
+    app.dir = Dir::E;
+    key(&mut app, 'm');
+    assert_eq!(app.dir, Dir::W);
+    app.dir = Dir::N;
+    key(&mut app, 'M');
+    assert_eq!(app.dir, Dir::S);
+    // m is not the view switch any more.
+    render(&mut app, 130, 40);
+    let before = app.compact_now;
+    app.selected = None;
+    key(&mut app, 'm');
+    render(&mut app, 130, 40);
+    assert_eq!(app.compact_now, before);
+}

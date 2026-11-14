@@ -106,6 +106,22 @@ impl Dir {
             Dir::W => (-1, 0),
         }
     }
+    /// Left to right: east and west swap.
+    pub fn flip_h(self) -> Dir {
+        match self {
+            Dir::E => Dir::W,
+            Dir::W => Dir::E,
+            d => d,
+        }
+    }
+    /// Top to bottom: north and south swap.
+    pub fn flip_v(self) -> Dir {
+        match self {
+            Dir::N => Dir::S,
+            Dir::S => Dir::N,
+            d => d,
+        }
+    }
     pub fn cw(self) -> Dir {
         match self {
             Dir::N => Dir::E,
