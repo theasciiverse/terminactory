@@ -315,10 +315,10 @@ fn recipe_book() {
     let key = |app: &mut App, c: KeyCode| app.on_key(KeyEvent::from(c));
     key(&mut app, KeyCode::Char('b'));
     assert!(app.book);
-    assert_eq!(app.book_slug, "home");
+    assert_eq!(app.book_slug, "start");
     let t = text(&render(&mut app, 80, 40));
-    assert!(t.contains("https://terminactory.wiki/home"), "{t}");
-    assert!(t.contains("New here? Start with Getting started") && !t.contains("Raw materials:"), "{t}");
+    assert!(t.contains("termweb.search") && t.contains("termweb Search") && t.contains("I'm Feeling Lucky"), "{t}");
+    // A link under the search box opens a wiki page; Backspace comes back to the start page.
     let (r, _) = app.book_urls.iter().find(|(_, slug)| slug == "getting-started").unwrap();
     app.on_mouse(MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
@@ -327,28 +327,41 @@ fn recipe_book() {
         modifiers: ratatui::crossterm::event::KeyModifiers::NONE,
     });
     assert_eq!(app.book_slug, "getting-started");
+    let t = text(&render(&mut app, 80, 40));
+    assert!(t.contains("terminactory.wiki/getting-started"), "{t}");
     key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
-    key(&mut app, KeyCode::Enter);
-    assert_eq!(app.book_slug, "getting-started");
-    key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
-    // Type a query in the URL bar, select a result, then use browser history.
-    key(&mut app, KeyCode::Char('/'));
+    assert_eq!(app.book_slug, "start");
+    // Type in the search box and press Enter: a page of results, then a result opens.
     for c in "coil".chars() {
         key(&mut app, KeyCode::Char(c));
     }
-    assert!(app.book_results.iter().any(|s| s == "copper-coil"));
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.book_slug, "search?q=coil");
+    let t = text(&render(&mut app, 100, 40));
+    assert!(t.contains("termweb.search/search?q=coil") && t.contains("Copper coil - Terminactory Wiki") && t.contains("About "), "{t}");
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").unwrap();
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.book_slug, "copper-coil");
-    assert_eq!(app.book_history, ["home"]);
+    assert_eq!(app.book_history, ["start", "search?q=coil"]);
     key(&mut app, KeyCode::Backspace);
-    assert_eq!(app.book_slug, "home");
+    assert_eq!(app.book_slug, "search?q=coil");
+    key(&mut app, KeyCode::Backspace);
+    assert_eq!(app.book_slug, "start");
+    // Esc leaves the search box, and then `]` goes forward.
+    key(&mut app, KeyCode::Esc);
+    assert!(app.book && !app.book_typing);
     key(&mut app, KeyCode::Char(']'));
-    assert_eq!(app.book_slug, "copper-coil");
+    assert_eq!(app.book_slug, "search?q=coil");
+    // A search with no match says so.
+    key(&mut app, KeyCode::Char('/'));
+    for c in "zzzqqq".chars() {
+        key(&mut app, KeyCode::Char(c));
+    }
+    key(&mut app, KeyCode::Enter);
+    let t = text(&render(&mut app, 100, 40));
+    assert!(t.contains("did not match any pages"), "{t}");
     let t = text(&render(&mut app, 50, 34));
-    assert!(t.contains("https://terminactory.wiki/copper-coil"), "{t}");
-    assert!(text(&render(&mut app, 100, 40)).contains("https://terminactory.wiki/copper-coil"));
+    assert!(t.contains("ermweb.search"), "{t}");
     key(&mut app, KeyCode::Esc);
     assert!(!app.book);
     app.book = true;
@@ -370,7 +383,7 @@ fn wiki_floating_window_behavior() {
     });
     assert!(visible_map, "map should remain visible outside the browser window");
     let title = text(&wide);
-    assert!(title.contains("Copper coil — Terminactory Wiki"), "{title}");
+    assert!(title.contains("termweb") && title.contains("Copper coil"), "{title}");
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: 0, row: 0, modifiers: KeyModifiers::NONE });
     assert!(!app.book, "clicking outside the browser closes it");
 
@@ -390,12 +403,7 @@ fn wiki_floating_window_behavior() {
 fn wiki_infobox_and_page_sections_render_in_narrow_and_wide_panes() {
     let mut app = App::new(World::new());
     app.on_key(KeyEvent::from(KeyCode::Char('b')));
-    app.on_key(KeyEvent::from(KeyCode::Char('/')));
-    for c in "copper-coil".chars() {
-        app.on_key(KeyEvent::from(KeyCode::Char(c)));
-    }
-    app.book_selected = app.book_results.iter().position(|s| s == "copper-coil").unwrap();
-    app.on_key(KeyEvent::from(KeyCode::Enter));
+    app.book_go(Entry::Item(Item::CopperCoil));
     let top = text(&render(&mut app, 50, 34));
     assert!(top.find("Copper coil").unwrap() < top.find("Money").unwrap(), "{top}");
     for _ in 0..30 {
@@ -405,7 +413,7 @@ fn wiki_infobox_and_page_sections_render_in_narrow_and_wide_panes() {
     assert!(narrow_end.contains("Category: Items"), "{narrow_end}");
     app.book_scroll = 0;
     let wide_top = text(&render(&mut app, 100, 40));
-    assert!(wide_top.contains("https://terminactory.wiki/copper-coil"), "{wide_top}");
+    assert!(wide_top.contains("terminactory.wiki/copper-coil"), "{wide_top}");
     for _ in 0..30 {
         app.on_key(KeyEvent::from(KeyCode::PageDown));
     }
@@ -514,7 +522,7 @@ fn waste_shows_up() {
     app.book = true;
     let buf = render(&mut app, 130, 60);
     let t = text(&buf);
-    assert!(t.contains("https://terminactory.wiki/waste") && t.contains("unwanted leftover"), "{t}");
+    assert!(t.contains("terminactory.wiki/waste") && t.contains("unwanted leftover"), "{t}");
     std::fs::write("target/snapshot-waste-book.html", to_html(&buf)).unwrap();
 }
 
@@ -1233,7 +1241,7 @@ fn silicon_book_pages_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 42));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         // Narrow, tall and zoomed-out panes draw the page without trouble.
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
@@ -1280,7 +1288,7 @@ fn chip_book_pages_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 130, 60));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(40, 30), (60, 40), (50, 80), (200, 60)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1288,7 +1296,7 @@ fn chip_book_pages_fit_every_size() {
     }
     // The long item name keeps its code in the grid, and the research list and tree show the etcher.
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("https://terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
+    assert!(t.contains("terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
     app.book = false;
     app.tree = true;
     app.tree_pick = tech_node(Tech::Etcher);
@@ -1360,7 +1368,7 @@ fn computer_pages_rows_and_machine_fit_every_size() {
     for (entry, _wants) in pages {
         app.book_go(entry);
         let wide = text(&render(&mut app, 150, 70));
-        assert!(wide.contains(&format!("https://terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
+        assert!(wide.contains(&format!("terminactory.wiki/{}", crate::wiki::slug(entry.name()))), "{entry:?}: {wide}");
         for (w, h) in [(36, 24), (40, 30), (60, 40), (50, 80), (200, 60), (150, 90)] {
             let buf = render(&mut app, w, h);
             assert!(text(&buf).len() > 100, "{entry:?} at {w}x{h}");
@@ -1415,23 +1423,23 @@ fn book_pages_for_the_new_machines_and_items() {
     app.book = true;
     app.book_go(Entry::Part(Kind::Lathe));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/lathe") && t.contains("Lathe turns plate into rods"), "{t}");
+    assert!(t.contains("terminactory.wiki/lathe") && t.contains("Lathe turns plate into rods"), "{t}");
     std::fs::write("target/snapshot-book-lathe.html", to_html(&render(&mut app, 130, 42))).unwrap();
     std::fs::write("target/snapshot-book-lathe-narrow.html", to_html(&render(&mut app, 60, 40))).unwrap();
     app.book_go(Entry::Part(Kind::CokeOven));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("Coke oven"), "{t}");
+    assert!(t.contains("terminactory.wiki/coke-oven") && t.contains("Coke oven"), "{t}");
     // An item page: where the screw comes from, and what a spring needs.
     app.book_go(Entry::Item(Item::Screw));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/screw") && t.contains("screw"), "{t}");
+    assert!(t.contains("terminactory.wiki/screw") && t.contains("screw"), "{t}");
     app.book_go(Entry::Item(Item::Coal));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coal") && t.contains("Coal"), "{t}");
+    assert!(t.contains("terminactory.wiki/coal") && t.contains("Coal"), "{t}");
     // Furnace and blast furnace melt iron differently: both show on the iron ore page.
     app.book_go(Entry::Item(Item::IronOre));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/iron-ore") && t.contains("iron ore"), "{t}");
+    assert!(t.contains("terminactory.wiki/iron-ore") && t.contains("iron ore"), "{t}");
     app.book_go(Entry::Item(Item::Spring));
     std::fs::write("target/snapshot-book-spring.html", to_html(&render(&mut app, 130, 42))).unwrap();
     // The research list has the new machines, locked behind their key items.
@@ -1552,17 +1560,14 @@ fn content_step_screens_fit_every_size() {
     app.book_go(Entry::Item(Item::ControlBoard));
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
-    assert!(
-        t.contains("https://terminactory.wiki/control-board") && t.contains("Advanced assembler") && t.contains("Precision assembler"),
-        "{t}"
-    );
+    assert!(t.contains("terminactory.wiki/control-board") && t.contains("Advanced assembler") && t.contains("Precision assembler"), "{t}");
     assert!(t.contains("relay") && t.contains("fine wire"), "{t}");
     std::fs::write("target/snapshot-book-items.html", to_html(&buf)).unwrap();
     let buf = render(&mut app, 50, 40);
     std::fs::write("target/snapshot-book-items-50.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Item(Item::Gearbox));
     let buf = render(&mut app, 130, 42);
-    assert!(text(&buf).contains("https://terminactory.wiki/gearbox"), "{}", text(&buf));
+    assert!(text(&buf).contains("terminactory.wiki/gearbox"), "{}", text(&buf));
     std::fs::write("target/snapshot-book-gearbox.html", to_html(&buf)).unwrap();
     app.book_go(Entry::Part(Kind::LargeAdvancedAssembler));
     let buf = render(&mut app, 50, 40);
@@ -1600,16 +1605,16 @@ fn machines_say_waste_leaves_by_the_back() {
     app.book_go(Entry::Part(Kind::CokeOven));
     app.book = true;
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/coke-oven") && t.contains("waste"), "{t}");
+    assert!(t.contains("terminactory.wiki/coke-oven") && t.contains("waste"), "{t}");
     // A machine with no waste has no such line.
     app.book_go(Entry::Part(Kind::Furnace));
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("https://terminactory.wiki/furnace"), "{t}");
+    assert!(t.contains("terminactory.wiki/furnace"), "{t}");
     // The waste page says where it comes from.
     // (A tall pane: the page of waste has grown with every machine that leaves some.)
     app.book_go(Entry::Item(Item::Waste));
     let t = text(&render(&mut app, 130, 60));
-    assert!(t.contains("https://terminactory.wiki/waste") && !t.contains("fuel for"), "{t}");
+    assert!(t.contains("terminactory.wiki/waste") && !t.contains("fuel for"), "{t}");
     // And a placed boiler says nothing of burning waste.
     let mut w = World::blank();
     w.place(0, 20, 20, Kind::Boiler, Dir::E).unwrap();
@@ -1714,7 +1719,7 @@ fn wiki_home_has_four_navigation_destinations_and_generated_facts_link_to_pages(
     app.book = true;
     app.book_slug = "home".into();
     let rendered = text(&render(&mut app, 140, 45));
-    assert!(rendered.contains("╭ Terminactory Wiki ╮"));
+    assert!(rendered.contains("termweb") && rendered.contains("terminactory.wiki/home"));
     assert!(!rendered.contains("Terminactory Wiki — Terminactory Wiki"));
     assert!(rendered.contains("Machines") && rendered.contains("Items") && rendered.contains("Topics") && rendered.contains("Companies"));
     assert!(app.book_urls.iter().any(|(_, slug)| slug == "machines"));
@@ -1753,7 +1758,7 @@ fn wiki_recipe_cards_close_contents_cover_sections_and_home_tiles_keep_borders()
     let _ = render(&mut page_app, 140, 45);
     for section in expected {
         assert!(
-            page_app.book_urls.iter().any(|(_, target)| target == &format!("#{}", section.to_lowercase().replace(' ', "-"))),
+            page_app.book_click_only.iter().any(|(_, target)| target == &format!("#{}", section.to_lowercase().replace(' ', "-"))),
             "Contents links to {section}"
         );
     }
@@ -1787,8 +1792,11 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     let mut narrow = App::new(World::new());
     narrow.book = true;
     narrow.book_slug = "copper-coil".into();
+    // The tab strip and the bookmarks bar take a row each, so the first screen is two lines shorter.
+    narrow.book_scroll = 2;
     let narrow_top = text(&render(&mut narrow, 60, 30));
     assert!(narrow_top.contains("Recipes"), "{narrow_top}");
+    narrow.book_scroll = 0;
     narrow.book_scroll = u16::MAX;
     let narrow_end = text(&render(&mut narrow, 60, 30));
     assert!(narrow_end.contains("See also") && narrow_end.contains("Category: Items"), "{narrow_end}");
@@ -1809,6 +1817,8 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
 fn did_you_know_facts_hold_still_while_the_game_runs() {
     let mut app = App::new(World::new());
     app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "home".into();
+    app.book_typing = false;
     let before = text(&render(&mut app, 140, 45));
     for _ in 0..37 {
         app.world.tick();
@@ -1825,6 +1835,8 @@ fn home_navigation_tiles_open_their_pages() {
     for (slug, shows) in [("machines", "Press"), ("items", "Copper ore"), ("topics", "Power"), ("companies", "Companies")] {
         let mut app = App::new(World::new());
         app.on_key(KeyEvent::from(KeyCode::Char('b')));
+        app.book_slug = "home".into();
+        app.book_typing = false;
         render(&mut app, 140, 45);
         app.book_selected = app.book_urls.iter().position(|(_, s)| s == slug).unwrap_or_else(|| panic!("no {slug} link on home"));
         app.on_key(KeyEvent::from(KeyCode::Enter));
@@ -1866,7 +1878,7 @@ fn wiki_arrows_roll_over_at_the_edges() {
     render(&mut app, 60, 30);
     app.on_key(KeyEvent::from(KeyCode::Up));
     let t = text(&render(&mut app, 60, 30));
-    assert!(app.book_scroll > 0 && t.contains("Category: Items"), "{t}");
+    assert!(app.book_scroll > 0 && t.contains("See also"), "{t}");
     // The item index rolls over without breaking either.
     app.book_slug = "items".into();
     app.book_scroll = 0;
@@ -1896,4 +1908,393 @@ fn wiki_item_grid_scrolls_by_rows_and_rolls_over() {
     }
     assert!(seen_scroll, "the grid never scrolled");
     assert_eq!((app.book_scroll, app.book_selected), (0, 0), "it rolled over to the top");
+}
+
+/// A link to a page that isn't there still opens: T Web shows its own 404, and Backspace returns.
+#[test]
+fn web_missing_page_shows_a_404_and_backspace_returns() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "example.news/index".into();
+    app.book_typing = false;
+    render(&mut app, 110, 40);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.news/issues/issue-9").expect("the broken link is on the page");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.news/issues/issue-9");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("404") && t.contains("was not found on this server"), "{t}");
+    assert!(t.contains("example.news/index"), "the 404 links back to the domain's index: {t}");
+    app.on_key(KeyEvent::from(KeyCode::Backspace));
+    assert_eq!(app.book_slug, "example.news/index");
+    render(&mut app, 110, 40);
+    // A link to a server that isn't there says so, and has nothing to follow.
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "nowhere.example/lost").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "nowhere.example/lost");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Server not found") && t.contains("nowhere.example"), "{t}");
+}
+
+/// A site page renders as plain text, its links carry full addresses, and a table's cells keep
+/// their links. A wiki link on a web page still opens the wiki.
+#[test]
+fn web_site_page_renders_with_full_address_links() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    app.book_slug = "example.news/index".into();
+    app.book_typing = false;
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Example News") && t.contains("Issue 1"), "{t}");
+    assert!(t.contains("example.news/index"), "the address field shows the address: {t}");
+    for target in ["example.news/about", "example.news/issues/issue-1", "example.forum", "copper-coil", "example.news/issues/issue-9"] {
+        assert!(app.book_urls.iter().any(|(_, s)| s == target), "{target} is a link: {:?}", app.book_urls);
+    }
+    // A forum link opens the forum's index, its table links to a thread, and that thread's page shows.
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.forum").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("Example forum"), "{t}");
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "example.forum/first-thread").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum/first-thread");
+    // A wiki link on a web page opens the wiki page, with the wiki's address.
+    app.book_slug = "example.news/issues/issue-1".into();
+    app.book_selected = 0;
+    render(&mut app, 110, 40);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").unwrap();
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "copper-coil");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("terminactory.wiki/copper-coil"), "{t}");
+}
+
+/// A thread nests its replies: a depth-3 post sits further right than its parent, and PgDn
+/// moves down the thread while PgUp comes back to the top.
+#[test]
+fn web_thread_nests_posts_and_scrolls() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("A deep thread") && t.contains("Help · solved · 5 replies"), "{t}");
+    let xs: Vec<u16> = app.book_urls.iter().filter(|(_, s)| s == "lounge.example/@bob").map(|(r, _)| r.x).collect();
+    assert_eq!(xs.len(), 2, "bob's profile is linked on both his posts: {:?}", app.book_urls);
+    assert!(xs[1] > xs[0], "a depth-3 reply sits further right than its parent: {xs:?}");
+    // A short window: the thread is taller than its page.
+    render(&mut app, 60, 22);
+    app.on_key(KeyEvent::from(KeyCode::PageDown));
+    render(&mut app, 60, 22);
+    assert!(app.book_scroll > 0);
+    app.on_key(KeyEvent::from(KeyCode::PageUp));
+    assert_eq!(app.book_scroll, 0);
+}
+
+/// f folds the post whose header is picked and f again brings its replies back; F folds every
+/// top-level post and unfolds everything when anything is folded.
+#[test]
+fn web_thread_folding_hides_and_restores_replies() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    let pick_first_post = |app: &mut App| {
+        render(app, 100, 34);
+        let row = app.book_post_hits.iter().find(|(_, p)| *p == 0).expect("a post header").0.y;
+        app.book_selected = app.book_urls.iter().position(|(r, _)| r.y == row).expect("the author link");
+    };
+    assert!(text(&render(&mut app, 100, 34)).contains("Bottom of this branch"));
+    pick_first_post(&mut app);
+    app.on_key(KeyEvent::from(KeyCode::Char('f')));
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("[+] 5 replies hidden"), "{t}");
+    assert!(!t.contains("Bottom of this branch"), "a folded post hides its replies: {t}");
+    assert!(!app.book_urls.iter().any(|(_, s)| s == "lounge.example/@bob"), "and their links");
+    pick_first_post(&mut app);
+    app.on_key(KeyEvent::from(KeyCode::Char('f')));
+    assert!(text(&render(&mut app, 100, 34)).contains("Bottom of this branch"));
+    // F folds the top-level post; F again unfolds everything.
+    app.on_key(KeyEvent::from(KeyCode::Char('F')));
+    assert_eq!(app.book_folded, vec![0], "the only top-level post");
+    assert!(text(&render(&mut app, 100, 34)).contains("[+] 5 replies hidden"));
+    app.on_key(KeyEvent::from(KeyCode::Char('F')));
+    assert!(app.book_folded.is_empty());
+}
+
+/// Folds belong to their tab, and following a link starts a fresh page.
+#[test]
+fn web_folds_travel_with_their_tab_and_links_clear_them() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "example.forum/deep-thread".into();
+    app.book_typing = false;
+    render(&mut app, 100, 34);
+    app.book_folded = vec![1];
+    app.on_key(KeyEvent::from(KeyCode::Char('+')));
+    render(&mut app, 100, 34);
+    app.book_switch(0);
+    assert_eq!(app.book_slug, "example.forum/deep-thread");
+    assert_eq!(app.book_folded, vec![1], "the fold stayed with its tab");
+    // A link in the first post's body still works while another post is folded.
+    render(&mut app, 100, 34);
+    app.book_selected = app.book_urls.iter().position(|(_, s)| s == "copper-coil").expect("the wiki link");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "copper-coil");
+    assert!(app.book_folded.is_empty(), "a new page starts unfolded");
+}
+
+/// Authors link to their profile page, wherever it is, and a profile lists the threads its
+/// author posted in. A name with no profile is plain text.
+#[test]
+fn web_profile_links_open_the_right_page_and_list_its_threads() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    let open = |app: &mut App, target: &str| {
+        app.book_slug = "example.forum/deep-thread".into();
+        render(app, 110, 40);
+        let i = app.book_urls.iter().position(|(_, s)| s == target).unwrap_or_else(|| panic!("no link to {target}"));
+        app.book_selected = i;
+        app.on_key(KeyEvent::from(KeyCode::Enter));
+    };
+    open(&mut app, "example.forum/@alice");
+    assert_eq!(app.book_slug, "example.forum/@alice");
+    let t = text(&render(&mut app, 110, 40));
+    assert!(t.contains("In this archive") && t.contains("Posts from Y140-08-25 to Y140-09-02."), "{t}");
+    assert!(t.contains("A deep thread") && t.contains("A first thread"), "{t}");
+    assert!(app.book_urls.iter().any(|(_, s)| s == "example.forum/first-thread"));
+    open(&mut app, "lounge.example/@bob");
+    assert_eq!(app.book_slug, "lounge.example/@bob");
+    // carol has no profile page anywhere: her name is not a link.
+    app.book_slug = "example.forum/deep-thread".into();
+    render(&mut app, 110, 40);
+    assert!(!app.book_urls.iter().any(|(_, s)| s.contains("carol")));
+}
+
+/// T Web: the bookmarks bar starts with three pages, `*` adds and removes the current one, and
+/// a long page gets a scrollbar down its right edge.
+#[test]
+fn t_web_bookmarks_and_scrollbar() {
+    use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    let t = text(&render(&mut app, 100, 36));
+    assert!(t.contains("★ Getting started") && t.contains("★ Machines") && t.contains("★ Items"), "{t}");
+    // A page that is not bookmarked has an empty star; `*` fills it and puts it on the bar.
+    app.book_slug = "copper-coil".into();
+    app.book_typing = false;
+    assert!(text(&render(&mut app, 100, 36)).contains('☆'));
+    app.on_key(KeyEvent::from(KeyCode::Char('*')));
+    let t = text(&render(&mut app, 100, 36));
+    assert!(t.contains("★ Copper coil"), "{t}");
+    assert_eq!(app.settings.bookmarks.last().map(String::as_str), Some("copper-coil"));
+    // Clicking a bookmark opens it.
+    let (r, _) = app.book_mark_hits.iter().find(|(_, s)| s == "getting-started").cloned().unwrap();
+    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
+    assert_eq!(app.book_slug, "getting-started");
+    // And `*` again takes the page off.
+    app.book_slug = "copper-coil".into();
+    app.book_typing = false;
+    app.on_key(KeyEvent::from(KeyCode::Char('*')));
+    assert!(!app.settings.bookmarks.iter().any(|s| s == "copper-coil"));
+    // A tall page in a short window shows the scrollbar (it appears on the second frame).
+    app.book_slug = "copper-coil".into();
+    render(&mut app, 60, 30);
+    let t = text(&render(&mut app, 60, 30));
+    assert!(t.contains('▲') && t.contains('▼') && t.contains('█'), "{t}");
+}
+
+/// A gated page asks for a sign-in and never shows its body until one works. Usernames match
+/// without case, passwords exactly, and a domain stays signed in for its other pages.
+#[test]
+fn web_gated_pages_ask_for_a_sign_in_and_remember_it() {
+    use crate::app::LoginForm;
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    app.book_slug = "portal.example.lan/gate".into();
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("This page needs a sign-in."), "{t}");
+    assert!(t.contains("portal.example.lan"), "{t}");
+    assert!(t.contains("user:") && t.contains("pass:"), "{t}");
+    assert!(!t.contains("Quiet night") && !t.contains("changeover"), "the body must not leak: {t}");
+    assert!(!app.book_urls.iter().any(|(_, s)| s == "portal.example.lan/gate"), "no body links either");
+
+    // A wrong password fails, and says nothing beyond that.
+    app.on_key(KeyEvent::from(KeyCode::Char('i')));
+    assert!(app.book_login_typing, "i starts typing");
+    for c in "MIRA".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Tab));
+    for c in "not copper".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    let typed = text(&render(&mut app, 80, 34));
+    assert!(typed.contains("not copper"), "the password shows as typed, not as dots: {typed}");
+    assert!(!typed.contains('•'), "{typed}");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("Sign-in failed."), "{t}");
+    assert!(!t.contains("Quiet night"), "{t}");
+    assert!(app.book_logins.is_empty());
+
+    // The right one, in either case, signs in and draws the page that was asked for.
+    app.book_login = Some(LoginForm { user: "mira".into(), pass: "copper".into(), on_pass: true, failed: false });
+    app.book_login_typing = true;
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_login, None);
+    assert!(app.book_typing == false);
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("Quiet night") && t.contains("changeover"), "{t}");
+    assert!(t.contains("signed in as mira"), "the status bar says who is reading: {t}");
+    assert_eq!(app.book_logins, vec![("portal.example.lan".to_string(), "mira".to_string())]);
+    assert!(app.book_history.is_empty(), "signing in adds no history entry");
+
+    // `access: all` accepts any account of the domain, without another form.
+    let mut app2 = App::new(World::new());
+    app2.book = true;
+    app2.book_typing = false;
+    app2.book_logins = vec![("portal.example.lan".into(), "otto".into())];
+    app2.book_slug = "portal.example.lan/all".into();
+    let t = text(&render(&mut app2, 80, 34));
+    assert!(t.contains("Anyone with an account here"), "{t}");
+
+    // Signed in, but not on the list: a 403 with nothing of the page.
+    let mut app3 = App::new(World::new());
+    app3.book = true;
+    app3.book_typing = false;
+    app3.book_logins = vec![("portal.example.lan".into(), "otto".into())];
+    app3.book_slug = "portal.example.lan/gate".into();
+    let t = text(&render(&mut app3, 80, 34));
+    assert!(t.contains("403") && t.contains("otto may not read this page."), "{t}");
+    assert!(!t.contains("Quiet night"), "{t}");
+
+    // Another domain still asks, and logout signs this one out and shows its index.
+    app.book_slug = "example.news/login".into();
+    let t = text(&render(&mut app, 80, 34));
+    assert!(t.contains("This page needs a sign-in."), "{t}");
+    app.book_submit_search("portal.example.lan/logout");
+    assert_eq!(app.book_slug, "portal.example.lan/index");
+    assert!(app.book_logins.is_empty());
+}
+
+/// Search finds a thread from another site, shows its address, and never reveals a gated page.
+#[test]
+fn web_search_finds_threads_and_never_reveals_gated_pages() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_typing = false;
+    app.book_slug = "search?q=deep thread".into();
+    let t = text(&render(&mut app, 100, 34));
+    assert!(t.contains("example.forum › deep-thread"), "{t}");
+    assert!(t.contains("A deep thread") && !t.contains("A deep thread - Terminactory Wiki"), "{t}");
+    let at = app.book_urls.iter().position(|(_, s)| s == "example.forum/deep-thread").expect("a result link");
+    app.book_selected = at;
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "example.forum/deep-thread");
+    assert!(text(&render(&mut app, 100, 34)).contains("First post text."));
+
+    // A gated page's words find nothing at all, in titles, snippets or links.
+    let mut gated = App::new(World::new());
+    gated.book = true;
+    gated.book_typing = false;
+    gated.book_slug = "search?q=changeover".into();
+    let t = text(&render(&mut gated, 100, 34));
+    assert!(!t.contains("Shift notes") && !t.contains("Quiet night"), "{t}");
+    assert!(!gated.book_urls.iter().any(|(_, s)| s == "portal.example.lan/gate"), "{t}");
+
+    // A domain typed into the start page's box opens it instead of searching for it.
+    let mut direct = App::new(World::new());
+    direct.book = true;
+    direct.book_slug = "start".into();
+    direct.book_typing = true;
+    direct.book_query = "example.forum".into();
+    direct.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(direct.book_slug, "example.forum");
+    direct.book_typing = false;
+    let t = text(&render(&mut direct, 100, 34));
+    assert!(t.contains("Example forum") && t.contains("A deep thread"), "{t}");
+}
+
+/// Every page kind draws inside the window at 120, 80, 50 and 30 columns.
+#[test]
+fn web_pages_draw_at_narrow_widths() {
+    for (w, h) in [(120, 40), (80, 34), (50, 34), (30, 20)] {
+        for (slug, fold) in [
+            ("example.forum/deep-thread", true),
+            ("portal.example.lan/gate", false),
+            ("portal.example.lan/nope", false),
+            ("example.forum/index", false),
+            ("search?q=deep thread", false),
+        ] {
+            let mut app = App::new(World::new());
+            app.book = true;
+            app.book_typing = false;
+            app.book_slug = slug.into();
+            if fold {
+                app.book_folded = vec![0];
+            }
+            let buf = render(&mut app, w, h);
+            assert_eq!(buf.area.width, w, "{slug} at {w}x{h}");
+            assert!(!text(&buf).trim().is_empty(), "{slug} at {w}x{h} drew nothing");
+        }
+    }
+}
+
+/// Every `[[domain/path]]` link in `WEB_PAGES` whose target is missing, grouped by page.
+/// Dead links are allowed: this only reports them, for whoever writes the content.
+#[test]
+#[ignore]
+fn web_dead_links_report() {
+    let mut dead = 0;
+    for (addr, md) in crate::web::WEB_PAGES {
+        let mut rest = *md;
+        let mut missing: Vec<String> = Vec::new();
+        while let Some(start) = rest.find("[[") {
+            let after = &rest[start + 2..];
+            let Some(end) = after.find("]]") else { break };
+            let spec = after[..end].split('|').next().unwrap_or("").trim();
+            rest = &after[end + 2..];
+            if spec.is_empty() || spec.starts_with('#') || !spec.contains('/') {
+                continue;
+            }
+            if crate::web::page(spec).is_none() && missing.iter().all(|m| m != spec) {
+                missing.push(spec.to_string());
+            }
+        }
+        if !missing.is_empty() {
+            dead += missing.len();
+            println!("{addr}");
+            for target in missing {
+                println!("  -> {target}");
+            }
+        }
+    }
+    println!("{dead} dead links");
+}
+
+#[test]
+fn the_copy_button_is_in_the_status_bar_and_the_page_text_is_plain() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    render(&mut app, 140, 45);
+    assert!(app.book_page_text().is_none());
+    assert!(!app.book_buttons.iter().any(|(_, b)| *b == crate::app::BookButton::Copy));
+    app.book_slug = "boiler".into();
+    let screen = render(&mut app, 140, 45);
+    assert!(text(&screen).contains("Copy page"));
+    assert!(app.book_buttons.iter().any(|(_, b)| *b == crate::app::BookButton::Copy));
+    let copied = app.book_page_text().expect("wiki text");
+    assert!(copied.starts_with("terminactory.wiki/boiler"), "{copied}");
+    assert!(!copied.contains("[[") && !copied.contains("**"));
+    app.book_slug = "search?q=boiler".into();
+    let results = app.book_page_text().expect("results text");
+    assert!(results.starts_with("Search: boiler"), "{results}");
+    assert!(results.contains("terminactory.wiki/boiler"));
+    app.book_slug = "example.forum/deep-thread".into();
+    let thread = app.book_page_text().expect("thread text");
+    assert!(thread.contains(" · "), "{thread}");
 }

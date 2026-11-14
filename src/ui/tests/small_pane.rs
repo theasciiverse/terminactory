@@ -433,7 +433,7 @@ fn the_pipe_page_prints_its_rules() {
     app.book_go(Entry::Part(Kind::Pipe));
     for (w, h) in [(44, 60), (50, 40), (130, 42)] {
         let t = text(&render(&mut app, w, h));
-        assert!(t.contains("Pipe") && t.contains("https://terminactory.wiki/pipe"), "{w}x{h}: {t}");
+        assert!(t.contains("Pipe") && t.contains("terminactory.wiki/pipe"), "{w}x{h}: {t}");
         assert!(t.contains("fluid") && t.contains("pipe"), "{w}x{h}: {t}");
     }
 }

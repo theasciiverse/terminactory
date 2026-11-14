@@ -201,6 +201,67 @@ impl Entry {
 /// Removing waste storage that costs more than this takes a second click.
 const WASTE_CONFIRM: f64 = 20.0;
 
+/// A button on the browser's toolbar.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BookButton {
+    Back,
+    Forward,
+    Reload,
+    Home,
+    NewTab,
+    Star,
+    /// The start page's Search and Lucky buttons, and the box on the results page.
+    Search,
+    Lucky,
+    Edit,
+    /// The status bar's Copy button: the page's text goes to the clipboard.
+    Copy,
+}
+
+/// One browser tab: a page, its own history and where it was scrolled and picked.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tab {
+    pub slug: String,
+    pub history: Vec<String>,
+    pub forward: Vec<String>,
+    pub selected: usize,
+    pub scroll: u16,
+    /// The posts folded away on this tab's thread (post indexes).
+    pub folded: Vec<usize>,
+}
+
+/// The sign-in form on a gated page: the two boxes, which one has the keys, and whether the
+/// last try failed.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LoginForm {
+    pub user: String,
+    pub pass: String,
+    pub on_pass: bool,
+    pub failed: bool,
+}
+
+impl Tab {
+    pub fn home() -> Self {
+        Tab { slug: "start".into(), history: Vec::new(), forward: Vec::new(), selected: 0, scroll: 0, folded: Vec::new() }
+    }
+
+    /// The page's title, for the tab strip.
+    pub fn title(&self) -> String {
+        if crate::web::is_addr(&self.slug) {
+            return crate::web::title(&self.slug);
+        }
+        match self.slug.as_str() {
+            "start" => "termweb".into(),
+            "home" => "Home".into(),
+            s if s.starts_with("search?q=") => format!("{} - termweb", &s["search?q=".len()..]),
+            "items" => "Items".into(),
+            "machines" => "Machines".into(),
+            "topics" => "Topics".into(),
+            s => crate::wiki::page(s).and_then(|md| md.lines().next()).unwrap_or(s).trim_start_matches('#').trim().to_string(),
+        }
+    }
+}
+
 pub struct App {
     pub world: World,
     /// Waste storage the player was warned about: removing it again confirms the fee.
@@ -265,8 +326,44 @@ pub struct App {
     /// and the pages Backspace goes back to.
     pub book_links: Vec<(Rect, Entry)>,
     pub book_urls: Vec<(Rect, String)>,
+    /// The header row of every post drawn on a thread, and the `[+]` rows of folded posts.
+    pub book_post_hits: Vec<(Rect, usize)>,
+    pub book_fold_hits: Vec<(Rect, usize)>,
+    /// The posts folded away on the page being read, kept with its tab.
+    pub book_folded: Vec<usize>,
+    /// Who is signed in where (domain, username), for as long as the game runs.
+    pub book_logins: Vec<(String, String)>,
+    /// The sign-in form on the page being read, and whether its boxes have the keys.
+    pub book_login: Option<LoginForm>,
+    pub book_login_typing: bool,
+    /// Links that can be clicked but are not stepped to with the arrow keys (the contents list, the category box).
+    pub book_click_only: Vec<(Rect, String)>,
+    /// The results page's pick: which result is selected, counted over all of them, and whether the
+    /// next draw scrolls to it.
+    pub book_pick: usize,
+    pub book_pick_follow: bool,
+    pub book_first_hit: usize,
+    pub book_sel_seen: usize,
     /// The browser window's last drawn bounds, used to dismiss it on an outside click.
     pub book_area: Rect,
+    /// The browser's toolbar buttons, with where they were drawn, for clicks.
+    pub book_buttons: Vec<(Rect, BookButton)>,
+    /// The browser's tabs, and which one is showing. The `book_*` page fields below are the
+    /// active tab's live copy; they are saved into its `Tab` whenever another tab takes over.
+    pub book_tabs: Vec<Tab>,
+    pub book_active: usize,
+    /// The tab strip's chips and their close crosses, for clicks.
+    pub book_tab_hits: Vec<(Rect, usize)>,
+    pub book_tab_close: Vec<(Rect, usize)>,
+    /// The bookmarks bar's links, where they were drawn, and whether the page has a scrollbar column.
+    pub book_mark_hits: Vec<(Rect, String)>,
+    pub book_scrollbar: bool,
+    /// When the Copy button was last pressed, for its "Copied" note.
+    pub book_copied: Option<Instant>,
+    /// The last search drawn: its words and its results.
+    pub book_hits: Option<(String, Vec<crate::search::Hit>)>,
+    /// When the page last opened: the load bar fills for a moment after it.
+    pub book_opened: Option<std::time::Instant>,
     pub book_slug: String,
     pub book_history: Vec<String>,
     pub book_forward: Vec<String>,
@@ -383,7 +480,28 @@ impl App {
             book_typing: false,
             book_links: Vec::new(),
             book_urls: Vec::new(),
+            book_post_hits: Vec::new(),
+            book_fold_hits: Vec::new(),
+            book_folded: Vec::new(),
+            book_logins: Vec::new(),
+            book_login: None,
+            book_login_typing: false,
+            book_click_only: Vec::new(),
+            book_pick: 0,
+            book_pick_follow: false,
+            book_first_hit: 0,
+            book_sel_seen: 0,
             book_area: Rect::default(),
+            book_buttons: Vec::new(),
+            book_tabs: vec![Tab::home()],
+            book_active: 0,
+            book_tab_hits: Vec::new(),
+            book_tab_close: Vec::new(),
+            book_mark_hits: Vec::new(),
+            book_scrollbar: false,
+            book_copied: None,
+            book_hits: None,
+            book_opened: None,
             book_slug: "home".into(),
             book_history: Vec::new(),
             book_forward: Vec::new(),
@@ -832,13 +950,16 @@ impl App {
             self.book_query.clear();
             self.book_show(e);
         } else {
-            self.book_slug = "home".into();
+            self.book_slug = "start".into();
             self.book_scroll = 0;
         }
         self.book_scroll = 0;
         self.book_history.clear();
         self.book_forward.clear();
+        self.book_folded.clear();
+        self.book_opened = Some(std::time::Instant::now());
         self.book = true;
+        self.book_land();
     }
 
     /// Shows a page (and so its tab), remembering it as that tab's last page.
@@ -847,6 +968,143 @@ impl App {
         self.book_scroll = 0;
         self.book_slug = crate::wiki::slug(e.name());
         self.book_selected = 0;
+        self.book_opened = Some(std::time::Instant::now());
+    }
+
+    /// Saves the live page state into its tab.
+    fn book_store(&mut self) {
+        if let Some(t) = self.book_tabs.get_mut(self.book_active) {
+            t.slug = self.book_slug.clone();
+            t.history = self.book_history.clone();
+            t.forward = self.book_forward.clone();
+            t.selected = self.book_selected;
+            t.scroll = self.book_scroll;
+            t.folded = self.book_folded.clone();
+        }
+    }
+
+    /// Makes a tab the live one, keeping the page state below in step with it.
+    fn book_load_tab(&mut self, i: usize) {
+        let Some(t) = self.book_tabs.get(i).cloned() else { return };
+        self.book_active = i;
+        self.book_slug = t.slug;
+        self.book_history = t.history;
+        self.book_forward = t.forward;
+        self.book_selected = t.selected;
+        self.book_scroll = t.scroll;
+        self.book_folded = t.folded;
+        if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+            self.book_entry = e;
+        }
+        self.book_opened = Some(std::time::Instant::now());
+        self.book_land();
+    }
+
+    /// Opens a page in a new tab and switches to it.
+    pub fn book_new_tab(&mut self, slug: &str) {
+        self.book_store();
+        let mut t = Tab::home();
+        t.slug = slug.to_string();
+        self.book_tabs.push(t);
+        let i = self.book_tabs.len() - 1;
+        self.book_load_tab(i);
+    }
+
+    /// Switches to a tab by its place in the strip.
+    pub fn book_switch(&mut self, i: usize) {
+        if i < self.book_tabs.len() && i != self.book_active {
+            self.book_store();
+            self.book_load_tab(i);
+        }
+    }
+
+    /// Tab and Shift+Tab: round the strip, either way.
+    fn book_cycle_tab(&mut self, forward: bool) {
+        let n = self.book_tabs.len();
+        if n < 2 {
+            return;
+        }
+        let i = if forward { (self.book_active + 1) % n } else { (self.book_active + n - 1) % n };
+        self.book_switch(i);
+    }
+
+    /// w or a chip's ✕: shut this tab. Shutting the last one closes the browser.
+    pub fn book_close_tab(&mut self) {
+        self.book_store();
+        self.book_tabs.remove(self.book_active);
+        if self.book_tabs.is_empty() {
+            self.book_tabs.push(Tab::home());
+            self.book_active = 0;
+            self.book_load_tab(0);
+            self.book = false;
+            return;
+        }
+        let i = self.book_active.min(self.book_tabs.len() - 1);
+        self.book_active = i;
+        self.book_load_tab(i);
+    }
+
+    /// f: fold or unfold the post whose header row holds the selected link. F: fold every
+    /// top-level post, or unfold everything when anything is folded.
+    fn book_fold(&mut self, all: bool) {
+        let Some(thread) = crate::web::thread(&self.book_slug) else { return };
+        if all {
+            self.book_folded = if self.book_folded.is_empty() {
+                thread.posts.iter().enumerate().filter(|(_, p)| p.depth == 0).map(|(i, _)| i).collect()
+            } else {
+                Vec::new()
+            };
+        } else {
+            let row = self.book_urls.get(self.book_selected).map(|(rect, _)| rect.y);
+            let Some((_, post)) = self.book_post_hits.iter().find(|(rect, _)| Some(rect.y) == row).copied() else { return };
+            match self.book_folded.iter().position(|i| *i == post) {
+                Some(at) => {
+                    self.book_folded.remove(at);
+                }
+                None => self.book_folded.push(post),
+            }
+            self.book_folded.sort_unstable();
+        }
+        // Folding takes rows away: keep the pick and the scroll on something that is still there.
+        self.book_selected = self.book_selected.min(self.book_urls.len().saturating_sub(1));
+        self.book_scroll = self.book_scroll.min(self.book_max_scroll);
+    }
+
+    /// Redraws the page where it is, as the reload button does.
+    pub fn book_reload(&mut self) {
+        self.book_scroll = 0;
+        self.book_folded.clear();
+        self.book_opened = Some(std::time::Instant::now());
+    }
+
+    /// Backspace's job: the last page this tab visited.
+    fn book_back(&mut self) {
+        if let Some(slug) = self.book_history.pop() {
+            self.book_forward.push(self.book_slug.clone());
+            self.book_slug = slug;
+            if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                self.book_entry = e;
+            }
+            self.book_scroll = 0;
+            self.book_folded.clear();
+            self.book_opened = Some(std::time::Instant::now());
+            self.book_land();
+        }
+    }
+
+    /// ]'s job: the page Backspace last left.
+    fn book_forward(&mut self) {
+        if let Some(slug) = self.book_forward.pop() {
+            self.book_history.push(self.book_slug.clone());
+            self.book_slug = slug;
+            if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
+                self.book_entry = e;
+            }
+            self.book_scroll = 0;
+            self.book_folded.clear();
+            self.book_opened = Some(std::time::Instant::now());
+            self.book_land();
+        }
     }
 
     /// Goes to a page from a link, remembering this one for Backspace.
@@ -876,6 +1134,14 @@ impl App {
     }
 
     fn book_go_slug(&mut self, slug: &str) {
+        // Signing out shows the domain's index: the login is gone before the page is opened.
+        if let Some(domain) = slug.trim_end_matches('/').strip_suffix("/logout").map(str::to_string) {
+            self.book_logins.retain(|(d, _)| *d != domain);
+            if crate::web::is_addr(&domain) {
+                self.book_go_slug(&format!("{domain}/index"));
+                return;
+            }
+        }
         if let Some(anchor) = slug.strip_prefix('#') {
             if let Some(page) = crate::wiki::page(&self.book_slug) {
                 let label = anchor.replace('-', " ");
@@ -886,8 +1152,10 @@ impl App {
             return;
         }
         // Home and the index pages are generated, so they have no markdown file.
-        let generated = matches!(slug, "home" | "items" | "machines" | "topics");
-        if (crate::wiki::page(slug).is_none() && !generated) || slug == self.book_slug {
+        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics") || slug.starts_with("search?q=");
+        // A web address always opens, even when the page (or the server) isn't there: the page
+        // that shows is T Web's own 404 or "server not found", not a refusal to move.
+        if (crate::wiki::page(slug).is_none() && !generated && !crate::web::is_addr(slug)) || slug == self.book_slug {
             return;
         }
         self.book_history.push(self.book_slug.clone());
@@ -895,9 +1163,189 @@ impl App {
         self.book_slug = slug.to_string();
         self.book_scroll = 0;
         self.book_selected = 0;
+        self.book_folded.clear();
+        self.book_opened = Some(std::time::Instant::now());
         if let Some(e) = Self::book_entry_for_slug(slug) {
             self.book_entry = e;
         }
+        self.book_land();
+    }
+
+    /// Where the typing cursor goes when a page opens: into the box on the start page, nowhere else.
+    fn book_land(&mut self) {
+        self.book_typing = self.book_slug == "start";
+        self.book_pick = 0;
+        self.book_pick_follow = false;
+        self.book_query.clear();
+        self.book_results.clear();
+        self.book_login = None;
+        self.book_login_typing = false;
+    }
+
+    /// The user signed in on a domain, if there is one.
+    pub fn book_signed_in(&self, domain: &str) -> Option<&str> {
+        self.book_logins.iter().find(|(d, _)| d == domain).map(|(_, user)| user.as_str())
+    }
+
+    /// Whether the page in the browser is showing a sign-in form: a gated page with nobody
+    /// signed in on its domain, or the domain's own `login` page.
+    pub fn book_asks_login(&self) -> bool {
+        let slug = self.book_slug.as_str();
+        if !crate::web::is_addr(slug) {
+            return false;
+        }
+        let domain = crate::web::domain_of(slug);
+        if slug.trim_end_matches('/') == format!("{domain}/login") {
+            return true;
+        }
+        // A signed-in user who is not on the list is a 403, not another form.
+        crate::web::access(slug).is_some() && self.book_signed_in(domain).is_none()
+    }
+
+    /// The text of the page in the browser, as plain text for the clipboard: a header with the
+    /// title and address, then the page as the reader sees it. `None` where there is nothing to
+    /// copy (the start page, a sign-in form).
+    pub fn book_page_text(&self) -> Option<String> {
+        let slug = self.book_slug.as_str();
+        if slug == "start" || self.book_asks_login() {
+            return None;
+        }
+        let address = crate::ui::book_url(slug);
+        if let Some(query) = slug.strip_prefix("search?q=") {
+            let hits = crate::search::search(query);
+            let mut out = format!("Search: {query}\n{address}\n\n{} results\n", hits.len());
+            for h in &hits {
+                out.push_str(&format!("\n{}\n{}\n{}\n", crate::ui::book_url(&h.slug), h.title, h.snippet));
+            }
+            return Some(out);
+        }
+        let body = if crate::web::is_addr(slug) {
+            if let Some(thread) = crate::web::thread(slug) {
+                let mut out = format!("{}\n", thread.title);
+                for (k, v) in &thread.meta {
+                    out.push_str(&format!("{k}: {v}\n"));
+                }
+                for post in &thread.posts {
+                    let pad = "  ".repeat(post.depth);
+                    out.push_str(&format!("\n{pad}{} · {}\n", post.author, post.date));
+                    for line in &post.body {
+                        out.push_str(&format!("{pad}{}\n", crate::search::plain(line)));
+                    }
+                }
+                out
+            } else {
+                let md = match crate::web::page(slug) {
+                    Some(md) => {
+                        let mut text = crate::web::prepare(slug, md);
+                        if let Some(section) = crate::web::profile_section(slug) {
+                            text.push_str(&section);
+                        }
+                        text
+                    }
+                    None => crate::web::missing(slug),
+                };
+                crate::search::plain(&md)
+            }
+        } else {
+            crate::search::plain(crate::wiki::page(slug)?)
+        };
+        Some(format!("{address}\n\n{body}"))
+    }
+
+    /// The Copy button: put the page's text on the clipboard.
+    pub fn book_copy(&mut self) {
+        if let Some(text) = self.book_page_text() {
+            crate::clip::copy(&text);
+            self.book_copied = Some(Instant::now());
+        }
+    }
+
+    /// `i` or Enter on a login page: the boxes take the keys from here.
+    fn start_login(&mut self) {
+        self.book_login.get_or_insert_with(LoginForm::default).failed = false;
+        self.book_login_typing = true;
+    }
+
+    /// A key while the sign-in boxes have the keys: characters go to the active box, Tab
+    /// swaps them, and nothing else on the page hears the key.
+    fn login_key(&mut self, k: KeyEvent) {
+        if self.book_login.is_none() {
+            self.book_login = Some(LoginForm::default());
+        }
+        let Some(form) = self.book_login.as_mut() else { return };
+        let mut submit = false;
+        match k.code {
+            KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => {
+                if form.on_pass {
+                    form.pass.push(c);
+                } else {
+                    form.user.push(c);
+                }
+            }
+            KeyCode::Backspace => {
+                if form.on_pass {
+                    form.pass.pop();
+                } else {
+                    form.user.pop();
+                }
+            }
+            KeyCode::Tab | KeyCode::BackTab => form.on_pass = !form.on_pass,
+            KeyCode::Enter if form.on_pass => submit = true,
+            KeyCode::Enter => form.on_pass = true,
+            KeyCode::Esc => self.book_login_typing = false,
+            _ => {}
+        }
+        if submit {
+            self.submit_login();
+        }
+    }
+
+    /// Tries the form's username and password against the domain's accounts. Usernames are
+    /// compared without case, passwords exactly. A failure says only that it failed.
+    fn submit_login(&mut self) {
+        let domain = crate::web::domain_of(&self.book_slug).to_string();
+        let Some(form) = self.book_login.clone() else { return };
+        let account =
+            crate::web::accounts(&domain).into_iter().find(|a| a.user.eq_ignore_ascii_case(form.user.trim()) && a.pass == form.pass);
+        match account {
+            Some(a) => {
+                self.book_logins.retain(|(d, _)| *d != domain);
+                self.book_logins.push((domain, a.user));
+                self.book_login = None;
+                self.book_login_typing = false;
+                self.book_selected = 0;
+            }
+            None => {
+                if let Some(f) = self.book_login.as_mut() {
+                    f.failed = true;
+                    f.pass.clear();
+                    f.on_pass = true;
+                }
+            }
+        }
+    }
+
+    /// Runs a search: the results page for these words.
+    pub fn book_submit_search(&mut self, query: &str) {
+        let q = query.split_whitespace().collect::<Vec<_>>().join(" ");
+        if q.is_empty() {
+            return;
+        }
+        // A domain or address typed into the box opens it, rather than searching for it.
+        if crate::web::is_addr(&q) {
+            self.book_go_slug(&q);
+            return;
+        }
+        self.book_go_slug(&format!("search?q={q}"));
+    }
+
+    /// The slug of the best result for these words, or a random wiki page for an empty search.
+    fn book_lucky(&self, query: &str) -> Option<String> {
+        if let Some(hit) = crate::search::search(query).into_iter().next() {
+            return Some(hit.slug);
+        }
+        let pages = crate::wiki::PAGES;
+        (query.trim().is_empty() && !pages.is_empty()).then(|| pages[self.book_seed % pages.len()].0.to_string())
     }
 
     fn book_entry_for_slug(slug: &str) -> Option<Entry> {
@@ -914,19 +1362,11 @@ impl App {
 
     fn book_search(&mut self) {
         let q = self.book_query.to_lowercase();
-        self.book_results = if q.is_empty() {
+        // Only the item and machine grids filter as you type; every other page searches on Enter.
+        self.book_results = if q.is_empty() || !(self.book_slug == "items" || self.book_slug == "machines") {
             Vec::new()
-        } else if self.book_slug == "items" || self.book_slug == "machines" {
-            Entry::list(&q, self.book_slug == "machines").into_iter().map(|e| crate::wiki::slug(e.name())).collect()
         } else {
-            crate::wiki::PAGES
-                .iter()
-                .filter(|(slug, md)| {
-                    let title = md.lines().next().unwrap_or("");
-                    slug.contains(&q) || title.to_lowercase().contains(&q)
-                })
-                .map(|(s, _)| (*s).to_string())
-                .collect()
+            Entry::list(&q, self.book_slug == "machines").into_iter().map(|e| crate::wiki::slug(e.name())).collect()
         };
         self.book_selected = self.book_selected.min(self.book_results.len().saturating_sub(1));
     }
@@ -948,22 +1388,50 @@ impl App {
         true
     }
 
+    /// Adds the page being read to the bookmarks bar, or takes it off, and saves the list.
+    pub fn book_toggle_mark(&mut self) {
+        let slug = self.book_slug.clone();
+        if let Some(i) = self.settings.bookmarks.iter().position(|s| *s == slug) {
+            self.settings.bookmarks.remove(i);
+        } else {
+            self.settings.bookmarks.push(slug);
+        }
+        if let Some(path) = &self.settings_path {
+            let _ = self.settings.save(path);
+        }
+    }
+
     #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
         if self.book_typing {
             match k.code {
                 KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => self.book_query.push(c),
                 KeyCode::Backspace => {
-                    self.book_query.pop();
+                    // With nothing typed on the start page, Backspace goes back like anywhere else.
+                    if self.book_query.is_empty() && self.book_slug == "start" {
+                        self.book_back();
+                    } else {
+                        self.book_query.pop();
+                    }
                 }
                 KeyCode::Enter => {
-                    if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
-                        self.book_go_slug(&slug);
+                    let grid = self.book_slug == "items" || self.book_slug == "machines";
+                    if grid {
+                        if let Some(slug) = self.book_results.get(self.book_selected).cloned() {
+                            self.book_go_slug(&slug);
+                            self.book_query.clear();
+                            self.book_results.clear();
+                        }
+                        self.book_typing = false;
+                    } else {
+                        let q = self.book_query.clone();
+                        self.book_typing = false;
                         self.book_query.clear();
-                        self.book_results.clear();
+                        self.book_submit_search(&q);
                     }
-                    self.book_typing = false;
                 }
+                KeyCode::Tab => self.book_cycle_tab(true),
+                KeyCode::BackTab => self.book_cycle_tab(false),
                 KeyCode::Up => {
                     self.book_selected = self.book_selected.saturating_sub(1);
                     if self.book_selected < self.book_scroll as usize {
@@ -976,52 +1444,83 @@ impl App {
                         self.book_scroll = self.book_selected.saturating_sub(self.book_result_capacity.saturating_sub(1)) as u16;
                     }
                 }
-                KeyCode::Esc => self.book_typing = false,
+                KeyCode::Esc => {
+                    self.book_typing = false;
+                    if !(self.book_slug == "items" || self.book_slug == "machines") {
+                        self.book_query.clear();
+                        self.book_results.clear();
+                    }
+                }
                 _ => {}
             }
             self.book_search();
             return;
         }
+        // The sign-in boxes take every key while they are open, and `i` or Enter opens them.
+        if self.book_login_typing {
+            self.login_key(k);
+            return;
+        }
+        if self.book_asks_login() && matches!(k.code, KeyCode::Char('i') | KeyCode::Enter) {
+            self.start_login();
+            return;
+        }
         match (k.code, action) {
             (KeyCode::Char('b'), _) | (_, Some(Action::Book | Action::Back)) => {
                 self.book = false;
-                return;
+            }
+            (KeyCode::Enter, _) if k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::SHIFT) => {
+                // Shift+Enter: the selected link opens in a tab of its own.
+                let slug = if self.book_query.is_empty() {
+                    self.book_urls.get(self.book_selected).map(|(_, s)| s.clone())
+                } else {
+                    self.book_results.get(self.book_selected).cloned()
+                };
+                if let Some(slug) = slug {
+                    self.book_query.clear();
+                    self.book_results.clear();
+                    self.book_new_tab(&slug);
+                }
+            }
+            (KeyCode::Char('w'), _) => {
+                self.book_close_tab();
+            }
+            (KeyCode::Tab, _) => {
+                self.book_cycle_tab(true);
+            }
+            (KeyCode::BackTab, _) => {
+                self.book_cycle_tab(false);
+            }
+            (KeyCode::Char('+'), _) => {
+                self.book_new_tab("start");
+            }
+            (KeyCode::Char('*'), _) => {
+                self.book_toggle_mark();
             }
             (KeyCode::Char('/'), _) => {
                 self.book_typing = true;
-                self.book_query.clear();
+                self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
                 self.book_search();
-                return;
             }
             (KeyCode::PageUp, _) => {
                 self.book_scroll = self.book_scroll.saturating_sub(5);
-                return;
             }
             (KeyCode::PageDown, _) => {
                 self.book_scroll += 5;
-                return;
             }
             (KeyCode::Backspace, _) => {
-                if let Some(slug) = self.book_history.pop() {
-                    self.book_forward.push(self.book_slug.clone());
-                    self.book_slug = slug;
-                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
-                        self.book_entry = e;
-                    }
-                    self.book_scroll = 0;
-                }
-                return;
+                self.book_back();
             }
             (KeyCode::Char(']'), _) => {
-                if let Some(slug) = self.book_forward.pop() {
-                    self.book_history.push(self.book_slug.clone());
-                    self.book_slug = slug;
-                    if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
-                        self.book_entry = e;
-                    }
-                    self.book_scroll = 0;
+                self.book_forward();
+            }
+            (KeyCode::Left | KeyCode::Right, _) if self.book_slug.starts_with("search?q=") => {
+                // On a results page the side arrows jump straight to the previous or next result.
+                let n = self.book_hits.as_ref().map_or(0, |(_, h)| h.len());
+                if n > 0 {
+                    self.book_pick = if k.code == KeyCode::Right { (self.book_pick + 1) % n } else { (self.book_pick + n - 1) % n };
+                    self.book_pick_follow = true;
                 }
-                return;
             }
             (KeyCode::Left | KeyCode::Right, _) if self.book_query.is_empty() => {
                 // Along the current line: the nearest link to the left or right on the same row.
@@ -1046,7 +1545,6 @@ impl App {
                         self.book_selected = i;
                     }
                 }
-                return;
             }
             (KeyCode::Up, _) | (_, Some(Action::MoveUp)) => {
                 if !self.book_query.is_empty() {
@@ -1070,7 +1568,6 @@ impl App {
                     self.book_scroll = self.book_max_scroll;
                     self.book_selected = usize::MAX;
                 }
-                return;
             }
             (KeyCode::Down, _) | (_, Some(Action::MoveDown)) => {
                 if !self.book_query.is_empty() {
@@ -1095,7 +1592,6 @@ impl App {
                     self.book_scroll = 0;
                     self.book_selected = 0;
                 }
-                return;
             }
             (KeyCode::Enter, _) => {
                 if !self.book_query.is_empty() {
@@ -1112,14 +1608,15 @@ impl App {
                         self.book_go_slug(&slug);
                     }
                 }
-                return;
             }
+            // f and F fold posts, on a thread only; everywhere else a letter starts a search.
+            (KeyCode::Char('f'), _) if crate::web::thread(&self.book_slug).is_some() => self.book_fold(false),
+            (KeyCode::Char('F'), _) if crate::web::thread(&self.book_slug).is_some() => self.book_fold(true),
             (KeyCode::Char(c), _) if c.is_alphabetic() => {
                 self.book_typing = true;
                 self.book_query.clear();
                 self.book_query.push(c);
                 self.book_search();
-                return;
             }
             _ => {}
         }
@@ -1134,6 +1631,55 @@ impl App {
             MouseEventKind::Down(MouseButton::Left) => {
                 if !inside {
                     self.book = false;
+                    return;
+                }
+                if let Some((_, i)) = self.book_tab_close.iter().find(|(r, _)| r.contains(at)) {
+                    self.book_switch(*i);
+                    self.book_close_tab();
+                    return;
+                }
+                if let Some((_, i)) = self.book_tab_hits.iter().find(|(r, _)| r.contains(at)) {
+                    self.book_switch(*i);
+                    return;
+                }
+                if let Some((_, button)) = self.book_buttons.iter().find(|(r, _)| r.contains(at)) {
+                    match button {
+                        BookButton::Back => self.book_back(),
+                        BookButton::Forward => self.book_forward(),
+                        BookButton::Reload => self.book_reload(),
+                        BookButton::Home => self.book_go_slug("start"),
+                        BookButton::NewTab => self.book_new_tab("start"),
+                        BookButton::Star => self.book_toggle_mark(),
+                        BookButton::Search => {
+                            let q = self.book_query.clone();
+                            self.book_submit_search(&q);
+                        }
+                        BookButton::Lucky => {
+                            let q = self.book_query.clone();
+                            if let Some(slug) = self.book_lucky(&q) {
+                                self.book_go_slug(&slug);
+                            }
+                        }
+                        BookButton::Copy => self.book_copy(),
+                        BookButton::Edit => {
+                            self.book_typing = true;
+                            self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
+                        }
+                    }
+                    return;
+                }
+                if let Some(slug) = self.book_click_only.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
+                    self.book_go_slug(&slug);
+                    return;
+                }
+                if let Some(slug) = self.book_mark_hits.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
+                    self.book_go_slug(&slug);
+                    return;
+                }
+                // The `[+] n replies hidden` row of a folded post opens it again.
+                if let Some((_, post)) = self.book_fold_hits.iter().find(|(r, _)| r.contains(at)).copied() {
+                    self.book_folded.retain(|i| *i != post);
+                    self.book_selected = self.book_selected.min(self.book_urls.len().saturating_sub(1));
                     return;
                 }
                 if let Some(slug) = self.book_urls.iter().find(|(r, _)| r.contains(at)).map(|(_, s)| s.clone()) {
@@ -2188,7 +2734,7 @@ fn thousands(n: u64) -> String {
     let digits = n.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);

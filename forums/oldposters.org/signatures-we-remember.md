@@ -1,0 +1,35 @@
+# Signatures we remember
+board: Archive   date: Y152-06-14   author: archive_clerk   status: open
+
+- archive_clerk | Y152-06-14 | A signature is the only thing on this board that a person chooses for themselves and never has to defend. I have been collecting them. Post the ones you remember, and who they belonged to.
+  - greasy_hands: *Grease is honest.*
+  - Voss_shift: *Coal built this place.*
+  - eldermill: *Mind the mill.*
+  - the_first_drill: *Somebody has to start.*
+  - Marnie_Q: *Put it back where you found it.*
+  - GerdV | Y152-06-14 | *A good seam is a quiet seam.* I did not choose it. It was on a plate in the welding bay and I took it.
+    - archive_clerk | Y152-06-14 | Then it was chosen twice.
+  - OldHollowmere | Y152-06-15 | *The hill remembers what we forget.* My father had it on a card in his wallet. He could not have told you what it meant.
+    - archive_clerk | Y152-06-15 | Do you know what it means?
+      - OldHollowmere | Y152-06-15 | No. I have been using it for forty years.
+  - MillaOnNights | Y152-06-15 | *The night line does not argue.* I wrote it after an argument on the night line.
+    - third_shift_tom | Y152-06-15 | I remember the argument. You won it by leaving.
+      - MillaOnNights | Y152-06-15 | I won it by leaving.
+  - TamsinR | Y152-06-16 | I have had four. *Apprentice, Line 1.* Then *Operator, Line 1.* Then *Shift lead, nights.* Now *Nothing to add.*
+    - archive_clerk | Y152-06-16 | Which was the true one?
+      - TamsinR | Y152-06-16 | The first one. The rest were jobs.
+        - archive_clerk | Y152-06-16 | I will put all four in.
+  - brass_tally | Y152-06-17 | *Measure twice. Belt once.* I have had it since Y120 and I have never once measured twice.
+    - OldHollowmere | Y152-06-17 | That is the best thing you have ever written.
+      - brass_tally | Y152-06-17 | It is the truest, which is not the same.
+  - sign_writer | Y152-06-18 | *Please read the notice.* Nobody reads the notice.
+  - quiet_oswin | Y152-06-19 | I have no signature.
+    - archive_clerk | Y152-06-19 | That is a signature of a kind. I have put a dash.
+      - quiet_oswin | Y152-06-19 | A dash is accurate.
+  - [Deleted User #4471] | Y152-06-20 | *If it is not written down, it did not happen.*
+    - brass_tally | Y152-06-20 | That is ForemanEllis's line.
+      - [Deleted User #4471] | Y152-06-20 | Yes.
+        - ForemanEllis | Y152-06-21 | I took it from somewhere. I cannot remember where.
+  - archive_clerk | Y155-01-09 | An addition, from a thread in Y131. [Deleted User #209] had no signature either. When asked, he wrote: *The number is enough.*
+    - GerdV | Y155-01-09 | I remember that.
+      - archive_clerk | Y155-01-09 | So do I. That is why it is in the archive.

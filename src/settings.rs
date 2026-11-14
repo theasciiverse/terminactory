@@ -175,7 +175,7 @@ impl GraphRange {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub sidebar_graph: GraphShow,
@@ -185,7 +185,26 @@ pub struct Settings {
     pub telegram_style: TelegramStyle,
     /// Quiet hints and asides on the idle status line.
     pub hints: OnOff,
+    /// T Web bookmarks: wiki page slugs, in the order the bar shows them.
+    pub bookmarks: Vec<String>,
 }
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            sidebar_graph: GraphShow::default(),
+            sidebar_graph_range: GraphRange::default(),
+            small_view: SmallView::default(),
+            small_width: Cols::default(),
+            telegram_style: TelegramStyle::default(),
+            hints: OnOff::default(),
+            bookmarks: DEFAULT_BOOKMARKS.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+}
+
+/// The bookmarks a new settings file starts with.
+pub const DEFAULT_BOOKMARKS: &[&str] = &["home", "getting-started", "machines", "items"];
 
 impl Settings {
     /// Whether a pane of this size gets the small-pane view (before `m`'s session override).
@@ -299,6 +318,9 @@ impl Settings {
         s.small_width = field(map, "small_width", &mut problems);
         s.telegram_style = field(map, "telegram_style", &mut problems);
         s.hints = field(map, "hints", &mut problems);
+        if map.contains_key("bookmarks") {
+            s.bookmarks = field(map, "bookmarks", &mut problems);
+        }
         let note = (!problems.is_empty()).then(|| format!("settings.json: {}; using the default there", problems.join(", ")));
         (s, note)
     }
@@ -348,6 +370,7 @@ mod tests {
             small_width: Cols(140),
             telegram_style: TelegramStyle::Ticker,
             hints: OnOff::Off,
+            bookmarks: vec!["power".to_string(), "waste".to_string()],
         };
         s.save(&path).unwrap();
         let (back, note) = Settings::load_or_create(&path);
