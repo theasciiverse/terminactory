@@ -172,7 +172,16 @@ pub fn search(query: &str) -> Vec<Hit> {
     }
     for page in WEB_INDEX.iter() {
         let lines: Vec<&str> = page.lines.iter().map(String::as_str).collect();
-        if let Some((score, hit)) = score_page(page.addr, &page.title, &page.text, &lines, &words) {
+        if let Some((mut score, hit)) = score_page(page.addr, &page.title, &page.text, &lines, &words) {
+            // A profile that only mentions the word in its text sinks below real pages; one whose
+            // name or title has the word (a search for a person) keeps its score.
+            let named = {
+                let head = format!("{} {}", page.addr, page.title).to_lowercase();
+                words.iter().any(|w| head.contains(w.as_str()))
+            };
+            if page.addr.contains("/@") && !named {
+                score /= 4;
+            }
             scored.push((score, true, hit));
         }
     }
@@ -215,6 +224,16 @@ mod tests {
         // Only the gated fixture page has this word.
         assert!(search("changeover").is_empty(), "a gated page's text is not indexed: {:?}", search("changeover"));
         assert!(!search("Shift notes").iter().any(|h| h.slug == "portal.example.lan/gate"));
+    }
+
+    #[test]
+    fn profiles_that_only_mention_a_word_rank_below_real_pages() {
+        let hits = search("home");
+        let first_profile = hits.iter().position(|h| h.slug.contains("/@")).unwrap_or(hits.len());
+        let last_page = hits.iter().rposition(|h| !h.slug.contains("/@")).unwrap_or(0);
+        assert!(last_page < first_profile || first_profile > 20, "profiles flood the top: {:?}", &hits[..hits.len().min(25)]);
+        // Searching a person's name still finds the profile first.
+        assert!(search("brass_tally").first().is_some_and(|h| h.slug.contains("@brass_tally")), "{:?}", &search("brass_tally")[..3]);
     }
 
     #[test]
