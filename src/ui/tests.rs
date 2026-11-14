@@ -2634,7 +2634,7 @@ fn item_and_machine_pages_show_their_place_in_the_research_tree() {
 fn item_pages_chart_how_research_fades_with_sales() {
     let mut w = World::new();
     w.econ.research_sales[Item::Coke.idx()] = 100;
-    let fade = crate::ui::research_fade(&w, Item::Coke, 80).expect("coke earns research");
+    let fade = crate::ui::research_fade(&w, Item::Coke).expect("coke earns research");
     println!("{fade}");
     assert!(
         fade.contains("The first unit sold brings 8.00") && fade.contains("down to 0.24") && fade.contains("You have sold 100"),
@@ -2642,7 +2642,7 @@ fn item_pages_chart_how_research_fades_with_sales() {
     );
     assert!(!fade.contains('█'), "the chart lives in the infobox: {fade}");
     // Waste earns nothing, so it has no chart.
-    assert!(crate::ui::research_fade(&w, Item::Waste, 80).is_none());
+    assert!(crate::ui::research_fade(&w, Item::Waste).is_none());
     // On the page itself.
     let mut app = App::new(w);
     app.book = true;

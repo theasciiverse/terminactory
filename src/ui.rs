@@ -4376,7 +4376,7 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
         }
     }
     if let Entry::Item(item) = entry {
-        if let Some(fade) = research_fade(world, item, width) {
+        if let Some(fade) = research_fade(world, item) {
             out.push_str("\n## Research from sales\n");
             out.push_str(&fade);
         }
@@ -4414,7 +4414,7 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
 
 /// How much research each unit sold brings, and how it fades, in words. The chart of it is in the
 /// infobox (`fade_chart`).
-pub(crate) fn research_fade(world: &World, item: Item, width: usize) -> Option<String> {
+pub(crate) fn research_fade(world: &World, item: Item) -> Option<String> {
     let c = item.curve();
     if c.worth <= 0.0 {
         return None;
