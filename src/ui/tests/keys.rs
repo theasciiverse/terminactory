@@ -30,7 +30,8 @@ fn the_tree_shows_both_keys_of_a_company() {
         assert!(details[2].0.contains("Make copper wire or molten iron once: it opens Ashgrove"), "{}", details[2].0);
         // And on screen.
         let mut app = App::new(w);
-        app.tree = true;
+        app.open_site("research");
+        app.book_full = true;
         app.tree_pick = crate::research::node_id_for_tech(Tech::Crusher).unwrap();
         let t = text(&render(&mut app, 130, 42));
         assert!(t.contains("copper wire or molten iron"), "{t}");

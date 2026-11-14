@@ -320,8 +320,7 @@ pub struct App {
     pub power_view: bool,
     /// The build category whose parts the number keys pick (None = keys pick a category).
     pub menu: Option<Category>,
-    /// The research screen is open, and the selected TREE node id.
-    pub tree: bool,
+    /// The research site's selected TREE node id.
     pub tree_pick: usize,
     /// TREE node ids opened in the research tree for this session.
     pub tree_expanded: std::collections::HashSet<usize>,
@@ -408,8 +407,7 @@ pub struct App {
     pub mail_area: Rect,
     /// Where the sidebar's earnings charts were drawn (none when hidden or in the small-pane view).
     pub graph_areas: Vec<Rect>,
-    /// The production panel is open (over the map; the game keeps running), and its scroll.
-    pub stats: bool,
+    /// The production site's scroll.
     pub stats_scroll: u16,
     /// The panel's History tab is showing (Tab switches), with its chart range, whether the chart
     /// shows research instead of money.
@@ -481,10 +479,8 @@ impl App {
             help: false,
             power_view: false,
             menu: None,
-            tree: false,
             tree_pick: 1,
             tree_expanded: std::collections::HashSet::new(),
-            stats: false,
             stats_scroll: 0,
             stats_history: false,
             hist_range: Range::Hours,
@@ -740,34 +736,9 @@ impl App {
         };
         let action = self.controls.action(k.code).or_else(|| lower.and_then(|l| self.controls.action(l)));
         let shift = k.modifiers.contains(KeyModifiers::SHIFT) || lower.is_some();
-        // A telegram can be read from over the tree or the book too (they cover the sidebar).
-        if (self.tree || (self.book && !self.book_typing)) && action == Some(Action::Mail) && self.mail.is_some() {
+        // A telegram can be read from over the book too (it covers the sidebar).
+        if (self.book && !self.book_typing) && action == Some(Action::Mail) && self.mail.is_some() {
             self.mail_open = true;
-            return;
-        }
-        if self.tree {
-            self.tree_key(k.code, action);
-            return;
-        }
-        if self.stats && !self.book {
-            // Arrows scroll it, o or Esc closes it, pause and speed work without closing it;
-            // any other key closes it and goes on to the game.
-            match (k.code, action) {
-                (KeyCode::Tab | KeyCode::BackTab, _) => self.stats_tab(!self.stats_history),
-                _ if self.stats_history && self.history_key(k.code) => {}
-                (KeyCode::PageUp, _) => self.stats_scroll = self.stats_scroll.saturating_sub(5),
-                (KeyCode::PageDown, _) => self.stats_scroll += 5,
-                (_, Some(Action::MoveUp)) if !shift => self.stats_scroll = self.stats_scroll.saturating_sub(1),
-                (_, Some(Action::MoveDown)) if !shift => self.stats_scroll += 1,
-                (_, Some(Action::Stats | Action::Back)) => self.stats = false,
-                (_, Some(Action::Pause)) => self.paused = !self.paused,
-                (_, Some(Action::Faster)) => self.speed = (self.speed * 2).min(8),
-                (_, Some(Action::Slower)) => self.speed = (self.speed / 2).max(1),
-                _ => {
-                    self.stats = false;
-                    self.on_key(k);
-                }
-            }
             return;
         }
         if self.book {
@@ -2008,7 +1979,6 @@ impl App {
             (_, Some(Action::MoveUp)) => self.select_visible(ids.get(at.saturating_sub(1)).copied()),
             (_, Some(Action::MoveDown)) => self.select_visible(ids.get((at + 1).min(n - 1)).copied()),
             (_, Some(Action::Place)) if crate::research::tech_for_node(self.tree_pick).is_some() => self.buy_research(),
-            (_, Some(Action::Tree | Action::Back)) => self.tree = false,
             _ => {}
         }
     }
@@ -2066,29 +2036,11 @@ impl App {
             self.book_mouse(m);
             return;
         }
-        if self.tree && !self.mail_open && self.away.is_none() && !self.help {
-            self.tree_mouse(m);
-            return;
-        }
-        if self.library.is_some() && !self.help && self.away.is_none() && !self.tree && !self.book {
+        if self.library.is_some() && !self.help && self.away.is_none() && !self.book {
             self.library_mouse(m);
             return;
         }
-        if self.tree || self.book || self.help || self.settings_open || self.away.is_some() {
-            return;
-        }
-        if self.stats {
-            // The panel covers the map: the wheel scrolls it and a click closes it.
-            match m.kind {
-                MouseEventKind::ScrollUp => self.stats_scroll = self.stats_scroll.saturating_sub(1),
-                MouseEventKind::ScrollDown => self.stats_scroll += 1,
-                MouseEventKind::Down(_) => match self.stats_hits.iter().find(|(r, _)| r.contains((m.column, m.row).into())) {
-                    Some((_, StatsHit::Tab(h))) => self.stats_tab(*h),
-                    Some((_, StatsHit::Range(r))) => self.hist_range = *r,
-                    None => self.stats = false,
-                },
-                _ => {}
-            }
+        if self.book || self.help || self.settings_open || self.away.is_some() {
             return;
         }
         let tile = self.screen_to_tile(m.column, m.row);

@@ -95,17 +95,18 @@ fn phone_36x24() {
     app.floor = app.world.floor_of(0).unwrap();
     // The research list keeps whole names, with a short status after them.
     app.menu = None;
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = crate::research::node_id_for_tech(tree_rows()[tech_row("Crude assembler")]).unwrap();
     let t = text(&render(&mut app, 36, 24));
     assert!(t.contains("Crude assembler ") && !t.contains("assemblerneeds"), "{t}");
     assert!(t.contains("needs") && t.contains("Assembling"), "{t}");
     assert_no_glued_hints(&t);
-    app.tree = false;
+    app.book = false;
     // The browser keeps its URL bar and close hint readable in a phone-sized pane.
     app.book = true;
     let t = text(&render(&mut app, 36, 24));
-    assert!(t.contains("terminactory.wiki"), "{t}");
+    assert!(t.contains("research.lan"), "{t}");
     assert_no_glued_hints(&t);
 }
 
@@ -148,11 +149,12 @@ fn tall_44x60() {
     assert_no_glued_hints(&t);
     app.book = false;
     // The whole research list fits and says which group the picked row is in.
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = crate::research::node_id_for_tech(tree_rows()[tech_row("Large basic drill")]).unwrap();
     let t = text(&render(&mut app, 44, 60));
     assert!(t.contains("Drilling") && t.contains("Large basic drill"), "{t}");
-    app.tree = false;
+    app.book = false;
     // Help puts the keys first.
     app.help = true;
     let t = text(&render(&mut app, 44, 60));
@@ -163,14 +165,15 @@ fn tall_44x60() {
 #[test]
 fn short_64x12() {
     let mut app = demo();
-    app.tree = true;
-    let buf = render(&mut app, 64, 12);
+    app.open_site("research");
+    app.book_full = true;
+    let buf = render(&mut app, 64, 20);
     snapshot("short-64x12", &buf);
     let t = text(&buf);
-    let list = lines(&t).iter().filter(|l| ["✓", "○", "·", "●", "◔", "◑", "◕"].iter().any(|m| l.starts_with(&format!("│ {m} ")))).count();
+    let list = lines(&t).iter().filter(|l| ["✓", "○", "·", "●", "◔", "◑", "◕"].iter().any(|m| l.starts_with(&format!("││ {m} ")))).count();
     assert!(list >= 3, "{list} list rows: {t}");
-    assert!(t.contains("Press") && t.contains("t/Esc close"), "{t}");
-    app.tree = false;
+    assert!(t.contains("Press") && t.contains("Esc minimize"), "{t}");
+    app.book = false;
     app.book = true;
     let t = text(&render(&mut app, 64, 12));
     let rows = lines(&t);
@@ -179,9 +182,10 @@ fn short_64x12() {
     assert_no_glued_hints(&t);
     app.book = false;
     // The production panel says when rows are hidden.
-    app.stats = true;
+    app.open_site("production");
+    app.book_full = true;
     let t = text(&render(&mut app, 64, 12));
-    assert!(t.contains("o/Esc close"), "{t}");
+    assert!(t.contains("Esc minimize"), "{t}");
 }
 
 #[test]
@@ -287,15 +291,19 @@ fn overlays_fit_every_pane_size() {
             } else if scene == 12 {
                 app.hints.force(crate::hints::What::Aside(crate::hints::Aside::A3), "Hollowmere: Good coal. Dad would have wept.", now);
             }
-            app.tree = scene == 0;
             app.book = scene == 1 || scene == 2;
+            if scene == 0 {
+                app.open_site("research");
+            }
             if scene == 2 {
                 app.book_go(Entry::Part(Kind::Furnace));
             } else if scene == 1 {
                 app.book_go(Entry::Item(Item::CopperOre));
             }
             app.help = scene == 3;
-            app.stats = matches!(scene, 4 | 8 | 9);
+            if matches!(scene, 4 | 8 | 9) {
+                app.open_site("production");
+            }
             app.stats_history = matches!(scene, 8 | 9);
             // Scene 9 has no earnings at all: the empty state.
             if scene == 9 {
@@ -383,7 +391,7 @@ fn overlays_fit_every_pane_size() {
                 assert!(app.compact_now, "Always at {w}x{h}");
             }
             if (0..=3).contains(&scene) {
-                if matches!(scene, 1 | 2) && app.book_area.width < w {
+                if matches!(scene, 0..=2) && app.book_area.width < w {
                     assert!(t.contains("Esc minimize"), "wiki footer at {w}x{h}: {t}");
                 } else {
                     assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));

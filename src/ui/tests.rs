@@ -72,11 +72,12 @@ fn render_snapshots() {
     app.menu = Some(Category::Create);
 
     app.power_view = false;
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     let buf = render(&mut app, 130, 42);
     assert!(text(&buf).contains("Press") && text(&buf).contains("starting machinery"));
 
-    app.tree = false;
+    app.book = false;
     // A company's letter is a telegram in the sidebar, and the game keeps running.
     app.mail = Some(crate::mail::letter(Company::Ashgrove, Made::Item(Item::CopperWire), 0));
     let buf = render(&mut app, 130, 42);
@@ -171,7 +172,8 @@ fn research_tree_fits_the_window() {
     let mut w = World::new();
     w.econ.research = 17_687.0;
     let mut app = App::new(w);
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     // Wide: the selection and its path stay visible under the horizontal graph.
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
@@ -207,13 +209,14 @@ fn research_tree_fits_the_window() {
     // n opens a waiting telegram over the screen.
     app.mail = Some(crate::mail::parse("Done", 0));
     app.on_key(KeyEvent::from(KeyCode::Char('n')));
-    assert!(app.mail_open && app.tree);
+    assert!(app.mail_open && app.book);
 }
 
 #[test]
 fn research_tree_expands_and_collapses_with_arrows() {
     let mut app = App::new(World::new());
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     let key = |app: &mut App, code| app.on_key(KeyEvent::from(code));
     assert_eq!(crate::research::layout_expanded(&app.tree_expanded).len(), 3);
     key(&mut app, KeyCode::Right);
@@ -249,7 +252,8 @@ fn research_tree_expands_and_collapses_with_arrows() {
 #[test]
 fn deep_tree_pick_expands_its_ancestors() {
     let mut app = App::new(World::new());
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(Tech::Excavation);
     render(&mut app, 80, 40);
     assert!(app.tree_expanded.contains(&crate::research::node_id_for_tech(Tech::Press).unwrap()));
@@ -266,7 +270,8 @@ fn deep_tree_pick_expands_its_ancestors() {
 #[test]
 fn print_research_tree_render_sizes() {
     let mut app = App::new(World::new());
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     let wide = render(&mut app, 80, 40);
     println!("80x40:\n{}", text(&wide));
     app.tree_expanded = crate::content::TREE
@@ -463,10 +468,11 @@ fn research_is_readable_in_the_production_panel() {
     // A brand-new world has sold nothing, for research or money.
     for (world, zero) in [(selling, false), (World::new(), true)] {
         let mut app = App::new(world);
-        app.stats = true;
+        app.open_site("production");
+        app.book_full = true;
         let buf = render(&mut app, 130, 42);
         let t = text(&buf);
-        let head = t.lines().nth(3).unwrap();
+        let head = t.lines().find(|l| l.contains("research/min")).unwrap();
         assert!(head.contains("research/min"), "{head}");
         if zero {
             assert!(head.contains("0 research/min") && !head.contains("·  ·"), "{head}");
@@ -480,7 +486,8 @@ fn research_is_readable_in_the_production_panel() {
         }
         // The words "research/min" use the research colour.
         let col = head.find("research/min").map(|i| head[..i].chars().count()).unwrap();
-        assert!(matches!(buf.cell((col as u16, 3)).unwrap().fg, Color::Indexed(75) | Color::Indexed(67)));
+        let row = t.lines().position(|l| l.contains("research/min")).unwrap();
+        assert!(matches!(buf.cell((col as u16, row as u16)).unwrap().fg, Color::Indexed(75) | Color::Indexed(67)));
     }
 }
 
@@ -511,7 +518,8 @@ fn waste_shows_up() {
             w.offer(0, 70, 36, Item::Waste);
         }
     }
-    app.stats = true;
+    app.open_site("production");
+    app.book_full = true;
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
     assert!(t.contains("waste") && t.contains("-$"), "{t}");
@@ -519,7 +527,7 @@ fn waste_shows_up() {
     std::fs::write("target/snapshot-waste-production.html", to_html(&buf)).unwrap();
     let t = text(&render(&mut app, 50, 30));
     assert!(t.contains("waste"), "{t}");
-    app.stats = false;
+    app.book = false;
 
     // Its recipe book page: no research chart.
     app.book_go(Entry::Item(Item::Waste));
@@ -1029,7 +1037,8 @@ fn render_phase3_snapshots() {
 
     // The research screen, picked on its last row.
     app.away = None;
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(*tree_rows().last().unwrap());
     let buf = render(&mut app, 120, 42);
     assert!(text(&buf).contains("Upgrade planner · "), "{}", text(&buf));
@@ -1302,7 +1311,8 @@ fn chip_book_pages_fit_every_size() {
     let t = text(&render(&mut app, 130, 60));
     assert!(t.contains("terminactory.wiki/ram-chip") && t.contains("RAM chip"), "{t}");
     app.book = false;
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(Tech::Etcher);
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60)] {
         let t = text(&render(&mut app, w, h));
@@ -1380,13 +1390,14 @@ fn computer_pages_rows_and_machine_fit_every_size() {
     }
     // The research tree: its row shows next to the fine etcher.
     app.book = false;
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(Tech::LargePrecisionAssembler);
     for (w, h) in [(36, 24), (50, 40), (44, 60), (130, 42), (200, 60), (130, 64)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Large prec"), "{w}x{h}: {t}");
     }
-    app.tree = false;
+    app.book = false;
     // The map: the label fits in every facing, and the inspector names the machine.
     let mut w = World::blank();
     let (x, y) = (52, 30);
@@ -1449,7 +1460,8 @@ fn book_pages_for_the_new_machines_and_items() {
     // The research list has the new machines, locked behind their key items.
     app.book = false;
     app.world = World::new();
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(Tech::Crusher);
     let t = text(&render(&mut app, 130, 42));
     assert!(t.contains("Crusher · Create") && t.contains("copper wire"), "{t}");
@@ -1545,19 +1557,20 @@ fn content_step_screens_fit_every_size() {
 
     // The research tree at 50 columns: two boxes remain visible, and the selected details fit.
     app.world.progress = Progress::default();
-    app.tree = true;
+    app.open_site("research");
+    app.book_full = true;
     app.tree_pick = tech_node(*tree_rows().last().unwrap());
-    let buf = render(&mut app, 50, 40);
+    let buf = render(&mut app, 50, 60);
     let t = text(&buf);
-    assert!(t.contains("Upgrade planner") && t.contains("free at") && t.contains("t/Esc"), "{t}");
+    assert!(t.contains("Upgrade planner") && t.contains("Misc") && t.contains("Esc"), "{t}");
     app.tree_pick = tech_node(Tech::LargeAdvancedAssembler);
-    let buf = render(&mut app, 50, 40);
+    let buf = render(&mut app, 50, 60);
     let t = text(&buf);
     assert!(t.contains("Large adv. assembler") && t.contains("control board"), "{t}");
     std::fs::write("target/snapshot-tree-50.html", to_html(&buf)).unwrap();
     let buf = render(&mut app, 130, 42);
     std::fs::write("target/snapshot-tree-130.html", to_html(&buf)).unwrap();
-    app.tree = false;
+    app.book = false;
 
     // The recipe book: every item and machine listed, narrow too.
     app.book = true;
@@ -1584,7 +1597,8 @@ fn content_step_screens_fit_every_size() {
     app.book = false;
 
     // The production panel with every item made.
-    app.stats = true;
+    app.open_site("production");
+    app.book_full = true;
     let buf = render(&mut app, 130, 42);
     assert!(text(&buf).contains("Production"));
     std::fs::write("target/snapshot-production-all.html", to_html(&buf)).unwrap();

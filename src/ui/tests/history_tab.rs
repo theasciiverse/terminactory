@@ -47,7 +47,8 @@ fn app_with_history() -> App {
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
     // These tests count the tab's own glyphs, so the sidebar graph stays out of the way.
     app.settings.sidebar_graph = crate::settings::GraphShow::Off;
-    app.stats = true;
+    app.open_site("production");
+    app.book_full = true;
     app.stats_history = true;
     app
 }
@@ -64,19 +65,19 @@ fn tab_switches_between_production_and_history() {
     assert!(t.contains(" Production ") && t.contains(" History ") && t.contains("last minute"), "{t}");
     assert!(t.contains("Tab history") && !t.contains("less"), "{t}");
     key(&mut app, KeyCode::Tab);
-    assert!(app.stats && app.stats_history);
+    assert!(app.book && app.stats_history);
     let t = text(&render(&mut app, 100, 30));
     assert!(t.contains("Money ·") && t.contains("Tab production"), "{t}");
     assert!(!t.contains("last minute"), "{t}");
     key(&mut app, KeyCode::Tab);
-    assert!(app.stats && !app.stats_history);
-    // Shift+Tab too, and reopening starts on Production.
+    assert!(app.book && !app.stats_history);
+    // Shift+Tab too; Esc puts the browser away and o brings the production site back.
     key(&mut app, KeyCode::BackTab);
     assert!(app.stats_history);
+    key(&mut app, KeyCode::Esc);
+    assert!(!app.book);
     press(&mut app, 'o');
-    assert!(!app.stats);
-    press(&mut app, 'o');
-    assert!(app.book && app.book_slug == "production" && !app.stats_history);
+    assert!(app.book && app.book_slug == "production");
 }
 
 #[test]
@@ -85,14 +86,14 @@ fn clicking_a_tab_switches_to_it() {
     render(&mut app, 100, 30);
     let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Tab(false)).unwrap();
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x + 1, row: r.y, modifiers: KeyModifiers::NONE });
-    assert!(app.stats && !app.stats_history);
+    assert!(app.book && !app.stats_history);
     // And a click on a range pill picks it, a click on a day picks that day.
     app.stats_history = true;
     render(&mut app, 100, 30);
     let (r, _) = *app.stats_hits.iter().find(|(_, h)| *h == crate::app::StatsHit::Range(Range::Days)).unwrap();
     app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: r.x, row: r.y, modifiers: KeyModifiers::NONE });
     assert_eq!(app.hist_range, Range::Days);
-    assert!(app.stats, "still open");
+    assert!(app.book, "still open");
 }
 
 #[test]
@@ -101,16 +102,16 @@ fn range_keys_pick_seconds_minutes_hours_and_days() {
     for (c, r) in [('1', Range::Seconds), ('2', Range::Minutes), ('3', Range::Hours), ('4', Range::Days)] {
         press(&mut app, c);
         assert_eq!(app.hist_range, r, "{c}");
-        assert!(app.stats, "{c} keeps the panel open on the History tab");
+        assert!(app.book, "{c} keeps the panel open on the History tab");
     }
     // [ and ] stay the game's speed keys, and pause works too, all without closing the panel.
     let speed = app.speed;
     press(&mut app, ']');
-    assert_eq!((app.speed, app.hist_range, app.stats), (speed * 2, Range::Days, true));
+    assert_eq!((app.speed, app.hist_range, app.book), (speed * 2, Range::Days, true));
     press(&mut app, '[');
-    assert_eq!((app.speed, app.stats), (speed, true));
+    assert_eq!((app.speed, app.book), (speed, true));
     press(&mut app, 'p');
-    assert!(app.paused && app.stats);
+    assert!(app.paused && app.book);
     press(&mut app, 'p');
     press(&mut app, '1');
     // The chart says which range it is showing.
@@ -125,10 +126,10 @@ fn range_keys_pick_seconds_minutes_hours_and_days() {
     press(&mut app, '4');
     let t = text(&render(&mut app, 100, 30));
     assert!(t.contains("days") && t.contains("Nov"), "{t}");
-    // On the Production tab the same keys are the game's: 1 closes the panel and picks a slot.
+    // On the Production tab the digits are the browser's: 1 picks the first browser tab.
     app.stats_history = false;
     press(&mut app, '1');
-    assert!(!app.stats);
+    assert!(app.book && app.book_slug != "production");
 }
 
 #[test]
@@ -171,18 +172,18 @@ fn no_history_yet_is_a_friendly_empty_state() {
     // And it fits a phone-sized pane.
     let t = text(&render(&mut app, 36, 24));
     assert!(t.contains("Earnings show up here"), "{t}");
-    assert!(t.contains("Esc close") && t.contains("Tab"), "{t}");
+    assert!(t.contains("Esc") && t.contains("Tab"), "{t}");
 }
 
 #[test]
 fn a_short_pane_scrolls_and_says_so() {
     let mut app = app_with_history();
-    let t = text(&render(&mut app, 64, 10));
+    let t = text(&render(&mut app, 64, 14));
     assert!(t.contains("more ▼"), "{t}");
     for _ in 0..5 {
         key(&mut app, KeyCode::PageDown);
     }
-    let t = text(&render(&mut app, 64, 10));
+    let t = text(&render(&mut app, 64, 14));
     assert!(t.contains("more ▲") && t.contains("now"), "{t}");
 }
 

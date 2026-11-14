@@ -88,9 +88,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         graph::draw(f, &graphs, app);
         draw_bottom(f, bottom, app);
     }
-    if app.stats {
-        draw_stats(f, app.map_area, app);
-    }
     if app.log_open {
         maillog::draw_log(f, app.map_area, app);
     }
@@ -99,9 +96,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
     if app.library.is_some() {
         library::draw_library(f, app.map_area, app);
-    }
-    if app.tree {
-        draw_tree(f, f.area(), app);
     }
     if app.book {
         draw_book(f, f.area(), app);
@@ -2200,7 +2194,7 @@ fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
     // The Note style shows the note always; the sidebar style only while the tree or book covers the sidebar.
     let note = match app.settings.telegram_style {
         TelegramStyle::Note => mail_note(app, area.width),
-        TelegramStyle::Sidebar if app.tree || app.book => mail_note(app, area.width),
+        TelegramStyle::Sidebar if app.book => mail_note(app, area.width),
         _ => None,
     };
     let avail = (area.width as usize).saturating_sub(note.as_ref().map_or(0, |n| n.chars().count()));
@@ -2397,7 +2391,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
         let mut hints = vec![
             (0, if narrow { "Tab switch" } else { "Tab production" }),
             (0, "1-4 range"),
-            (0, if narrow { "Esc close" } else { close.as_str() }),
+            (0, if narrow { "Esc" } else { close.as_str() }),
             (3, "PgUp/PgDn scroll"),
             (4, "the game keeps running"),
         ];
@@ -2734,7 +2728,7 @@ fn draw_tree_list(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Footer: keys, and which way the list goes on.
-    let close = format!("{}/Esc close", app.controls.key(Action::Tree));
+    let close = "Esc minimize".to_string();
     let more = match (top > 0, top + view < lines.len()) {
         (true, true) => Some("more ▲▼"),
         (true, false) => Some("more ▲"),
@@ -3024,9 +3018,9 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
     }
     let more = (!more.is_empty()).then(|| format!("{} more", more.join(" ")));
     let hints = if width < 60 {
-        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter"), (0, "t/Esc")]
+        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter"), (0, "Esc")]
     } else {
-        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter research"), (0, "t/Esc close")]
+        vec![(3, "↑↓ move"), (2, "→ open"), (2, "← close"), (1, "Enter research"), (0, "Esc minimize")]
     };
     f.render_widget(Paragraph::new(footer_line(width, &hints, more.as_deref())), Rect::new(x0, footer_y, width, 1));
 }
