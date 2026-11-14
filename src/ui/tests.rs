@@ -2313,3 +2313,22 @@ fn a_sign_in_form_takes_typing_even_when_the_search_box_had_the_keys() {
     assert_eq!(app.book_login.as_ref().map(|f| f.user.as_str()), Some("ab"));
     assert!(app.book_query.is_empty());
 }
+
+#[test]
+fn signing_in_on_the_login_page_opens_the_domain() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_go_slug("portal.plant3.lan/login");
+    let account = crate::web::accounts("portal.plant3.lan").into_iter().next().expect("an account");
+    for c in account.user.chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Tab));
+    for c in account.pass.chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "portal.plant3.lan");
+    assert!(app.book_signed_in("portal.plant3.lan").is_some());
+}

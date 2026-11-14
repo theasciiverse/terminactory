@@ -1314,11 +1314,16 @@ impl App {
             crate::web::accounts(&domain).into_iter().find(|a| a.user.eq_ignore_ascii_case(form.user.trim()) && a.pass == form.pass);
         match account {
             Some(a) => {
+                let on_login_page = self.book_slug.trim_end_matches('/') == format!("{domain}/login");
                 self.book_logins.retain(|(d, _)| *d != domain);
-                self.book_logins.push((domain, a.user));
+                self.book_logins.push((domain.clone(), a.user));
                 self.book_login = None;
                 self.book_login_typing = false;
                 self.book_selected = 0;
+                // The domain's own login page leads on to the domain; a gated page just opens.
+                if on_login_page {
+                    self.book_go_slug(&domain);
+                }
             }
             None => {
                 if let Some(f) = self.book_login.as_mut() {
