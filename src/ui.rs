@@ -5085,28 +5085,44 @@ fn table_rows(block: &[&str], width: usize) -> Vec<Vec<(char, Option<String>, bo
     }
     let gap = " │ ";
     let mut total = widths.iter().sum::<usize>() + gap.chars().count() * cols.saturating_sub(1);
+    // Columns shrink from the widest down, never below a few letters; long cells wrap.
+    let floor = |w: usize| w.min(8);
     while total > width {
-        let Some((i, _)) = widths.iter().enumerate().filter(|(_, w)| **w > 1).max_by_key(|(_, w)| **w) else { break };
+        let Some((i, _)) = widths.iter().enumerate().filter(|(_, w)| **w > floor(**w)).max_by_key(|(_, w)| **w) else { break };
         widths[i] -= 1;
         total -= 1;
     }
-    rows.iter()
-        .map(|row| {
+    let mut out_rows = Vec::new();
+    for row in &rows {
+        let cells: Vec<Vec<Vec<(char, Option<String>, bool)>>> = widths
+            .iter()
+            .enumerate()
+            .map(|(i, w)| {
+                let wrapped = wrap_wiki_chars(inline_chars(row.get(i).copied().unwrap_or("")), (*w).max(1));
+                if wrapped.is_empty() {
+                    vec![Vec::new()]
+                } else {
+                    wrapped
+                }
+            })
+            .collect();
+        let height = cells.iter().map(Vec::len).max().unwrap_or(1);
+        for line_no in 0..height {
             let mut out = Vec::new();
             for (i, w) in widths.iter().enumerate() {
                 if i > 0 {
                     out.extend(gap.chars().map(|c| (c, None, false)));
                 }
-                let mut cell = inline_chars(row.get(i).copied().unwrap_or(""));
-                cell.truncate(*w);
+                let cell = cells[i].get(line_no).cloned().unwrap_or_default();
                 let len = cell.len();
                 out.extend(cell);
                 // Pad the cell, but not the last column: a row ends where its text does.
-                out.extend(std::iter::repeat_n((' ', None, false), if i + 1 < cols { w - len } else { 0 }));
+                out.extend(std::iter::repeat_n((' ', None, false), if i + 1 < cols { w.saturating_sub(len) } else { 0 }));
             }
-            out
-        })
-        .collect()
+            out_rows.push(out);
+        }
+    }
+    out_rows
 }
 
 /// A table row's cells: split on `|`, but never on the one inside a `[[target|label]]` link.

@@ -2332,3 +2332,15 @@ fn signing_in_on_the_login_page_opens_the_domain() {
     assert_eq!(app.book_slug, "portal.plant3.lan");
     assert!(app.book_signed_in("portal.plant3.lan").is_some());
 }
+
+#[test]
+fn a_wide_table_wraps_its_long_cells_instead_of_cutting_them() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_logins.push(("portal.plant3.lan".into(), "TamsinR".into()));
+    app.book_slug = "portal.plant3.lan/retirements".into();
+    let screen = text(&render(&mut app, 100, 40));
+    for tail in ["took the stool", "gave it back", "Thursdays."] {
+        assert!(screen.contains(tail), "{tail} was cut off:\n{screen}");
+    }
+}
