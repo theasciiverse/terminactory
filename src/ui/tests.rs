@@ -1741,7 +1741,7 @@ fn wiki_contents_sidebar_only_appears_at_110_inner_columns() {
 }
 
 #[test]
-fn wiki_recipe_cards_close_contents_cover_sections_and_home_tiles_keep_borders() {
+fn wiki_recipe_cards_close_contents_cover_sections_and_home_is_plain() {
     let world = World::new();
     let md = crate::wiki::page("copper-coil").unwrap();
     let page = super::book_page_markdown(&world, Entry::Item(Item::CopperCoil), md, 94);
@@ -1767,12 +1767,12 @@ fn wiki_recipe_cards_close_contents_cover_sections_and_home_tiles_keep_borders()
     app.book = true;
     app.book_slug = "home".into();
     let rendered = text(&render(&mut app, 140, 45));
-    let tiles = rendered.lines().find(|line| line.contains("Machines") && line.contains("Companies")).unwrap();
-    for label in ["│ Machines │", "│  Items   │", "│  Topics  │", "│ Companies │"] {
-        assert!(tiles.contains(label), "tile has both side borders ({label}): {tiles}");
+    let links = rendered.lines().find(|line| line.contains("Machines") && line.contains("Companies")).unwrap();
+    for label in ["Machines", "Items", "Topics", "Companies"] {
+        assert!(links.contains(label), "the link row has {label}: {links}");
     }
-    let back = rendered.lines().find(|line| line.contains("BACK TO THE FACTORY")).unwrap();
-    assert!(back.contains("│     BACK TO THE FACTORY     │"), "the return tile has both side borders: {back}");
+    assert!(rendered.contains("Back to the factory"));
+    assert!(!rendered.contains("Welcome to the"));
 }
 
 #[test]

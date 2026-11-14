@@ -4796,7 +4796,14 @@ fn book_home_markdown(_w: &World, seed: usize) -> String {
         "…that the most valuable item is the [[computer]]?".to_string(),
         "…that a [[boiler]] burns only as much [[coal]] as its grid needs?".to_string(),
     ];
-    let mut out = format!("## ⚙\n## Welcome to the\n**Terminactory Wiki!**\n────────────────────────────────\n## about\n{}\n\n[[getting-started|New here? Start with Getting started]]\n## statistics\n**{} pages**  ·  **{} items · {} machines · {} recipes**\n## navigation\n╭──────────╮ ╭──────────╮ ╭──────────╮ ╭───────────╮\n│ [[machines|Machines]] │ │  [[items|Items]]   │ │  [[topics|Topics]]  │ │ [[companies|Companies]] │\n╰──────────╯ ╰──────────╯ ╰──────────╯ ╰───────────╯\n## did you know?\n", crate::wiki::page("home").unwrap_or("").lines().find(|l| l.starts_with("**Terminactory Wiki**")).unwrap_or("A factory building game about making things, one recipe at a time."), crate::wiki::PAGES.len() + 3, items, machines, recipes);
+    let mut out = format!(
+        "# Terminactory Wiki\n\n{}\n\n[[getting-started|New here? Start with Getting started]]\n\n[[machines|Machines]] · [[items|Items]] · [[topics|Topics]] · [[companies|Companies]]\n\n**{} pages · {} items · {} machines · {} recipes**\n\n## Did you know?\n",
+        crate::wiki::page("home").unwrap_or("").lines().find(|l| l.starts_with("**Terminactory Wiki**")).unwrap_or("A factory building game about making things, one recipe at a time."),
+        crate::wiki::PAGES.len() + 3,
+        items,
+        machines,
+        recipes
+    );
     out.push('\n');
     for i in 0..4 {
         if i > 0 {
@@ -4805,7 +4812,7 @@ fn book_home_markdown(_w: &World, seed: usize) -> String {
         out.push_str("- ");
         out.push_str(&facts[(seed + i * 5) % facts.len()]);
     }
-    out.push_str("\n╭──────────────────────────────╮\n│     [[close-book|BACK TO THE FACTORY]]     │\n╰──────────────────────────────╯\n");
+    out.push_str("\n\n[[close-book|Back to the factory]]\n");
     out
 }
 
