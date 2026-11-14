@@ -4138,7 +4138,7 @@ fn fit_left(s: &str, width: usize) -> String {
 fn recipe_item(item: Item, count: u32) -> String {
     let slug = crate::wiki::slug(item.name());
     let glyph = item_cell(item, Color::Reset).0;
-    format!("{}[[{slug}|{glyph}]] [[{slug}]]", if count > 1 { format!("{count}x ") } else { String::new() })
+    format!("{}{glyph} [[{slug}]]", if count > 1 { format!("{count}x ") } else { String::new() })
 }
 
 fn wiki_visible_width(text: &str) -> usize {
