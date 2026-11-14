@@ -60,27 +60,26 @@ Two of the three also have a worked example on an open page:
 
 ## portal.plant3.lan
 
-The first twenty accounts, all Plant 3 (the account file now holds twenty-three; the later ones are in the tables at the end). The password is the badge number out of the open staff directory, except Percy Ilott, who never changed his word and who has it written down for him.
+Twenty of the twenty-three accounts in the account file, all Plant 3 (the other three are in the tables at the end). The password is the badge number out of the open staff directory, except Percy Ilott, who never changed his word and who has it written down for him.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
-| `One line per account: username` | `password` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `brass_tally` | `3007` | msg.plant7.lan/dm/142/the-belt-once.md — six_belts asks; he spells it out | medium |
 | `ForemanEllis` | `3005` | msg.plant7.lan/dm/142/write-it-down.md — brass_tally spells it out; brass_tally's own word comes first | medium |
-| `TamsinR` | `3012` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
+| `TamsinR` | `3012` | [[portal.plant3.lan/staff-directory|Staff directory]] — her badge number, in the open list | easy |
 | `six_belts` | `3009` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
-| `MillaOnNights` | `3011` | msg.plant7.lan/dm/128/nights-swap-friday.md — she tells six_belts in passing | medium |
+| `MillaOnNights` | `3011` | msg.plant7.lan/dm/130/nights-swap-friday.md — she tells six_belts in passing | medium |
 | `Dorn` | `3016` | msg.plant7.lan/dm/142/drill-belt-next.md — he spells it out to six_belts | medium |
-| `browncoat_bex` | `3008` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
+| `browncoat_bex` | `3008` | [[portal.plant3.lan/staff-directory|Staff directory]] — her badge number, in the open list | easy |
 | `lorn_a` | `3024` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `west_gate_pat` | `3002` | msg.plant7.lan/dm/142/the-code.md — six_belts says the number first; also on the portal notice board, which needs a portal account | easy |
 | `hollis_k` | `3021` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `apryce` | `3020` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `e_stroud` | `3023` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `w_corrin` | `3018` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
-| `mirren_v` | `3022` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
+| `mirren_v` | `3022` | [[portal.plant3.lan/staff-directory|Staff directory]] — her badge number, in the open list | easy |
 | `the_quiet_shift` | `3019` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
-| `Voss_shift` | `3003` | msg.plant7.lan/dm/142/coal-built-this-place.md — browncoat_bex asks; he spells it out | medium |
+| `Voss_shift` | `3003` | msg.plant7.lan/dm/141/coal-built-this-place.md — browncoat_bex asks; he spells it out | medium |
 | `OldHollowmere` | `3001` | msg.plant7.lan/dm/139/the-hill.md — six_belts asks; he answers | medium |
 | `the_first_drill` | `3004` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
 | `eldermill` | `3006` | [[portal.plant3.lan/staff-directory|Staff directory]] — his badge number, in the open list | easy |
@@ -89,72 +88,70 @@ The first twenty accounts, all Plant 3 (the account file now holds twenty-three;
 
 ## selfservice.plant1.lan
 
-The first twenty-five accounts, all Plant 1 (the account file now holds twenty-six; the later one is in the tables at the end). The password is the staff number out of the open list, except the three who were given a word at issue and who use the same word on the message service.
+Twenty-five of the twenty-six accounts in the account file, all Plant 1 (the other one is in the tables at the end). The password is the staff number out of the open list, except the three who were given a word at issue and who use the same word on the message service.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
-| `One line per account: username` | `password` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `Marnie_Q` | `1001` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `Marnie_Q` | `1001` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `canteen_agnes` | `eatwarm` | msg.plant7.lan/dm/142/eat-something-warm.md — soup_ladle asks; she spells it out | medium |
 | `old_bert_hands` | `1003` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `green_helmet` | `1004` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `belt_end_bram` | `1005` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `anvil_jo` | `1006` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `anvil_jo` | `1006` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `molder_max` | `1008` | msg.plant7.lan/dm/140/one-metal.md — rivet_pete asks; he spells it out | medium |
 | `rivet_pete` | `1010` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `NurseOdile` | `firstday` | msg.plant7.lan/dm/144/first-day.md — sign_writer asks; sign_writer's own word has to be got first | hard |
-| `tilda_m` | `1012` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `tilda_m` | `1012` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `tiny_lathe` | `1013` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `sign_writer` | `readit` | msg.plant7.lan/dm/144/read-the-notice.md — apryce asks; he spells it out | medium |
-| `radio_rona` | `1015` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `soup_ladle` | `1016` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `radio_rona` | `1015` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
+| `soup_ladle` | `1016` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `crated_up` | `1017` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `dawn_porter` | `1018` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `foreman_hale` | `1019` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `della_r` | `1020` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `apprentice_nell` | `1021` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `della_r` | `1020` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
+| `apprentice_nell` | `1021` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `hem_of_the_line` | `1022` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `iris_m` | `1023` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `iris_m` | `1023` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 | `young_hal` | `1024` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
 | `apprentice_tomas` | `1025` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `sela_b` | `1026` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
-| `mabel_t` | `1027` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — his staff number, in the open list | easy |
+| `sela_b` | `1026` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
+| `mabel_t` | `1027` | [[selfservice.plant1.lan/staff-numbers|Staff numbers]] — her staff number, in the open list | easy |
 
 
 ## msg.plant7.lan
 
-The first seventy-four accounts, all nine plants (the account file now holds ninety-one; the rest are in the tables at the end). Of the first seventy-four, fifty-four are the staff number off the open day sheet. Twenty are a word, and each word is spoken aloud in a thread by the man who owns it.
+Seventy-four of the hundred and one accounts in the account file, all nine plants (the other twenty-seven are in the tables at the end). Of the seventy-four, fifty-four are the staff number off the open day sheet. Twenty are a word, and each word is spoken aloud in a thread by the person who owns it.
 
 | account | password | where it is written down | how hard |
 |---|---|---|---|
-| `One line per account: username` | `password` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `sign_writer` | `readit` | msg.plant7.lan/dm/144/read-the-notice.md — apryce asks; he spells it out | medium |
-| `tilda_m` | `1012` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `tilda_m` | `1012` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `molder_max` | `onemetal` | msg.plant7.lan/dm/140/one-metal.md — rivet_pete asks; he spells it out | medium |
 | `foreman_hale` | `1019` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `apprentice_nell` | `1021` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `apprentice_nell` | `1021` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `canteen_agnes` | `eatwarm` | msg.plant7.lan/dm/142/eat-something-warm.md — soup_ladle asks; she spells it out | medium |
-| `radio_rona` | `1015` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `radio_rona` | `1015` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `NurseOdile` | `firstday` | msg.plant7.lan/dm/144/first-day.md — sign_writer asks; sign_writer's own word has to be got first | hard |
 | `apprentice_tomas` | `1025` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `young_hal` | `1024` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `mabel_t` | `1027` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `mabel_t` | `1027` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `rivet_pete` | `1010` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `soup_ladle` | `1016` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `soup_ladle` | `1016` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `dawn_porter` | `1018` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `della_r` | `1020` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `iris_m` | `1023` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `della_r` | `1020` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
+| `iris_m` | `1023` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `sand_and_stone` | `2003` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `barter_bert` | `2002` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `brass_tally` | `beltonce` | msg.plant7.lan/dm/142/the-belt-once.md — six_belts asks; he spells it out | medium |
 | `ForemanEllis` | `writedown` | msg.plant7.lan/dm/142/write-it-down.md — brass_tally spells it out; brass_tally's own word comes first | medium |
-| `TamsinR` | `3012` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `TamsinR` | `3012` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `six_belts` | `3009` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `MillaOnNights` | `nightline` | msg.plant7.lan/dm/128/nights-swap-friday.md — she tells six_belts in passing | medium |
+| `MillaOnNights` | `nightline` | msg.plant7.lan/dm/130/nights-swap-friday.md — she tells six_belts in passing | medium |
 | `Dorn` | `drillbelt` | msg.plant7.lan/dm/142/drill-belt-next.md — he spells it out to six_belts | medium |
-| `browncoat_bex` | `3008` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `browncoat_bex` | `3008` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `west_gate_pat` | `4417` | msg.plant7.lan/dm/142/the-code.md — six_belts says the number first; also on the portal notice board, which needs a portal account | easy |
-| `mirren_v` | `3022` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `mirren_v` | `3022` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `hollis_k` | `3021` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `apryce` | `3020` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `e_stroud` | `3023` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
@@ -162,12 +159,12 @@ The first seventy-four accounts, all nine plants (the account file now holds nin
 | `percy_i` | `thursdays` | portal.plant3.lan/staff-directory.md — the retired list, in plain text, on an open page | easy |
 | `the_quiet_shift` | `3019` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `OldHollowmere` | `thehill` | msg.plant7.lan/dm/139/the-hill.md — six_belts asks; he answers | medium |
-| `Voss_shift` | `coalbuilt` | msg.plant7.lan/dm/142/coal-built-this-place.md — browncoat_bex asks; he spells it out | medium |
-| `ferrous_ann` | `4003` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `nadine_s` | `4005` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `Voss_shift` | `coalbuilt` | msg.plant7.lan/dm/141/coal-built-this-place.md — browncoat_bex asks; he spells it out | medium |
+| `ferrous_ann` | `4003` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
+| `nadine_s` | `4005` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `slag_accountant` | `4004` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `waste_lars` | `4002` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `copperkate` | `4001` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `copperkate` | `4001` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `quiet_oswin` | `correct` | msg.plant7.lan/dm/136/answer-from-plant-5.md — he tells ivo_p, who is glad to be asked | medium |
 | `ivo_p` | `5003` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `slow_steam` | `6002` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
@@ -179,9 +176,9 @@ The first seventy-four accounts, all nine plants (the account file now holds nin
 | `halvard_k` | `patientfire` | msg.plant7.lan/dm/143/fire-and-patience.md — kiln_marit asks; he spells it out | medium |
 | `ruben_m` | `7006` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `nevil_o` | `7007` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `half_belt_hana` | `7008` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `half_belt_hana` | `7008` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `dorian_a` | `thearea` | msg.plant7.lan/dm/143/the-group-move.md — v_shaw spells it out in the move note | medium |
-| `kiln_marit` | `7011` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `kiln_marit` | `7011` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `sam_three_to_eleven` | `7012` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `teo_lima` | `7013` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `colm_f` | `7014` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
@@ -192,11 +189,11 @@ The first seventy-four accounts, all nine plants (the account file now holds nin
 | `the_last_round` | `7019` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `night_porter_iss` | `7020` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `[Deleted User #3312]` | `7021` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `fen_b` | `7022` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
-| `v_shaw` | `7023` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `fen_b` | `7022` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
+| `v_shaw` | `7023` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `marge_on_four` | `quietline` | msg.plant7.lan/dm/143/four-line-quiet-line.md — bench_light asks; she spells it out | medium |
 | `GerdV` | `quietseam` | msg.plant7.lan/dm/144/a-quiet-seam.md — v_shaw tells him at the Y144 issue | medium |
-| `second_floor_ivy` | `8005` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
+| `second_floor_ivy` | `8005` | [[ops.dashboard.lan/roster|Day sheet]] — her staff number, in the open list | easy |
 | `archive_clerk` | `8003` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `mateo_belts` | `9004` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
 | `third_shift_tom` | `9001` | [[ops.dashboard.lan/roster|Day sheet]] — his staff number, in the open list | easy |
@@ -209,11 +206,11 @@ The first seventy-four accounts, all nine plants (the account file now holds nin
 |---|---|---|---|
 | west_gate_pat | 4417 | [[msg.plant7.lan/dm/142/the-code|dm/142/the-code]] | six_belts, or anybody on the portal |
 | percy_i | thursdays | [[portal.plant3.lan/staff-directory|staff directory]] | nobody |
-| MillaOnNights | nightline | [[msg.plant7.lan/dm/128/nights-swap-friday|dm/128/nights-swap-friday]] | six_belts |
+| MillaOnNights | nightline | [[msg.plant7.lan/dm/130/nights-swap-friday|dm/130/nights-swap-friday]] | six_belts |
 | OldHollowmere | thehill | [[msg.plant7.lan/dm/139/the-hill|dm/139/the-hill]] | six_belts |
 | brass_tally | beltonce | [[msg.plant7.lan/dm/142/the-belt-once|dm/142/the-belt-once]] | six_belts |
 | Dorn | drillbelt | [[msg.plant7.lan/dm/142/drill-belt-next|dm/142/drill-belt-next]] | six_belts |
-| Voss_shift | coalbuilt | [[msg.plant7.lan/dm/142/coal-built-this-place|dm/142/coal-built-this-place]] | browncoat_bex |
+| Voss_shift | coalbuilt | [[msg.plant7.lan/dm/141/coal-built-this-place|dm/141/coal-built-this-place]] | browncoat_bex |
 | canteen_agnes | eatwarm | [[msg.plant7.lan/dm/142/eat-something-warm|dm/142/eat-something-warm]] | soup_ladle |
 | sign_writer | readit | [[msg.plant7.lan/dm/144/read-the-notice|dm/144/read-the-notice]] | apryce |
 | molder_max | onemetal | [[msg.plant7.lan/dm/140/one-metal|dm/140/one-metal]] | rivet_pete |
@@ -250,7 +247,7 @@ described there as a reader would find them, not as a list.
 ## Accounts added at the Y160 tidy-up
 
 Twelve accounts were carried on the sheet for years and never written into
-this file. They are here now. Two of them are words, and the rest are on the
+this file (with the six and the nine below them, they make up the twenty-seven). They are here now. Two of them are words, and the rest are on the
 open lists like everybody else.
 
 | account | password | where it is written down | how hard |
@@ -266,7 +263,7 @@ open lists like everybody else.
 | `alec_b` | `8007` | [[ops.dashboard.lan/roster|Day sheet]] | easy |
 | `gideon_p` | `9005` | [[ops.dashboard.lan/roster|Day sheet]] | easy |
 | `denny_o` | `kilncoal` | [[msg.plant7.lan/dm/147/two-kilns|dm/147/two-kilns]] — he says it out loud to rosa_t, who has to be read first | hard |
-| `rosa_t` | `ladle` | [[msg.plant7.lan/dm/147/the-door-notes|dm/147/the-door-notes]] — she tells denny_o at the Y143 issue, in the middle of an argument about bread | medium |
+| `rosa_t` | `ladle` | [[msg.plant7.lan/dm/147/the-door-notes|dm/147/the-door-notes]] — she tells denny_o the word she was given at the Y143 issue, in the middle of an argument about bread | medium |
 
 The last two are a pair and the pair is the point: neither of them can be got
 without the other, and both of them are in threads that are mostly about
@@ -278,7 +275,7 @@ supper.
 |---|---|---|---|
 | `green_helmet` | `greenline` | [[msg.plant7.lan/dm/149/the-lamp-post|dm/149/the-lamp-post]] — said in passing while telling somebody off about a cupboard | medium |
 | `sela_b` | `daylamp` | [[msg.plant7.lan/dm/149/the-lamp-post|dm/149/the-lamp-post]] — the word is on the back of a switch note | medium |
-| `kettlekeeper` | `kettlepot` | [[msg.plant7.lan/dm/156/the-kettle|dm/156/the-kettle]] — he offers to give it away | medium |
+| `kettlekeeper` | `kettlepot` | [[msg.plant7.lan/dm/154/the-kettle|dm/154/the-kettle]] — he offers to give it away | medium |
 | `throughput_tony` | `ratecard` | [[msg.plant7.lan/dm/155/the-rate-sheet|dm/155/the-rate-sheet]] — he complains about being given it | easy |
 | `table_herr` | `straightline` | [[msg.plant7.lan/dm/156/the-copying|dm/156/the-copying]] — the pair of words is the point of the argument | hard |
 | `barr_o` | `bluepencil` | [[msg.plant7.lan/dm/156/the-copying|dm/156/the-copying]] — she has corrected his drawings in blue for six years | medium |
@@ -286,3 +283,20 @@ supper.
 kettlepot is the only word in the whole service that two people have used. The
 office has it written against two accounts and has never corrected it, and
 third_shift_tom signs in with it to this day.
+
+## Nine old boxes, never listed
+
+Nine people who write or are written to in the threads and whose boxes were
+never on any list. All nine are the staff number, off an open page.
+
+| account | password | where it is written down | how hard |
+|---|---|---|---|
+| `lorn_a` | `3024` | [[ops.dashboard.lan/roster|Day sheet]] and [[portal.plant3.lan/staff-directory|Staff directory]] | easy |
+| `eldermill` | `3006` | [[portal.plant3.lan/staff-directory|Staff directory]] — the retired list | easy |
+| `cold_forge` | `3010` | [[portal.plant3.lan/staff-directory|Staff directory]] — the retired list | easy |
+| `paper_ledger` | `3013` | [[portal.plant3.lan/staff-directory|Staff directory]] — the retired list | easy |
+| `Marnie_Q` | `1001` | [[ops.dashboard.lan/roster|Day sheet]] — the retired list | easy |
+| `old_bert_hands` | `1003` | [[ops.dashboard.lan/roster|Day sheet]] — the retired list | easy |
+| `belt_end_bram` | `1005` | [[ops.dashboard.lan/roster|Day sheet]] | easy |
+| `crated_up` | `1017` | [[ops.dashboard.lan/roster|Day sheet]] | easy |
+| `hem_of_the_line` | `1022` | [[ops.dashboard.lan/roster|Day sheet]] | easy |

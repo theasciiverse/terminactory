@@ -5,7 +5,7 @@ denny_o | Y147-02-06 22:10 | Rosa. My word for the service and you are the only 
 
 rosa_t | Y147-02-07 05:30 | Say it.
 
-denny_o | Y147-02-07 13:10 | Kilncoal. No space. It is two things on one shelf.
+denny_o | Y147-02-07 13:10 | kilncoal. No space. It is two things on one shelf.
 
 rosa_t | Y147-02-07 13:20 | It is a poor word.
 

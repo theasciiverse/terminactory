@@ -6,7 +6,10 @@ The message service keeps everything. It has kept everything since the Plant 7
 system was turned on in Y126 and it kept the twelve years before that on paper,
 which are in the archive in two boxes and are not on here.
 
-- Thirty-five years, Y126 to Y160.
+- Thirty-four years, Y126 to Y160.
+- The internal mail of the other eight plants, loaded in at the Y143 group
+  move. A thread from before Y143 between two people at another plant came
+  in that way.
 - Every account that has ever been issued, including the ones that have come
   off the books. An account that is off the books keeps its messages.
 - Nothing has been deleted. The service has no delete. A man who wanted a

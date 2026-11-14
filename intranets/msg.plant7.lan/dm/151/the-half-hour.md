@@ -23,7 +23,7 @@ TamsinR | Y151-02-03 10:35 | The hour would be paid and the plant would be down 
 
 brass_tally | Y151-02-03 11:00 | May I say something.
 
-e_stroud | Y151-02-03 11:05 | You are the foreman. You do not have to ask.
+e_stroud | Y151-02-03 11:05 | You have been a foreman longer than I have. You do not have to ask.
 
 brass_tally | Y151-02-03 11:10 | I am the foreman of Line 2 and this is the whole plant, so I am asking. The half hour is not about the buses. It is about the day sheet matching the gate. The gate opens at six and the sheet says six and the men arrive at six forty and nobody has written down the forty minutes.
 

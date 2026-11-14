@@ -180,10 +180,10 @@ MillaOnNights | Y150-05-20 12:40 | Will you.
 TamsinR | Y150-05-20 13:00 | I have closed it. I will not reopen it for
 strangers.
 
-MillaOnNights | Y150-05-20 13:20 | You are the man who used to apologise
+MillaOnNights | Y150-05-20 13:20 | You are the one who used to apologise
 for everything.
 
-TamsinR | Y150-05-20 13:40 | I am the man who used to apologise for
+TamsinR | Y150-05-20 13:40 | I am the one who used to apologise for
 everything and now writes two lines a night and does not need the rest of
 it.
 
@@ -199,7 +199,7 @@ foreman says the line runs itself now.
 MillaOnNights | Y151-03-02 12:30 | Then you will have more time to write
 lists.
 
-TamsinR | Y151-03-02 12:50 | I closed the list in Y146.
+TamsinR | Y151-03-02 12:50 | I closed the list in Y143.
 
 MillaOnNights | Y151-03-02 13:10 | I know. You said.
 

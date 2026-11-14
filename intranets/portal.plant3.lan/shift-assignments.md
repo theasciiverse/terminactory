@@ -12,7 +12,7 @@ Days
 
 - Line 1 — six_belts, Dorn, lorn_a
 - Line 2 — ForemanEllis, e_stroud
-- Surface — Voss_shift, w_corrin (mornings)
+- Surface — w_corrin (mornings)
 - Gate — west_gate_pat
 - Stores — browncoat_bex
 - Canteen — mirren_v

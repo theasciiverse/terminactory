@@ -3,7 +3,7 @@ access: teo_lima, pipefitter_uri
 
 teo_lima | Y143-02-11 08:40 | I have forgotten the word for the service.
 
-pipefitter_uri | Y143-02-11 09:20 | Jointyoumissed.
+pipefitter_uri | Y143-02-11 09:20 | jointyoumissed.
 
 teo_lima | Y143-02-11 09:30 | The joint you missed.
 

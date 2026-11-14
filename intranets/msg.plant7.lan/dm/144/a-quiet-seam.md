@@ -3,7 +3,7 @@ access: v_shaw, GerdV
 
 v_shaw | Y144-06-02 09:00 | Mr Vance. Your account for the message service is issued. Your word is quietseam.
 
-GerdV | Y144-06-02 09:20 | Quietseam. No space.
+GerdV | Y144-06-02 09:20 | quietseam. No space.
 
 v_shaw | Y144-06-02 09:25 | No space.
 

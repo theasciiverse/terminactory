@@ -1,7 +1,7 @@
 # Write it down
 access: brass_tally, ForemanEllis
 
-brass_tally | Y142-08-15 09:00 | Your message service word. Writedown. No
+brass_tally | Y142-08-15 09:00 | Your message service word. writedown. No
 space.
 
 ForemanEllis | Y142-08-15 09:30 | Thank you. I have written it on the

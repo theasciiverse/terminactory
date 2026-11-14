@@ -21,7 +21,7 @@ sela_b | Y149-02-07 06:40 | Green. The office has given me a word for the messag
 
 green_helmet | Y149-02-07 07:00 | What is the word.
 
-sela_b | Y149-02-07 07:05 | Daylamp.
+sela_b | Y149-02-07 07:05 | daylamp.
 
 green_helmet | Y149-02-07 07:10 | That is a word for a person who works days and thinks about lamps.
 

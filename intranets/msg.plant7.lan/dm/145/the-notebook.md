@@ -175,7 +175,7 @@ six_belts | Y150-09-14 08:20 | Then say that at the next dinner.
 
 brass_tally | Y150-09-14 08:25 | There is not going to be a next dinner.
 
-six_belts | Y151-01-09 07:20 | Six. They are retiring me in Y152.
+brass_tally | Y151-01-09 07:20 | Six. They are retiring me in Y152.
 
 six_belts | Y151-01-09 07:25 | I know.
 

@@ -45,9 +45,9 @@ GerdV | Y155-06-02 19:20 | Clerk. There is a name on my list I cannot place. Fer
 
 archive_clerk | Y155-06-02 19:40 | Ferris was on the pipes in Y118 and Y119 and he left in Y120.
 
-GerdV | Y155-06-02 19:45 | He said the seventies.
+GerdV | Y155-06-02 19:45 | He said years back.
 
-archive_clerk | Y155-06-02 19:50 | Everybody says the seventies. It is the only decade a man can be vague about and still be believed.
+archive_clerk | Y155-06-02 19:50 | Everybody says years back. It is the only date a man can be vague about and still be believed.
 
 GerdV | Y155-06-02 19:55 | He said the pipes were smaller.
 

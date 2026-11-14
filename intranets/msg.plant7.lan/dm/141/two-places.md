@@ -16,7 +16,7 @@ decimal_doreen | Y141-09-20 11:44 | Two places and a note. That is what I
 will do.
 
 ratio_warden | Y141-09-20 12:10 | And your message service password is the
-old one. Twoplaces. I have never seen anybody use it.
+old one. twoplaces. I have never seen anybody use it.
 
 decimal_doreen | Y141-09-20 12:30 | I use it for the sheet. Nobody knows
 the sheet.
