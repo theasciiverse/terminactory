@@ -4027,11 +4027,11 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     // The close hint shares the right end where there is room for it, and a signed-in
     // domain says who is reading.
     let close = if foot.width >= 44 {
-        "Done · b/Esc close"
+        "b new tab · Esc minimize"
     } else if foot.width >= 30 {
-        "Done"
+        "Esc minimize"
     } else {
-        "b/Esc close"
+        "Esc"
     };
     let signed = crate::web::is_addr(&app.book_slug).then(|| app.book_signed_in(crate::web::domain_of(&app.book_slug))).flatten();
     let right = match signed {

@@ -384,7 +384,7 @@ fn overlays_fit_every_pane_size() {
             }
             if (0..=3).contains(&scene) {
                 if matches!(scene, 1 | 2) && app.book_area.width < w {
-                    assert!(t.contains("b/Esc close"), "wiki footer at {w}x{h}: {t}");
+                    assert!(t.contains("Esc minimize"), "wiki footer at {w}x{h}: {t}");
                 } else {
                     assert_footer_filled(&t, &format!("scene {scene} at {w}x{h}"));
                 }

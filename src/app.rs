@@ -1519,9 +1519,9 @@ impl App {
             return;
         }
         match (k.code, action) {
-            (KeyCode::Char('b'), _) | (_, Some(Action::Book | Action::Back)) => {
-                self.book_minimize();
-            }
+            // In the browser, b opens a new tab and Esc puts the browser away.
+            (KeyCode::Char('b'), _) | (_, Some(Action::Book)) => self.book_new_tab("start"),
+            (KeyCode::Esc, _) | (_, Some(Action::Back)) => self.book_minimize(),
             (KeyCode::Enter, _) if k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::SHIFT) => {
                 // Shift+Enter: the selected link opens in a tab of its own.
                 let slug = if self.book_query.is_empty() {

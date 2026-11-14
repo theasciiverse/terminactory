@@ -365,8 +365,9 @@ fn recipe_book() {
     key(&mut app, KeyCode::Esc);
     assert!(!app.book);
     app.book = true;
+    app.book_typing = false;
     key(&mut app, KeyCode::Char('b'));
-    assert!(!app.book);
+    assert!(app.book, "b opens a tab, it does not close the browser");
 }
 
 #[test]
@@ -2445,4 +2446,20 @@ fn an_items_symbol_in_a_recipe_card_is_coloured_but_not_a_link() {
         })
     });
     assert!(found, "a coloured, un-underlined coal symbol");
+}
+
+#[test]
+fn b_opens_a_new_tab_and_esc_minimizes_in_the_browser() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "boiler".into();
+    render(&mut app, 140, 45);
+    app.book_typing = false;
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    assert!(app.book && app.book_tabs.len() == 2 && app.book_slug == "start");
+    app.book_typing = false;
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(!app.book);
+    assert_eq!(app.book_tabs.len(), 2, "the tabs are kept");
 }
