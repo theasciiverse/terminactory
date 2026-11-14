@@ -2562,3 +2562,32 @@ fn the_production_site_has_two_tabs_an_address_and_no_copy_button() {
     app.book_submit_address("production.lan");
     assert_eq!(app.book_slug, "production");
 }
+
+#[test]
+fn reopening_the_browser_never_overwrites_a_tab_and_research_is_a_site() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('o')));
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(!app.book);
+    // b brings the browser back on a new start tab; the production tab keeps its page.
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    assert!(app.book && app.book_slug == "start" && app.book_tabs.len() == 3, "{} tabs on {}", app.book_tabs.len(), app.book_slug);
+    assert_eq!(app.book_tabs[1].slug, "production");
+    // On a start page the first Esc leaves the search box, the second puts the browser away.
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(!app.book);
+    // A blank start tab is reused, not piled up.
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    assert_eq!(app.book_tabs.len(), 3);
+    app.book_typing = false;
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(!app.book);
+    // t opens research at research.lan.
+    app.on_key(KeyEvent::from(KeyCode::Char('t')));
+    assert_eq!(app.book_slug, "research");
+    let t = text(&render(&mut app, 140, 45));
+    assert!(t.contains("research.lan") && t.contains("Research") && !t.contains("Copy page"), "{t}");
+    app.book_submit_address("research.lan");
+    assert_eq!(app.book_slug, "research");
+}

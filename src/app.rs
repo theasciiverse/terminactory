@@ -264,6 +264,7 @@ impl Tab {
             "home" => "Home".into(),
             "history" => "History".into(),
             "production" => "Production".into(),
+            "research" => "Research".into(),
             s if s.starts_with("search?q=") => s["search?q=".len()..].to_string(),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
@@ -813,8 +814,8 @@ impl App {
                 self.selected = None;
                 self.held = None;
             }
-            Action::Tree => self.tree = true,
-            Action::Stats => self.open_production(),
+            Action::Tree => self.open_site("research"),
+            Action::Stats => self.open_site("production"),
             Action::Book => self.open_book(),
             Action::Settings => self.settings_open = true,
             Action::Area => self.start_area(),
@@ -965,17 +966,27 @@ impl App {
                 .map(|o| Entry::Item(o.0))
                 .or(BOOK_PARTS.contains(&b.kind).then_some(Entry::Part(b.kind))),
         });
-        if let Some(e) = here {
-            self.book_query.clear();
-            self.book_show(e);
-        } else {
-            self.book_slug = "start".into();
-            self.book_scroll = 0;
-        }
+        // The page to show: what is under the cursor, or the start page. A tab that is only a
+        // blank start page is used as it is; any other tab stays as it was and a new one opens.
+        self.book_store();
+        let blank_start = self.book_slug == "start" && self.book_history.is_empty();
         self.book_scroll = 0;
-        self.book_history.clear();
-        self.book_forward.clear();
-        self.book_folded.clear();
+        match here {
+            Some(e) => {
+                self.book_query.clear();
+                if blank_start {
+                    self.book_show(e);
+                    self.book_history.clear();
+                    self.book_forward.clear();
+                    self.book_folded.clear();
+                } else {
+                    self.book_new_tab(&crate::wiki::slug(e.name()));
+                    self.book_entry = e;
+                }
+            }
+            None if blank_start => {}
+            None => self.book_new_tab("start"),
+        }
         self.book_opened = Some(std::time::Instant::now());
         self.book = true;
         self.book_land();
@@ -1173,8 +1184,8 @@ impl App {
             return;
         }
         // Home and the index pages are generated, so they have no markdown file.
-        let generated =
-            matches!(slug, "start" | "home" | "items" | "machines" | "topics" | "history" | "production") || slug.starts_with("search?q=");
+        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics" | "history" | "production" | "research")
+            || slug.starts_with("search?q=");
         // A web address always opens, even when the page (or the server) isn't there: the page
         // that shows is T Web's own 404 or "server not found", not a refusal to move.
         if (crate::wiki::page(slug).is_none() && !generated && !crate::web::is_addr(slug)) || slug == self.book_slug {
@@ -1234,7 +1245,7 @@ impl App {
     /// copy (the start page, a sign-in form).
     pub fn book_page_text(&self) -> Option<String> {
         let slug = self.book_slug.as_str();
-        if slug == "start" || slug == "history" || slug == "production" || self.book_asks_login() {
+        if slug == "start" || slug == "history" || slug == "production" || slug == "research" || self.book_asks_login() {
             return None;
         }
         let address = crate::ui::book_url(slug);
@@ -1428,18 +1439,40 @@ impl App {
         true
     }
 
-    /// `o`: the production site in the browser, in the tab that already shows it or a new one.
-    pub fn open_production(&mut self) {
+    /// `o` and `t`: one of the game's own sites (production, research) in the browser, in the
+    /// tab that already shows it or a new one.
+    pub fn open_site(&mut self, slug: &str) {
         self.book_store();
         self.book = true;
         self.book_typing = false;
-        if let Some(i) = self.book_tabs.iter().position(|t| t.slug == "production") {
+        if let Some(i) = self.book_tabs.iter().position(|t| t.slug == slug) {
             self.book_switch(i);
         } else {
-            self.stats_scroll = 0;
-            self.stats_history = false;
-            self.book_new_tab("production");
+            if slug == "production" {
+                self.stats_scroll = 0;
+                self.stats_history = false;
+            }
+            self.book_new_tab(slug);
         }
+    }
+
+    /// Keys on the research site: the research screen in a page. Returns whether the key was used.
+    fn research_key(&mut self, k: KeyEvent, action: Option<Action>) -> bool {
+        let used = matches!(
+            k.code,
+            KeyCode::Left
+                | KeyCode::Right
+                | KeyCode::Up
+                | KeyCode::Down
+                | KeyCode::PageUp
+                | KeyCode::PageDown
+                | KeyCode::Home
+                | KeyCode::End
+        ) || matches!(action, Some(Action::MoveUp | Action::MoveDown | Action::Place));
+        if used {
+            self.tree_key(k.code, action);
+        }
+        used
     }
 
     /// Keys on the production site: it is the production panel in a page, so Tab swaps its two
@@ -1476,6 +1509,8 @@ impl App {
             self.book_go_slug(slug);
         } else if t == "production.lan" {
             self.book_go_slug("production");
+        } else if t == "research.lan" {
+            self.book_go_slug("research");
         } else if t == "terminactory.wiki" {
             self.book_go_slug("home");
         } else {
@@ -1614,6 +1649,9 @@ impl App {
             return;
         }
         if self.book_slug == "production" && self.production_key(k, action) {
+            return;
+        }
+        if self.book_slug == "research" && self.research_key(k, action) {
             return;
         }
         // With nothing focused, a digit picks a tab.
@@ -1787,6 +1825,19 @@ impl App {
     fn book_mouse(&mut self, m: MouseEvent) {
         let at = ratatui::layout::Position::new(m.column, m.row);
         let inside = self.book_area.contains(at);
+        if inside && self.book_slug == "research" {
+            match m.kind {
+                MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {
+                    self.tree_mouse(m);
+                    return;
+                }
+                MouseEventKind::Down(MouseButton::Left) if self.tree_rows.iter().any(|(r, _)| r.contains(at)) => {
+                    self.tree_mouse(m);
+                    return;
+                }
+                _ => {}
+            }
+        }
         if inside && self.book_slug == "production" {
             match m.kind {
                 MouseEventKind::ScrollUp => {
@@ -3372,7 +3423,7 @@ mod tests {
     fn research_screen_keys() {
         let mut app = App::new(World::new());
         key(&mut app, KeyCode::Char('t'));
-        assert!(app.tree);
+        assert!(app.book && app.book_slug == "research", "t opens the research site");
         assert_eq!(app.tree_choice(), Tech::Press);
         key(&mut app, KeyCode::Right);
         assert_eq!(app.tree_choice(), Tech::Press);
@@ -3409,7 +3460,7 @@ mod tests {
         key(&mut app, KeyCode::Enter);
         assert!(app.world.progress.has(Tech::Coking));
         assert_eq!(app.world.econ.research, 50.0);
-        key(&mut app, KeyCode::Char('t'));
-        assert!(!app.tree);
+        key(&mut app, KeyCode::Esc);
+        assert!(!app.book, "Esc puts the browser away");
     }
 }

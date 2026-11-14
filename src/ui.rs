@@ -3942,6 +3942,9 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     } else if app.book_slug == "production" {
         draw_stats(f, content, app);
         app.book_max_scroll = 0;
+    } else if app.book_slug == "research" {
+        draw_tree(f, content, app);
+        app.book_max_scroll = 0;
     } else if app.book_slug.starts_with("search?q=") {
         draw_book_results(f, content, app);
     } else if app.book_slug == "items" || app.book_slug == "machines" {
@@ -4078,7 +4081,12 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     };
     let copy_w = copy_label.chars().count() as u16;
     let can_copy = foot.width >= right.chars().count() as u16 + copy_w + 24
-        && (on_start || (!app.book_typing && app.book_slug != "history" && app.book_slug != "production" && !app.book_asks_login()));
+        && (on_start
+            || (!app.book_typing
+                && app.book_slug != "history"
+                && app.book_slug != "production"
+                && app.book_slug != "research"
+                && !app.book_asks_login()));
     let reserved = if can_copy { copy_w + 2 } else { 0 };
     if can_copy {
         let cx = foot.right().saturating_sub(right.chars().count() as u16 + 2 + copy_w);
@@ -4380,6 +4388,8 @@ pub(crate) fn book_url(slug: &str) -> String {
         "termweb.search/history".into()
     } else if slug == "production" {
         "production.lan".into()
+    } else if slug == "research" {
+        "research.lan".into()
     } else if slug.starts_with("search?q=") {
         format!("termweb.search/{slug}")
     } else if crate::web::is_addr(slug) {
@@ -4703,6 +4713,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
         ("Items", "items"),
         ("Topics", "topics"),
         ("Production", "production"),
+        ("Research", "research"),
         ("Directory", "termweb.search/directory"),
     ];
     let widths: Vec<u16> = links.iter().map(|(l, _)| l.chars().count() as u16).collect();
