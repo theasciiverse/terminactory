@@ -2,12 +2,7 @@
 
 Brannock & Daughters — Plant 1. Leave, pay slips, benefits and forms.
 
-    +------------------------------------+
-    |  PLANT 1 SELF SERVICE              |
-    |  staff number: _________________   |
-    |  password: ____________________   |
-    |  [ sign in ]                       |
-    +------------------------------------+
+[[selfservice.plant1.lan/login|Sign in]]
 
 Your staff number is on your badge and in the
 [[selfservice.plant1.lan/forms|forms page]]. Your password is the four digits

@@ -3,12 +3,7 @@
 Underhill Excavation, Plant 7. The message service, bought by the group and
 carrying for every plant in it.
 
-    +------------------------------------+
-    |  PLANT 7 MESSAGES                  |
-    |  user: _________________________   |
-    |  pass: _________________________   |
-    |  [ sign in ]                       |
-    +------------------------------------+
+[[msg.plant7.lan/login|Sign in]]
 
 You need an account. Everyone on the books has one, from the Y143 group
 move, and the account is your staff number.

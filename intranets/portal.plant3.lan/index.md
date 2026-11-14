@@ -2,12 +2,7 @@
 
 Hollowmere Mining Co. — Plant 3, the mine and the surface plant.
 
-    +------------------------------------+
-    |  PLANT 3 PORTAL                     |
-    |  user: __________________________   |
-    |  pass: __________________________   |
-    |  [ sign in ]                        |
-    +------------------------------------+
+[[portal.plant3.lan/login|Sign in]]
 
 The portal is for people who work at Plant 3. It is not for the plant's
 opinions.
