@@ -4533,6 +4533,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
         ("Machines", "machines"),
         ("Items", "items"),
         ("Topics", "topics"),
+        ("Directory", "termweb.search/directory"),
     ];
     let widths: Vec<u16> = links.iter().map(|(l, _)| l.chars().count() as u16).collect();
     let mut shown = links.len();

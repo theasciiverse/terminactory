@@ -414,6 +414,19 @@ pub fn profile_section(addr: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_directory_links_only_to_sites_that_exist() {
+        let md = super::page("termweb.search/directory").expect("the directory page");
+        let mut count = 0;
+        for part in md.split("[[").skip(1) {
+            let target = part.split("]]").next().unwrap().split('|').next().unwrap();
+            let domain = target.trim_end_matches('/');
+            assert!(super::known(domain), "{domain} is not a site");
+            count += 1;
+        }
+        assert!(count >= 25, "{count} links");
+    }
+
     use super::*;
 
     #[test]
