@@ -3971,7 +3971,8 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
             let (prose, info) = if app.book_slug == "home"
                 || Entry::list("", false).iter().chain(Entry::list("", true).iter()).all(|e| crate::wiki::slug(e.name()) != app.book_slug)
             {
-                (content, None)
+                // The Contents column keeps its 16 columns on every page that has one.
+                (if has_contents { Rect { width: content.width.saturating_sub(16), ..content } } else { content }, None)
             } else if narrow {
                 (content, Some(content))
             } else {

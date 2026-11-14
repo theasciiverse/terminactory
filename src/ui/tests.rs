@@ -2651,3 +2651,20 @@ fn item_pages_chart_how_research_fades_with_sales() {
     let screen = text(&render(&mut app, 140, 45));
     assert!(screen.contains("Research"), "{screen}");
 }
+
+#[test]
+fn the_contents_column_never_overlaps_the_text_of_a_plain_page() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "elevator".into();
+    let screen = text(&render(&mut app, 160, 45));
+    assert!(screen.contains("Contents"), "{screen}");
+    // The Contents column is the last 16 columns of the page; no text of the page runs under it.
+    let width = screen.lines().next().unwrap().chars().count();
+    for row in screen.lines().filter(|r| r.contains("loading at one")) {
+        let cols: Vec<char> = row.chars().collect();
+        let tail: String = cols[width.saturating_sub(24)..].iter().collect();
+        assert!(!tail.contains("unloading"), "{row}");
+    }
+    assert!(!screen.contains("See alsoer"), "{screen}");
+}
