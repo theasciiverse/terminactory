@@ -1133,7 +1133,7 @@ impl App {
             .map(|(i, _)| i)
     }
 
-    fn book_go_slug(&mut self, slug: &str) {
+    pub(crate) fn book_go_slug(&mut self, slug: &str) {
         // Signing out shows the domain's index: the login is gone before the page is opened.
         if let Some(domain) = slug.trim_end_matches('/').strip_suffix("/logout").map(str::to_string) {
             self.book_logins.retain(|(d, _)| *d != domain);
@@ -1180,6 +1180,11 @@ impl App {
         self.book_results.clear();
         self.book_login = None;
         self.book_login_typing = false;
+        // A sign-in form has the keys from the start: the player opens it to type in it.
+        if self.book_asks_login() {
+            self.book_typing = false;
+            self.start_login();
+        }
     }
 
     /// The user signed in on a domain, if there is one.
@@ -1309,11 +1314,16 @@ impl App {
             crate::web::accounts(&domain).into_iter().find(|a| a.user.eq_ignore_ascii_case(form.user.trim()) && a.pass == form.pass);
         match account {
             Some(a) => {
+                let on_login_page = self.book_slug.trim_end_matches('/') == format!("{domain}/login");
                 self.book_logins.retain(|(d, _)| *d != domain);
-                self.book_logins.push((domain, a.user));
+                self.book_logins.push((domain.clone(), a.user));
                 self.book_login = None;
                 self.book_login_typing = false;
                 self.book_selected = 0;
+                // The domain's own login page leads on to the domain; a gated page just opens.
+                if on_login_page {
+                    self.book_go_slug(&domain);
+                }
             }
             None => {
                 if let Some(f) = self.book_login.as_mut() {
@@ -1403,6 +1413,11 @@ impl App {
 
     #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
+        // Whatever else had the keys, a sign-in form on the page takes them.
+        if self.book_asks_login() && !self.book_login_typing && matches!(k.code, KeyCode::Char(_)) {
+            self.book_typing = false;
+            self.start_login();
+        }
         if self.book_typing {
             match k.code {
                 KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => self.book_query.push(c),

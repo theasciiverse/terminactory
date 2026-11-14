@@ -2298,3 +2298,49 @@ fn the_copy_button_is_in_the_status_bar_and_the_page_text_is_plain() {
     let thread = app.book_page_text().expect("thread text");
     assert!(thread.contains(" · "), "{thread}");
 }
+
+#[test]
+fn a_sign_in_form_takes_typing_even_when_the_search_box_had_the_keys() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    app.book_typing = true;
+    app.book_go_slug("portal.plant3.lan/login");
+    for c in "ab".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    assert_eq!(app.book_login.as_ref().map(|f| f.user.as_str()), Some("ab"));
+    assert!(app.book_query.is_empty());
+}
+
+#[test]
+fn signing_in_on_the_login_page_opens_the_domain() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_go_slug("portal.plant3.lan/login");
+    let account = crate::web::accounts("portal.plant3.lan").into_iter().next().expect("an account");
+    for c in account.user.chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Tab));
+    for c in account.pass.chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "portal.plant3.lan");
+    assert!(app.book_signed_in("portal.plant3.lan").is_some());
+}
+
+#[test]
+fn a_wide_table_wraps_its_long_cells_instead_of_cutting_them() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_logins.push(("portal.plant3.lan".into(), "TamsinR".into()));
+    app.book_slug = "portal.plant3.lan/retirements".into();
+    let screen = text(&render(&mut app, 100, 40));
+    for tail in ["took the stool", "gave it back", "Thursdays."] {
+        assert!(screen.contains(tail), "{tail} was cut off:\n{screen}");
+    }
+}
