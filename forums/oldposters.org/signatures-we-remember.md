@@ -33,3 +33,49 @@ board: Archive   date: Y152-06-14   author: archive_clerk   status: open
   - archive_clerk | Y155-01-09 | An addition, from a thread in Y131. [Deleted User #209] had no signature either. When asked, he wrote: *The number is enough.*
     - GerdV | Y155-01-09 | I remember that.
       - archive_clerk | Y155-01-09 | So do I. That is why it is in the archive.
+
+- GerdV | Y155-02-19 | One more, and it is not a signature. quiet_oswin has a dash where his should be and the dash is the only honest thing on this thread.
+  - quiet_oswin | Y155-02-19 | A dash is accurate.
+  - archive_clerk | Y155-02-19 | I have kept the dash.
+- OldHollowmere | Y155-04-02 | My father's card said the hill remembers. I have found the card. It is in a drawer and it says "the hill remembers what we forget" and underneath, in pencil, "ask your mother".
+  - archive_clerk | Y155-04-02 | Did you ask her?
+    - OldHollowmere | Y155-04-02 | She is gone and I did not ask.
+      - archive_clerk | Y155-04-02 | Then the card is the record.
+  - GerdV | Y155-04-03 | That is the best thing on this board and it is a pencil note.
+- MillaOnNights | Y155-09-11 | I have changed my signature. It is still "the night line does not argue". I want it noted that I have not changed it in twenty years and I am not going to.
+  - archive_clerk | Y155-09-11 | Noted and not changed.
+  - third_shift_tom | Y155-09-12 | I have never had a signature. I have a thread instead.
+    - archive_clerk | Y155-09-12 | That is a signature of a kind. I will put it in.
+- TamsinR | Y156-02-02 | A correction to the archive. My first signature was "Apprentice, Line 1" and it was not a signature. It was a job title and I was proud of it. The first one I chose myself was "Nothing to add" and it took me thirty years to be able to write it.
+  - archive_clerk | Y156-02-02 | You have said that better than I did.
+  - brass_tally | Y156-02-03 | "Nothing to add" is the hardest signature on this board to earn.
+    - TamsinR | Y156-02-03 | It is the easiest to write and the hardest to earn.
+- apprentice_nell | Y156-06-19 | Mine is still "Still learning. Please be gentle." I have been here fifteen years and I have not changed it. I have thought about changing it and I cannot think of anything true to change it to.
+  - archive_clerk | Y156-06-19 | A signature that is still true does not need changing.
+  - TamsinR | Y156-06-20 | I changed mine four times and none of them were true except the last one.
+- sign_writer | Y157-01-14 | "Please read the notice" is a signature that has failed for thirty years. I have decided to keep it as a record of the failure.
+  - GerdV | Y157-01-14 | I read the notices.
+    - sign_writer | Y157-01-14 | You are one man.
+      - GerdV | Y157-01-15 | I am the man the notices are for.
+- archive_clerk | Y157-05-20 | An addition from a thread in Y133. [Deleted User #209] had no signature and when asked wrote "the number is enough". [Deleted User #4471] wrote "if it is not written down, it did not happen" and then said he had taken it from somewhere.
+  - ForemanEllis | Y157-05-20 | I have said on here that I took it from somewhere and could not remember where. I have remembered. It was on a card in the line office in Y129.
+    - archive_clerk | Y157-05-20 | Then it was not his and it was not yours.
+      - ForemanEllis | Y157-05-21 | It was the line office's.
+- kettle_ron | Y158-02-11 | "Steam forgives nothing." I wrote it after a boiler went and it is the only thing I have ever written that I still believe.
+  - archive_clerk | Y158-02-11 | It is in the thread.
+  - slow_steam | Y158-02-12 | It is not true. Steam forgives a great deal if you warm the shell.
+    - kettle_ron | Y158-02-12 | It forgives you and it does not forgive me.
+- anvil_jo | Y158-09-02 | "Hot metal has no friends." A man in the forge said it to me on my first day and I have never found out who he was.
+  - archive_clerk | Y158-09-02 | Did he have a name?
+    - anvil_jo | Y158-09-02 | He had a glove and no name.
+      - OldHollowmere | Y158-09-03 | Then he is on the other thread.
+- archive_clerk | Y159-02-14 | I have been keeping this thread for seven years and it has become a list of the things people chose to say about themselves. There are thirty-one signatures in it. Four belong to people who have stopped posting and one belongs to a number.
+  - GerdV | Y159-02-14 | Which number?
+    - archive_clerk | Y159-02-14 | #209. "The number is enough."
+      - GerdV | Y159-02-15 | It was.
+- brass_tally | Y159-06-11 | I have been asked what my signature means and I have always said measure twice and belt once. It means the same thing it meant in Y120. I have never measured twice and the belt has always been the fault. That is not a contradiction. It is a warning I gave myself and did not take.
+  - OldHollowmere | Y159-06-11 | A warning you did not take is still a warning.
+  - archive_clerk | Y159-06-12 | I am putting that under the signature.
+- archive_clerk | Y160-01-15 | The last entry for this year and it is mine. I have no signature. I have a board and a box and a list of names. If somebody is reading this in fifty years, the signatures were real and most of them were chosen on a good day.
+  - GerdV | Y160-01-15 | Put your own in.
+    - archive_clerk | Y160-01-15 | "The record does not need you to agree with it." I did not choose it. It chose me.

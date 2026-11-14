@@ -10,8 +10,10 @@ Boards: **Archive** · **Profiles** · **Deleted accounts**
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Old accounts we cannot reach: a list](old-accounts-we-cannot-reach.md) — *sticky* | archive_clerk | 18 | Y159-11-02 |
-| [The last post thread](last-post-thread.md) — *sticky* | archive_clerk | 17 | Y155-06-02 |
+| [Old accounts we cannot reach: a list](old-accounts-we-cannot-reach.md) — *sticky* | archive_clerk | 44 | Y160-11-02 |
+| [Threads we still read](threads-we-still-read.md) | archive_clerk | 81 | Y160-02-24 |
+| [The ones who left before the board](the-ones-who-left-before-the-board.md) | GerdV | 88 | Y158-06-15 |
+| [The last post thread](last-post-thread.md) — *sticky* | archive_clerk | 45 | Y160-04-02 |
 | [Archive: Line 2 opening, Y124](line-two-opening-archive.md) — *locked* | brass_tally | 20 | Y148-11-02 |
 | [The first floor, in their own words](first-floor-in-their-own-words.md) — *locked* | archive_clerk | 1 | Y150-07-19 |
 | [Mill rollers: a last word (eldermill, Y134)](eldermills-last-thread.md) — *locked* | eldermill | 17 | Y151-02-14 |
@@ -20,7 +22,7 @@ Boards: **Archive** · **Profiles** · **Deleted accounts**
 | [The sound of the old floor](the-sound-of-the-old-floor.md) | archive_clerk | 6 | Y153-11-13 |
 | [Who was Mallory?](who-was-mallory.md) | archive_clerk | 10 | Y154-06-20 |
 | [Names from the gate books](names-from-the-gate-books.md) | archive_clerk | 13 | Y154-09-11 |
-| [Signatures we remember](signatures-we-remember.md) | archive_clerk | 26 | Y155-01-09 |
+| [Signatures we remember](signatures-we-remember.md) | archive_clerk | 71 | Y160-01-15 |
 | [What is a deleted user, exactly?](whats-a-deleted-user.md) | young_hal | 18 | Y155-04-02 |
 | [A thread from Y124 that got the press wrong](a-thread-that-was-wrong.md) | archive_clerk | 12 | Y156-10-02 |
 | [Counting the accounts: what the board actually holds](counting-the-accounts.md) | archive_clerk | 10 | Y157-02-16 |

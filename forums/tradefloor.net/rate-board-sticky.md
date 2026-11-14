@@ -48,3 +48,46 @@ board: Rates   date: Y127-01-12   author: copperkate   status: open
     - copperkate | Y157-08-14 | It is a price for a machine that makes a factory's decisions. The factory is the expensive part.
   - scrap_king_pell | Y157-08-15 | And the scrap from making one? Sell it to me. It is not waste.
     - copperkate | Y157-08-15 | That is the correct instinct and the wrong board. Waste and scrap go in their own threads.
+
+- copperkate | Y157-09-20 | The board above is current. I am writing this because three people have asked me this month whether the steel girder rate has moved. It has not. Seventy-five, and it has been seventy-five since Y151.
+  - barter_bert | Y157-09-20 | And I sold one at eighty last week.
+    - copperkate | Y157-09-20 | Then you found a man who needed a girder and you did not rob him.
+      - barter_bert | Y157-09-20 | I did not.
+  - greta_sells | Y157-09-21 | The board is a floor. I have said it and I will keep saying it and nobody will read it.
+    - copperkate | Y157-09-21 | I read it. I have it in the first post from Y127.
+- contract_ines | Y158-01-14 | A question about the board and not about a rate. If a contract is written at the posted rate and the rate moves before delivery, which one is on the paper?
+  - copperkate | Y158-01-14 | The paper. The board is what a trade post pays today, not what a contract pays in March.
+    - contract_ines | Y158-01-14 | Then the second page should say so.
+      - copperkate | Y158-01-14 | The second page should say a great deal and never does.
+  - old_ferrous | Y158-01-15 | In my day we wrote the price on the paper and the paper was the price. The board came later and it made men lazy.
+    - copperkate | Y158-01-15 | It made men honest. Lazy was already there.
+- waste_lars | Y158-04-08 | The waste line on the board is still the only negative number and somebody has copied it again without the sign. I have seen it on a notice by the trade gate with the minus missing and I have taken the notice down.
+  - sign_writer | Y158-04-08 | You took down my notice.
+    - waste_lars | Y158-04-08 | I took down a notice that said waste was half a unit and I would do it again.
+      - sign_writer | Y158-04-08 | I will make another one with the sign in red.
+        - copperkate | Y158-04-08 | Make two.
+- scrap_king_pell | Y158-07-21 | A scrap rate question. Silicon scrap is on the board at one and a half and I am paying one and a half. Copper scrap is not on the board at all and I am paying three for it. Why is one on the board and the other not?
+  - copperkate | Y158-07-21 | Because the board lists what a trade post pays. Copper scrap is not an item a post will take. It is a plate that somebody cut wrong and you are buying it as a plate.
+    - scrap_king_pell | Y158-07-21 | So I am buying plates.
+      - copperkate | Y158-07-21 | You are buying plates and calling it scrap, and the plate rate is four. You are underpaying.
+        - scrap_king_pell | Y158-07-21 | I am buying plates at three and I am not sorry.
+- margin_mo | Y159-02-02 | A note on the board's oldest problem. The gearbox rate is a hundred and twenty and the parts at posted rates are over seventy. That is a thin margin for a machine that takes an assembler ten seconds and four inputs. If you are making gearboxes to sell, count the assembler's time.
+  - copperkate | Y159-02-02 | The board is what a post pays. It has never pretended to be a cost sheet.
+    - margin_mo | Y159-02-02 | It should pretend a little.
+  - tiny_lathe | Y159-02-03 | A gearbox is three iron gears and one steel. The steel is the expensive part and it is the part people forget.
+    - margin_mo | Y159-02-03 | Then the board is right and the margin is thin and both of those are true.
+- greta_sells | Y159-06-11 | I have been asked to sell a computer for a plant that has built one and cannot use it. The board says eleven thousand. I have a buyer at nine and a half and a buyer at eleven who wants it in a month.
+  - copperkate | Y159-06-11 | Take the eleven and make the month a condition, not a promise.
+    - greta_sells | Y159-06-11 | And if it is late?
+      - copperkate | Y159-06-11 | Then the paper pays and you do not.
+  - contract_ines | Y159-06-12 | Put the condition on the second page and put the penalty beside it. A condition without a penalty is a wish.
+- copperkate | Y160-01-08 | Another year and the board stands. Copper plate four, wire three, pipe twelve, steel twenty-four, girder seventy-five, gearbox a hundred and twenty, computer eleven thousand, and waste minus half. None of it has moved and I do not expect it to.
+  - barter_bert | Y160-01-08 | And if it moves?
+    - copperkate | Y160-01-08 | Then I will write it at the top and you will read it and tell me I have got it wrong.
+  - old_ferrous | Y160-01-09 | I sold my last girder in Y144 and I still read this board every month. It is the only price I have ever trusted.
+    - copperkate | Y160-01-09 | That is the nicest thing anybody has said about it.
+- copperkate | Y160-02-15 | I am not handing the board on this year. I have been asked twice and both times I have said no, and I am writing it here so that nobody is surprised in the spring. A board is a habit as much as a list and the habit is not transferable.
+  - greta_sells | Y160-02-15 | I would have kept it the same.
+    - copperkate | Y160-02-15 | You would have kept it better and nobody would have believed you.
+  - contract_ines | Y160-02-16 | Then put the habit in the first post.
+    - copperkate | Y160-02-16 | The first post is the habit.

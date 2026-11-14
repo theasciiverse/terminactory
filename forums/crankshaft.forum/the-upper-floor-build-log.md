@@ -105,3 +105,34 @@ board: Build Orders & Layouts   date: Y156-01-10   author: foreman_hale   status
     - foreman_hale | Y157-03-04 | Copy the wrong parts too. They are the parts that will save you.
   - brass_tally | Y157-03-05 | It comes out right in the end.
     - foreman_hale | Y157-03-05 | It came out right in March. In June it was a hall with a hump in the corner.
+
+- foreman_hale | Y157-06-11 | A postscript, because people keep asking me in the corridor. The floor is at rate nine months after the lift came and it has stayed there. The thing that nearly broke it was not the rope and not the beam. It was the waste post on the west wall.
+  - brass_tally | Y157-06-11 | That is the whole log in one sentence.
+  - second_floor_ivy | Y157-06-12 | Put the lift on the list. A lift that is never serviced is a floor that stops eleven seconds at a time.
+    - foreman_hale | Y157-06-12 | It is on the list. It has been on the list since April.
+- rivet_pete | Y157-09-02 | The press that came up on the rope is still on its feet and it has not moved a finger's width. I check it every quarter and I would like that in the log.
+  - green_helmet | Y157-09-02 | It is in the log and it does not make the rope a good idea.
+    - rivet_pete | Y157-09-02 | I have never said it was.
+      - green_helmet | Y157-09-03 | You have said it eleven times, Pete.
+- apprentice_tomas | Y158-01-14 | I have been assigned to the deck for six months and I have read this log twice. The part I did not expect is how much of it is about people being told they were wrong and saying thank you.
+  - foreman_hale | Y158-01-14 | That is the part that keeps a floor running.
+  - old_bert_hands | Y158-01-15 | A man who can say thank you through gritted teeth is a man you can build with.
+- second_floor_ivy | Y158-04-20 | A lift note for the log. The car is set to leave when it is full. If it is never full it never leaves, and a man will stand there pressing the call button and telling everybody the lift is broken. It is not broken. It is waiting for a full car.
+  - foreman_hale | Y158-04-20 | The deck knows. We put a sign on it in Y156.
+    - second_floor_ivy | Y158-04-20 | The sign does not fill the car.
+      - crated_up | Y158-04-21 | A crate on the loading floor fills the car. It is the same answer as everything else.
+        - second_floor_ivy | Y158-04-21 | It is the same answer as everything else.
+- kettle_ron | Y158-08-09 | The boiler we did not order is still in the boiler house and it is the best thing that came out of that delivery. I said I would take it and I have taken it every day since.
+  - foreman_hale | Y158-08-09 | It is the only part of this log that I am unreservedly proud of.
+    - kettle_ron | Y158-08-09 | You should be. It was a good mistake.
+- tilda_m | Y159-02-11 | I have the shift counts from the deck for three years now. They are the most boring sheets I own and I have read them four times. The floor is at rate and the rate has not drifted.
+  - foreman_hale | Y159-02-11 | Boring is the number I wanted.
+    - tilda_m | Y159-02-11 | Boring is the only number that means anything over three years.
+- hem_of_the_line | Y159-06-02 | We copied the two-crate lift arrangement onto Line 5 and it worked, which surprised nobody but me. I am writing it because I said it would work in Y156 and I have never been right about anything on this board before.
+  - foreman_hale | Y159-06-02 | You were right about the crates.
+  - second_floor_ivy | Y159-06-03 | Two crates and a full car. It is not clever, it is just true.
+- foreman_hale | Y160-01-20 | Four years after the last entry and the floor is still the floor. We have moved the waste post once more, put in a second pole by the drawer and taken out a beam to run a pipe, and none of it is in the original nine pages. If you are reading this to learn how to build a floor, read the dates and the mistakes. The finished parts are not the useful parts.
+  - brass_tally | Y160-01-20 | Write the mistakes first. I have said that to three apprentices this month and they all nod and then write the finished part.
+- GerdV | Y160-02-04 | I welded the frames for that floor in the spring of Y156 and I have still not been up. I am told it is very fine. I am also told the press came up on a rope, which I have now read in a log, so it must be true.
+  - foreman_hale | Y160-02-04 | It is in the log.
+    - GerdV | Y160-02-04 | Then it is true and I am glad I was in the yard.

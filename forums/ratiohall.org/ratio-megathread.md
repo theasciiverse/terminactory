@@ -72,3 +72,51 @@ board: Reference   date: Y126-04-05   author: ratio_warden   status: open
 - ratio_warden | Y149-01-06 | A note after twenty-three years. This thread has been wrong twice. Once about the molder, once about the pipe press, and both times a person with a crate and a shift of counting corrected it. That is the method working. Bring your counts.
   - the_third_decimal | Y149-01-06 | 23.4
     - ratio_warden | Y149-01-06 | Not that kind of count.
+
+- throughput_tony | Y149-02-11 | A figure I have checked three times and I am still not comfortable with. A pipe press takes two plate for one pipe in two and a half seconds. A plate press makes one plate in two and a half seconds. So one plate press feeds one pipe press for two and a half seconds and then the pipe press waits two and a half seconds. Two plate presses is the arrangement.
+  - decimal_doreen | Y149-02-11 | The arithmetic is right and the conclusion is right. One and a half plate presses is the honest figure for a line that runs.
+    - throughput_tony | Y149-02-11 | I said two.
+      - decimal_doreen | Y149-02-11 | You said two and then I said one and a half and we are both describing a line that stops.
+  - ratio_warden | Y149-02-12 | Accepted, with the margin note. The recipe figure is two plate per pipe. The arrangement is a choice.
+- old_slide_rule | Y150-06-02 | I have been reading this thread for twenty-nine years and it has one quality I have never seen on a board of numbers. It says when it does not know. That is rarer than being right.
+  - ratio_warden | Y150-06-02 | It is the only reason the thread is worth pinning.
+  - table_herr | Y150-06-03 | A table with no gaps in it is a table nobody has checked.
+- pinch_point | Y151-03-19 | A method note that belongs here and not in the method board, because it is about a number. If your line runs at ninety per cent of its recipe, and you cannot find the missing ten, stop looking for a machine. Look at the crates. A crate that is always full is a machine that is not working.
+  - ratio_warden | Y151-03-19 | That is a claim and it has a unit. Accepted.
+  - half_belt_hana | Y151-03-20 | Mine ran at ninety-four for a year and it was a crate at the lift. It was never full and never empty and I called it a buffer.
+    - pinch_point | Y151-03-20 | Then it was storage and the lift was the machine.
+- unit_ursula | Y152-11-08 | A teacher's correction, offered twelve years after I last posted. I used to teach two furnaces per molder as the first lesson. I have stopped. I teach one furnace and one molder and a crate, because that is a line a person can see. The ratio comes after they have watched it starve once.
+  - decimal_doreen | Y152-11-08 | That is a better order than mine and I have taught the other one for twenty years.
+    - unit_ursula | Y152-11-08 | You have taught it correctly. I have taught it too early.
+  - foreman_ferro | Y152-11-09 | A ratio taught too early is a drawing a man will defend for a year.
+- table_herr | Y153-05-14 | I have redrawn the copper table one last time and I am putting the crates on it as arrows with a break in them. It is not a machine and it is not nothing. Every man who has ever used one of my tables has added a crate to it in pencil.
+  - ratio_warden | Y153-05-14 | It is the first time the standard table has had a break in it.
+  - old_slide_rule | Y153-05-15 | It is the first time it has been honest about the floor.
+- margin_mo | Y154-02-27 | A cost figure that belongs beside the ratios. A steel line at exactly its recipe rate has no room for the four stoppages a month that every steel line has. Four stoppages at six minutes is twenty-four minutes. On a ten-hour shift that is four per cent. That is your margin and it is not a fudge.
+  - decimal_doreen | Y154-02-27 | Four per cent for stops and another six for the wage. Ten is the number I use.
+    - margin_mo | Y154-02-27 | Then we use the same number for different reasons and both of them are right.
+  - foreman_ferro | Y154-02-28 | And a line staffed by a new man has more stops. The margin is not a constant. It is a statement about who is on the line.
+- the_third_decimal | Y155-07-02 | 1.5.
+  - ratio_warden | Y155-07-02 | Which thread?
+    - the_third_decimal | Y155-07-02 | This one. Plate presses per pipe press.
+      - decimal_doreen | Y155-07-02 | He is right and he has read the whole thread to find it.
+- clean_melt | Y156-02-19 | A silicon figure for the record, since it comes up and it is not in the first post. A grower takes an ingot and gives a crystal, and a saw takes the crystal and gives wafers. The saw is the slow one and the grower is the one that costs EC. If you are counting silicon, count the wafers and not the crystals.
+  - ratio_warden | Y156-02-19 | Accepted, with the note that the silicon recipes are on the cost board and not this one.
+  - half_belt_hana | Y156-02-20 | And the etcher is the machine that stops. Nobody counts the etcher.
+    - clean_melt | Y156-02-20 | Everybody counts the etcher after their first month.
+- throughput_tony | Y157-09-11 | I am going to post a number I got wrong, because the thread is twenty-nine years old and I have been wrong about once a year for all of them. I said a basic belt carries forty-eight a minute. I have recounted on a different line and got forty-four. The difference is a splitter I did not know was there.
+  - ratio_warden | Y157-09-11 | A count through a splitter is a count of the splitter. You taught me that.
+    - throughput_tony | Y157-09-11 | I taught you that and then I forgot it.
+  - pinch_point | Y157-09-12 | Forty-four is the number I would have given you and I have never posted it because I could not say why.
+- decimal_doreen | Y158-06-04 | A summary, because the thread has grown and people do not read it from the top.
+  1. A molder casts one ingot every two and a half seconds, twenty-four a minute.
+  2. A copper furnace makes twelve a minute. Two per molder, and one and a half for a molder that never waits.
+  3. A plate press makes twenty-four plate a minute. A pipe press eats two plate for one pipe. Two plate presses per pipe press.
+  4. Wire is one plate for two wire, and the wire is worth more than the plate but backs up faster.
+  5. Everything at exactly its rate has no room for a stop. Add the margin or add the crate.
+  - ratio_warden | Y158-06-04 | This is going in the first post as the summary.
+  - table_herr | Y158-06-05 | And I will draw it as five lines, which is the only way I have ever been able to read anything.
+- ratio_warden | Y160-01-20 | Thirty-four years and the thread has been corrected three times, once about a molder and twice about a press, and every correction came from somebody with a crate and a shift of counting. The method has not changed. Bring your counts.
+  - decimal_doreen | Y160-01-20 | And your dates.
+  - the_third_decimal | Y160-01-20 | 3.
+    - ratio_warden | Y160-01-20 | That one is correct.

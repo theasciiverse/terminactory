@@ -10,8 +10,9 @@ Boards: **Reference** · **Throughput** · **Cost** · **Power** · **Fluids** �
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Ratio megathread: the numbers, and how to use them](ratio-megathread.md) — *sticky* | ratio_warden | 42 | Y149-01-06 |
-| [The counting thread: a shift, a number, a date](the-counting-thread.md) — *sticky* | decimal_doreen | 51 | Y160-01-15 |
+| [Ratio megathread: the numbers, and how to use them](ratio-megathread.md) — *sticky* | ratio_warden | 84 | Y160-01-20 |
+| [The counting thread: a shift, a number, a date](the-counting-thread.md) — *sticky* | decimal_doreen | 93 | Y160-11-15 |
+| [The yearly numbers thread: what changed, and what did not](the-yearly-numbers-thread.md) | ratio_warden | 146 | Y160-01-12 |
 | [Items per second on a belt: the actual figure](items-per-second-on-a-belt.md) | table_herr | 9 | Y140-02-11 |
 
 ## Throughput
@@ -24,7 +25,7 @@ Boards: **Reference** · **Throughput** · **Cost** · **Power** · **Fluids** �
 | [Is grit worth the extra machine?](grit-worth-the-extra-machine.md) | throughput_tony | 11 | Y147-01-21 |
 | [How many drills does one furnace need?](drills-per-furnace.md) | pinch_point | 11 | Y145-06-03 |
 | [Grit versus whole ore: the actual numbers](grit-vs-whole-ore-numbers.md) | sand_and_stone | 15 | Y145-04-02 |
-| [How many furnaces per molder?](how-many-furnaces-per-molder.md) | decimal_doreen | 27 | Y143-03-07 |
+| [How many furnaces per molder?](how-many-furnaces-per-molder.md) | decimal_doreen | 73 | Y159-05-14 |
 
 ## Cost
 
@@ -58,6 +59,7 @@ Boards: **Reference** · **Throughput** · **Cost** · **Power** · **Fluids** �
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
 | [Why I stopped chasing ratios](why-i-stopped-chasing-ratios.md) | pinch_point | 20 | Y159-11-08 |
+| [Is a crate a machine?](is-a-crate-a-machine.md) | unit_ursula | 118 | Y158-11-21 |
 | [The word "optimal" again](the-word-optimal-again.md) — *locked* | unit_ursula | 6 | Y159-09-17 |
 | [When do you stop building and start running?](when-to-stop-building.md) | foreman_ferro | 14 | Y158-07-11 |
 | [How do you teach a ratio to somebody who has never built a line?](teaching-ratios-to-apprentices.md) | unit_ursula | 15 | Y154-01-20 |

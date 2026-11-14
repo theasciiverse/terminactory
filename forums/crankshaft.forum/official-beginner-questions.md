@@ -115,3 +115,41 @@ board: Beginner Questions   date: Y124-02-11   author: brass_tally   status: ope
 - brass_tally | Y160-01-06 | This thread has been going for thirty-six years. I have answered questions in it as a young operator, as a foreman, and now as a man with a garden. The advice in the first post has not changed, because the machines have not changed. Read the front of the machine. Clear the back. Feed it. It comes out right in the end.
   - TamsinR | Y160-01-06 | Nothing to add.
   - GerdV | Y160-01-07 | I remember when this thread was three pages. Some of the people who asked questions in it are not with us on here any more. I still think it is the best thing on the board.
+
+- apprentice_tomas | Y160-01-19 | A question I have been saving because I did not want to look foolish. My line makes copper wire and the wire backs up at the trade post every afternoon. The press is not stopped and the post is not full. What is it?
+  - six_belts | Y160-01-19 | Post full is not the only stop. A post takes a load at a time. If your belt arrives faster than the post can take it, the belt backs up and the post looks idle.
+    - apprentice_tomas | Y160-01-19 | So the post is the slow machine.
+      - six_belts | Y160-01-19 | The post is the slow machine. Six faults, and that is the seventh.
+  - brass_tally | Y160-01-20 | An arm on the post helps, and a crate before it helps more. The post is not a machine you can make faster. You can only stop it being asked for more than it can take.
+    - apprentice_tomas | Y160-01-20 | I have a crate. I will put the arm on.
+      - brass_tally | Y160-01-21 | Then you will have solved it and you will not need me.
+- young_hal | Y160-01-24 | Is there any way to make a drill mine faster without a second drill?
+  - ivo_p | Y160-01-24 | No. A drill has a rate and the rate is the machine. A second drill is the answer and it is also the cheap answer.
+  - brass_tally | Y160-01-24 | There is one thing. A drill set to coal feeds itself and does not wait for a belt. If your drill is on ore, it is fed by whatever you bring it and that is where the waiting is.
+    - young_hal | Y160-01-24 | It is on ore and it is fed by a belt from a crate.
+      - brass_tally | Y160-01-25 | Then the crate is the answer and you already have it.
+- mateo_belts | Y160-02-02 | I have been fitting belts for seventeen years and I will answer the question I get most. Yes, a fast belt is worth it on a long run and no, it is not worth it on a short one. A fast belt costs the same as a basic one to run and twice as much to replace, and a belt that is too fast for the machine in front of it is a belt that stops more often.
+  - six_belts | Y160-02-02 | Fast belt, slow machine is a full belt and a stopped machine. Same fault, more money.
+  - apprentice_nell | Y160-02-03 | I have been told the opposite for years.
+    - mateo_belts | Y160-02-03 | You have been told the opposite by people selling belts.
+- halvard_k | Y160-02-06 | Hello. I have been asked to answer a kiln question in this thread because it is the beginner thread and I have answered it forty times elsewhere. A kiln waits for a full batch. If it sits with stone and coal and does nothing, it is waiting for the eighth run. Fill it faster or put a crate in front of it.
+  - apprentice_tomas | Y160-02-06 | How do I know it is waiting and not broken?
+    - halvard_k | Y160-02-06 | If it is broken it stops taking stone. If it is waiting it takes stone and does nothing with it.
+      - apprentice_tomas | Y160-02-07 | That is the clearest thing I have read on here.
+        - kiln_marit | Y160-02-07 | He has had thirty years to make it clear.
+- ferrous_ann | Y160-02-11 | A waste question that comes up every year and I will answer it once more. A trade post set to money takes waste and charges the fee. Research and split posts refuse it. There is no post that takes waste for free and there is no way to burn it. If your furnace is stopped and the back is full, you have a post problem.
+  - crated_up | Y160-02-11 | And a crate behind the furnace is a buffer, not a drain. It buys you an hour and then you are back where you were.
+    - ferrous_ann | Y160-02-11 | An hour is a shift if you use it.
+- quiet_oswin | Y160-02-19 | A press that is warm and idle is waiting for an ingot. A press that is cold and idle is not on the grid.
+  - apprentice_nell | Y160-02-19 | How do you tell a warm press from a cold one?
+    - quiet_oswin | Y160-02-20 | Put your hand near it.
+      - apprentice_nell | Y160-02-20 | That is obvious and I did not think of it.
+- TamsinR | Y160-02-24 | Nothing to add.
+  - apprentice_tomas | Y160-02-24 | You always say that and then somebody quotes you three posts later.
+    - TamsinR | Y160-02-24 | Then they have said it better than I would.
+- brass_tally | Y160-03-02 | Two more, for the people who have read this far. A machine that is stopped will tell you which of the five checks failed if you stand in front of it and look. And a machine that is running badly is not stopped, and it will tell you nothing, and that is the harder afternoon.
+  - OldHollowmere | Y160-03-02 | A running machine that is running badly is a machine asking for help quietly.
+  - six_belts | Y160-03-03 | Watch the belt, not the machine. The belt knows first.
+- GerdV | Y160-03-08 | I have read this thread for thirty-six years and it is the only one I would keep if the boards closed tomorrow. Everything on it is somebody asking a question they were afraid to ask, and somebody answering as if it were a good question. Which it was.
+  - TamsinR | Y160-03-08 | Nothing to add, and this time I mean it.
+    - brass_tally | Y160-03-09 | It comes out right in the end.

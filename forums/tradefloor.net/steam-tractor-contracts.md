@@ -25,3 +25,38 @@ board: Contracts   date: Y153-02-20   author: contract_ines   status: open
     - contract_ines | Y153-02-25 | That is a business model and it is not mine.
       - old_ferrous | Y153-02-25 | It worked for thirty years.
   - contract_ines | Y155-09-02 | Two years on. Four tractors brokered, three on time, one late by a month and paid for with a penalty clause I wrote myself. The clause was the best work I did on that contract.
+
+- contract_ines | Y155-10-19 | A fifth tractor, and the first one I have brokered to a buyer who had already owned one. He knew what he wanted and he wrote the second page himself. It was better than mine and I signed it.
+  - copperkate | Y155-10-19 | A buyer who writes the second page is a buyer who has been burned.
+    - contract_ines | Y155-10-19 | He had. His first tractor came two months late and he paid for the wait.
+  - foreman_hale | Y155-10-20 | Did he ask for the panel line to be running before the date?
+    - contract_ines | Y155-10-20 | He asked for the panel line to be running before the order. I sent him the date the line started and he was satisfied.
+      - foreman_hale | Y155-10-20 | Then he knows the business.
+- silo_sam | Y156-03-08 | A haulage note for the fifth tractor. It went out on a flat cart with four men and a morning and it took the west gate because the north gate cannot take it. The buyer complained about the haulage charge and paid it.
+  - contract_ines | Y156-03-08 | Did he pay on the day?
+    - silo_sam | Y156-03-08 | He paid when the tractor was on his yard.
+      - contract_ines | Y156-03-08 | That is the right order for a haulage charge.
+  - freight_fen | Y156-03-09 | Put the route on the paper. I have turned one away at the north gate and I do not want to do it twice.
+- margin_mo | Y156-09-02 | A cost note that is really a warning. A steam tractor is an engine block, a frame, four hardened gears, a control panel and a generator. At posted rates the parts are over five thousand before you have paid the assembler or the haulier. Seven thousand five hundred leaves a margin that a late delivery will eat entirely.
+  - copperkate | Y156-09-02 | Then do not be late.
+    - margin_mo | Y156-09-02 | Then do not sell a date you have not built the line for.
+  - contract_ines | Y156-09-03 | That is the whole of this thread in two posts.
+- greta_sells | Y157-02-11 | I have a buyer who wants a tractor and does not want a control panel. He says he will fit his own.
+  - contract_ines | Y157-02-11 | Then the rate is not seven thousand five hundred. It is the tractor less the panel, and the panel is nine hundred, and you should both write down that he is fitting his own.
+    - greta_sells | Y157-02-11 | He will fit his own and it will be a control panel from a plant that makes them.
+      - contract_ines | Y157-02-11 | Then the paper says so and his warranty is his own.
+  - copperkate | Y157-02-12 | A tractor without a panel is a tractor with a conversation attached. Charge for the conversation.
+- foreman_hale | Y157-08-02 | We are building a sixth tractor on the deck and I have put the panel line on the same floor so that the panel is never waiting. It has cost me two machines' worth of space and it has saved me four months.
+  - second_floor_ivy | Y157-08-02 | A panel line beside the assembly is the only way to promise a date.
+  - contract_ines | Y157-08-03 | And the date is what the buyer is actually buying.
+- silo_sam | Y158-01-20 | The sixth tractor went out in the snow and it took two days instead of one. The buyer paid the haulage and did not pay the wait. I have written it in the book.
+  - freight_fen | Y158-01-20 | A winter haulage line is a line on the paper and a number on the invoice.
+    - silo_sam | Y158-01-20 | It was on the paper. He read it after.
+  - contract_ines | Y158-01-21 | They always read it after. That is why it is on the paper.
+- contract_ines | Y159-04-11 | Six tractors in six years, four on time, one late and one early. The early one was the only one where the buyer complained, because he had nowhere to put it.
+  - copperkate | Y159-04-11 | An early delivery is a storage problem you have given somebody for free.
+    - contract_ines | Y159-04-11 | I have started asking where it will stand.
+  - silo_sam | Y159-04-12 | And who will unload it. An early tractor and no men is a tractor on a cart for a week.
+- contract_ines | Y159-09-02 | A last note on the thread, and it is the note I would put on the second page if I were writing one for the whole trade. A tractor is a date and a route and a panel. Get those three on the paper and the price will look after itself.
+  - foreman_hale | Y159-09-03 | The panel is the one people leave off.
+    - contract_ines | Y159-09-03 | The panel is always the one people leave off.

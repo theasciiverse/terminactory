@@ -18,7 +18,7 @@ Boards: **Guides & Sticky** · **Beginner Questions** · **Build Orders & Layout
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Official beginner questions thread (read the first post before asking)](official-beginner-questions.md) — *sticky* | brass_tally | 86 | Y160-01-07 |
+| [Official beginner questions thread (read the first post before asking)](official-beginner-questions.md) — *sticky* | brass_tally | 123 | Y160-03-09 |
 | [Drill will not take coal from the belt](drill-wont-take-coal-from-belt.md) — *solved* | apprentice_tomas | 7 | Y154-05-13 |
 | [Upgrade planner and belt tunnels](upgrade-planner-and-tunnels.md) | mateo_belts | 11 | Y153-10-02 |
 | [Belt tunnel exit will not place](belt-tunnel-exit-will-not-place.md) — *solved* | hem_of_the_line | 5 | Y151-02-20 |
@@ -36,8 +36,9 @@ Boards: **Guides & Sticky** · **Beginner Questions** · **Build Orders & Layout
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Build order megathread: what to build first, and what to build next](build-order-megathread.md) — *sticky* | six_belts | 47 | Y158-04-20 |
-| [Build log: the upper floor on Line 4](the-upper-floor-build-log.md) | foreman_hale | 86 | Y157-03-05 |
+| [Build order megathread: what to build first, and what to build next](build-order-megathread.md) — *sticky* | six_belts | 75 | Y160-02-27 |
+| [Build log: the upper floor on Line 4](the-upper-floor-build-log.md) | foreman_hale | 121 | Y160-02-04 |
+| [Belts over the aisle or pipes under it?](belts-over-the-aisle-or-pipes-under.md) | pipefitter_uri | 89 | Y160-01-19 |
 | [Steam tractor: is the control panel line worth it?](steam-tractor-control-panel.md) | foreman_hale | 23 | Y157-02-11 |
 | [Blueprint names: how do you keep a library usable?](blueprint-naming-conventions.md) | second_floor_ivy | 12 | Y155-06-02 |
 | [One belt with copper and iron on it: how do you sort it?](mixed-ore-belt-sorting.md) | ferrous_ann | 16 | Y155-03-20 |
@@ -94,7 +95,8 @@ Boards: **Guides & Sticky** · **Beginner Questions** · **Build Orders & Layout
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [What are you building this week?](what-are-you-building-this-week.md) — *sticky* | TamsinR | 64 | Y160-02-12 |
+| [What are you building this week?](what-are-you-building-this-week.md) — *sticky* | TamsinR | 113 | Y160-11-15 |
+| [Does anyone else remember the first furnace?](does-anyone-remember-the-first-furnace.md) | GerdV | 144 | Y160-02-21 |
 | [Who signs a new line off before it runs?](who-signs-off-a-new-line.md) | green_helmet | 11 | Y159-04-12 |
 | [Will a steam tractor fit through the north gate?](tractor-through-the-gate.md) | foreman_hale | 11 | Y158-03-15 |
 | [Apprentices and the night rota](apprentice-rota-and-nights.md) | foreman_hale | 12 | Y157-07-25 |

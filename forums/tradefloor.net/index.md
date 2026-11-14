@@ -10,7 +10,8 @@ Boards: **Rates** · **Contracts** · **Haulage** · **Barter** · **Waste**
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Rate board (read the first post, it is the only post that is kept current)](rate-board-sticky.md) — *sticky* | copperkate | 29 | Y157-08-15 |
+| [Rate board (read the first post, it is the only post that is kept current)](rate-board-sticky.md) — *sticky* | copperkate | 71 | Y160-02-16 |
+| [What did you sell this year, and what did you get for it?](what-did-you-sell-this-year.md) | copperkate | 86 | Y160-02-12 |
 | [Closing a deal at the gate: what do you say?](closing-a-deal-at-the-gate.md) | copperkate | 11 | Y160-01-24 |
 | [A buyer who wants it cheap and will not say how cheap](a-buyer-who-wants-it-cheap.md) | greta_sells | 10 | Y159-04-02 |
 | [When do you hold a price and when do you let it move?](when-to-hold-a-price.md) | copperkate | 11 | Y156-10-13 |
@@ -27,7 +28,7 @@ Boards: **Rates** · **Contracts** · **Haulage** · **Barter** · **Waste**
 |---|---|---|---|
 | [Who has sold to Meridian? They are very friendly and I do not trust it](who-sold-to-meridian.md) | noon_market_mira | 18 | Y158-04-11 |
 | [The second page: what do you actually put on it?](the-second-page.md) | contract_ines | 12 | Y158-03-02 |
-| [Steam tractor contracts: who is actually buying?](steam-tractor-contracts.md) | contract_ines | 22 | Y155-09-02 |
+| [Steam tractor contracts: who is actually buying?](steam-tractor-contracts.md) | contract_ines | 56 | Y159-09-03 |
 | [Is it disloyal to sell to a rival plant?](selling-to-a-rival-plant.md) | noon_market_mira | 11 | Y154-02-11 |
 | [A contract for a thousand plates: what do I put on the paper?](contract-for-a-thousand-plates.md) | contract_ines | 10 | Y152-08-19 |
 | [Credit and handshakes: how much do you carry?](credit-and-handshakes.md) | old_ferrous | 11 | Y141-12-02 |
@@ -36,7 +37,7 @@ Boards: **Rates** · **Contracts** · **Haulage** · **Barter** · **Waste**
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [The gate book: what actually crossed, and when](the-gate-book.md) — *sticky* | west_gate_pat | 40 | Y160-01-05 |
+| [The gate book: what actually crossed, and when](the-gate-book.md) — *sticky* | west_gate_pat | 86 | Y160-11-03 |
 | [Haulage in winter: what do you add to the rate?](haulage-in-winter.md) | silo_sam | 9 | Y157-12-05 |
 | [Gate fees and the weighing: who pays for the scale?](gate-fees-and-weighing.md) | freight_fen | 8 | Y153-01-29 |
 | [What counts as a delivery: on the cart or on the floor?](what-counts-as-a-delivery.md) | freight_fen | 10 | Y150-10-03 |
@@ -60,6 +61,7 @@ Boards: **Rates** · **Contracts** · **Haulage** · **Barter** · **Waste**
 | [Scrap buyers: what will you actually take?](scrap-buyers-wanted.md) | scrap_king_pell | 8 | Y149-09-07 |
 | [Selling waste without getting a lecture](selling-waste-without-a-lecture.md) | waste_lars | 8 | Y139-04-15 |
 | [Anyone buying waste? Asking for a friend with a full back](anyone-buying-waste.md) | molder_max | 14 | Y137-11-02 |
+| [Waste is not free and never was](waste-is-not-free-and-never-was.md) | waste_lars | 89 | Y159-04-03 |
 
 ---
 

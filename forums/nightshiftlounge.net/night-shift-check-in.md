@@ -67,3 +67,57 @@ board: The Lounge   date: Y131-08-14   author: third_shift_tom   status: open
     - third_shift_tom | Y157-04-12 | It was me. I had forgotten I said it.
   - [Deleted User #3312] | Y157-04-12 | Line 6, running. The corridor lights are out between fourteen and twenty and nobody has put it in the book, so I have put it in the book.
     - night_porter_iss | Y157-04-12 | I will tell the gate.
+
+- bench_light | Y157-06-02 | Line 6. Running. It is the first check-in in nine years where I have something to report. The man on the next machine has been moved to days and I have been given a new one who does not talk.
+  - third_shift_tom | Y157-06-02 | Does not talk yet.
+    - bench_light | Y157-06-02 | Does not talk yet.
+  - MillaOnNights | Y157-06-03 | Give him a month and then tell him the check-in exists. That is how it was done for me.
+- night_porter_iss | Y157-09-11 | Porter. The corridors are dry and the lights are on and the canteen hatch is shut at half two because the man who cleans it leaves at half two. I have written the time in the book.
+  - soup_ladle | Y157-09-11 | The hatch is shut at half two and there is a pot on behind it. Knock.
+    - night_porter_iss | Y157-09-12 | I have knocked.
+      - soup_ladle | Y157-09-12 | Then you have had soup.
+- quiet_corridor | Y157-12-02 | Corridor. Nothing running and nothing stopped. The light at the turn is out and I have reported it and I am writing it here so that the report has a date.
+  - ivo_p | Y157-12-02 | Is it the switch or the lamp?
+    - quiet_corridor | Y157-12-02 | The lamp. The switch works the corridor.
+      - ivo_p | Y157-12-03 | Then it is a lamp and a man with a ladder. I will see to it.
+        - quiet_corridor | Y157-12-04 | It is on.
+- marge_on_four | Y158-03-14 | Line 4. Running. My daughter has started at the plant on days and I have told her nothing except to sign the book and read the notices.
+  - third_shift_tom | Y158-03-14 | That is more than most parents tell them.
+  - canteen_agnes | Y158-03-15 | Tell her the hatch is open at half two.
+    - marge_on_four | Y158-03-15 | She is on days.
+      - canteen_agnes | Y158-03-15 | Then tell her the bread comes at five.
+- [Deleted User #3312] | Y158-05-19 | Line 6, running. The second press is starved and the drawer is fine and the plate press is the slow one. I have told the fitter and I am telling the board because the fitter is on days.
+  - MillaOnNights | Y158-05-19 | Written down here is as good as told.
+    - [Deleted User #3312] | Y158-05-19 | It is better. The board reads it twice.
+- sam_three_to_eleven | Y158-08-02 | Line 2. Running, and I am on three to eleven for the first time in four years and I have remembered why I asked to come off it. Nothing is wrong. I am just tired in a different way.
+  - third_shift_tom | Y158-08-02 | Different tired is still tired.
+  - NurseOdile | Y158-08-03 | Sleep at the same time every day, including your days off. I will keep saying it.
+    - sam_three_to_eleven | Y158-08-03 | I know. I have been saying it to other people.
+- kettlekeeper | Y159-01-15 | Boiler house. Both boilers up and the kettle on and the door shuts. The corridor door still does not and I have written it in the handover sheet for the sixth year.
+  - marge_on_four | Y159-01-15 | It is in the sheet and it will be done in the spring.
+    - kettlekeeper | Y159-01-15 | It has been spring for six years.
+  - night_porter_iss | Y159-01-16 | I have put a rolled coat against it. It works.
+    - kettlekeeper | Y159-01-16 | It is not a door.
+      - night_porter_iss | Y159-01-16 | It is a warm corridor.
+- the_last_round | Y159-04-02 | Gate. Nothing crossed since one and the grit is out and the hill is clear. I have written the weather and it is "clear, cold".
+  - dawn_porter | Y159-04-02 | Clear and cold is the best walking.
+    - the_last_round | Y159-04-02 | It is the best walking and the worst ice.
+  - west_gate_pat | Y159-04-03 | The grit is in the shed and the key is on the hook. You have both.
+- apprentice_tomas | Y159-07-14 | Line 5. Running. I am the man on the next machine now and the new apprentice does not talk. I have told him about the check-in and he said nothing.
+  - bench_light | Y159-07-14 | He will.
+    - apprentice_tomas | Y159-07-14 | How long?
+      - bench_light | Y159-07-15 | A month. Then he will say one thing and you will remember it.
+- third_shift_tom | Y159-10-02 | Line 4. Running. Twenty-eight years of this thread and I have read the last page of it every night for a month. The same names, the same lines, and one new one who does not talk yet.
+  - MillaOnNights | Y159-10-02 | Line 3. Running. Nothing to report.
+  - night_porter_iss | Y159-10-03 | Porter. The corridors are empty and the hatch light is on.
+- night_porter_iss | Y160-01-18 | Porter. The new book is on the gate and the first entry is mine and the weather is in the margin. Nine years I have checked in here and this is the first entry I have written in a book of my own.
+  - west_gate_pat | Y160-01-18 | Keep the margin.
+    - night_porter_iss | Y160-01-18 | It is kept.
+  - third_shift_tom | Y160-01-19 | That is a check-in.
+- MillaOnNights | Y160-03-02 | Line 3. Running. I have been moved to the room with the assemblers and I am still learning the sounds. The arm is the loud one and the assembler is the quiet one and the belt is neither.
+  - quiet_corridor | Y160-03-02 | Which one stops first?
+    - MillaOnNights | Y160-03-02 | The arm. It waits for a part and it does not hide it.
+  - bench_light | Y160-03-03 | You have learned it in a month. It took me a year.
+- third_shift_tom | Y160-06-14 | Line 4. Running. The coffee is better than it has ever been and the man who makes it has been on nights for a year and does not talk.
+  - bench_light | Y160-06-14 | Does not talk yet.
+    - third_shift_tom | Y160-06-14 | Does not talk yet.

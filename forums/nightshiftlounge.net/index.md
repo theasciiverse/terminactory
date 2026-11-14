@@ -10,8 +10,10 @@ Boards: **The Lounge** · **Health** · **Canteen** · **Rota**
 
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
-| [Night shift check-in](night-shift-check-in.md) — *sticky* | third_shift_tom | 57 | Y157-04-12 |
-| [The four o'clock thread](the-four-oclock-thread.md) — *sticky* | third_shift_tom | 56 | Y160-02-10 |
+| [Night shift check-in](night-shift-check-in.md) — *sticky* | third_shift_tom | 110 | Y160-06-14 |
+| [The four o'clock thread](the-four-oclock-thread.md) — *sticky* | third_shift_tom | 99 | Y160-12-02 |
+| [The winter thread](the-winter-thread.md) | kettlekeeper | 112 | Y160-01-28 |
+| [Who trained you?](who-trained-you.md) | marge_on_four | 80 | Y159-09-03 |
 | [Being the only one awake](being-the-only-one-awake.md) | bench_light | 8 | Y159-06-05 |
 | [Thirty years since Line 1 opened](anniversary-of-the-old-line.md) | GerdV | 20 | Y158-06-09 |
 | [What happens when the check-in stops?](the-check-in-that-stopped.md) | third_shift_tom | 10 | Y158-06-02 |
@@ -42,7 +44,7 @@ Boards: **The Lounge** · **Health** · **Canteen** · **Rota**
 | Thread | Author | Replies | Last activity |
 |---|---|---|---|
 | [The milk run: who brings what?](the-milk-run.md) | soup_ladle | 9 | Y155-02-11 |
-| [Canteen menu, and the great pudding question](canteen-menu.md) | canteen_agnes | 27 | Y152-03-02 |
+| [Canteen menu, and the great pudding question](canteen-menu.md) | canteen_agnes | 62 | Y159-04-21 |
 | [Who has the key to the kettle cupboard?](who-has-the-kettle-key.md) | kettlekeeper | 8 | Y151-09-04 |
 | [The canteen at three in the morning](the-canteen-at-three.md) | soup_ladle | 11 | Y150-09-02 |
 | [Tea at the gate: whose job is it?](tea-at-the-gate.md) | the_last_round | 9 | Y149-12-21 |

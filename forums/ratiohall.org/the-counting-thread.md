@@ -65,3 +65,46 @@ board: Reference   date: Y128-05-02   author: decimal_doreen   status: open
   The thread stays open. Somebody will post a number this week that I did not expect and I will be glad of it.
   - half_belt_hana | Y160-01-15 | Four thousand one hundred and ninety. Nine hours. One molder. Y145, and I have looked at the sheet this time.
     - decimal_doreen | Y160-01-15 | Then it is a proper count at last.
+
+- half_belt_hana | Y160-02-06 | Line 6, Y160-02-05. Copper plates, four thousand and ten. One stoppage, a crate at the lift that nobody had emptied. Nine hours. The number is worse than my Y145 count and the line is better, and I would like somebody to tell me why.
+  - decimal_doreen | Y160-02-06 | The Y145 count was nine and a half hours and four thousand one hundred and ninety. This is nine hours and four thousand and ten.
+    - half_belt_hana | Y160-02-06 | So it is better per hour.
+      - decimal_doreen | Y160-02-06 | It is better per hour and worse per shift. Both are true.
+  - tilda_m | Y160-02-07 | And the stoppage is a crate and not a machine, which is a different kind of bad week.
+- pinch_point | Y160-02-14 | Line 3, Y160-02-13. Wire, nine thousand four hundred. One stoppage, a drawer waiting on a plate press. Nine and a half hours. This is the best count I have ever posted and I am posting it because I have been wrong about my own line for two years.
+  - throughput_tony | Y160-02-14 | Nine thousand four hundred is above what I would have said the belt could carry.
+    - pinch_point | Y160-02-14 | The belt is new and I have the sheet.
+      - throughput_tony | Y160-02-15 | Then I withdraw my eyebrow again.
+- foreman_ferro | Y160-03-02 | Line 5, Y160-03-01. Gears, nine thousand and sixty. Three presses, one assembler, one stoppage at shift change. Ten hours. I am posting the gear count because nobody posts gears.
+  - decimal_doreen | Y160-03-02 | Nine thousand and sixty gears from three presses in ten hours is three hundred an hour a press. A press makes twenty-four a minute at recipe, so you are at a fifth of the rate.
+    - foreman_ferro | Y160-03-02 | The assembler is the slow machine and I knew that when I wrote the post.
+      - decimal_doreen | Y160-03-03 | Then say it in the post and the number explains itself.
+- clean_melt | Y160-03-19 | Silicon floor, Y160-03-18. Wafers, two thousand one hundred. Two growers, one saw, two etchers. No stoppages. Nine hours. First clean shift in a month and I have written the date on the wall.
+  - half_belt_hana | Y160-03-19 | No stoppages at all?
+    - clean_melt | Y160-03-19 | No stoppages. The etchers were both fed and the saw never waited.
+  - decimal_doreen | Y160-03-20 | Then post the month as well and the bad shifts in it. A clean shift is not a month.
+    - clean_melt | Y160-03-20 | I have the month. It has four bad shifts and I am posting them next week.
+- sand_and_stone | Y160-04-08 | Crusher floor, Y160-04-07. Thirty-four thousand grit in nine hours, two crushers, one stoppage on the feed belt. The ore came in better than it did in Y136 and the count shows it. I am posting it because I posted the bad one first.
+  - table_herr | Y160-04-08 | Two crushers at fifteen ore a minute is thirty ore and sixty grit, over nine hours is more than thirty-four thousand. You are closer to rate than you were.
+    - sand_and_stone | Y160-04-08 | I am. The feed belt is the difference.
+  - decimal_doreen | Y160-04-09 | Then the count is a count of the feed and not of the crushers, and now it says so.
+- tilda_m | Y160-05-02 | I have been asked to count the deck on Line 4 for a month and I am posting the month and not the shift. Nine hundred and ten steel in a week is not a rate. Three thousand six hundred in a month is a rate.
+  - decimal_doreen | Y160-05-02 | A month is the first number I would accept from a new line. Thank you.
+  - foreman_hale | Y160-05-03 | And the month has the bad week in it.
+    - tilda_m | Y160-05-03 | The month has the bad week in it and the bad week was the week of the pole.
+- margin_mo | Y160-06-11 | Line 4, Y160-06-10. Steel, three thousand four hundred. Four stoppages, three waste posts and one pole. Ten hours. The waste posts are still the thing I cannot plan and I have stopped pretending it is a surprise.
+  - slag_accountant | Y160-06-11 | Three thousand four hundred steel is three thousand four hundred waste. At half a unit that is seventeen hundred in fee for the day.
+    - margin_mo | Y160-06-11 | I had the number ready this time.
+      - slag_accountant | Y160-06-11 | Then you have learned the thing this board is for.
+- the_third_decimal | Y160-07-04 | 4100. 9.
+  - decimal_doreen | Y160-07-04 | Line and year?
+    - the_third_decimal | Y160-07-04 | Line 6. Y160.
+      - decimal_doreen | Y160-07-04 | That is half_belt_hana's count from February and you have copied it again.
+        - the_third_decimal | Y160-07-04 | Yes.
+          - half_belt_hana | Y160-07-05 | I am choosing to be flattered again.
+- pinch_point | Y160-08-20 | Line 3, Y160-08-19. Wire, nine thousand one hundred. Two stoppages, both the drawer, both a belt with no pole. Nine and a half hours. I have had a good year and a bad month and the thread has both.
+  - throughput_tony | Y160-08-20 | That is the first post of yours with a bad month in it.
+    - pinch_point | Y160-08-20 | It is the first month I have had that was worth writing down.
+- decimal_doreen | Y160-11-14 | Thirty-two years and one hundred and four counts. I have read every one of them twice. The three things that make a good post have not changed: the product, the hours, and the bad week. The thread stays open.
+  - half_belt_hana | Y160-11-14 | Four thousand and ten. Nine hours. One crate. Y160, and I have looked at the sheet.
+  - tilda_m | Y160-11-15 | And a month is better than a shift. I will keep saying it.

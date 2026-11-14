@@ -78,3 +78,32 @@ board: Build Orders & Layouts   date: Y128-09-17   author: six_belts   status: o
 - brass_tally | Y158-04-19 | I have read this thread from the beginning tonight, which took some doing. The order in the first post is still the order I would give. What has changed is how quickly a person can get to steel, and that is a matter of research and money, not of layout. The layout has not changed in thirty years. It comes out right in the end.
   - six_belts | Y158-04-19 | Six belts. Same six faults.
   - GerdV | Y158-04-20 | I remember when step five was a rumour. Now it is step five.
+
+- mateo_belts | Y158-06-02 | A belt fitter's addition to the order. Before step one, walk the aisle you are going to use. Not the space, the aisle. I have built four lines that fitted the drawing and blocked the walkway, and every one of them had to be rebuilt in a week.
+  - six_belts | Y158-06-02 | Walk it with a crate in your hands. That is what the aisle is for.
+  - green_helmet | Y158-06-03 | And with a second man. The aisle is not the only width that matters.
+- young_hal | Y158-09-19 | I am at the point where I need a control board and I do not have a computer line. Is there a way round it?
+  - halverson_adjacent | Y158-09-19 | No. A control board comes off a computer line and a computer line is a year. If you need one, buy one and build the line while you save.
+  - copperkate | Y158-09-20 | I sell them at a hundred and seventy. That is the number and it is cheaper than a year of your own line.
+    - young_hal | Y158-09-20 | That is the first time a price has made me feel better.
+- ferrous_ann | Y159-01-11 | The steel order, ten years on and unchanged. Coke first, iron plate second, the waste post before the furnace is lit. Two plate and one coke makes one steel and one waste. If you are running the coal recipe, it is two plate and two coal for three waste and you will spend the difference in fee.
+  - six_belts | Y159-01-11 | Still the build. Still step five.
+  - apprentice_tomas | Y159-01-12 | I have copied it into my notebook with the date.
+- tilda_m | Y159-04-02 | A counting note for the build order. Before you add a machine, count the ones you have for a shift. If you cannot say which machine is the slow one, you are not ready to add anything. The count is step zero and nobody puts it in.
+  - brass_tally | Y159-04-02 | That is step zero and I have never written it.
+    - tilda_m | Y159-04-02 | Then put it in the first post.
+      - six_belts | Y159-04-03 | It is in the first post now.
+- ivo_p | Y159-07-14 | The power order, since it comes up. A panel at each end, a line of poles along the machines, and a pole within reach of every machine you add. A machine outside every pole's reach is not on the grid and it will not tell you in a way you notice.
+  - second_floor_ivy | Y159-07-14 | And an elevator links the grids on the floors it touches, so you do not need a pole up the wall.
+  - slow_steam | Y159-07-15 | Size the grid for the busy minute. Welders and assemblers are quiet until they are not.
+- apprentice_nell | Y159-10-08 | I have been asked to teach the build order to two new apprentices and I have found that I cannot. I can tell them the steps and they nod. What I cannot give them is the watching.
+  - brass_tally | Y159-10-08 | You cannot give it. You can only make them do it.
+    - apprentice_nell | Y159-10-08 | How?
+      - brass_tally | Y159-10-09 | Build one machine, then sit down and look at it for an hour. Do not help them. Let them be bored.
+  - TamsinR | Y159-10-09 | I was made to do that in Y128 and I thought it was a punishment.
+- hem_of_the_line | Y160-01-14 | Backwards still works. I have built four lines this way now and I have never once had a machine with nowhere to send its product. Build the drain, then the pipe.
+  - belt_end_bram | Y160-01-14 | The trade post men have been saying it for thirty years.
+  - six_belts | Y160-01-15 | Backwards. It is in the first post and nobody does it.
+- brass_tally | Y160-02-27 | I read this thread again this week, which is the third time since I retired. The order has not changed and the reasons have not changed. What has changed is that the people posting in it are better at saying why. That is the whole of progress on a factory floor.
+  - GerdV | Y160-02-27 | And the machines are the same.
+    - brass_tally | Y160-02-27 | The machines are the same and the people are better. It comes out right in the end.

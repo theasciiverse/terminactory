@@ -86,3 +86,53 @@ board: Off Topic   date: Y134-01-08   author: TamsinR   status: open
   - brass_tally | Y160-02-12 | What am I building this week? A bird box. It is going badly. The hinge is wrong.
     - TamsinR | Y160-02-12 | Measure twice.
       - brass_tally | Y160-02-12 | I did. The hinge is still wrong.
+
+- TamsinR | Y160-03-19 | A fence. The garden fence has been down since the autumn and I have spent two weekends on it. It is the first thing I have built in three years that does not have a rate.
+  - GerdV | Y160-03-19 | A fence has a rate. It is one post an hour and a bad back.
+  - brass_tally | Y160-03-20 | The hinge is the hard part. I say this as a man with a bird box that does not open.
+    - TamsinR | Y160-03-20 | I did not ask about the hinge.
+      - brass_tally | Y160-03-20 | Everybody asks about the hinge eventually.
+- young_hal | Y160-04-02 | A second silicon line, or the beginning of one. I have a grower and a saw and nothing between them, which I am told is the wrong order.
+  - halverson_adjacent | Y160-04-02 | It is the right order if you are short of money and the wrong order if you are short of time. A grower with nowhere to send a crystal is a very expensive shelf.
+    - young_hal | Y160-04-02 | I am short of money.
+      - halverson_adjacent | Y160-04-03 | Then it is the right order. Build the etcher next and do not tell anybody what it cost.
+  - clean_melt | Y160-04-03 | And do not run the saw until the etcher is ready. A crystal that sits is a crystal that has to be checked again.
+- mateo_belts | Y160-04-11 | A belt tunnel under the main aisle, my first, and I have measured it twice because the last thing I built over an aisle dropped a tile short.
+  - pipefitter_uri | Y160-04-11 | A tunnel does not drop short. That is its whole advantage.
+    - mateo_belts | Y160-04-11 | I have measured it twice anyway.
+      - pipefitter_uri | Y160-04-11 | Then you have learned something from the arm.
+- crated_up | Y160-04-24 | A stores reorganisation, which is not a factory. Four hundred crates counted and a new shelf for the ones that are always wanted. The counting took a week and the shelf took an afternoon.
+  - browncoat_bex | Y160-04-24 | The shelf is the part people will notice.
+  - tilda_m | Y160-04-25 | Did you find anything you had written off?
+    - crated_up | Y160-04-25 | Nine gearboxes and a boiler fitting that has been on order since Y151.
+      - browncoat_bex | Y160-04-25 | Cancel the order.
+- apprentice_tomas | Y160-05-08 | My first solo gearbox. It took me four days and the assembler stopped twice and both times it was a part I had not fed. I am putting it here before I tell anybody at home that it went well.
+  - anvil_jo | Y160-05-08 | Four days is a good first gearbox. Mine took a week and I had help.
+  - tiny_lathe | Y160-05-08 | Feed the assembler from a crate and it will not stop for a part. It will stop for four parts at once and that is different.
+    - apprentice_tomas | Y160-05-09 | I have the crate. I did not have the arm.
+- MillaOnNights | Y160-05-19 | Nothing on my floor. I have been moved to the room with the assemblers and I am learning the sounds. There is an arm and an assembler and a belt and I can tell which one has stopped without looking up.
+  - quiet_corridor | Y160-05-19 | How long did it take?
+    - MillaOnNights | Y160-05-19 | A month. I was told a week.
+  - third_shift_tom | Y160-05-20 | Everybody is told a week.
+- GerdV | Y160-06-02 | A gate. A garden gate, on the hinge I have been complaining about since March. It opens. It does not sag. I have opened it eleven times today and I am not ashamed.
+  - old_bert_hands | Y160-06-02 | A gate that does not sag is a gate that was hung by a man who measured.
+  - brass_tally | Y160-06-03 | The hinge was the hard part.
+    - GerdV | Y160-06-03 | The hinge was the hard part.
+- kettle_ron | Y160-06-14 | A boiler house with a new door that shuts. It took four years and a requisition and it shuts. I have swept the floor twice and the water is where the water was.
+  - slow_steam | Y160-06-14 | A dry floor and a shut door. You will be wanting a chair next.
+- second_floor_ivy | Y160-07-02 | A lift modernisation on Line 2, which is a polite word for taking the car apart and putting it back. Eleven seconds is now nine and nobody has noticed except the men who wait for it.
+  - foreman_hale | Y160-07-02 | Nine seconds is a floor that got two seconds back on every crate.
+    - second_floor_ivy | Y160-07-02 | It is nine seconds from the ground to the deck. Do not quote it as a rate.
+- hem_of_the_line | Y160-07-21 | A week off. I have not built anything and I have not thought about a belt and it has been the longest week of my life.
+  - TamsinR | Y160-07-21 | That is how you know you needed it.
+- apprentice_nell | Y160-08-04 | A line for somebody else. I have been asked to lay out a copper line for a plant on the coast and I have written the build order out from memory and then checked it against the thread. It was right except for the crates.
+  - six_belts | Y160-08-04 | It is always the crates.
+    - apprentice_nell | Y160-08-04 | It is always the crates.
+  - brass_tally | Y160-08-05 | You have become the person who answers. That happened without anybody announcing it.
+    - apprentice_nell | Y160-08-05 | I noticed when I stopped saying sorry.
+- Dorn | Y160-09-01 | A bigger drill. No reason.
+  - young_hal | Y160-09-01 | There is always a reason.
+    - Dorn | Y160-09-01 | More ore.
+- TamsinR | Y160-11-14 | The fence is up and the gate opens and the bird box still does not. What am I building this week? Nothing. I am reading the thread from the beginning and it is twenty-six years long and I have forgotten half of it.
+  - GerdV | Y160-11-14 | That is the best thing to build in November.
+  - brass_tally | Y160-11-15 | Read the parts where somebody was wrong. They are the parts you will need.

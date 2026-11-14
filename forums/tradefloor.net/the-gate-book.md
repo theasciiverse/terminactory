@@ -55,3 +55,44 @@ board: Haulage   date: Y133-02-14   author: west_gate_pat   status: open
           - west_gate_pat | Y160-01-06 | Then I was. I do not remember the second one and I remember the first one very well.
             - night_porter_iss | Y160-01-07 | I have written a note beside it. It says "two, check".
               - west_gate_pat | Y160-01-07 | Good. That is what the margin is for.
+
+- night_porter_iss | Y160-02-11 | Y160-02-10, two crates of copper plate, one cart, signed at 07:05. The driver's paper says 06:30 and the driver's paper is always half an hour early.
+  - west_gate_pat | Y160-02-11 | Is that in the margin?
+    - night_porter_iss | Y160-02-11 | It is in the margin and it says "paper early".
+      - west_gate_pat | Y160-02-11 | Then he will do it again and you will have the note.
+- freight_fen | Y160-02-19 | Y160-02-18, one gearbox, one crate, signed at 14:20 after the buyer's man spent twenty minutes looking for a stamp. The load was fine. The stamp was the delay.
+  - contract_ines | Y160-02-19 | A stamp is not a delivery. Put the time and the word "stamp" and the paper will not beat you.
+  - night_porter_iss | Y160-02-19 | It is written as "stamp".
+- silo_sam | Y160-03-02 | Y160-03-01, one drilling rig, two carts and a morning. The rig came through the west gate at 11:40 and it took the corner by the boiler house with four inches to spare. I would like the four inches in the book.
+  - night_porter_iss | Y160-03-02 | It is in the book. I have written "four inches" and I did not believe it until I measured the gate.
+    - silo_sam | Y160-03-02 | Measure it again next time.
+  - west_gate_pat | Y160-03-03 | The rig came through the west gate because the north gate cannot take it. It says so on a notice he made me put up.
+    - sign_writer | Y160-03-03 | It says so and it is readable.
+- cart_and_crate | Y160-03-19 | Y160-03-18, two crates of brick, one cart, one broken axle at the bridge again, signed at 16:05. The road is still the road and I am still writing it in the book.
+  - west_gate_pat | Y160-03-19 | The bridge has taken four axles in this book.
+    - cart_and_crate | Y160-03-19 | It has taken five. The fifth was mine and I did not write it down.
+      - west_gate_pat | Y160-03-19 | Then the book has four and the road has five.
+- night_porter_iss | Y160-04-02 | A note for whoever takes the pen after me, which is not a thing I expected to write. The book is not a diary and it is not a defence. It is the only place where the time a load arrived is written by somebody who was there. Write the time first. Everything else can be argued later.
+  - west_gate_pat | Y160-04-02 | That is the whole of the training and it took me twenty years to say it in one paragraph.
+  - copperkate | Y160-04-03 | And keep the margin. Somebody will ask about the weather.
+- the_last_round | Y160-04-14 | Y160-04-13, nothing crossed between one and four and I have written "none" in the book. I have written "none" nine hundred times and it is still a record.
+  - night_porter_iss | Y160-04-14 | A night with nothing in it is a night that is in the book.
+    - the_last_round | Y160-04-14 | That is what I was taught.
+- freight_fen | Y160-05-06 | Y160-05-05, forty crates of glass, one cart, signed at 09:40 and refused at the floor because two crates were not strapped. I have written "refused, straps" so that the buyer and I are both in the book.
+  - silo_sam | Y160-05-06 | A refusal in the book is worth more than a shout at the gate.
+  - contract_ines | Y160-05-06 | Put the refusal on the paper as well. The book is evidence and the paper is the argument.
+- night_porter_iss | Y160-06-02 | Y160-06-01, one computer, one crate, signed at 13:15 and escorted to the floor by two men because the buyer would not let it out of his sight. I have written "escorted" and the names of the men.
+  - copperkate | Y160-06-02 | That is the first computer in this book.
+    - night_porter_iss | Y160-06-02 | It is the first computer in any book in this box.
+  - margin_mo | Y160-06-03 | Eleven thousand and two men to carry it. That is a rate I would like to see the paper for.
+- west_gate_pat | Y160-07-19 | I came to the gate for a parcel today and the young porter asked me to check an entry in his hand. It was a load of girders signed at 06:20 and he had written "early" in the margin. I told him it was right and he said he knew it was right and he wanted somebody to say so.
+  - night_porter_iss | Y160-07-19 | I did want somebody to say so.
+    - west_gate_pat | Y160-07-19 | Then it is said.
+  - copperkate | Y160-07-20 | The book has outlasted three gatekeepers and it will outlast the gate.
+- night_porter_iss | Y160-09-08 | Nine hundred and forty loads became two thousand and ten this year. I counted them twice because tilda_m told me to and she was right about the first count being wrong.
+  - tilda_m | Y160-09-08 | I did not tell you to count twice. I told you to count twice.
+    - night_porter_iss | Y160-09-08 | That is what I said.
+- west_gate_pat | Y160-11-02 | The book is twenty-seven years old and the box is full. The next book will be the sixth and the first one in a new hand since Y133. I have read every page of the first five and I have never once found a load that was not there.
+  - night_porter_iss | Y160-11-02 | I will start it on the first of the year and put my name on the front.
+    - west_gate_pat | Y160-11-02 | Put the date on the front as well.
+  - copperkate | Y160-11-03 | And keep the box.
