@@ -4347,8 +4347,14 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
             out.push_str(if world.progress.part_unlocked(k) { "Ready to build.\n" } else { "Locked by research or company progress.\n" });
         }
     }
+    if let Entry::Item(item) = entry {
+        if let Some(fade) = research_fade(world, item, width) {
+            out.push_str("\n## Research from sales\n");
+            out.push_str(&fade);
+        }
+    }
     if let Some(graph) = research_graph(world, entry) {
-        out.push_str("\n## Research\n");
+        out.push_str("\n## Research path\n");
         out.push_str(&graph);
     }
     for line in rest {
@@ -4376,6 +4382,74 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
         "─".repeat(width.saturating_sub(2))
     ));
     out
+}
+
+/// How much research each unit sold brings, and how it fades: a few lines of numbers and a small
+/// chart of research per unit against units sold, with a mark at how many you have sold.
+pub(crate) fn research_fade(world: &World, item: Item, width: usize) -> Option<String> {
+    let c = item.curve();
+    if c.worth <= 0.0 {
+        return None;
+    }
+    let sold = world.econ.research_sales[item.idx()];
+    let mut out = String::new();
+    if c.decay >= 1.0 || c.floor >= 1.0 {
+        out.push_str(&format!("Every unit sold brings {:.2} research, and it never fades.\n", c.worth));
+        return Some(out);
+    }
+    // Past the knee every sale pays the floor.
+    let knee = (c.floor.ln() / c.decay.ln()).ceil().max(1.0) as u64;
+    out.push_str(&format!(
+        "The first unit sold brings {:.2} research. Each sale pays a little less, down to {:.2} after about {} sales, and that is all it pays from then on.\n",
+        c.worth,
+        c.worth * c.floor,
+        grouped(knee as f64)
+    ));
+    out.push_str(&format!("You have sold {}; the next one brings {:.2}.\n\n", grouped(sold as f64), c.value(sold)));
+    // The chart: units sold across, research per unit up, a little past the knee.
+    let span = knee + knee / 4;
+    let cols = width.saturating_sub(8).clamp(16, 48);
+    let rows = 4usize;
+    let heights: Vec<usize> = (0..cols)
+        .map(|x| {
+            let n = (x as f64 + 0.5) / cols as f64 * span as f64;
+            let part = c.value(n as u64) / c.worth;
+            (part * (rows * 8) as f64).round().clamp(1.0, (rows * 8) as f64) as usize
+        })
+        .collect();
+    const BLOCKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    for r in (0..rows).rev() {
+        let line: String = heights
+            .iter()
+            .map(|&h| {
+                let here = h.saturating_sub(r * 8).min(8);
+                if here == 0 {
+                    ' '
+                } else {
+                    BLOCKS[here - 1]
+                }
+            })
+            .collect();
+        let label = if r == rows - 1 {
+            format!("{:.1}", c.worth)
+        } else if r == 0 {
+            format!("{:.1}", c.worth * c.floor)
+        } else {
+            String::new()
+        };
+        out.push_str(&format!("│{line} {label}\n"));
+    }
+    out.push_str(&format!("└{}\n", "─".repeat(cols)));
+    let mark = ((sold as f64 / span as f64) * cols as f64).round() as usize;
+    if mark < cols {
+        out.push_str(&format!("{}▲ you are here\n", "\u{a0}".repeat(mark + 1)));
+    } else {
+        out.push_str(&format!("{}you are past the end of the chart\n", "\u{a0}".repeat(1)));
+    }
+    let end = format!("{} sold", grouped(span as f64));
+    let gap = (cols + 1).saturating_sub(1 + end.chars().count());
+    out.push_str(&format!("0{}{end}\n", "\u{a0}".repeat(gap)));
+    Some(out)
 }
 
 /// Where a page's item or machine sits in the research tree: its node, if it has one.
