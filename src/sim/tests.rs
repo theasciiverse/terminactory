@@ -3898,3 +3898,28 @@ fn only_a_precision_assembler_makes_the_fine_mask_and_the_x4x2() {
         assert!(!recipe_names(k).contains(&"fine mask") && !recipe_names(k).contains(&"microprocessor (x4x2)"), "{k:?}");
     }
 }
+
+#[test]
+fn a_splitter_feeds_a_belt_lying_beside_it_but_not_one_facing_it() {
+    let mut w = World::new();
+    w.place(0, 12, 10, Kind::Splitter, Dir::E).unwrap();
+    // East of it a belt runs south; west of it a belt faces the splitter head-on.
+    w.place(0, 13, 10, Kind::Belt, Dir::S).unwrap();
+    w.place(0, 11, 10, Kind::Belt, Dir::E).unwrap();
+    // Power for the belts and splitter.
+    w.place(0, 14, 8, Kind::Solar, Dir::E).unwrap();
+    w.place(0, 12, 8, Kind::Pole, Dir::E).unwrap();
+    if let Some(St::Splitter { buf, .. }) = w.floors[0].anchor_at(12, 10).and_then(|a| w.floors[0].tiles[a].as_mut()).map(|b| &mut b.st) {
+        buf.push_back(Item::Coal);
+    }
+    for _ in 0..TPS * 3 {
+        w.tick();
+    }
+    let items = |x, y| match &w.tile(0, x, y).unwrap().st {
+        St::Belt { items } => items.len(),
+        _ => 0,
+    };
+    let beyond = (0..14).map(|y| if w.tile(0, 13, y).is_some() { items(13, y) } else { 0 }).sum::<usize>();
+    assert!(beyond > 0, "the coal went onto the belt beside the splitter");
+    assert_eq!(items(11, 10), 0, "nothing went back into the belt facing it");
+}

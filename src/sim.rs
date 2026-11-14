@@ -3788,7 +3788,8 @@ fn split_out(
             continue;
         }
         if let Some(Building { dir: bd, st: St::Belt { items }, .. }) = tiles[idx(nx, ny)].as_mut() {
-            if *bd == d && belt_accept(items, item) {
+            // Like any machine's output, a belt takes it from any side but head-on.
+            if *bd != d.opposite() && belt_accept(items, item) {
                 q.pop_front();
                 *rr = ((*rr as usize + k + 1) % 4) as u8;
                 return true;
