@@ -10,9 +10,10 @@ Pick the item with the set-up key, and the splitter lets that one through to the
 - Pair it with a second filter splitter to sort a mixed line into several streams.
 
 ## Placement
-- A single tile with a front that turns to face any way. The filtered item leaves ahead, the rest to the other sides, and only onto belts that lead away.
+- A single tile with a front that turns to face any way. The filtered item leaves ahead, the rest to the other sides, and only onto belts that do not point back into it.
 
 ## See also
 - [[basic-splitter]]
+- [[overflow-gate]]
 - [[filtering-arm]]
 - [[belts-and-logistics]]

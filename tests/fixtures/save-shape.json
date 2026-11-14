@@ -77,7 +77,7 @@
         "dug_default": "bool",
         "level": "int",
         "tiles": {
-          "len": 55,
+          "len": 56,
           "of": [
             {
               "len": 3,
@@ -1113,6 +1113,31 @@
                     "Extractor": {
                       "busy": "bool",
                       "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"OverflowGate\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Splitter": {
+                      "buf": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "cooldown": "float",
+                      "filter": "null",
+                      "last_in": "null",
+                      "tried": "int",
+                      "tried_prev": "int"
                     }
                   }
                 }

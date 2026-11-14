@@ -809,7 +809,9 @@ impl Tech {
                 "belts that dive under up to 4 tiles: place an entrance, then its exit further along, and build anything in between"
             }
             Tech::LongArms => "an arm that reaches 2 tiles: it grabs from 2 behind and drops 2 ahead, over whatever sits in between",
-            Tech::FilterSplitters => "a splitter that sends one chosen item out its front and everything else out its sides",
+            Tech::FilterSplitters => {
+                "a splitter that sends one chosen item out its front and everything else out its sides, and a gate that only uses its sides when the front is full"
+            }
             Tech::Warehouses => "a 2x2 crate that holds four times as much",
             Tech::Crusher => "grinds ore into grit (a third more metal when melted) and stone into sand",
             Tech::WireDrawer => "draws plate into three wire, and wire into fine wire",

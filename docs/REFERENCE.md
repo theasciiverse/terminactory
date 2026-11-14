@@ -20,6 +20,7 @@ Phase 3: floors, elevators and machinery.
   - **Belt tunnels** pass under up to 4 tiles. Place an entrance, then its exit up to 5 tiles further on facing the same way; build anything in between. They need no power.
   - **Long arm**: grabs from 2 tiles behind and drops 2 ahead, over whatever sits in between.
   - **Filter splitter**: `f` picks an item; that item goes out the front and everything else out the sides (with no item picked it shares like a splitter).
+  - **Overflow gate** (comes with the filter splitter): everything goes out the front; only when the front can't take an item does it turn to the left and right, taking turns.
   - **Warehouse**: a 2×2 crate holding four crates' worth.
   - Pipes have their own slot, Transport 5, after belts / fast belts / tunnels, splitters / filter splitters, arms / long arms and elevators. Misc 1 is crate / warehouse.
 - **Free unlocks**: everything also unlocks free once you've made enough of its milestone item (shown in the tree); research is the shortcut.
@@ -129,7 +130,7 @@ Every key item can be made with machines from companies that open before it, so 
 | | 5 | water pump / advanced pump / mixer / evacuator |
 | | 6 | etcher / crystal grower / wafer saw / fine etcher |
 | Transport (2) | 1 | belt / fast belt / tunnel |
-| | 2 | splitter / filter splitter |
+| | 2 | splitter / filter splitter / overflow gate |
 | | 3 | arm / long arm |
 | | 4 | elevator |
 | | 5 | pipe |

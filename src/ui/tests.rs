@@ -1821,7 +1821,7 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     assert!(!narrow_end.contains("Money"), "infobox should scroll away: {narrow_end}");
 
     let machine_pages = crate::sim::Kind::ALL.iter().filter(|k| crate::wiki::page(&crate::wiki::slug(k.name())).is_some()).count();
-    assert_eq!(machine_pages, 54);
+    assert_eq!(machine_pages, 55);
     let mut home = App::new(World::new());
     home.book = true;
     home.book_slug = "home".into();

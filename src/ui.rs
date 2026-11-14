@@ -279,6 +279,7 @@ fn map_label(k: Kind) -> &'static str {
         Kind::Tunnel => "TUNL",
         Kind::Splitter => "SPLT",
         Kind::Sorter => "SORT",
+        Kind::OverflowGate => "OVFL",
         Kind::Arm => "ARM",
         Kind::LongArm => "LARM",
         Kind::Furnace => "FURN",
@@ -1159,6 +1160,7 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Tunnel => (BELT, 237),
         Kind::LongArm => (PAPER, 97),
         Kind::Sorter => (INK, 37),
+        Kind::OverflowGate => (INK, 173),
         Kind::Warehouse => (INK, 136),
         Kind::CokeOven => (PAPER, 95),
         Kind::Crusher => (PAPER, 65),
@@ -1229,6 +1231,7 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Tunnel => (a, ']'),
         Kind::LongArm => ('L', a),
         Kind::Sorter => ('S', a),
+        Kind::OverflowGate => ('O', a),
         Kind::Warehouse => ('W', 'H'),
         Kind::CokeOven => ('C', 'K'),
         Kind::Crusher => ('C', 'R'),
@@ -1320,6 +1323,7 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
         Kind::Tunnel => vec![tunnel_chars(dir, false).iter().collect()],
         Kind::LongArm => vec![format!("L{a}")],
         Kind::Sorter => vec![format!("S{a}")],
+        Kind::OverflowGate => vec![format!("O{a}")],
         Kind::Warehouse => labelled("WARE"),
         Kind::CrudeAssembler => labelled("CRD ASM"),
         Kind::BasicAssembler => labelled("BASM"),
@@ -2028,7 +2032,10 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         }
         St::Splitter { buf, filter, .. } => {
             v.push(format!("holding {}/2", buf.len()));
-            if b.kind == Kind::Sorter {
+            if b.kind == Kind::OverflowGate {
+                v.push(format!("everything goes out the front {} first", b.dir.arrow()));
+                v.push("the sides only get what the front cannot take".into());
+            } else if b.kind == Kind::Sorter {
                 match filter {
                     Some(i) => v.push(format!("{} out the front {}, the rest out the sides", i.name(), b.dir.arrow())),
                     None => v.push("no filter yet: shares out every side".into()),

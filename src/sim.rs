@@ -226,6 +226,7 @@ pub enum Kind {
     Tunnel,
     LongArm,
     Sorter,
+    OverflowGate,
     Warehouse,
     Molder,
     CokeOven,
@@ -288,7 +289,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 54] = [
+    pub const ALL: [Kind; 55] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -297,6 +298,7 @@ impl Kind {
         Kind::Tunnel,
         Kind::Splitter,
         Kind::Sorter,
+        Kind::OverflowGate,
         Kind::Arm,
         Kind::LongArm,
         Kind::Warehouse,
@@ -388,6 +390,7 @@ impl Kind {
             | Kind::Tunnel
             | Kind::Splitter
             | Kind::Sorter
+            | Kind::OverflowGate
             | Kind::Arm
             | Kind::LongArm
             | Kind::Elevator
@@ -445,6 +448,7 @@ impl Kind {
             Kind::Tunnel => "Belt tunnel",
             Kind::LongArm => "Long arm",
             Kind::Sorter => "Filter splitter",
+            Kind::OverflowGate => "Overflow gate",
             Kind::Warehouse => "Warehouse",
             Kind::CokeOven => "Coke oven",
             Kind::Crusher => "Crusher",
@@ -506,6 +510,7 @@ impl Kind {
             Kind::Tunnel => 25.0,
             Kind::LongArm => 250.0,
             Kind::Sorter => 60.0,
+            Kind::OverflowGate => 60.0,
             Kind::Warehouse => 300.0,
             Kind::CokeOven => 150.0,
             Kind::Crusher => 250.0,
@@ -569,6 +574,7 @@ impl Kind {
             | Kind::Tunnel
             | Kind::Splitter
             | Kind::Sorter
+            | Kind::OverflowGate
             | Kind::Arm
             | Kind::LongArm
             | Kind::Crate
@@ -589,7 +595,7 @@ impl Kind {
         match self {
             Kind::Belt => 0.5,
             Kind::FastBelt | Kind::Pump => 1.0,
-            Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
+            Kind::Splitter | Kind::Sorter | Kind::OverflowGate | Kind::Molder => 2.0,
             Kind::Press => 2.0,
             Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
             Kind::OilExtractor => 6.0,
@@ -747,7 +753,7 @@ impl Kind {
             Kind::FastBelt => Some(Tech::FastBelts),
             Kind::Tunnel => Some(Tech::Tunnels),
             Kind::LongArm => Some(Tech::LongArms),
-            Kind::Sorter => Some(Tech::FilterSplitters),
+            Kind::Sorter | Kind::OverflowGate => Some(Tech::FilterSplitters),
             Kind::Warehouse => Some(Tech::Warehouses),
             _ => None,
         }
@@ -1115,7 +1121,7 @@ impl Building {
                 St::Drill { mines: None, fuel, coal: 0, progress: 0.0, out: VecDeque::new() }
             }
             Kind::Belt | Kind::FastBelt => St::Belt { items: Vec::new() },
-            Kind::Splitter | Kind::Sorter => {
+            Kind::Splitter | Kind::Sorter | Kind::OverflowGate => {
                 St::Splitter { buf: VecDeque::new(), cooldown: 0.0, last_in: None, tried: 0, tried_prev: 0, filter: None }
             }
             Kind::Arm | Kind::LongArm => St::Arm { filter: None, hold: None, progress: 0.0 },
@@ -3571,6 +3577,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Pipe => {}
         St::Splitter { buf, cooldown, tried, tried_prev, filter, .. } => {
             let only = (kind == Kind::Sorter).then_some((dir, *filter));
+            let overflow = (kind == Kind::OverflowGate).then_some(dir);
             *tried_prev = *tried;
             *tried = 0;
             if ratio <= 0.0 {
@@ -3579,7 +3586,7 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
             if *cooldown > 0.0 {
                 *cooldown -= ratio;
             }
-            if *cooldown <= 0.0 && split_out(tiles, x, y, buf, rr, only) {
+            if *cooldown <= 0.0 && split_out(tiles, x, y, buf, rr, only, overflow) {
                 *cooldown += SPLITTER_TICKS;
             }
         }
@@ -3860,10 +3867,29 @@ fn push_fluid(
 /// Splitters send items, in turn, onto every neighbouring belt that leads away from them.
 /// `only`: a filter splitter's front and filter: the filtered item goes out the front only,
 /// everything else out the other sides only.
-fn split_out(tiles: &mut Tiles, x: i32, y: i32, q: &mut VecDeque<Item>, rr: &mut u8, only: Option<(Dir, Option<Item>)>) -> bool {
+fn split_out(
+    tiles: &mut Tiles,
+    x: i32,
+    y: i32,
+    q: &mut VecDeque<Item>,
+    rr: &mut u8,
+    only: Option<(Dir, Option<Item>)>,
+    overflow: Option<Dir>,
+) -> bool {
     let Some(&item) = q.front() else { return false };
-    for k in 0..4 {
-        let d = Dir::ALL[(*rr as usize + k) % 4];
+    // The sides an overflow gate turns to: left and right of its front, taking turns.
+    let order: Vec<Dir> = match overflow {
+        Some(front) => {
+            let (left, right) = (front.cw().opposite(), front.cw());
+            if *rr % 2 == 0 {
+                vec![front, left, right]
+            } else {
+                vec![front, right, left]
+            }
+        }
+        None => (0..4).map(|k| Dir::ALL[(*rr as usize + k) % 4]).collect(),
+    };
+    for (k, &d) in order.iter().enumerate() {
         let allowed = match only {
             Some((front, Some(f))) => (item == f) == (d == front),
             _ => true,
@@ -3880,7 +3906,11 @@ fn split_out(tiles: &mut Tiles, x: i32, y: i32, q: &mut VecDeque<Item>, rr: &mut
             // Like any machine's output, a belt takes it from any side but head-on.
             if *bd != d.opposite() && belt_accept(items, item) {
                 q.pop_front();
-                *rr = ((*rr as usize + k + 1) % 4) as u8;
+                *rr = match overflow {
+                    // Only a side that took something moves the turn on; the front never does.
+                    Some(front) => (*rr as usize + usize::from(d != front)) as u8 % 4,
+                    None => ((*rr as usize + k + 1) % 4) as u8,
+                };
                 return true;
             }
         }

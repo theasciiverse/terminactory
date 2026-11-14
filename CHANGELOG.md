@@ -10,7 +10,7 @@ First public version. Saves are format version 8 (version 7 saves still open and
 ### The game
 - Phase 1: drills, furnaces, molders and presses; trade posts that sell for money, research or a split; a research tree with free unlocks for making enough of an item; companies that open when you make their key item and send a letter.
 - Phase 2: pumps and pipes with one fluid per network, solar panels and EC poles, boilers and steam engines, the blast furnace and its waste, which leaves a machine by its back edge.
-- Phase 3: floors and elevators, assemblers from crude to precision (and large ones), kilns, mixers, welders, belt tunnels, long arms, filter splitters and warehouses.
+- Phase 3: floors and elevators, assemblers from crude to precision (and large ones), kilns, mixers, welders, belt tunnels, long arms, filter splitters, overflow gates and warehouses.
 - Silicon, chips and computers: wafers, etchers, microprocessors, and the computer as the branch's crown item.
 - Oil: crude oil, naphtha, fuel oil and ethylene, the oil extractor, the still and the liquid trader, and a seventh Create slot for chemistry.
 - Tools: the area tool (`c`) to remove, copy or upgrade a rectangle, blueprints saved to `~/.terminactory/blueprints` that can be turned (`r`) and mirrored (`m`), and the upgrade planner (`u`).

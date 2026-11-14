@@ -150,7 +150,7 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
             &[Still],
         ],
         // Pipes carry things, so they sit with the belts, in slot 5.
-        Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
+        Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter, OverflowGate], &[Arm, LongArm], &[Elevator], &[Pipe]],
         Category::Power => &[&[Solar, BasicSolar], &[Pole], &[Boiler], &[SteamEngine]],
         // Slot 3 is kept for rail.
         Category::Misc => &[&[Crate, Warehouse], &[TradePost, LiquidTrader]],

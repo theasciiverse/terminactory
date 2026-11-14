@@ -3981,3 +3981,50 @@ fn the_map_has_no_edge_to_meet_a_factory_can_stand_far_out_and_below_zero() {
     let mut w = World::blank();
     assert_eq!(w.place(0, EDGE, 0, Kind::Belt, Dir::E), Err("Doesn't fit on the map here".to_string()));
 }
+
+#[test]
+fn an_overflow_gate_goes_straight_ahead_and_only_spills_to_its_sides_when_the_front_is_full() {
+    let mut w = World::blank();
+    w.econ.money = 1e6;
+    // A line of belts running east into a gate, with a belt ahead and a belt on each side.
+    for x in 5..=9 {
+        w.place(0, x, 10, Kind::Belt, Dir::E).unwrap();
+    }
+    w.place(0, 10, 10, Kind::OverflowGate, Dir::E).unwrap();
+    w.place(0, 11, 10, Kind::Belt, Dir::E).unwrap(); // ahead
+    w.place(0, 10, 9, Kind::Belt, Dir::N).unwrap(); // left of an east-facing gate
+    w.place(0, 10, 11, Kind::Belt, Dir::S).unwrap(); // right
+                                                     // Power for belts and the gate.
+    w.place(0, 12, 8, Kind::Solar, Dir::E).unwrap();
+    w.place(0, 12, 12, Kind::Pole, Dir::E).unwrap();
+    w.place(0, 9, 8, Kind::Pole, Dir::E).unwrap();
+    w.place(0, 6, 9, Kind::Pole, Dir::E).unwrap();
+    let held = |w: &World, x, y| match &w.tile(0, x, y).unwrap().st {
+        St::Belt { items } => items.len(),
+        _ => 0,
+    };
+    // Feed coal in from the back and let it flow, counting what reaches each belt.
+    let (mut sides_before_full, mut sides_after_full, mut full_at) = (0, 0, None);
+    for tick in 0..TPS * 40 {
+        if tick % 15 == 0 {
+            if let Some(St::Belt { items }) = w.floors[0].anchor_at(5, 10).and_then(|a| w.floors[0].tiles[a].as_mut()).map(|b| &mut b.st) {
+                if items.last().is_none_or(|l| l.pos >= 0.5) {
+                    items.push(BeltItem { item: Item::Coal, pos: 0.0 });
+                }
+            }
+        }
+        w.tick();
+        let sides = held(&w, 10, 9) + held(&w, 10, 11);
+        if full_at.is_none() && held(&w, 11, 10) >= 5 {
+            full_at = Some(tick);
+        }
+        match full_at {
+            None => sides_before_full += sides,
+            Some(t) if tick > t + TPS * 10 => sides_after_full += sides,
+            Some(_) => {}
+        }
+    }
+    assert!(full_at.is_some(), "the belt ahead filled up");
+    assert_eq!(sides_before_full, 0, "the sides get nothing while the front takes everything");
+    assert!(sides_after_full > 0, "once the front is full the overflow goes out the sides");
+}
