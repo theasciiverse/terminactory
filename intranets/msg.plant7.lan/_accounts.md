@@ -127,3 +127,15 @@ kettlekeeper | kettlepot | kettlekeeper | Boiler house | Plant 6
 throughput_tony | ratecard | throughput_tony | Process engineer | Plant 7
 table_herr | straightline | table_herr | Draughtsman (retired) | Plant 8
 barr_o | bluepencil | Ottoline Barr | Drawing office clerk | Plant 8
+
+## Accounts found at the Y160 tidy-up (old boxes, never listed)
+
+lorn_a | 3024 | Lorn Ashby | Stores assistant | Plant 3
+eldermill | 3006 | eldermill | Millwright (retired Y134) | Plant 3
+cold_forge | 3010 | cold_forge | Cold work (retired Y136) | Plant 3
+paper_ledger | 3013 | paper_ledger | Records (retired Y150) | Plant 3
+Marnie_Q | 1001 | Marnie_Q | Canteen and stores (retired Y148) | Plant 1
+old_bert_hands | 1003 | old_bert_hands | Fitter (retired Y148) | Plant 1
+belt_end_bram | 1005 | belt_end_bram | Trade post operator | Plant 1
+crated_up | 1017 | crated_up | Stores | Plant 1
+hem_of_the_line | 1022 | hem_of_the_line | Line hand | Plant 1

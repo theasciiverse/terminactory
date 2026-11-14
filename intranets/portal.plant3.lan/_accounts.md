@@ -3,7 +3,7 @@
 One line per account: username | password | display name | role | plant
 
 The password is the badge number, in four digits, as printed in the staff
-directory. The two exceptions are noted in the directory and on the forgot
+directory. The one exception is noted in the directory and on the forgot
 password page.
 
 brass_tally | 3007 | brass_tally | Foreman, Line 2 | Plant 3
@@ -17,7 +17,7 @@ lorn_a | 3024 | Lorn Ashby | Stores assistant | Plant 3
 west_gate_pat | 3002 | west_gate_pat | Gatehouse | Plant 3
 hollis_k | 3021 | Hollis Kerr | Systems administrator | Plant 3
 apryce | 3020 | Aaron Pryce | Underground deputy | Plant 3
-e_stroud | 3023 | Ewan Stroud | Assistant foreman | Plant 3
+e_stroud | 3023 | Ewan Stroud | Foreman, Line 2 | Plant 3
 w_corrin | 3018 | Wilfred Corrin | Records clerk | Plant 3
 mirren_v | 3022 | Mirren Vale | Canteen | Plant 3
 the_quiet_shift | 3019 | the_quiet_shift | Line operator | Plant 3

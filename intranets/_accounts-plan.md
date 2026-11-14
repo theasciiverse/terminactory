@@ -7,7 +7,7 @@ sites have a login; two are open to anybody.
 
 ### portal.plant3.lan — Plant 3 Operator Portal
 
-Twenty accounts. Only Plant 3 staff. The portal is Plant 3's own
+Twenty-three accounts. Only Plant 3 staff. The portal is Plant 3's own
 and it carries the shift assignments and the notices for that plant.
 
 The password is the badge number, four digits, in every case but one. Plant 3
@@ -25,7 +25,7 @@ keep being asked.
 
 ### selfservice.plant1.lan — Plant 1 Staff Self Service
 
-Twenty-five accounts. Every member of Plant 1 payroll. The site is run from
+Twenty-six accounts. Every member of Plant 1 payroll. The site is run from
 Plant 1 and does the paperwork for the whole group, but the accounts belong
 to Plant 1.
 
@@ -39,13 +39,14 @@ where two of the accounts can be read off directly.
 
 ### msg.plant7.lan — Plant 7 Internal Messages
 
-Sixty-eight accounts, across all nine plants. Plant 7 bought the service and
+A hundred and one accounts, across all nine plants. Plant 7 bought the service and
 hosts it, and the group bought it from Plant 7 at the Y143 move, so the
 accounts cover everybody.
 
 Twenty of the accounts were carried over from the old Plant 7 system and
-kept the word they were given. The other forty-eight were issued at the
-group move and use the staff number.
+kept the word they were given. Eight more were given a word later, out of
+a second drawer. The other seventy-three were issued at the group move or
+after it and use the staff number.
 
 The list of the twenty words is in a drawer in the Plant 7 office, and
 Verity Shaw (v_shaw) will read it out to anybody who asks. She has never

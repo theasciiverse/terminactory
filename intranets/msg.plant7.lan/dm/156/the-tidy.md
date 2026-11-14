@@ -193,7 +193,7 @@ cora_v | Y157-09-14 09:25 | The plant is easier than it was. Not the work. The p
 
 hollis_k | Y157-09-14 09:30 | And that is good.
 
-cora_v | Y157-09-14 09:35 | It is good and it is not what a plant is like and I have been in rooms in three plants and it is the same in all of them.
+cora_v | Y157-09-14 09:35 | It is good and it is not what a plant is like.
 
 hollis_k | Y157-09-14 09:40 | Then it is a good decade.
 

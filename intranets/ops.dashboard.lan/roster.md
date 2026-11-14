@@ -14,18 +14,15 @@ Sheet for Y160-01-08, days.
 - anvil_jo — 1006 — forge
 - rivet_pete — 1010 — fitter
 - crated_up — 1017 — stores
-- old_bert_hands — 1003 — fitter
 - green_helmet — 1004 — safety
 - hem_of_the_line — 1022 — Line 4
 - apprentice_nell — 1021
 - apprentice_tomas — 1025
 - young_hal — 1024
-- canteen_agnes — 1002 — canteen
 - soup_ladle — 1016 — canteen
 - NurseOdile — 1011 — nurse
 - radio_rona — 1015 — Line 2
 - dawn_porter — 1018 — porter
-- Marnie_Q — 1001 — canteen and stores
 - tiny_lathe — 1013 — lathe
 - belt_end_bram — 1005 — trade post
 - della_r — 1020 — payroll
@@ -44,7 +41,6 @@ Sheet for Y160-01-08, days.
 
 ## Plant 3, Hollowmere Mining Co.
 
-- brass_tally — 3007 — Line 2 (retired Y152)
 - ForemanEllis — 3005 — scheduling
 - TamsinR — 3012 — nights
 - six_belts — 3009 — Line 2
@@ -59,9 +55,6 @@ Sheet for Y160-01-08, days.
 - w_corrin — 3018 — records
 - mirren_v — 3022 — canteen
 - the_quiet_shift — 3019 — Line 2
-- Voss_shift — 3003 — coal and stores
-- OldHollowmere — 3001 — miner (retired Y139)
-- percy_i — 3025 — foreman (retired Y149)
 - tam_ferris — 3026 — Line 1
 - priya_r — 3027 — Line 2
 - cora_v — 3028 — nurse
@@ -85,8 +78,6 @@ Sheet for Y160-01-08, days.
 
 - kettle_ron — 6001 — boiler
 - slow_steam — 6002 — boiler house
-- kettlekeeper — 6003 — boiler house, nights
-- walt_s — 6004 — boiler house (retired Y157)
 
 ## Plant 7, Underhill Excavation
 
@@ -131,17 +122,31 @@ Sheet for Y160-01-08, days.
 - freight_fen — 9002 — weighbridge
 - grey_belt — 9003 — Line 1
 - mateo_belts — 9004 — belt fitting
-- gideon_p — 9005 — haulage (retired Y151)
+
+## Retired or off the books, number kept
+
+Not on today's sheet. Listed because the number is still theirs.
+
+- Marnie_Q — 1001 — Plant 1, canteen and stores (retired Y148)
+- canteen_agnes — 1002 — Plant 1, canteen (retired Y150)
+- old_bert_hands — 1003 — Plant 1, fitter (retired Y148)
+- OldHollowmere — 3001 — Plant 3, miner (retired Y139)
+- Voss_shift — 3003 — Plant 3, coal and stores (died Y141)
+- brass_tally — 3007 — Plant 3, Line 2 (retired Y152)
+- percy_i — 3025 — Plant 3, foreman (retired Y149)
+- kettlekeeper — 6003 — Plant 6, boiler house (retired Y154)
+- walt_s — 6004 — Plant 6, boiler house (retired Y157)
+- gideon_p — 9005 — Plant 9, haulage (retired Y151)
 
 ## Notes
 
-- Retired staff keep their number. The list at the top of the Plant 3
-  section includes two men who have not worked a shift for eleven years,
-  and they are on the list, the numbers being still theirs.
+- Retired staff keep their number. The retired list includes a miner who
+  has not worked a shift for twenty-one years, and he is on it, the number
+  being still his.
 - Every account in the group is the staff number, except the ones issued on
   the old Plant 7 system, which were given a word. Verity Shaw at Plant 7
-  has that list. It is nineteen names long and it is not hidden, it is
-  just in a drawer. There are twenty names on it.
+  has that list. It is twenty names long and it is not hidden, it is
+  just in a drawer.
 - Nobody's number changes. If a man retires, his number goes with him and
   nobody else has it.
 

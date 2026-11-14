@@ -17,7 +17,7 @@ days.
 **Y126-04-18, 07:02 — six_belts** — Stopped again at the third roller.
 Dressed again. The roller is not worn, it is being pushed.
 
-**Y126-05-02, 11:40 — Dorn** — Looked at the frame. The frame is sound. The
+**Y126-05-02, 11:40 — six_belts** — Looked at the frame. The frame is sound. The
 roller is being pushed and I cannot see what is pushing it. Left the ticket
 open.
 
@@ -28,7 +28,7 @@ Ticket carried.
 Dressed the roller at the start of every shift for a month. Six stops in the
 month, all at the roller.
 
-**Y131-11-27, 10:05 — Dorn** — The frame again. Still sound. I have asked for
+**Y131-11-27, 10:05 — six_belts** — The frame again. Still sound. I have asked for
 a new frame three times and been told the frame is sound, and it is, and the
 belt still stops.
 

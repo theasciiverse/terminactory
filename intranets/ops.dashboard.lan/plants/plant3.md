@@ -24,7 +24,7 @@ Read at Y160-01-08, 06:00.
   been open since Y126, and it has never once been to the rollers.
 - The shift book is the record. The typed copy of it is public and the
   paper is in the cupboard and the paper is the better of the two.
-- The gate code has not changed since before the war and it is written on
+- The gate code has not changed since before the terminal and it is written on
   the board.
 - The first drill's drill is painted with his number on the side of it.
 

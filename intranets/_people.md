@@ -61,7 +61,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** fifties and sixties.
 - **Forum:** crankshaft.forum, joined Y120, 3,208 posts. Signature: *The hill remembers what we forget.*
 - **Personality:** Plain-spoken, short sentences. Distrusts anything he did not see built.
-- **Drift:** Later posts are shorter and gentler. He never uses the word "optimise".
+- **Drift:** Later posts are warmer. He asks after people's families, which he
+  did not do before Y139. He never uses the word "optimise".
 - **Known for:** ending nearly every post with a proverb or half a proverb.
 
 ### six_belts
@@ -99,8 +100,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Forum:** crankshaft.forum and nightshiftlounge.net, joined Y126, 1,882 posts. No signature.
 - **Personality:** Posts perhaps twenty times a year. Every post is correct. Never
   quotes anyone, never says hello.
-- **Drift:** The posts become shorter and less frequent. From about Y148 they
-  are almost always a single number.
+- **Drift:** He simply posts less. Three a year by Y150, then one, and the one
+  is still correct.
 - **Known for:** being right the first time.
 
 ### TamsinR
@@ -121,11 +122,11 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### GerdV
 - **Job / plant:** Welder, Plant 8.
 - **Age band:** fifties.
-- **Forum:** crankshaft.forum, joined Y128, 3,401 posts. Signature: *A good seam is a quiet seam.*
+- **Forum:** crankshaft.forum, joined Y124, 3,401 posts. Signature: *A good seam is a quiet seam.*
 - **Personality:** Warm, digressive. Tells stories about people who have left.
 - **Drift:** The only poster who consistently remembers who used to work where.
-  From about Y145 his stories get shorter, as if there were less to remember, and
-  he starts using people's names differently.
+  From about Y145 he tells the same stories more warmly and with fewer names in
+  them, and he starts using people's names differently.
 - **Known for:** asking after absent people by name.
 
 ### halvard_k
@@ -145,9 +146,9 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Forum:** crankshaft.forum and nightshiftlounge.net, joined Y130, 4,921 posts.
   Signature: *The night line does not argue.*
 - **Personality:** Blunt, kind, tired. Writes at 04:00.
-- **Drift:** Over the years her posts get shorter and her spelling gets better.
-  Her night log entries in the shift book get shorter too, and by Y155 she
-  writes only what happened, with no note about how it felt.
+- **Drift:** On nights since Y130. Over the years her spelling gets better and
+  her posts get tidier: the same three headings every time by Y155, and under
+  them only what happened, with no note about how it felt.
 - **Known for:** the night line.
 
 ### browncoat_bex
@@ -166,7 +167,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Forum:** crankshaft.forum, joined Y132, 3,912 posts. Signature: *Drill. Belt. Next.*
 - **Personality:** One or two words per post. Occasionally a whole paragraph,
   which frightens everyone.
-- **Drift:** Never writes more than eight words before Y150. The long post in Y153
+- **Drift:** Came to the plant in Y132. Never writes more than eight words before Y150. The long post in Y153
   is remarked on by three people. After Y153 he goes back to two words and
   stays there.
 - **Known for:** the Y153 paragraph.
@@ -174,7 +175,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### ivo_p
 - **Job / plant:** Electrician, Plant 5.
 - **Age band:** thirties.
-- **Forum:** crankshaft.forum and nightshiftlounge.net, joined Y133, 4,308 posts.
+- **Forum:** crankshaft.forum and nightshiftlounge.net, joined Y130, 4,308 posts.
   Signature: *Check the pole before the machine.*
 - **Personality:** Technical, impatient with hand-waving, generous with a real
   question. Uses "EC" as a mass noun.
@@ -186,7 +187,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### apprentice_nell
 - **Job / plant:** Apprentice, Plant 1.
 - **Age band:** teens, twenties.
-- **Forum:** crankshaft.forum, joined Y144, 900 posts. Signature: *Still learning. Please be gentle.*
+- **Forum:** crankshaft.forum, joined Y141, 900 posts. Signature: *Still learning. Please be gentle.*
 - **Personality:** Asks the questions the megathread exists for. Thanks everybody, twice.
 - **Drift:** Her later posts (Y155 on) lose the apology and gain a certain flat
   confidence. On the intranet she stops asking permission to ask.
@@ -195,26 +196,26 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### kettle_ron
 - **Job / plant:** Boiler operator, Plant 6.
 - **Age band:** forties.
-- **Forum:** crankshaft.forum, joined Y126, 2,470 posts. Signature: *Steam forgives nothing.*
+- **Forum:** crankshaft.forum, joined Y124, 2,470 posts. Signature: *Steam forgives nothing.*
 - **Personality:** Gruff, suspicious of solar.
-- **Drift:** The suspicion of solar never changes. Everything else about his
-  posts gets shorter. He complains about the same three things from Y126 to
-  Y159 and the complaints get kinder.
+- **Drift:** The suspicion of solar never changes. He complains about the same
+  three things from Y124 to Y159 and the complaints get kinder, until they
+  read more like greetings.
 - **Known for:** the boiler house at Plant 6.
 
 ### ferrous_ann
 - **Job / plant:** Steel line, Plant 4.
 - **Age band:** thirties, forties.
-- **Forum:** crankshaft.forum, joined Y135, 1,730 posts. Signature: *Two plate, one coke.*
+- **Forum:** crankshaft.forum, joined Y133, 1,730 posts. Signature: *Two plate, one coke.*
 - **Personality:** Dry. Corrects people about waste.
-- **Drift:** The corrections get shorter and the tone softens. From Y150 she
-  posts less but each post is about something she has checked herself.
+- **Drift:** She stops correcting people in public. From Y150 she posts only
+  about something she has checked herself, and lays it out like a ledger.
 - **Known for:** counting the waste.
 
 ### mateo_belts
 - **Job / plant:** Belt fitter, Plant 9.
 - **Age band:** twenties.
-- **Forum:** crankshaft.forum, joined Y146, 640 posts. No signature.
+- **Forum:** crankshaft.forum, joined Y143, 640 posts. No signature.
 - **Personality:** Young, enthusiastic, over-explains.
 - **Drift:** Keeps over-explaining until about Y152 and then simply says what he
   did. In the message service he switches from long explanations to photos of
@@ -233,7 +234,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### young_hal
 - **Job / plant:** Apprentice, Plant 1.
 - **Age band:** teens.
-- **Forum:** crankshaft.forum, joined Y149, 380 posts. Signature: *Learning the ropes, literally.*
+- **Forum:** crankshaft.forum, joined Y140, 380 posts. Signature: *Learning the ropes, literally.*
 - **Personality:** Cheerful, asks about everything.
 - **Drift:** By Y156 he asks fewer questions and starts answering some.
 - **Known for:** asking about everything.
@@ -241,7 +242,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### crated_up
 - **Job / plant:** Stores, Plant 1.
 - **Age band:** thirties.
-- **Forum:** crankshaft.forum, joined Y137, 1,120 posts. Signature: *Mind the corners.*
+- **Forum:** crankshaft.forum, joined Y133, 1,120 posts. Signature: *Mind the corners.*
 - **Personality:** Practical about buffers and crate losses.
 - **Drift:** Starts forecasting losses and ends up never having one. His buffer
   numbers get smaller.
@@ -252,8 +253,9 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** fifties, sixties.
 - **Forum:** crankshaft.forum, joined Y122, 2,880 posts. Signature: *If it rattles, it is loose.*
 - **Personality:** Storyteller. Remembers the first furnaces.
-- **Drift:** The stories get shorter and the dates in them get vaguer, though
-  he insists they are exact. After Y148 he still posts, as a retired man.
+- **Drift:** The dates in his stories get vaguer, though he insists they are
+  exact, and the stories get friendlier to the people in them. After Y148 he
+  still posts, as a retired man.
 - **Known for:** the first furnaces.
 
 ### sign_writer
@@ -261,8 +263,9 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** thirties.
 - **Forum:** crankshaft.forum, joined Y128, 1,340 posts. Signature: *Please read the notice.*
 - **Personality:** Pedantic about notices and post titles.
-- **Drift:** The notices get shorter and the pedantry gets exact rather than
-  fussy. He is the one who keeps the portal notice board tidy for forty years.
+- **Drift:** The notices get tidier: one typeface, one margin, the date always
+  in the same corner. He is the one who keeps the Plant 1 notice board straight
+  for thirty years.
 - **Known for:** the notice board.
 
 ### anvil_jo
@@ -303,7 +306,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### second_floor_ivy
 - **Job / plant:** Elevators and floors, Plant 8.
 - **Age band:** thirties.
-- **Forum:** crankshaft.forum, joined Y141, 860 posts. Signature: *Full car or no car.*
+- **Forum:** crankshaft.forum, joined Y139, 860 posts. Signature: *Full car or no car.*
 - **Personality:** Fixes elevator threads.
 - **Drift:** Stops arguing about car sizes and starts explaining them.
 - **Known for:** the elevators at Plant 8.
@@ -311,10 +314,10 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### molder_max
 - **Job / plant:** Molder operator, Plant 1.
 - **Age band:** forties.
-- **Forum:** crankshaft.forum, joined Y132, 1,290 posts. Signature: *One metal, one molder.*
+- **Forum:** crankshaft.forum, joined Y130, 1,290 posts. Signature: *One metal, one molder.*
 - **Personality:** Exact about heats and orders.
-- **Drift:** His heat records get shorter and neater. In Y153 he stops writing
-  the order number, which he has never done before.
+- **Drift:** His heat records get neater, ruled in the same ink. In Y153 he
+  stops writing the order number, which he has never done before.
 - **Known for:** the heats.
 
 ### belt_end_bram
@@ -322,13 +325,13 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** thirties.
 - **Forum:** crankshaft.forum, joined Y127, 1,880 posts. Signature: *Somebody has to count it.*
 - **Personality:** Counts everything, out loud, twice.
-- **Drift:** From Y150 the counts get shorter and he trusts the machine more.
+- **Drift:** From Y150 he counts once, quietly, and trusts the machine more.
 - **Known for:** the trade post.
 
 ### slow_steam
 - **Job / plant:** Boiler engineer, Plant 6.
 - **Age band:** forties.
-- **Forum:** crankshaft.forum, joined Y139, 1,450 posts. Signature: *Size the grid for the busy minute.*
+- **Forum:** crankshaft.forum, joined Y130, 1,450 posts. Signature: *Size the grid for the busy minute.*
 - **Personality:** Cautious, sizing things for the worst case.
 - **Drift:** Sizes things smaller. His final posts recommend a smaller grid and
   say so plainly, with no argument for the bigger one.
@@ -340,8 +343,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Forum:** crankshaft.forum and nightshiftlounge.net, joined Y143, 690 posts.
   Signature: *Nothing breaks at a convenient time.*
 - **Personality:** Dry, unhurried.
-- **Drift:** The sig gets shorter in practice: from Y152 he answers with a time
-  and a part, and nothing else.
+- **Drift:** Goes quiet. From Y152 he answers when asked, with a time and a
+  part, and starts no threads of his own.
 - **Known for:** the night calls.
 
 ### green_helmet
@@ -364,7 +367,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### tiny_lathe
 - **Job / plant:** Lathe hand, Plant 1.
 - **Age band:** thirties.
-- **Forum:** crankshaft.forum, joined Y137, 1,010 posts. Signature: *Rods first, screws after.*
+- **Forum:** crankshaft.forum, joined Y134, 1,010 posts. Signature: *Rods first, screws after.*
 - **Personality:** Orderly, does the small job first.
 - **Drift:** Stops mentioning screws entirely after Y154.
 - **Known for:** the lathe.
@@ -408,7 +411,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### apprentice_tomas
 - **Job / plant:** Apprentice, Plant 1.
 - **Age band:** teens.
-- **Forum:** crankshaft.forum, joined Y152, 260 posts. Signature: *Ask first, build second.*
+- **Forum:** crankshaft.forum, joined Y150, 260 posts. Signature: *Ask first, build second.*
 - **Personality:** Careful, asks first.
 - **Drift:** Stops asking first and starts checking, which is a different thing.
 - **Known for:** asking first.
@@ -416,7 +419,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### foreman_hale
 - **Job / plant:** Foreman of Line 4, Plant 1.
 - **Age band:** forties.
-- **Forum:** crankshaft.forum, joined Y145, 760 posts. Signature: *The line runs at the speed of its slowest hand.*
+- **Forum:** crankshaft.forum, joined Y140, 760 posts. Signature: *The line runs at the speed of its slowest hand.*
 - **Personality:** Steady, protective of the slow hand.
 - **Drift:** From Y152 he no longer names the slowest hand in his notices, and
   writes "the line" instead.
@@ -435,7 +438,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 ### decimal_doreen
 - **Job / plant:** Planner, Plant 7.
 - **Age band:** forties.
-- **Forum:** ratiohall.org, joined Y129, 3,145 posts. Signature: *Two places is enough.*
+- **Forum:** ratiohall.org, joined Y126, 3,145 posts. Signature: *Two places is enough.*
 - **Personality:** Quiet, exact. Ends arguments by posting the arithmetic everyone was avoiding.
 - **Drift:** Stops posting the arithmetic and posts the result. The arithmetic
   she used to include was always the part nobody wanted.
@@ -466,7 +469,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Forum:** tradefloor.net, joined Y125, 5,812 posts. Signature: *Everything has a rate.*
 - **Personality:** Brisk, fair, remembers every deal.
 - **Drift:** Remembers fewer deals and quotes fewer prices, and is never wrong
-  about the ones he does quote.
+  about the ones she does quote.
 - **Known for:** the rate board.
 
 ### waste_lars
@@ -487,7 +490,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the gate at Plant 2.
 
 ### canteen_agnes
-- **Job / plant:** Canteen cook, Plant 1. Retired Y150.
+- **Job / plant:** Canteen cook, Plant 1. Retired spring Y150.
 - **Age band:** fifties, sixties.
 - **Forum:** nightshiftlounge.net, joined Y122, 2,930 posts. Signature: *Eat something warm.*
 - **Personality:** Warm, nosy. Keeps the roll of who is on which shift.
@@ -495,7 +498,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the roll, which she passes on complete.
 
 ### third_shift_tom
-- **Job / plant:** Operator, Plant 9. Host of the night lounge check-in threads.
+- **Job / plant:** Operator, Plant 9, started Y127. Host of the night lounge check-in threads.
 - **Age band:** forties.
 - **Forum:** nightshiftlounge.net, joined Y127, 4,410 posts. Signature: *See you at four.*
 - **Personality:** Starts the check-in threads and keeps them going.
@@ -530,11 +533,12 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the run.
 
 ### kettlekeeper
-- **Job / plant:** Boiler house, Plant 6.
-- **Age band:** fifties.
+- **Job / plant:** Boiler house, Plant 6. Retired December Y154.
+- **Age band:** fifties, sixties.
 - **Forum:** nightshiftlounge.net, joined Y124, 2,460 posts. Signature: *The kettle is always on.*
 - **Personality:** Steady, sings.
-- **Drift:** Still on nights in Y158, still singing, and no longer jokes about it.
+- **Drift:** Retired in December Y154. Sang on nights to the last, and by then
+  no longer joked about it.
 - **Known for:** the kettle at Plant 6.
 
 ### bench_light
@@ -550,8 +554,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** forties.
 - **Forum:** nightshiftlounge.net, joined Y130, 1,660 posts. Signature: *Four line, quiet line.*
 - **Personality:** Quiet, steady, knows the line.
-- **Drift:** Her forum posts do not change. Her message service notes get
-  shorter, and after Y154 she only writes to say that a thing is fine.
+- **Drift:** Her forum posts do not change. On the message service she stops
+  writing after Y143, without a last note.
 - **Known for:** the quiet line.
 
 ### quiet_corridor
@@ -583,8 +587,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** thirties.
 - **Forum:** nightshiftlounge.net, joined Y145, 350 posts. Signature: *One more lap.*
 - **Personality:** Does the rounds at the end of the night.
-- **Drift:** The rounds get shorter. By Y157 he writes one line, and it says
-  that all was quiet.
+- **Drift:** The rounds get tidier: the same doors in the same order, written
+  the same way. By Y157 it is one line, and it says that all was quiet.
 - **Known for:** the last round.
 
 ### night_porter_iss
@@ -596,11 +600,11 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the night porter's keys.
 
 ### Marnie_Q
-- **Job / plant:** Canteen and stores, Plant 1. Last post Y147.
+- **Job / plant:** Canteen and stores, Plant 1. Retired Y148, and living. Last post Y149-01.
 - **Age band:** fifties.
 - **Forum:** oldposters.org, joined Y121, 3,050 posts. Signature: *Put it back where you found it.*
 - **Personality:** Bossy in a kind way.
-- **Drift:** Stops posting in Y147. Her last few posts are about where things go.
+- **Drift:** Stops posting in January Y149. Her last few posts are about where things go.
 - **Known for:** putting things back.
 
 ### archive_clerk
@@ -675,7 +679,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the mill that gave the plant its name.
 
 ### Voss_shift
-- **Job / plant:** Coal man, Plant 3. Last post Y141.
+- **Job / plant:** Coal man, Plant 3. Last post Y141. Died December Y141.
 - **Age band:** fifties, sixties.
 - **Forum:** oldposters.org, joined Y120, 2,880 posts. Signature: *Coal built this place.*
 - **Personality:** Opinionated about coal, sentimental about the pit.
@@ -700,7 +704,7 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** starting the waste thread in Y126, which is still pinned.
 
 ### [Deleted User #4471]
-- **Job / plant:** Plant 8. Posts Y128 to Y144.
+- **Job / plant:** Plant 8. Posts Y128 to Y152.
 - **Forum:** crankshaft.forum.
 - **Personality:** Answered beginner questions thoroughly. Several of the old
   answers are quoted long after the account is gone.
@@ -708,25 +712,35 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Known for:** the answers that outlived the account.
 
 ### [Deleted User #1180]
-- **Job / plant:** Plant 3. Posts Y133 to Y151.
+- **Job / plant:** Plant 3. Posts Y133 to Y155.
 - **Forum:** crankshaft.forum.
 - **Personality:** Fond of the phrase "it evens out".
-- **Drift:** Used the phrase all the way to Y151. It appears in his name on the
+- **Drift:** Used the phrase all the way to Y155. It appears in his name on the
   portal staff list, spelled out, and it is the only thing about him left.
 - **Known for:** it evens out.
 
 ### [Deleted User #3312]
-- **Job / plant:** Plant 7. Posts Y146 to Y157.
+- **Job / plant:** Line hand, Plant 7. Posts Y146 to Y158.
 - **Forum:** crankshaft.forum.
 - **Personality:** Very calm. Sometimes quoted by people who cannot say who said it.
 - **Drift:** Never troubled by anything. The threads he is quoted in carry a
   calmness that the other people in them find restful.
 - **Known for:** being quoted by people who cannot say who said it.
 
+### half_belt_hana
+- **Job / plant:** Operator, Line 2, Plant 7.
+- **Age band:** thirties, forties.
+- **Forum:** ratiohall.org, joined Y140, 880 posts. Signature: *Half a belt is still a belt.*
+- **Personality:** Checks claims against her own line. Often the only person
+  who has actually built the thing being argued about.
+- **Drift:** Stops checking other people's claims and reports only her own
+  line, which she says is all she can vouch for.
+- **Known for:** the half belt.
+
 ### kiln_marit
 - **Job / plant:** Kiln operator, Plant 7.
 - **Age band:** twenties.
-- **Forum:** crankshaft.forum, joined Y142, 720 posts. Signature: *Twenty seconds a batch.*
+- **Forum:** crankshaft.forum, joined Y140, 720 posts. Signature: *Twenty seconds a batch.*
 - **Personality:** Young, precise. Owes halvard_k a debt for the training.
 - **Drift:** Her batch times get rounder and she stops explaining how the kiln
   works. By Y157 a batch is a batch.
@@ -745,8 +759,8 @@ plant. That is why an operator at Plant 3 can write to one at Plant 8.
 - **Age band:** forties.
 - **Forum:** ratiohall.org, joined Y126, 6,612 posts. Signature: *Per minute, or it did not happen.*
 - **Personality:** Confident, likes tables, wrong about once a year and does not enjoy it.
-- **Drift:** The tables get shorter. From Y153 he posts one rate and no table, and
-  when someone asks for the table he says it is not needed.
+- **Drift:** From Y153 he posts one rate and no table, and when someone asks for
+  the table he says, pleasantly, that it is not needed.
 - **Known for:** the rates sheet.
 
 ### freight_fen
@@ -765,9 +779,9 @@ that the plants are places with people in them, and not only the ones who
 type.
 
 ### hollis_k — Hollis Kerr
-- **Job / plant:** System administrator, Plant 3. Runs the operator portal and
-  the notice board.
-- **Age band:** thirties.
+- **Job / plant:** System administrator, Plant 3, from the Y126 change. Runs
+  the operator portal and the notice board.
+- **Age band:** fifties, sixties.
 - **Personality:** Precise, dislikes clutter, answers questions as a numbered
   list. Will not take part in the plant's gossip and says so once a year in
   the portal notice.
@@ -783,9 +797,9 @@ type.
 - **Age band:** forties.
 - **Personality:** Warm and exact. Will not tell a person what they were paid
   without the slip in front of her, and will not be asked twice.
-- **Drift:** Her slips go from four lines to two between Y152 and Y158. She
-  stops adding the note about who to ask, she being the one to ask, and
-  everybody knows it now.
+- **Drift:** Her slips get tidier between Y152 and Y158: the same four lines,
+  ruled. She stops adding the note about who to ask, she being the one to ask,
+  and everybody knows it now.
 - **Known for:** the slip that says what a week was worth.
 
 ### iris_m — Iris Mappin
@@ -820,8 +834,9 @@ type.
 - **Age band:** forties.
 - **Personality:** Blunt, protective, and physically large. Writes the
   shortest notes on the portal and the longest ones in person.
-- **Drift:** The notes get shorter. From Y151 he stops naming the men he sent
-  up and starts naming the ones he kept down.
+- **Drift:** Stops writing on the portal after Y150 and says it at the cage
+  instead. In his last notes he no longer names the men he sent up, only the
+  ones he kept down.
 - **Known for:** the descent, and the shift board.
 
 ### mirren_v — Mirren Vale
@@ -834,8 +849,9 @@ type.
 - **Known for:** the roll.
 
 ### e_stroud — Ewan Stroud
-- **Job / plant:** Assistant foreman, Plant 3.
-- **Age band:** twenties.
+- **Job / plant:** Line hand, Plant 3, new in Y129. Foreman from Y140; has
+  Line 2 from Y152.
+- **Age band:** twenties at first, fifties by Y160.
 - **Personality:** Eager, writes too much, copies the older men's manner and
   gets it slightly wrong.
 - **Drift:** Writes less each year. By Y158 his notices are two lines and both
@@ -852,8 +868,9 @@ type.
 - **Known for:** the shelf, and "the small gear thing".
 
 ### w_corrin — Wilfred Corrin
-- **Job / plant:** Records clerk, Plant 3. The paper archive, half retired.
-- **Age band:** sixties.
+- **Job / plant:** Records clerk, Plant 3, from Y128 as eldermill's lad. Keeps
+  the paper archive.
+- **Age band:** born about Y112: a lad at first, forties by Y160.
 - **Personality:** Precise, slow, and difficult to hurry. Knows where
   everything is, including the things nobody has asked for yet.
 - **Drift:** Keeps the same desk and the same habits for thirty years. He is
@@ -873,8 +890,9 @@ type.
 - **Age band:** forties.
 - **Personality:** Very exact. Counts the coke and the waste and is not
   sentimental about either.
-- **Drift:** From Y154 her heats get steadier and her notes get shorter, and
-  she is the only person at Plant 4 who is happy about it.
+- **Drift:** From Y154 her heats get steadier and her notes get warmer, with a
+  line for whoever is on next, and she is the only person at Plant 4 who is
+  happy about it.
 - **Known for:** the coke count.
 
 ### teo_lima — Teo Lima
@@ -897,16 +915,16 @@ type.
 - **Age band:** fifties.
 - **Personality:** Thorough, tired, and fair. Repeats himself, as the
   job needs it.
-- **Drift:** From Y154 his notices are shorter and he stops writing the part
-  about what could have happened.
+- **Drift:** From Y154 his notices are friendlier, addressed to people by name,
+  and he stops writing the part about what could have happened.
 - **Known for:** the notices that do not frighten anybody any more.
 
 ### nevil_o — Nevil Okpara
 - **Job / plant:** Night shift lead, Plant 7.
 - **Age band:** forties.
 - **Personality:** Steady. Runs the nights like a clock and knows every hand.
-- **Drift:** From Y155 his handovers get shorter, and the last line of the
-  handover stops being a note about the weather.
+- **Drift:** From Y155 his handovers are laid out the same way every night, and
+  the last line of the handover stops being a note about the weather.
 - **Known for:** the handover.
 
 ### dorian_a — Dorian Ash
@@ -1008,8 +1026,8 @@ type.
 - **Age band:** forties, fifties, sixties.
 - **Personality:** Slow voice, long memory, dislikes being hurried and is
   never hurried.
-- **Drift:** His sentences get shorter and his temper goes entirely, which
-  the boiler house notices for about a month.
+- **Drift:** His temper goes entirely and he starts making the tea for the
+  others, which the boiler house notices for about a month.
 - **Known for:** the feed valve, and the chair by the gauge.
 
 ### ines_c — Ines Corbet
@@ -1041,7 +1059,7 @@ type.
 - **Job / plant:** Payroll, Plant 1, from Y128. Works with della_r.
 - **Age band:** twenties, thirties, forties.
 - **Personality:** Kind, tired, keeps everybody's birthdays and nobody's
-  secrets.
+  gossip.
 - **Drift:** Still keeps the birthdays in Y159 and the list is the same
   length it was in Y140.
 - **Known for:** the birthday list, which is a different list from Priya's

@@ -4,7 +4,7 @@ access: halvard_k, kiln_marit
 kiln_marit | Y143-04-20 07:40 | Hello. My word for the service. I have
 looked on the sheet and it says patient fire.
 
-halvard_k | Y143-04-20 08:10 | Patientfire. No space. It is my line.
+halvard_k | Y143-04-20 08:10 | patientfire. No space. It is my line.
 
 kiln_marit | Y143-04-20 08:20 | It is a good line.
 

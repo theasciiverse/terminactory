@@ -41,7 +41,7 @@ TamsinR | Y134-04-11 05:25 | I called it too fast and I have written what he sai
 
 MillaOnNights | Y134-04-11 05:30 | You are going to be a very tiring foreman.
 
-TamsinR | Y134-06-02 23:00 | Milla. I have been made shift lead of nights.
+TamsinR | Y134-06-02 23:00 | Milla. I have been put in charge of the north belt on nights.
 
 MillaOnNights | Y134-06-02 23:20 | I know. I read the board.
 
@@ -99,7 +99,7 @@ MillaOnNights | Y136-02-06 05:00 | I believe you have three things on a list. I 
 
 TamsinR | Y136-02-06 05:05 | What mistakes do you make.
 
-MillaOnNights | Y136-02-06 05:10 | I put the kettle on the wrong ring once a month and I have done it for twenty years and I do not put it on a list.
+MillaOnNights | Y136-02-06 05:10 | I put the kettle on the wrong ring once a month and I have done it for six years and I do not put it on a list.
 
 TamsinR | Y136-02-06 05:15 | Why not.
 
@@ -205,13 +205,13 @@ TamsinR | Y141-01-08 03:55 | You have got very good at saying things like that.
 
 MillaOnNights | Y141-01-08 04:00 | I have always been good at saying them. I have not always been asked.
 
-TamsinR | Y143-06-02 02:40 | Milla. The group move. I have an account and a number and I am told to write to people.
+TamsinR | Y143-06-02 02:40 | Milla. The group move. Everybody in nine plants has a number now and we are all told to write to each other.
 
 MillaOnNights | Y143-06-02 03:00 | Write to me.
 
-TamsinR | Y143-06-02 03:05 | I am writing to you.
+TamsinR | Y143-06-02 03:05 | I have been writing to you for nine years.
 
-MillaOnNights | Y143-06-02 03:10 | Good. It is faster than a handover sheet.
+MillaOnNights | Y143-06-02 03:10 | Good. It is still faster than a handover sheet.
 
 TamsinR | Y143-06-02 03:15 | Nothing is faster than a handover sheet. A handover sheet is read at the start of the shift.
 

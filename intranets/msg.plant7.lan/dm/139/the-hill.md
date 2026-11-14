@@ -15,6 +15,10 @@ six_belts | Y139-04-02 07:20 | That is a good Thursday.
 
 OldHollowmere | Y139-04-02 07:25 | It is the only Thursday I have got.
 
+six_belts | Y139-04-02 07:30 | They will keep your box on the message service. What is the word, in case you lose it.
+
+OldHollowmere | Y139-04-02 07:35 | thehill. No space. I am not going to lose a hill.
+
 six_belts | Y139-04-11 06:50 | Did you walk up.
 
 OldHollowmere | Y139-04-11 07:20 | I walked up and I stood at the top and a lad from the new shift came past and did not know me.
@@ -137,7 +141,7 @@ OldHollowmere | Y141-03-09 07:30 | I saw it and it has the wrong number of men.
 
 six_belts | Y141-03-09 07:35 | How wrong.
 
-OldHollowmere | Y141-03-09 07:40 | Six wrong. It says four hundred and it was four hundred and six and the six are the ones who came after the war and before the change and nobody has ever counted them because they were on the books for two years each.
+OldHollowmere | Y141-03-09 07:40 | Six wrong. It says four hundred and it was four hundred and six and the six are the ones who came after the flood and before the change and nobody has ever counted them because they were on the books for two years each.
 
 six_belts | Y141-03-09 07:45 | Will you tell them.
 

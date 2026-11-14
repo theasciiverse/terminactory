@@ -14,6 +14,7 @@ have been given something else.
 - green_helmet — 1004 — Safety officer
 - belt_end_bram — 1005 — Trade post
 - anvil_jo — 1006 — Forge hand
+- Anton Reeve — 1007 — Press house — off the books Y149, [[selfservice.plant1.lan/record-1007|record card]] kept by the office
 - molder_max — 1008 — Molder
 - rivet_pete — 1010 — Fitter
 - NurseOdile — 1011 — Nurse

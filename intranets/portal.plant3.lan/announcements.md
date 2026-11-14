@@ -57,7 +57,7 @@ The company is giving a free ration on the last Friday of the month for as
 long as the coke ovens are running three shifts. The men on the ovens decide
 whether this is a good idea or not, and they have decided.
 
-    Voss_shift
+    mirren_v
 
 ## Y156-02-03 — A word about the notebook
 

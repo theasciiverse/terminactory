@@ -35,11 +35,11 @@ percy_i | Y140-03-09 07:00 | The list was right for a week and the paper was lat
 
 west_gate_pat | Y140-06-02 06:20 | Mr Ilott. There is a van at the gate with no paper and a man who says he is from Halverson.
 
-percy_i | Y140-06-02 06:40 | Halverson is a contractor and they have a man on the silicon line.
+percy_i | Y140-06-02 06:40 | Halverson is a contractor and they have nobody on this site.
 
-west_gate_pat | Y140-06-02 06:45 | He is not the man on the silicon line. That man is called Adjacent and he comes on Mondays.
+west_gate_pat | Y140-06-02 06:45 | He says they will have, one day, and he has come to look.
 
-percy_i | Y140-06-02 06:50 | Then this is a different man from Halverson and he has no paper and you will not let him in.
+percy_i | Y140-06-02 06:50 | Then he is a man from Halverson and he has no paper and you will not let him in.
 
 west_gate_pat | Y140-06-02 06:55 | He is very polite.
 
@@ -63,9 +63,9 @@ percy_i | Y140-06-02 09:05 | It is a list and a book and a van and it is the onl
 
 west_gate_pat | Y141-01-08 06:20 | Mr Ilott. There is a woman at the gate who says she is a nurse and she is not on my list.
 
-percy_i | Y141-01-08 06:40 | We do not have a nurse.
+percy_i | Y141-01-08 06:40 | We do not have a second nurse.
 
-west_gate_pat | Y141-01-08 06:45 | She says she is the nurse and she has a bag.
+west_gate_pat | Y141-01-08 06:45 | She says she is a nurse from the group and she has a bag.
 
 percy_i | Y141-01-08 06:50 | Then she is from the group and the group has not told you and you will let her in and write her name and the time and the bag.
 
@@ -133,7 +133,7 @@ west_gate_pat | Y144-09-14 06:20 | Mr Ilott. I have a man at the gate who says h
 
 percy_i | Y144-09-14 06:40 | Who.
 
-west_gate_pat | Y144-09-14 06:45 | He says his name is Ferris and he was on the pipes in the seventies.
+west_gate_pat | Y144-09-14 06:45 | He says his name is Ferris and he was on the pipes years back.
 
 percy_i | Y144-09-14 06:50 | There was no Ferris on the pipes.
 
@@ -153,13 +153,13 @@ west_gate_pat | Y144-09-14 08:55 | He said the pipes were smaller and the yard w
 
 percy_i | Y144-09-14 09:00 | Then he is a good man and you should give him a cup.
 
-west_gate_pat | Y146-02-06 06:20 | Mr Ilott. There is a woman at the gate with a pram and she says she is looking for her husband.
+west_gate_pat | Y146-02-06 06:20 | Mr Ilott. There is a woman at the gate with a pram and she says she is looking for her brother.
 
-percy_i | Y146-02-06 06:40 | Who is her husband.
+percy_i | Y146-02-06 06:40 | Who is her brother.
 
 west_gate_pat | Y146-02-06 06:45 | She says he is on the kiln and she does not know his name.
 
-percy_i | Y146-02-06 06:50 | She does not know her husband's name.
+percy_i | Y146-02-06 06:50 | She does not know her brother's name.
 
 west_gate_pat | Y146-02-06 06:55 | She knows his name. She does not know what he is called here.
 

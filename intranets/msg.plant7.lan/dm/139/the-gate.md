@@ -4,7 +4,7 @@ access: six_belts, west_gate_pat
 six_belts | Y139-01-22 06:40 | The gate code is still the same one, is it.
 
 west_gate_pat | Y139-01-22 07:20 | It has been the same since before the
-war and it will be the same after.
+terminal and it will be the same after.
 
 six_belts | Y139-01-22 07:30 | I am not asking what it is. I know what it
 is. My message service password is the same number and I could never

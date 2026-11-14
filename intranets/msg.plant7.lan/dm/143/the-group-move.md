@@ -6,7 +6,7 @@ at every plant has been issued. The password is the staff number.
 
 dorian_a | Y143-06-02 09:40 | And ours?
 
-v_shaw | Y143-06-02 09:50 | Yours is the area. Thearea. No space. It is
+v_shaw | Y143-06-02 09:50 | Yours is the area. thearea. No space. It is
 the only one at this plant I have not written on the sheet.
 
 dorian_a | Y143-06-02 10:10 | It is the area. That is fair enough.

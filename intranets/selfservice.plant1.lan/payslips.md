@@ -26,7 +26,7 @@ Della will get them for you.
 
 The week, the rate, the hours, and what was taken off. Four lines. That is
 the whole of a payslip and it has been the whole of a payslip since before
-the war.
+the terminal.
 
 If you think a line is wrong, use form P3 and say which week and which line.
 Della will compare it with the sheet. If the sheet is wrong it is put right

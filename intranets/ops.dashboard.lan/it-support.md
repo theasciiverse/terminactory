@@ -55,7 +55,7 @@ on file and are not read by anybody but themselves and the office.
 - The message service will not take a message over about four hundred words.
   It will not say so. It will simply not send it, and you will think you
   sent it.
-- Messages are kept for thirty years. Nobody has ever asked for one older
+- Messages are kept for thirty years. The oldest are from Y126. Nobody has ever asked for one older
   than that, and the office has never refused one.
 - The dashboard does not show plants 1 to 9 individually on the front page
   at this width. The plant pages are there.

@@ -23,6 +23,10 @@ denny_o | Y147-01-11 17:30 | Then I thought about it very hard and did not do it
 
 rosa_t | Y147-01-11 17:35 | It is not nearly the same.
 
+denny_o | Y147-01-11 17:40 | I will write you one now, on here. What is your word again, in case I have to sign in as you to find it.
+
+rosa_t | Y147-01-11 17:44 | ladle. The same as it was when they gave it to me in Y143. You are not signing in as me to read about bread.
+
 denny_o | Y147-02-03 06:10 | I am on lates this week. There is stew in the pot and it wants twenty minutes.
 
 rosa_t | Y147-02-03 15:20 | I had the stew. It wanted twenty-five.

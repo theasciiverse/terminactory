@@ -281,7 +281,7 @@ canteen_agnes | Y143-06-02 07:00 | Marnie. The group move. There is a machine an
 
 Marnie_Q | Y143-06-02 07:20 | What word.
 
-canteen_agnes | Y143-06-02 07:25 | Eatwarm.
+canteen_agnes | Y143-06-02 07:25 | eatwarm.
 
 Marnie_Q | Y143-06-02 07:30 | Of course it is.
 

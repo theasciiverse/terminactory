@@ -13,6 +13,10 @@ own, and it ran on the Plant 7 office machine, and the accounts that
 existed then were given a word instead of a number. There are twenty of
 those and Verity Shaw has the list.
 
+At the Y143 move each plant's own internal mail was loaded into the
+service, box for box. That is why there are messages here between people
+at other plants from before Plant 7 had ever heard of them.
+
 ## The rules
 
 - Write to a person. A message that names five people is read by none of
@@ -20,13 +24,15 @@ those and Verity Shaw has the list.
 - Keep it short. The service will not take a message of more than about
   four hundred words and it will not tell you that it has not sent it.
 - Do not put anything in a message that you would not want kept for thirty
-  years. They are kept for thirty years.
+  years. They are kept for thirty years, and after that they are still
+  here.
 - Nothing on the service is private from the office. The office does not
   read them. The office could.
 
 ## What is kept
 
-- Messages are kept thirty years.
+- Messages are kept thirty years. The oldest are from Y126 and are still
+  here.
 - Nothing has ever been deleted by anybody, including the office.
 - An account that is closed is kept and can be opened again by the office.
 
