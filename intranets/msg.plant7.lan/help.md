@@ -23,16 +23,16 @@ at other plants from before Plant 7 had ever heard of them.
   them.
 - Keep it short. The service will not take a message of more than about
   four hundred words and it will not tell you that it has not sent it.
-- Do not put anything in a message that you would not want kept for thirty
-  years. They are kept for thirty years, and after that they are still
-  here.
+- Do not put anything in a message that you would not want kept for good.
+  They are kept for as long as the service runs, and nobody has asked it to
+  stop.
 - Nothing on the service is private from the office. The office does not
   read them. The office could.
 
 ## What is kept
 
-- Messages are kept thirty years. The oldest are from Y126 and are still
-  here.
+- Messages are kept for as long as the service runs. The oldest are from
+  Y126 and are still here.
 - Nothing has ever been deleted by anybody, including the office.
 - An account that is closed is kept and can be opened again by the office.
 

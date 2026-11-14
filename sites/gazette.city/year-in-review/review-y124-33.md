@@ -2,7 +2,9 @@
 
 The founding decade of the Municipal Gazette. The first issue appeared Y124-11-03, edited by Tessa Roe, with Harold Pimm as council clerk on Mill Lane. The paper cost a penny and came out each month.
 
-**Y124** — The council office opens on Mill Lane, open Tuesdays and Thursdays. Six new street lamps are lit on Mill Lane in Y126, bright enough, Old Man Hargrave says, to read the Gazette by. Moll Peck places her first mangle ad in Y124; it runs, unanswered, until Y131.
+**Y124** — The council office opens on Mill Lane, open Tuesdays and Thursdays. Moll Peck places her first mangle ad in Y124; it runs, unanswered, until Y131.
+
+**Y126** — Six new street lamps are lit on Mill Lane, bright enough, Old Man Hargrave says, to read the Gazette by.
 
 **Y128** — Mill Lane is resurfaced, or the notice says so. Gravel is ordered from the rail siding. Cinderhall Foundry applies to extend its foundry shed over the coke oven yard. Ben Marsh writes about plate that warps.
 

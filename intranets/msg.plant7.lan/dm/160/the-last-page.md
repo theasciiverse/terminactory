@@ -15,6 +15,6 @@ hollis_k | Y160-01-09 09:40 | It is the truth and a page is a thing that can hol
 
 v_shaw | Y160-01-09 09:45 | Then write the four.
 
-hollis_k | Y160-01-09 09:50 | It is a box. It is not private from the office. It keeps thirty years. Nobody has ever deleted anything.
+hollis_k | Y160-01-09 09:50 | It is a box. It is not private from the office. It keeps everything. Nobody has ever deleted anything.
 
 v_shaw | Y160-01-09 09:55 | Put the last one first.
