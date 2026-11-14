@@ -230,7 +230,7 @@ fn a_rotated_copy_works() {
 }
 
 #[test]
-fn partial_paste_in_reading_order_and_the_rest_fills_in_later() {
+fn a_blueprint_the_money_does_not_cover_is_not_pasted_at_all() {
     // Furnace and press on the top row, two belts and a pole under them.
     let bp = bp_of(&[(Kind::Furnace, 0, 0), (Kind::Press, 4, 0), (Kind::Belt, 0, 3), (Kind::Belt, 1, 3), (Kind::Pole, 2, 3)]);
     let (furnace, press, belt, pole) = (Kind::Furnace.cost(), Kind::Press.cost(), Kind::Belt.cost(), Kind::Pole.cost());
@@ -245,25 +245,22 @@ fn partial_paste_in_reading_order_and_the_rest_fills_in_later() {
     // The pole is cheap enough for the $3 left but comes after the cut: a clean cut, not a scatter.
     assert!(pole > 3.0 || plan.parts[4].state == PlanState::Short);
     assert!((plan.short_by - (belt + pole - 3.0)).abs() < 1e-9, "{}", plan.short_by);
+    // Not enough for all of it: nothing is placed and nothing is charged.
     let rep = w.paste(0, 20, 20, &bp);
-    assert_eq!((rep.placed, rep.short), (3, 2));
-    assert!(w.tile(0, 20, 20).is_some() && w.tile(0, 24, 20).is_some() && w.tile(0, 20, 23).is_some());
-    assert!(w.tile(0, 21, 23).is_none() && w.tile(0, 22, 23).is_none());
-    assert!((w.econ.money - 3.0).abs() < 1e-9, "money never goes below zero: {}", w.econ.money);
-    // Pasting again with the same money changes nothing.
-    let again = w.paste(0, 20, 20, &bp);
-    assert_eq!((again.placed, again.present, again.short), (0, 3, 2));
-    assert!((w.econ.money - 3.0).abs() < 1e-9);
-    // More money, same spot: the rest, and the total over both pastes is the blueprint's price.
+    assert_eq!((rep.placed, rep.short), (0, 2));
+    assert!((rep.short_by - (belt + pole - 3.0)).abs() < 1e-9);
+    assert!(w.tile(0, 20, 20).is_none() && w.tile(0, 24, 20).is_none() && w.tile(0, 20, 23).is_none());
+    assert!((w.econ.money - (furnace + press + belt + 3.0)).abs() < 1e-9, "money untouched: {}", w.econ.money);
+    // With enough money the whole thing goes in, and the price is the blueprint's.
     money_set(&mut w, 1000.0);
     let last = w.paste(0, 20, 20, &bp);
-    assert_eq!((last.placed, last.present, last.short), (2, 3, 0));
-    assert!((last.cost - (belt + pole)).abs() < 1e-9);
-    assert!((w.econ.money - (1000.0 - belt - pole)).abs() < 1e-9);
+    assert_eq!((last.placed, last.present, last.short), (5, 0, 0));
+    assert!((last.cost - bp.cost()).abs() < 1e-9);
+    assert!((w.econ.money - (1000.0 - bp.cost())).abs() < 1e-9);
     // And once it is all there, a further paste does nothing at all.
     let done = w.paste(0, 20, 20, &bp);
     assert_eq!((done.placed, done.present), (0, 5));
-    assert!((w.econ.money - (1000.0 - belt - pole)).abs() < 1e-9);
+    assert!((w.econ.money - (1000.0 - bp.cost())).abs() < 1e-9);
 }
 
 fn money_set(w: &mut World, m: f64) {

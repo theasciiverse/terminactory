@@ -413,9 +413,10 @@ impl World {
         plan
     }
 
-    /// Pastes `bp` with its top-left corner at (ax, ay) on floor `f`: every part that fits and that
-    /// the money covers, in reading order, then one rebuild of the grids and pipes. Doing it again
-    /// at the same spot places what is left and charges nothing twice.
+    /// Pastes `bp` with its top-left corner at (ax, ay) on floor `f`: every part that fits, in
+    /// reading order, then one rebuild of the grids and pipes. If the money does not cover all of
+    /// them, nothing is placed. Doing it again at the same spot places what is left (parts that
+    /// were blocked before) and charges nothing twice.
     pub fn paste(&mut self, f: usize, ax: i32, ay: i32, bp: &Blueprint) -> PasteReport {
         let plan = self.plan_paste(f, ax, ay, bp);
         let mut rep = PasteReport {
@@ -431,6 +432,11 @@ impl World {
             ..Default::default()
         };
         if plan.refused.is_some() {
+            return rep;
+        }
+        // All or nothing for the money: a blueprint that costs more than you have is not pasted at
+        // all, so a half-built layout never happens.
+        if plan.short > 0 {
             return rep;
         }
         for (p, pp) in bp.parts.iter().zip(&plan.parts) {

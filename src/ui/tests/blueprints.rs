@@ -292,17 +292,13 @@ fn the_ghost_shows_what_fits_what_is_blocked_and_what_is_short() {
     assert!(!t.contains("BUILD") && t.contains("HERE"), "{t}");
     // The same, pasted: what fits, in reading order, then Space again after earning more.
     press(&mut app, ' ');
-    assert!(app.msg.starts_with("Placed 2 of 5, ") && app.msg.contains("short") && app.msg.contains("1 blocked"), "{}", app.msg);
-    assert!(app.msg.contains("the rest waits in your hand"), "{}", app.msg);
-    assert!(app.world.tile(0, x, y).is_some() && app.world.tile(0, x + 2, y).is_some() && app.world.tile(0, x + 3, y).is_none());
+    assert!(app.msg.starts_with("Not enough money: ") && app.msg.contains("nothing was placed"), "{}", app.msg);
+    assert!(app.world.tile(0, x, y).is_none() && app.world.tile(0, x + 2, y).is_none());
     app.world.econ.money = 100.0;
-    app.world.remove(0, x + 1, y);
     press(&mut app, ' ');
-    assert!(app.msg.contains("already there"), "{}", app.msg);
-    assert!((0..5).all(|i| app.world.tile(0, x + i, y).is_some()), "everything is there now");
-    // Once everything is placed it ghosts nothing and a further paste says so.
-    press(&mut app, ' ');
-    assert!(app.msg.starts_with("Already all here"), "{}", app.msg);
+    // With the money, everything that is not blocked goes in at once.
+    assert!(app.msg.starts_with("Placed 4 of 5") && app.msg.contains("1 blocked"), "{}", app.msg);
+    assert!(app.world.tile(0, x, y).is_some() && app.world.tile(0, x + 2, y).is_some());
 }
 
 fn snapshot_to(name: &str, buf: &Buffer) {
@@ -322,7 +318,7 @@ fn the_hand_in_a_small_pane_is_one_line_with_the_cost_and_what_fits() {
     // A fresh message (the paste result) takes the line for a while.
     press(&mut app, ' ');
     let t = text(&render(&mut app, 64, 16));
-    assert!(t.lines().last().unwrap().contains("Placed 2 of 5"), "{t}");
+    assert!(t.lines().last().unwrap().contains("Not enough money"), "{t}");
     // Narrower: the hint words go first, the numbers and the way out stay.
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
     for w in [64u16, 50, 44, 36, 30] {

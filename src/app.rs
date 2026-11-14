@@ -3057,6 +3057,9 @@ fn paste_message(rep: &PasteReport) -> String {
         return e.to_string();
     }
     let left = rep.total - rep.present;
+    if rep.short > 0 {
+        return format!("Not enough money: {} short, so nothing was placed", money_text(rep.short_by));
+    }
     let mut msg = if rep.placed == 0 && rep.present == rep.total {
         "Already all here: nothing to place".to_string()
     } else if rep.placed == 0 {
@@ -3066,9 +3069,6 @@ fn paste_message(rep: &PasteReport) -> String {
     } else {
         format!("Placed {} of {}", rep.placed, left)
     };
-    if rep.short > 0 {
-        msg += &format!(", {} short", money_text(rep.short_by));
-    }
     if rep.present > 0 && rep.present < rep.total {
         msg += &format!(" · {} already there", rep.present);
     }
@@ -3087,9 +3087,6 @@ fn paste_message(rep: &PasteReport) -> String {
     }
     if rep.elevators > 0 {
         msg += &format!(" · {} elevator{}: other floors' doors reset to unload", rep.elevators, plural(rep.elevators));
-    }
-    if rep.short > 0 {
-        msg += " · the rest waits in your hand";
     }
     msg
 }
