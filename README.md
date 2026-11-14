@@ -4,7 +4,7 @@ A cozy factory game for your terminal. Dig copper, coal and iron, melt it, press
 
 It is made to sit in a split next to your AI agents. They can send you short messages that show up in the game, so you can play while they work.
 
-![A factory running in the terminal](docs/screenshots/factory.gif)
+![A factory running in the terminal](docs/screenshots/factory.webp)
 
 ```
 tfac --demo     # a small working factory to look at
