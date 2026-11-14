@@ -826,11 +826,13 @@ impl App {
             Action::Place => self.place_here(),
             Action::Rotate => self.rotate(shift),
             Action::Remove => self.remove_here(true),
-            Action::Setup if self.selected.is_some_and(|k| self.cycle_hand_setting(k)) => {}
             Action::Setup => {
                 let (x, y) = self.cursor;
+                // A part under the cursor comes first, even with another in hand; with nothing
+                // there to set up, the part in hand takes the key.
                 match self.world.configure(self.floor, x, y) {
                     Some(m) => self.say(m),
+                    None if self.selected.is_some_and(|k| self.cycle_hand_setting(k)) => {}
                     None => self.say("Nothing to set up here (arms, trade posts, furnaces, presses)"),
                 }
             }

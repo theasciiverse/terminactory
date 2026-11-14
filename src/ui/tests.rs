@@ -2714,7 +2714,13 @@ fn f_with_a_part_in_hand_changes_what_it_will_be_when_placed() {
     let (x, y) = app.cursor;
     key(&mut app, ' ');
     assert!(matches!(app.world.setting_at(app.floor, x, y), Some(Setting::Mines(m)) if m == second));
-    // Machines: f cycles the recipe it will make.
+    // Hovering a placed part, f sets that part and leaves the hand alone.
+    let before = app.paste;
+    key(&mut app, 'f');
+    assert_eq!(app.paste, before, "the hand did not change");
+    assert!(!matches!(app.world.setting_at(app.floor, x, y), Some(Setting::Mines(m)) if m == second), "the drill under the cursor changed");
+    // Machines: f cycles the recipe it will make, on bare ground.
+    app.cursor.0 += 6;
     app.selected = Some(Kind::Press);
     app.paste = None;
     key(&mut app, 'f');
