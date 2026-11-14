@@ -3923,7 +3923,19 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         }
         _ => close.to_string(),
     };
-    let left_room = foot.width.saturating_sub(right.chars().count() as u16 + 3) as usize;
+    // The Copy button sits left of the right-hand text, where the page has something to copy.
+    let copied = app.book_copied.is_some_and(|t| t.elapsed().as_secs() < 2);
+    let copy_label = if copied { " Copied " } else { " Copy page " };
+    let copy_w = copy_label.chars().count() as u16;
+    let can_copy =
+        !app.book_typing && foot.width >= right.chars().count() as u16 + copy_w + 24 && app.book_slug != "start" && !app.book_asks_login();
+    let reserved = if can_copy { copy_w + 2 } else { 0 };
+    if can_copy {
+        let cx = foot.right().saturating_sub(right.chars().count() as u16 + 2 + copy_w);
+        f.buffer_mut().set_string(cx, foot.y, copy_label, Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(240)));
+        app.book_buttons.push((Rect::new(cx, foot.y, copy_w, 1), crate::app::BookButton::Copy));
+    }
+    let left_room = foot.width.saturating_sub(right.chars().count() as u16 + 3 + reserved) as usize;
     let left = fit_left(&left, left_room);
     f.buffer_mut().set_stringn(foot.x + 1, foot.y, &left, left_room, Style::new().fg(Color::Indexed(245)).bg(Color::Indexed(236)));
     if foot.width as usize > right.chars().count() + 8 {

@@ -212,6 +212,8 @@ pub enum BookButton {
     Search,
     Lucky,
     Edit,
+    /// The status bar's Copy button: the page's text goes to the clipboard.
+    Copy,
 }
 
 /// One browser tab: a page, its own history and where it was scrolled and picked.
@@ -354,6 +356,8 @@ pub struct App {
     /// The bookmarks bar's links, where they were drawn, and whether the page has a scrollbar column.
     pub book_mark_hits: Vec<(Rect, String)>,
     pub book_scrollbar: bool,
+    /// When the Copy button was last pressed, for its "Copied" note.
+    pub book_copied: Option<Instant>,
     /// The last search drawn: its words and its results.
     pub book_hits: Option<(String, Vec<crate::search::Hit>)>,
     /// When the page last opened: the load bar fills for a moment after it.
@@ -493,6 +497,7 @@ impl App {
             book_tab_close: Vec::new(),
             book_mark_hits: Vec::new(),
             book_scrollbar: false,
+            book_copied: None,
             book_hits: None,
             book_opened: None,
             book_slug: "home".into(),
@@ -1195,6 +1200,64 @@ impl App {
         crate::web::access(slug).is_some() && self.book_signed_in(domain).is_none()
     }
 
+    /// The text of the page in the browser, as plain text for the clipboard: a header with the
+    /// title and address, then the page as the reader sees it. `None` where there is nothing to
+    /// copy (the start page, a sign-in form).
+    pub fn book_page_text(&self) -> Option<String> {
+        let slug = self.book_slug.as_str();
+        if slug == "start" || self.book_asks_login() {
+            return None;
+        }
+        let address = crate::ui::book_url(slug);
+        if let Some(query) = slug.strip_prefix("search?q=") {
+            let hits = crate::search::search(query);
+            let mut out = format!("Search: {query}\n{address}\n\n{} results\n", hits.len());
+            for h in &hits {
+                out.push_str(&format!("\n{}\n{}\n{}\n", crate::ui::book_url(&h.slug), h.title, h.snippet));
+            }
+            return Some(out);
+        }
+        let body = if crate::web::is_addr(slug) {
+            if let Some(thread) = crate::web::thread(slug) {
+                let mut out = format!("{}\n", thread.title);
+                for (k, v) in &thread.meta {
+                    out.push_str(&format!("{k}: {v}\n"));
+                }
+                for post in &thread.posts {
+                    let pad = "  ".repeat(post.depth);
+                    out.push_str(&format!("\n{pad}{} · {}\n", post.author, post.date));
+                    for line in &post.body {
+                        out.push_str(&format!("{pad}{}\n", crate::search::plain(line)));
+                    }
+                }
+                out
+            } else {
+                let md = match crate::web::page(slug) {
+                    Some(md) => {
+                        let mut text = crate::web::prepare(slug, md);
+                        if let Some(section) = crate::web::profile_section(slug) {
+                            text.push_str(&section);
+                        }
+                        text
+                    }
+                    None => crate::web::missing(slug),
+                };
+                crate::search::plain(&md)
+            }
+        } else {
+            crate::search::plain(crate::wiki::page(slug)?)
+        };
+        Some(format!("{address}\n\n{body}"))
+    }
+
+    /// The Copy button: put the page's text on the clipboard.
+    pub fn book_copy(&mut self) {
+        if let Some(text) = self.book_page_text() {
+            crate::clip::copy(&text);
+            self.book_copied = Some(Instant::now());
+        }
+    }
+
     /// `i` or Enter on a login page: the boxes take the keys from here.
     fn start_login(&mut self) {
         self.book_login.get_or_insert_with(LoginForm::default).failed = false;
@@ -1595,6 +1658,7 @@ impl App {
                                 self.book_go_slug(&slug);
                             }
                         }
+                        BookButton::Copy => self.book_copy(),
                         BookButton::Edit => {
                             self.book_typing = true;
                             self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();

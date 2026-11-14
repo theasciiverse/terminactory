@@ -2,6 +2,7 @@
 //! Both commands, `terminactory` and its shortcut `tfac`, start the game through `start`.
 
 mod app;
+mod clip;
 mod content;
 mod controls;
 mod hints;

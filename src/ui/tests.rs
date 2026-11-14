@@ -2262,3 +2262,27 @@ fn web_dead_links_report() {
     }
     println!("{dead} dead links");
 }
+
+#[test]
+fn the_copy_button_is_in_the_status_bar_and_the_page_text_is_plain() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    render(&mut app, 140, 45);
+    assert!(app.book_page_text().is_none());
+    assert!(!app.book_buttons.iter().any(|(_, b)| *b == crate::app::BookButton::Copy));
+    app.book_slug = "boiler".into();
+    let screen = render(&mut app, 140, 45);
+    assert!(text(&screen).contains("Copy page"));
+    assert!(app.book_buttons.iter().any(|(_, b)| *b == crate::app::BookButton::Copy));
+    let copied = app.book_page_text().expect("wiki text");
+    assert!(copied.starts_with("terminactory.wiki/boiler"), "{copied}");
+    assert!(!copied.contains("[[") && !copied.contains("**"));
+    app.book_slug = "search?q=boiler".into();
+    let results = app.book_page_text().expect("results text");
+    assert!(results.starts_with("Search: boiler"), "{results}");
+    assert!(results.contains("terminactory.wiki/boiler"));
+    app.book_slug = "example.forum/deep-thread".into();
+    let thread = app.book_page_text().expect("thread text");
+    assert!(thread.contains(" · "), "{thread}");
+}
