@@ -432,19 +432,22 @@ fn production_panel() {
         w.tick();
     }
     let mut app = App::new(w);
+    // o opens the production site in the browser.
     app.on_key(KeyEvent::from(KeyCode::Char('o')));
-    assert!(app.stats);
+    assert!(app.book && app.book_slug == "production");
     let buf = render(&mut app, 130, 42);
     let t = text(&buf);
     assert!(t.contains(" Production ") && t.contains(" History ") && t.contains("last minute") && t.contains("research/min"), "{t}");
-    assert!(t.contains("copper plate") && t.contains("next sale") && t.contains("Factory"), "beside the sidebar: {t}");
+    assert!(t.contains("copper plate") && t.contains("next sale") && t.contains("production.lan"), "{t}");
     std::fs::write("target/snapshot-production.html", to_html(&buf)).unwrap();
     // Small pane: fewer columns, still readable.
     let t = text(&render(&mut app, 60, 20));
-    assert!(t.contains("copper plate") && !t.contains("next sale"), "{t}");
-    // Any other key closes it and still does its job.
-    app.on_key(KeyEvent::from(KeyCode::Char('t')));
-    assert!(!app.stats && app.tree);
+    assert!(t.contains("copper plate"), "{t}");
+    // Esc puts the browser away; o brings the same tab back.
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(!app.book);
+    app.on_key(KeyEvent::from(KeyCode::Char('o')));
+    assert!(app.book && app.book_tabs.len() == 2 && app.book_slug == "production");
 }
 
 /// Research reads in a sky blue (not the dark blue of the 16-colour palette, which is nearly
@@ -2542,4 +2545,20 @@ fn switching_tabs_shows_no_progress_bar_but_a_new_tab_does() {
     assert!(app.book_opened.is_none());
     app.book_switch(1);
     assert!(app.book_opened.is_none());
+}
+
+#[test]
+fn the_production_site_has_two_tabs_an_address_and_no_copy_button() {
+    let mut app = App::new(World::new());
+    app.on_key(KeyEvent::from(KeyCode::Char('o')));
+    let t = text(&render(&mut app, 140, 45));
+    assert!(t.contains("production.lan") && !t.contains("Copy page"), "{t}");
+    app.on_key(KeyEvent::from(KeyCode::Tab));
+    assert!(app.stats_history && app.book_slug == "production");
+    let t = text(&render(&mut app, 140, 45));
+    assert!(t.contains("Money ·"), "{t}");
+    // Typing the address finds it too.
+    app.book_submit_address("terminactory.wiki/coal");
+    app.book_submit_address("production.lan");
+    assert_eq!(app.book_slug, "production");
 }

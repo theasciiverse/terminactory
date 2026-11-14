@@ -76,7 +76,7 @@ fn tab_switches_between_production_and_history() {
     press(&mut app, 'o');
     assert!(!app.stats);
     press(&mut app, 'o');
-    assert!(app.stats && !app.stats_history);
+    assert!(app.book && app.book_slug == "production" && !app.stats_history);
 }
 
 #[test]

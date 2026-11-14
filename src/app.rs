@@ -263,6 +263,7 @@ impl Tab {
             "start" => "termweb".into(),
             "home" => "Home".into(),
             "history" => "History".into(),
+            "production" => "Production".into(),
             s if s.starts_with("search?q=") => s["search?q=".len()..].to_string(),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
@@ -813,11 +814,7 @@ impl App {
                 self.held = None;
             }
             Action::Tree => self.tree = true,
-            Action::Stats => {
-                self.stats = true;
-                self.stats_scroll = 0;
-                self.stats_history = false;
-            }
+            Action::Stats => self.open_production(),
             Action::Book => self.open_book(),
             Action::Settings => self.settings_open = true,
             Action::Area => self.start_area(),
@@ -1176,7 +1173,8 @@ impl App {
             return;
         }
         // Home and the index pages are generated, so they have no markdown file.
-        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics" | "history") || slug.starts_with("search?q=");
+        let generated =
+            matches!(slug, "start" | "home" | "items" | "machines" | "topics" | "history" | "production") || slug.starts_with("search?q=");
         // A web address always opens, even when the page (or the server) isn't there: the page
         // that shows is T Web's own 404 or "server not found", not a refusal to move.
         if (crate::wiki::page(slug).is_none() && !generated && !crate::web::is_addr(slug)) || slug == self.book_slug {
@@ -1236,7 +1234,7 @@ impl App {
     /// copy (the start page, a sign-in form).
     pub fn book_page_text(&self) -> Option<String> {
         let slug = self.book_slug.as_str();
-        if slug == "start" || slug == "history" || self.book_asks_login() {
+        if slug == "start" || slug == "history" || slug == "production" || self.book_asks_login() {
             return None;
         }
         let address = crate::ui::book_url(slug);
@@ -1430,6 +1428,39 @@ impl App {
         true
     }
 
+    /// `o`: the production site in the browser, in the tab that already shows it or a new one.
+    pub fn open_production(&mut self) {
+        self.book_store();
+        self.book = true;
+        self.book_typing = false;
+        if let Some(i) = self.book_tabs.iter().position(|t| t.slug == "production") {
+            self.book_switch(i);
+        } else {
+            self.stats_scroll = 0;
+            self.stats_history = false;
+            self.book_new_tab("production");
+        }
+    }
+
+    /// Keys on the production site: it is the production panel in a page, so Tab swaps its two
+    /// tabs and the panel's own keys scroll it. Returns whether the key was used.
+    fn production_key(&mut self, k: KeyEvent, action: Option<Action>) -> bool {
+        let shift = k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::SHIFT);
+        match (k.code, action) {
+            (KeyCode::Tab | KeyCode::BackTab, _) => self.stats_tab(!self.stats_history),
+            _ if self.stats_history && self.history_key(k.code) => {}
+            (KeyCode::PageUp, _) => self.stats_scroll = self.stats_scroll.saturating_sub(5),
+            (KeyCode::PageDown, _) => self.stats_scroll += 5,
+            (_, Some(Action::MoveUp)) if !shift => self.stats_scroll = self.stats_scroll.saturating_sub(1),
+            (_, Some(Action::MoveDown)) if !shift => self.stats_scroll += 1,
+            (_, Some(Action::Pause)) => self.paused = !self.paused,
+            (_, Some(Action::Faster)) => self.speed = (self.speed * 2).min(8),
+            (_, Some(Action::Slower)) => self.speed = (self.speed / 2).max(1),
+            _ => return false,
+        }
+        true
+    }
+
     /// What a typed address means: a page of termweb, a wiki page, a site, or a search.
     pub fn book_submit_address(&mut self, text: &str) {
         let t = text.trim();
@@ -1443,6 +1474,8 @@ impl App {
             self.book_go_slug(if rest == "history" { "history" } else { rest });
         } else if let Some(slug) = t.strip_prefix("terminactory.wiki/") {
             self.book_go_slug(slug);
+        } else if t == "production.lan" {
+            self.book_go_slug("production");
         } else if t == "terminactory.wiki" {
             self.book_go_slug("home");
         } else {
@@ -1578,6 +1611,9 @@ impl App {
         }
         if self.book_asks_login() && matches!(k.code, KeyCode::Char('i') | KeyCode::Enter) {
             self.start_login();
+            return;
+        }
+        if self.book_slug == "production" && self.production_key(k, action) {
             return;
         }
         // With nothing focused, a digit picks a tab.
@@ -1751,6 +1787,30 @@ impl App {
     fn book_mouse(&mut self, m: MouseEvent) {
         let at = ratatui::layout::Position::new(m.column, m.row);
         let inside = self.book_area.contains(at);
+        if inside && self.book_slug == "production" {
+            match m.kind {
+                MouseEventKind::ScrollUp => {
+                    self.stats_scroll = self.stats_scroll.saturating_sub(1);
+                    return;
+                }
+                MouseEventKind::ScrollDown => {
+                    self.stats_scroll += 1;
+                    return;
+                }
+                MouseEventKind::Down(MouseButton::Left) => match self.stats_hits.iter().find(|(r, _)| r.contains(at)).map(|(_, h)| *h) {
+                    Some(StatsHit::Tab(h)) => {
+                        self.stats_tab(h);
+                        return;
+                    }
+                    Some(StatsHit::Range(r)) => {
+                        self.hist_range = r;
+                        return;
+                    }
+                    None => {}
+                },
+                _ => {}
+            }
+        }
         match m.kind {
             MouseEventKind::Down(MouseButton::Left) => {
                 if !inside {

@@ -576,7 +576,7 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
                     (0, format!("{help} help")),
                     (1, "1-4 build".to_string()),
                     (2, format!("{tree} research")),
-                    (3, format!("{book} recipes")),
+                    (3, format!("{book} browser")),
                     (4, format!("{stats} production")),
                     (5, "Ctrl+C quit".to_string()),
                 ];
@@ -2212,7 +2212,7 @@ fn draw_bottom(f: &mut Frame, area: Rect, app: &App) {
             let c = &app.controls;
             Line::styled(
                 format!(
-                    " {} help   1-4 build   {} research   {} recipes   {} production   {} place   {} remove   Ctrl+C quit",
+                    " {} help   1-4 build   {} research   {} browser   {} production   {} place   {} remove   Ctrl+C quit",
                     c.key(Action::Help),
                     c.key(Action::Tree),
                     c.key(Action::Book),
@@ -2384,7 +2384,8 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &mut App) {
     let text = Paragraph::new(lines).scroll((app.stats_scroll, 0));
     f.render_widget(if app.stats_history { text } else { text.wrap(Wrap { trim: false }) }, body);
     let foot = Rect::new(inner.x + 1, inner.y + inner.height - 1, inner.width.saturating_sub(2), 1);
-    let close = format!("{}/Esc close", app.controls.key(Action::Stats));
+    // In the browser the panel is a page: Esc puts the browser away.
+    let close = if app.book { "Esc minimize".to_string() } else { format!("{}/Esc close", app.controls.key(Action::Stats)) };
     let more = match (app.stats_scroll > 0, app.stats_scroll < max_scroll) {
         (true, true) => Some("more ▲▼"),
         (true, false) => Some("more ▲"),
@@ -3938,6 +3939,9 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         draw_book_start(f, content, app);
     } else if app.book_slug == "history" {
         draw_book_history(f, content, app);
+    } else if app.book_slug == "production" {
+        draw_stats(f, content, app);
+        app.book_max_scroll = 0;
     } else if app.book_slug.starts_with("search?q=") {
         draw_book_results(f, content, app);
     } else if app.book_slug == "items" || app.book_slug == "machines" {
@@ -4074,7 +4078,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     };
     let copy_w = copy_label.chars().count() as u16;
     let can_copy = foot.width >= right.chars().count() as u16 + copy_w + 24
-        && (on_start || (!app.book_typing && app.book_slug != "history" && !app.book_asks_login()));
+        && (on_start || (!app.book_typing && app.book_slug != "history" && app.book_slug != "production" && !app.book_asks_login()));
     let reserved = if can_copy { copy_w + 2 } else { 0 };
     if can_copy {
         let cx = foot.right().saturating_sub(right.chars().count() as u16 + 2 + copy_w);
@@ -4374,6 +4378,8 @@ pub(crate) fn book_url(slug: &str) -> String {
         "termweb.search".into()
     } else if slug == "history" {
         "termweb.search/history".into()
+    } else if slug == "production" {
+        "production.lan".into()
     } else if slug.starts_with("search?q=") {
         format!("termweb.search/{slug}")
     } else if crate::web::is_addr(slug) {
@@ -4696,6 +4702,7 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
         ("Machines", "machines"),
         ("Items", "items"),
         ("Topics", "topics"),
+        ("Production", "production"),
         ("Directory", "termweb.search/directory"),
     ];
     let widths: Vec<u16> = links.iter().map(|(l, _)| l.chars().count() as u16).collect();
