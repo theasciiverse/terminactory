@@ -2204,6 +2204,57 @@ impl World {
         Ok(self.remove_part(f, x, y))
     }
 
+    /// A splitter only hands items to belts that face away from it and only takes them from belts
+    /// that face it. Turns the belts touching a new splitter at (x, y) so they do: a belt that
+    /// already faces it or faces away is left alone; any other belt turns to face away from it,
+    /// unless something feeds it and it leads nowhere, which makes it the end of an incoming line,
+    /// so it turns to face the splitter. Returns how many belts were turned.
+    pub fn route_belts_around_splitter(&mut self, f: usize, x: i32, y: i32) -> usize {
+        let mut turned = 0;
+        for d in Dir::ALL {
+            let (dx, dy) = d.delta();
+            let (bx, by) = (x + dx, y + dy);
+            if !in_bounds(bx, by) {
+                continue;
+            }
+            let Some(b) = self.tile(f, bx, by) else { continue };
+            if !matches!(b.kind, Kind::Belt | Kind::FastBelt) {
+                continue;
+            }
+            let bd = b.dir;
+            if bd == d || bd == d.opposite() {
+                continue;
+            }
+            // Does something push into this belt, and does it lead on to anything?
+            let (fx, fy) = (bx + bd.delta().0, by + bd.delta().1);
+            let continues = in_bounds(fx, fy) && self.tile(f, fx, fy).is_some();
+            let fed = Dir::ALL.iter().any(|e| {
+                let (ox, oy) = (bx + e.delta().0, by + e.delta().1);
+                if (ox, oy) == (x, y) || !in_bounds(ox, oy) {
+                    return false;
+                }
+                self.tile(f, ox, oy).is_some_and(|o| {
+                    o.dir == e.opposite()
+                        && matches!(
+                            o.st,
+                            St::Belt { .. }
+                                | St::Drill { .. }
+                                | St::Crafter { .. }
+                                | St::Crate { .. }
+                                | St::Splitter { .. }
+                                | St::Arm { .. }
+                        )
+                })
+            });
+            let new = if fed && !continues { d.opposite() } else { d };
+            if let Some(Some(belt)) = self.floors[f].anchor_at(bx, by).map(|a| self.floors[f].tiles[a].as_mut()) {
+                belt.dir = new;
+                turned += 1;
+            }
+        }
+        turned
+    }
+
     /// Like `try_remove`, but a refused removal is just None.
     #[allow(dead_code)]
     pub fn remove(&mut self, f: usize, x: i32, y: i32) -> Option<Kind> {

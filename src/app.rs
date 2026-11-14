@@ -2226,6 +2226,12 @@ impl App {
                 if let Some(set) = self.paste {
                     self.world.apply_setting(self.floor, x, y, set);
                 }
+                if matches!(kind, Kind::Splitter | Kind::Sorter) {
+                    let n = self.world.route_belts_around_splitter(self.floor, x, y);
+                    if n > 0 {
+                        self.say(format!("Turned {n} nearby belt{} to line up with the splitter", if n == 1 { "" } else { "s" }));
+                    }
+                }
             }
             Err(e) => self.say(e),
         }
