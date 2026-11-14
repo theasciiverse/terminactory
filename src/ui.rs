@@ -5777,7 +5777,7 @@ CONTROLS
     if small {
         let c = &app.controls;
         let keys = format!(
-            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Recipes {} · Production {} · Settings {} · Help {}\n  Area {} marks a rectangle, {} removes it, {} upgrades it, {} puts it back\n  Ctrl+C quits and saves. {} lists every item and machine.",
+            "KEYS\n  Move {} · Build 1-4 then a number · Place {} · Back {}\n  Research {} · Browser {} · Production {} · Settings {} · Help {}\n  Area {} marks a rectangle, {} removes it, {} upgrades it, {} puts it back\n  Ctrl+C quits and saves. {} lists every item and machine.",
             "WASD/arrows",
             c.key(Action::Place),
             c.key(Action::Back),
@@ -5795,7 +5795,7 @@ CONTROLS
         let controls = sections.pop().unwrap_or_default();
         let mut map = sections.remove(0);
         if let (Some(a), Some(b)) = (map.find("  Items:"), map.find("  Pipes show")) {
-            map.replace_range(a..b, "  Items: the recipe book (b) shows every item and what makes it.\n");
+            map.replace_range(a..b, "  Items: the browser (b) shows every item and what makes it.\n");
         }
         sections.insert(0, map);
         sections.insert(0, controls);
