@@ -2406,8 +2406,43 @@ fn searches_are_remembered_and_listed_on_the_start_page() {
     assert_eq!(app.settings.search_history, vec!["COAL".to_string(), "boiler waste".to_string()]);
     app.book_go_slug("start");
     let screen = text(&render(&mut app, 140, 45));
-    assert!(screen.contains("Recent searches") && screen.contains("↺ boiler waste"), "{screen}");
-    let (r, _) = app.book_click_only.iter().find(|(_, s)| s == "search?q=boiler waste").cloned().expect("a clickable entry");
+    assert!(!screen.contains("Recent searches"), "the start page lists no searches");
+    assert!(screen.contains(" History "), "{screen}");
+    let (r, _) = app.book_buttons.iter().find(|(_, b)| *b == crate::app::BookButton::History).cloned().expect("a History button");
+    left_click(&mut app, r.x, r.y);
+    assert_eq!(app.book_slug, "history");
+    let page = text(&render(&mut app, 140, 45));
+    assert!(page.contains("Search history") && page.contains("↺ boiler waste"), "{page}");
+    assert!(!page.contains("Copy page"), "no Copy button on the history page");
+    let (r, _) = app.book_urls.iter().find(|(_, s)| s == "search?q=boiler waste").cloned().expect("a clickable entry");
     left_click(&mut app, r.x, r.y);
     assert_eq!(app.book_slug, "search?q=boiler waste");
+    // Clearing empties the list.
+    app.book_go_slug("history");
+    render(&mut app, 140, 45);
+    let (r, _) = app.book_buttons.iter().find(|(_, b)| *b == crate::app::BookButton::ClearHistory).cloned().expect("a Clear button");
+    left_click(&mut app, r.x, r.y);
+    assert!(app.settings.search_history.is_empty());
+    // Later pages have no History button.
+    app.book_go_slug("boiler");
+    render(&mut app, 140, 45);
+    assert!(!app.book_buttons.iter().any(|(_, b)| *b == crate::app::BookButton::History));
+}
+
+#[test]
+fn an_items_symbol_in_a_recipe_card_is_coloured_but_not_a_link() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "coke".into();
+    let screen = render(&mut app, 140, 45);
+    assert!(!app.book_urls.iter().any(|(_, s)| s.starts_with('!')), "{:?}", app.book_urls);
+    let coal = Item::Coal;
+    let (glyph, style) = item_cell(coal, Color::Reset);
+    let found = (0..screen.area.height).any(|y| {
+        (0..screen.area.width).any(|x| {
+            let c = &screen[(x, y)];
+            c.symbol() == glyph.to_string() && c.fg == style.fg.unwrap_or(Color::Reset) && !c.modifier.contains(Modifier::UNDERLINED)
+        })
+    });
+    assert!(found, "a coloured, un-underlined coal symbol");
 }

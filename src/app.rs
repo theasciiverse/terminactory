@@ -220,6 +220,9 @@ pub enum BookButton {
     Fullscreen,
     /// The status bar's Copy button: the page's text goes to the clipboard.
     Copy,
+    /// The start page's History button and the history page's Clear button.
+    History,
+    ClearHistory,
 }
 
 /// One browser tab: a page, its own history and where it was scrolled and picked.
@@ -257,6 +260,7 @@ impl Tab {
         match self.slug.as_str() {
             "start" => "termweb".into(),
             "home" => "Home".into(),
+            "history" => "Search history".into(),
             s if s.starts_with("search?q=") => format!("{} - termweb", &s["search?q=".len()..]),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
@@ -1163,7 +1167,7 @@ impl App {
             return;
         }
         // Home and the index pages are generated, so they have no markdown file.
-        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics") || slug.starts_with("search?q=");
+        let generated = matches!(slug, "start" | "home" | "items" | "machines" | "topics" | "history") || slug.starts_with("search?q=");
         // A web address always opens, even when the page (or the server) isn't there: the page
         // that shows is T Web's own 404 or "server not found", not a refusal to move.
         if (crate::wiki::page(slug).is_none() && !generated && !crate::web::is_addr(slug)) || slug == self.book_slug {
@@ -1223,7 +1227,7 @@ impl App {
     /// copy (the start page, a sign-in form).
     pub fn book_page_text(&self) -> Option<String> {
         let slug = self.book_slug.as_str();
-        if slug == "start" || self.book_asks_login() {
+        if slug == "start" || slug == "history" || self.book_asks_login() {
             return None;
         }
         let address = crate::ui::book_url(slug);
@@ -1710,6 +1714,13 @@ impl App {
                             }
                         }
                         BookButton::Copy => self.book_copy(),
+                        BookButton::History => self.book_go_slug("history"),
+                        BookButton::ClearHistory => {
+                            self.settings.search_history.clear();
+                            if let Some(path) = &self.settings_path {
+                                let _ = self.settings.save(path);
+                            }
+                        }
                         BookButton::CloseWindow => self.book_close_window(),
                         BookButton::Minimize => self.book_minimize(),
                         BookButton::Fullscreen => self.book_full = !self.book_full,

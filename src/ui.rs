@@ -3920,6 +3920,8 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         draw_web_page(f, content, app);
     } else if app.book_slug == "start" {
         draw_book_start(f, content, app);
+    } else if app.book_slug == "history" {
+        draw_book_history(f, content, app);
     } else if app.book_slug.starts_with("search?q=") {
         draw_book_results(f, content, app);
     } else if app.book_slug == "items" || app.book_slug == "machines" {
@@ -4045,15 +4047,26 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     };
     // The Copy button sits left of the right-hand text, where the page has something to copy.
     let copied = app.book_copied.is_some_and(|t| t.elapsed().as_secs() < 2);
-    let copy_label = if copied { " Copied " } else { " Copy page " };
+    // On the first termweb.search page the same spot holds History instead.
+    let on_start = app.book_slug == "start";
+    let copy_label = if on_start {
+        " History "
+    } else if copied {
+        " Copied "
+    } else {
+        " Copy page "
+    };
     let copy_w = copy_label.chars().count() as u16;
-    let can_copy =
-        !app.book_typing && foot.width >= right.chars().count() as u16 + copy_w + 24 && app.book_slug != "start" && !app.book_asks_login();
+    let can_copy = foot.width >= right.chars().count() as u16 + copy_w + 24
+        && (on_start || (!app.book_typing && app.book_slug != "history" && !app.book_asks_login()));
     let reserved = if can_copy { copy_w + 2 } else { 0 };
     if can_copy {
         let cx = foot.right().saturating_sub(right.chars().count() as u16 + 2 + copy_w);
         f.buffer_mut().set_string(cx, foot.y, copy_label, Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(240)));
-        app.book_buttons.push((Rect::new(cx, foot.y, copy_w, 1), crate::app::BookButton::Copy));
+        app.book_buttons.push((
+            Rect::new(cx, foot.y, copy_w, 1),
+            if on_start { crate::app::BookButton::History } else { crate::app::BookButton::Copy },
+        ));
     }
     let left_room = foot.width.saturating_sub(right.chars().count() as u16 + 3 + reserved) as usize;
     let left = fit_left(&left, left_room);
@@ -4138,7 +4151,7 @@ fn fit_left(s: &str, width: usize) -> String {
 fn recipe_item(item: Item, count: u32) -> String {
     let slug = crate::wiki::slug(item.name());
     let glyph = item_cell(item, Color::Reset).0;
-    format!("{}{glyph} [[{slug}]]", if count > 1 { format!("{count}x ") } else { String::new() })
+    format!("{}[[!{slug}|{glyph}]] [[{slug}]]", if count > 1 { format!("{count}x ") } else { String::new() })
 }
 
 fn wiki_visible_width(text: &str) -> usize {
@@ -4343,6 +4356,8 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
 pub(crate) fn book_url(slug: &str) -> String {
     if slug == "start" {
         "termweb.search".into()
+    } else if slug == "history" {
+        "termweb.search/history".into()
     } else if slug.starts_with("search?q=") {
         format!("termweb.search/{slug}")
     } else if crate::web::is_addr(slug) {
@@ -4688,23 +4703,38 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
     if !app.book_urls.is_empty() {
         app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
     }
-    // Recent searches, newest first, under the links: a click runs the search again.
-    y += 2;
-    let recent: Vec<String> = app.settings.search_history.iter().take(5).cloned().collect();
-    if !recent.is_empty() && y < area.bottom() {
-        let w = 40.min(area.width.saturating_sub(4)) as usize;
-        let x = area.x + area.width.saturating_sub(w as u16) / 2;
-        f.buffer_mut().set_string(x, y, "Recent searches", Style::new().fg(Color::Indexed(243)));
-        y += 1;
-        for q in recent {
-            if y >= area.bottom() {
-                break;
-            }
-            let label = fit_left(&format!("↺ {q}"), w);
-            f.buffer_mut().set_stringn(x, y, &label, w, Style::new().fg(Color::Indexed(247)));
-            app.book_click_only.push((Rect::new(x, y, w as u16, 1), format!("search?q={q}")));
-            y += 1;
+    app.book_max_scroll = 0;
+}
+
+/// The search history page: every search made, newest first, each one a link, and a button to
+/// clear them.
+fn draw_book_history(f: &mut Frame, area: Rect, app: &mut App) {
+    let history = app.settings.search_history.clone();
+    f.buffer_mut().set_string(area.x + 1, area.y, "Search history", Style::new().fg(Color::Indexed(229)).bold());
+    let mut y = area.y + 2;
+    if history.is_empty() {
+        f.buffer_mut().set_string(area.x + 1, y, "No searches yet.", Style::new().fg(Color::Indexed(245)));
+    }
+    for (i, q) in history.iter().enumerate() {
+        if y >= area.bottom().saturating_sub(2) {
+            break;
         }
+        let selected = !app.book_typing && i == app.book_selected;
+        let style = if selected { Style::new().add_modifier(Modifier::REVERSED) } else { Style::new().fg(Color::Indexed(75)).underlined() };
+        let label = fit_left(q, area.width.saturating_sub(5) as usize);
+        f.buffer_mut().set_string(area.x + 1, y, "↺ ", Style::new().fg(Color::Indexed(245)));
+        f.buffer_mut().set_string(area.x + 3, y, &label, style);
+        app.book_urls.push((Rect::new(area.x + 3, y, label.chars().count() as u16, 1), format!("search?q={q}")));
+        y += 1;
+    }
+    if !history.is_empty() && area.bottom() > y + 1 {
+        let label = " Clear history ";
+        let r = Rect::new(area.x + 1, y + 1, label.chars().count() as u16, 1);
+        f.buffer_mut().set_string(r.x, r.y, label, Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(237)));
+        app.book_buttons.push((r, crate::app::BookButton::ClearHistory));
+    }
+    if !app.book_urls.is_empty() {
+        app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
     }
     app.book_max_scroll = 0;
 }
@@ -5214,8 +5244,12 @@ fn draw_wiki_row(
         }
         let txt: String = line[i..end].iter().map(|x| x.0).collect();
         let click_only = link.as_deref().is_some_and(|l| l.starts_with('~'));
-        let selected = link.is_some() && !click_only && *link_index == app.book_selected;
-        let mut style = if let Some(slug) = link.as_deref() {
+        // `!slug` is an item's coloured symbol: drawn like the item, but not a link.
+        let symbol = link.as_deref().and_then(|l| l.strip_prefix('!')).and_then(crate::app::App::book_entry_for_slug_for_ui);
+        let selected = link.is_some() && !click_only && symbol.is_none() && *link_index == app.book_selected;
+        let mut style = if let Some(Entry::Item(item)) = symbol {
+            item_cell(item, Color::Reset).1
+        } else if let Some(slug) = link.as_deref() {
             if let Some(Entry::Item(item)) = crate::app::App::book_entry_for_slug_for_ui(slug) {
                 let (glyph, glyph_style) = item_cell(item, Color::Reset);
                 if txt == glyph.to_string() {
@@ -5236,7 +5270,7 @@ fn draw_wiki_row(
             style = style.reversed();
         }
         f.buffer_mut().set_stringn(area.x + x as u16, y, &txt, (area.width as usize).saturating_sub(x), style);
-        if let Some(slug) = link {
+        if let Some(slug) = link.filter(|_| symbol.is_none()) {
             let rect = Rect::new(area.x + x as u16, y, txt.chars().count() as u16, 1);
             if let Some(real) = slug.strip_prefix('~') {
                 // A link you can click but not step to with the arrows.
