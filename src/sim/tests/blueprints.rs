@@ -651,7 +651,7 @@ fn the_file_shape_is_plain_json_and_ignores_what_it_does_not_know() {
 fn blueprints_are_a_brannock_tech_that_unlocks_after_a_pile_of_copper_plate() {
     assert_eq!(Tech::Blueprints.company(), Company::Brannock);
     assert_eq!(Tech::Blueprints.cost(), 800.0);
-    assert_eq!(Tech::Blueprints.milestone(), (Item::CopperPlate, 1500));
+    assert_eq!(Tech::Blueprints.milestone(), (Made::Item(Item::CopperPlate), 1500));
     let mut w = World::new();
     assert!(!w.progress.has(Tech::Blueprints));
     w.econ.research = 799.0;

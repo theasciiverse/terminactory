@@ -5,9 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const ITEMS: usize = 78;
+pub const ITEMS: usize = 79;
 pub const COMPANIES: usize = 15;
-pub const TECHS: usize = 43;
+pub const TECHS: usize = 46;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Item {
@@ -89,6 +89,7 @@ pub enum Item {
     DiskDrive,
     Mainboard,
     Computer,
+    CarbonBlack,
 }
 
 /// How much research an item gives as more of it is sold:
@@ -199,6 +200,7 @@ impl Item {
         Item::DiskDrive,
         Item::Mainboard,
         Item::Computer,
+        Item::CarbonBlack,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -288,6 +290,8 @@ impl Item {
             Item::DiskDrive => "disk drive",
             Item::Mainboard => "mainboard",
             Item::Computer => "computer",
+            // A fine soot, from the still: it sells, and waits for the plastic machines.
+            Item::CarbonBlack => "carbon black",
         }
     }
     pub fn price(self) -> f64 {
@@ -371,6 +375,7 @@ impl Item {
             Item::DiskDrive => 1100.0,
             Item::Mainboard => 1800.0,
             Item::Computer => 11_000.0,
+            Item::CarbonBlack => 3.0,
         }
     }
     pub fn curve(self) -> Curve {
@@ -460,6 +465,7 @@ impl Item {
             Item::Mainboard => c(3600.0, 0.997, 0.08),
             // The branch's crown item: same high floor as the drilling rig and the steam tractor.
             Item::Computer => c(22_000.0, 0.99, 0.3),
+            Item::CarbonBlack => c(10.0, 0.99, 0.02),
         }
     }
     /// Fuel items and how many ticks one keeps a fire going. Waste is never fuel.
@@ -573,16 +579,20 @@ impl Company {
             Company::LatticeFinch => &[Made::Item(Item::ControlBoard)],
             // Made in the kiln: the evacuator is what Sablon sells, so it cannot be the way in.
             Company::Sablon => &[Made::Item(Item::Tube)],
-            // Crude oil will be a second key when the oil plan arrives.
-            Company::Halverson => &[Made::Item(Item::SiliconIngot)],
+            // Silicon or crude oil: whichever is made first opens it.
+            Company::Halverson => &[Made::Item(Item::SiliconIngot), Made::Fluid(Fluid::CrudeOil)],
             // Plastic will be a second key when the oil plan arrives.
             Company::Meridian => &[Made::Item(Item::Microprocessor)],
         }
     }
     /// The letter a company sends when it opens. `key` is the key that opened it, so a company
-    /// with two keys can write a different letter for each (none does yet).
-    pub fn letter(self, _key: Made) -> &'static str {
+    /// with two keys can write a different letter for each.
+    pub fn letter(self, key: Made) -> &'static str {
         match self {
+            // Halverson's second way in: crude oil, and the two machines it sells for it.
+            Company::Halverson if key == Made::Fluid(Fluid::CrudeOil) => {
+                "Crude oil. We have been expecting you. Halverson sells a still and a Trader for anything that flows. We prefer to call your byproducts opportunities. Please make use of them."
+            }
             Company::Hollowmere => "We've dug these hills for four generations. Our drills are cheap, honest, and they don't complain. Neither should you.",
             Company::Brannock => "Furnaces, molders, belts, panels, poles: if it works, the three of us will sell it to you. If it doesn't, one of us will fix it.",
             Company::Ashgrove => "Copper wire, is it? Fine hands. Ashgrove deals in ironstone: our basic drill cuts any ore faster, and our crusher grinds ore and stone to grit and sand. Grit melts further than whole rock, so you get a third more metal from every lump.",
@@ -674,6 +684,9 @@ pub enum Tech {
     WaferSaw,
     FineEtcher,
     LargePrecisionAssembler,
+    OilExtractor,
+    LiquidTrader,
+    Still,
 }
 
 impl Tech {
@@ -721,6 +734,9 @@ impl Tech {
         Tech::WaferSaw,
         Tech::FineEtcher,
         Tech::LargePrecisionAssembler,
+        Tech::OilExtractor,
+        Tech::LiquidTrader,
+        Tech::Still,
     ];
     pub fn idx(self) -> usize {
         self as usize
@@ -770,6 +786,9 @@ impl Tech {
             Tech::WaferSaw => "Wafer saw",
             Tech::FineEtcher => "Fine etcher",
             Tech::LargePrecisionAssembler => "Large prec. assembler",
+            Tech::OilExtractor => "Oil extractor",
+            Tech::LiquidTrader => "Liquid trader",
+            Tech::Still => "Still",
         }
     }
     pub fn about(self) -> &'static str {
@@ -821,20 +840,23 @@ impl Tech {
             Tech::LargePrecisionAssembler => "a 5x5 assembler that builds the computer, and the large advanced goods twice as fast; nothing below",
             Tech::FineEtcher => "a 3x5 machine on EC that etches a fine die and a spare die from each wafer with a fine mask: no scrap, but very hungry",
             Tech::WaferSaw => "a 2x1 saw on EC that cuts a silicon crystal into 6 wafers with a fine wire: no scrap",
+            Tech::OilExtractor => "a tall pump that draws crude oil out of the ground into a pipe at its front",
+            Tech::LiquidTrader => "a trade post for fluids: it sells whatever pipe it touches, for money or research",
+            Tech::Still => "splits crude oil into naphtha, and naphtha into ethylene, with waste out the back",
         }
     }
     pub fn company(self) -> Company {
         match self {
             Tech::Press | Tech::Coking => Company::Brannock,
             Tech::BasicDrill => Company::Ashgrove,
-            Tech::Pumps | Tech::Mixer | Tech::AdvancedPump => Company::Wellbourne,
+            Tech::Pumps | Tech::Mixer | Tech::AdvancedPump | Tech::OilExtractor => Company::Wellbourne,
             Tech::Steam | Tech::BasicSolar => Company::Kettering,
             Tech::BlastFurnace => Company::Cinderhall,
             Tech::SupportBeams | Tech::RollingMill | Tech::Welder => Company::Pillar,
             Tech::Excavation | Tech::Kiln | Tech::LargeKiln => Company::Underhill,
             Tech::Evacuator => Company::Sablon,
             Tech::FineEtcher | Tech::LargePrecisionAssembler => Company::Meridian,
-            Tech::ArcFurnace | Tech::CrystalGrower | Tech::WaferSaw => Company::Halverson,
+            Tech::ArcFurnace | Tech::CrystalGrower | Tech::WaferSaw | Tech::LiquidTrader | Tech::Still => Company::Halverson,
             Tech::Assembler => Company::Gearwright,
             Tech::FastBelts | Tech::BasicAssembler | Tech::UpgradePlanner => Company::Swiftline,
             Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters | Tech::Warehouses | Tech::Blueprints => Company::Brannock,
@@ -881,8 +903,11 @@ impl Tech {
             | Tech::CrystalGrower
             | Tech::WaferSaw
             | Tech::FineEtcher
-            | Tech::LargePrecisionAssembler => Category::Create,
+            | Tech::LargePrecisionAssembler
+            | Tech::OilExtractor
+            | Tech::Still => Category::Create,
             Tech::Steam | Tech::BasicSolar => Category::Power,
+            Tech::LiquidTrader => Category::Misc,
             Tech::SupportBeams | Tech::Excavation => Category::Transport,
             Tech::FastBelts | Tech::Tunnels | Tech::LongArms | Tech::FilterSplitters => Category::Transport,
             Tech::Warehouses | Tech::Blueprints | Tech::UpgradePlanner => Category::Misc,
@@ -948,10 +973,27 @@ impl Tech {
             Tech::FineEtcher => 150_000.0,
             // The computer's machine: the biggest price on the shelf.
             Tech::LargePrecisionAssembler => 300_000.0,
+            // Oil comes before the steel stage: cheap to research, once a pipe is flowing.
+            Tech::OilExtractor => 800.0,
+            // The two machines that make and sell oil: just past the extractor.
+            Tech::LiquidTrader => 1200.0,
+            Tech::Still => 1500.0,
         }
     }
-    /// The free way to unlock: make this many of an item (nothing is used up).
-    pub fn milestone(self) -> (Item, u64) {
+    /// The free way to unlock: make this many of an item or a fluid (nothing is used up).
+    pub fn milestone(self) -> (Made, u64) {
+        // The oil machines count crude oil, so a fluid can be a milestone.
+        match self {
+            Tech::OilExtractor => return (Made::Fluid(Fluid::CrudeOil), 200),
+            Tech::LiquidTrader => return (Made::Fluid(Fluid::CrudeOil), 300),
+            Tech::Still => return (Made::Fluid(Fluid::CrudeOil), 400),
+            _ => {}
+        }
+        let (item, n) = self.item_milestone();
+        (Made::Item(item), n)
+    }
+    /// The free unlock of a tech that counts an item.
+    fn item_milestone(self) -> (Item, u64) {
         match self {
             Tech::Press => (Item::CopperIngot, 50),
             Tech::Coking => (Item::Coal, 300),
@@ -997,6 +1039,9 @@ impl Tech {
             Tech::WaferSaw => (Item::Wafer, 100),
             Tech::FineEtcher => (Item::Microprocessor, 100),
             Tech::LargePrecisionAssembler => (Item::Mainboard, 40),
+            // Unused: `milestone` answers for these first.
+            Tech::OilExtractor => (Item::CopperPipe, 200),
+            Tech::LiquidTrader | Tech::Still => (Item::CarbonBlack, 1),
         }
     }
 }
@@ -1022,6 +1067,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
             Tech::Mixer,
             Tech::Evacuator,
             Tech::ArcFurnace,
+            Tech::Still,
         ],
     ),
     (
@@ -1042,7 +1088,7 @@ pub const UNLOCK_GROUPS: &[(&str, &[Tech])] = &[
     ),
     ("Drilling", &[Tech::BasicDrill, Tech::AdvancedDrill, Tech::LargeBasicDrill, Tech::LargeAdvancedDrill]),
     ("Moving", &[Tech::Tunnels, Tech::LongArms, Tech::Warehouses, Tech::FilterSplitters, Tech::FastBelts]),
-    ("Pipes", &[Tech::Pumps, Tech::AdvancedPump]),
+    ("Pipes", &[Tech::Pumps, Tech::AdvancedPump, Tech::OilExtractor, Tech::LiquidTrader]),
     ("EC", &[Tech::Steam, Tech::BasicSolar]),
     ("Floors", &[Tech::SupportBeams, Tech::Excavation]),
     ("Tools", &[Tech::Blueprints, Tech::UpgradePlanner]),
@@ -1120,8 +1166,12 @@ pub const TREE: &[(Node, Option<usize>)] = &[
     (Node::Tech(Tech::LongArms), Some(51)),
     (Node::Tech(Tech::FilterSplitters), Some(51)),
     (Node::Tech(Tech::Blueprints), Some(51)),
-    (Node::Tech(Tech::Warehouses), Some(0)),      // 55: starting drill milestone
-    (Node::Tech(Tech::UpgradePlanner), Some(27)), // 56: gearbox unlocks upgrade planning
+    (Node::Tech(Tech::Warehouses), Some(0)),             // 55: starting drill milestone
+    (Node::Tech(Tech::UpgradePlanner), Some(27)),        // 56: gearbox unlocks upgrade planning
+    (Node::Tech(Tech::OilExtractor), Some(9)),           // 57: with the pump, under copper pipe
+    (Node::Key(Made::Fluid(Fluid::CrudeOil)), Some(57)), // 58: the first oil opens the still and the Trader
+    (Node::Tech(Tech::LiquidTrader), Some(58)),          // 59
+    (Node::Tech(Tech::Still), Some(58)),                 // 60
 ];
 
 #[allow(dead_code)]
@@ -1136,8 +1186,6 @@ pub const FLUIDS: usize = 10;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Made {
     Item(Item),
-    /// No company opens on a fluid yet (crude oil will).
-    #[allow(dead_code)]
     Fluid(Fluid),
 }
 
@@ -1864,6 +1912,48 @@ pub const ARC_RECIPES: &[Recipe] = &[
 /// The crystal grower pulls a crystal out of molten ingots, slowly: the slowest machine in the game.
 pub const GROWER_RECIPES: &[Recipe] =
     &[item_recipe("silicon crystal", &[(Item::SiliconIngot, 3)], &[(Item::SiliconCrystal, 1)], 1200, None, None, 'C')];
+
+/// The still splits crude oil into naphtha, and naphtha into ethylene, leaving waste out the
+/// back. Carbon black waits for fuel oil, which the refinery will make.
+pub const STILL_RECIPES: &[Recipe] = &[
+    Recipe {
+        name: "naphtha",
+        inputs: &[],
+        outputs: &[(Item::Waste, 1)],
+        fluid_in: Some((Fluid::CrudeOil, 6)),
+        fluid_out: Some((Fluid::Naphtha, 2)),
+        fluid_out2: None,
+        ticks: 600,
+        fuel: None,
+        needs: None,
+        tag: 'N',
+    },
+    Recipe {
+        name: "ethylene",
+        inputs: &[],
+        outputs: &[(Item::Waste, 1)],
+        fluid_in: Some((Fluid::Naphtha, 3)),
+        fluid_out: Some((Fluid::Ethylene, 2)),
+        fluid_out2: None,
+        ticks: 600,
+        fuel: None,
+        needs: None,
+        tag: 'E',
+    },
+    // No fuel oil maker yet: this recipe waits for the refinery.
+    Recipe {
+        name: "carbon black",
+        inputs: &[(Item::Coal, 4)],
+        outputs: &[(Item::CarbonBlack, 2), (Item::Waste, 1)],
+        fluid_in: Some((Fluid::FuelOil, 1)),
+        fluid_out: None,
+        fluid_out2: None,
+        ticks: 600,
+        fuel: None,
+        needs: None,
+        tag: 'B',
+    },
+];
 
 /// The wafer saw cuts a crystal into six wafers along a fine wire: no scrap.
 pub const SAW_RECIPES: &[Recipe] =

@@ -494,7 +494,7 @@ fn upgrading_works_on_other_floors_and_only_there() {
 #[test]
 fn the_planner_tech_is_priced_as_the_plan_says() {
     let t = Tech::UpgradePlanner;
-    assert_eq!((t.cost(), t.milestone()), (3000.0, (Item::Gearbox, 60)));
+    assert_eq!((t.cost(), t.milestone()), (3000.0, (Made::Item(Item::Gearbox), 60)));
     assert_eq!((t.company(), t.name()), (Company::Swiftline, "Upgrade planner"));
     assert!(UNLOCK_GROUPS.iter().any(|g| g.0 == "Tools" && g.1.contains(&t)));
 }

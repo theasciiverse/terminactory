@@ -309,6 +309,9 @@ fn map_label(k: Kind) -> &'static str {
         Kind::Welder => "WELD",
         Kind::Pump => "PUMP",
         Kind::AdvancedPump => "APMP",
+        Kind::OilExtractor => "OILX",
+        Kind::LiquidTrader => "TRDR",
+        Kind::Still => "STIL",
         Kind::Pipe => "PIPE",
         Kind::Mixer => "MIXR",
         Kind::Evacuator => "EVAC",
@@ -1081,6 +1084,7 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::DiskDrive => ('I', 183),
         Item::Mainboard => ('w', 82),
         Item::Computer => ('&', 226),
+        Item::CarbonBlack => ('#', 243),
     };
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
@@ -1108,6 +1112,13 @@ fn colours(kind: Kind, mode: Option<SellMode>) -> (Color, u8) {
         Kind::Elevator => (INK, 141),
         Kind::Pipe => (Color::Indexed(244), 234),
         Kind::Pump => (INK, 45),
+        Kind::OilExtractor => (PAPER, 58),
+        Kind::LiquidTrader => match mode.unwrap_or(SellMode::Money) {
+            SellMode::Money => (INK, 30),
+            SellMode::Split => (INK, 66),
+            SellMode::Research => (INK, 74),
+        },
+        Kind::Still => (PAPER, 95),
         Kind::BlastFurnace => (PAPER, 124),
         Kind::Boiler => (PAPER, 130),
         Kind::SteamEngine => (PAPER, 61),
@@ -1175,6 +1186,9 @@ pub fn kind_cells(kind: Kind, dir: Dir, on: bool) -> Cells {
         Kind::Elevator => ('L', 'I'),
         Kind::Pipe => ('=', '='),
         Kind::Pump => ('P', 'U'),
+        Kind::OilExtractor => ('O', 'L'),
+        Kind::LiquidTrader => ('$', 'L'),
+        Kind::Still => ('S', 'T'),
         Kind::BlastFurnace => ('B', 'F'),
         Kind::Boiler => ('B', 'O'),
         Kind::SteamEngine => ('E', 'N'),
@@ -1281,6 +1295,12 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
             Dir::E | Dir::W => vec!["PU".into(), "MP".into()],
             Dir::N | Dir::S => vec!["PUMP".into()],
         },
+        // A tall derrick: 1 wide and 5 tall, or lying down.
+        Kind::OilExtractor => match dir {
+            Dir::E => vec!["OL".into(), "  ".into(), format!(" {a}"), "  ".into(), "  ".into()],
+            Dir::W => vec!["OL".into(), "  ".into(), format!("{a} "), "  ".into(), "  ".into()],
+            Dir::N | Dir::S => vec!["  OIL     ".into()],
+        },
         Kind::BlastFurnace => labelled("BLST"),
         Kind::Boiler => labelled("BOIL"),
         Kind::SteamEngine => vec!["ENGN".into(), "    ".into()],
@@ -1318,6 +1338,15 @@ fn picture(kind: Kind, dir: Dir, mode: Option<SellMode>, tag: char) -> Vec<Strin
             };
             vec!["TRADE ".into(), format!("{:^6}", m), "      ".into()]
         }
+        Kind::LiquidTrader => {
+            let m = match mode.unwrap_or(SellMode::Money) {
+                SellMode::Money => "$",
+                SellMode::Split => "$R",
+                SellMode::Research => "R",
+            };
+            vec!["TRAD".into(), format!("{m:^4}")]
+        }
+        Kind::Still => labelled("STIL"),
     }
 }
 
@@ -1496,7 +1525,7 @@ fn building_cell(b: &Building, lx: i32, ly: i32, powered: bool, reason: Option<&
         St::Crafter { busy, .. } => (*busy, None),
         St::Trade { mode, .. } => (true, Some(*mode)),
         St::Crate { .. } | St::Solar | St::Pole | St::Elevator { .. } | St::Pipe => (true, None),
-        St::Pump { busy } | St::Boiler { busy, .. } => (*busy, None),
+        St::Pump { busy } | St::Boiler { busy, .. } | St::Extractor { busy, .. } => (*busy, None),
         St::Engine { steam, .. } => (*steam > 0.0, None),
     };
     let st = part_style(b.kind, on, mode);
@@ -2062,6 +2091,17 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
             v.push(format!("{}/{} items", items.len(), cap));
             v.extend(item_counts(items.iter().copied()));
         }
+        St::Trade { mode, money, research, count, .. } if b.kind.is_liquid_trader() => {
+            v.push(format!("mode: {}  (f changes)", mode.label()));
+            let _ = count;
+            v.push(format!("sold ${money:.0}   research {research:.1}"));
+            v.push("up to 4 units a second from the pipes it touches".into());
+            v.push("water and steam cannot be sold".into());
+            v.push("research for the next unit sold:".into());
+            for fl in Fluid::ALL.iter().copied().filter(|f| f.curve().is_some()) {
+                v.push(format!("  {:<19}{:>6.2}", fl.name(), w.econ.next_fluid_research(fl)));
+            }
+        }
         St::Trade { mode, money, research, count, .. } => {
             v.push(format!("mode: {}  (f changes)", mode.label()));
             let sign = if *money < 0.0 { "-" } else { "" };
@@ -2107,6 +2147,12 @@ fn inspect(w: &World, f: usize, x: i32, y: i32) -> Vec<String> {
         St::Pump { busy } => {
             v.push(format!("{:.0} water a second", b.kind.pump_rate()));
             v.push(if *busy { "pumping water into its pipes".into() } else { "idle: needs EC and a pipe with room".into() });
+        }
+        St::Extractor { busy, .. } => {
+            let secs = CRUDE_TICKS / TPS as f64;
+            v.push(format!("1 crude oil every {secs:.0} s, into a pipe at its front"));
+            v.push(format!("deeper floors are richer: x{} down here", crate::sim::richness(f as i32)));
+            v.push(if *busy { "drawing crude oil".into() } else { "idle: needs EC and a pipe with room".into() });
         }
         St::Boiler { coal, fuel, busy } => {
             v.push(format!("coal {}/{}   {}", coal, BOILER_COAL_CAP, if *fuel > 0 { "burning" } else { "no fire" }));
@@ -2437,6 +2483,18 @@ fn production_lines(w: &World, rows: &mut [Flow], width: usize) -> Vec<Line<'sta
             }
             lines.push(Line::from(spans));
         }
+        // Liquids a liquid trader sold: the same numbers, in the fluid's own colour.
+        for f in w.flow_fluids() {
+            let st = Style::new().fg(Color::Indexed(fluid_colour(f.fluid))).add_modifier(Modifier::BOLD);
+            let name: String = f.fluid.name().chars().take(name_w).collect();
+            lines.push(Line::from(vec![
+                Span::styled("~ ", st),
+                Span::raw(format!("  {name:<name_w$}")),
+                Span::raw(format!("{:>7}", rate(f.sold))),
+                Span::styled(format!("{:>8}", format!("${}", rate(f.money))), Style::new().fg(Color::Green)),
+                Span::styled(format!("{:>10}", format!("{} RP", rate(f.research))), Style::new().fg(RESEARCH)),
+            ]));
+        }
         lines.push(Line::raw(""));
         lines.push(Line::styled("Research per sale fades the more you sell of an item, so new items pay best.", dim));
         if rows.iter().any(|r| r.item == Item::Waste) {
@@ -2463,8 +2521,8 @@ fn grouped(v: f64) -> String {
 /// A tech partway to its free unlock: a circle filling a quarter at a time, with (made, needed).
 /// None before the first milestone item is made.
 fn milestone_mark(w: &World, t: Tech) -> Option<(&'static str, u64, u64)> {
-    let (item, n) = t.milestone();
-    let made = w.econ.made[item.idx()].min(n as u64);
+    let (key, n) = t.milestone();
+    let made = w.econ.made_of(key).min(n);
     let n = n as u64;
     if made == 0 || n == 0 {
         return None;
@@ -2518,8 +2576,8 @@ fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let note = Style::new().fg(RESEARCH);
     let rp = grouped(w.econ.research);
-    let (item, n) = t.milestone();
-    let made = w.econ.made[item.idx()].min(n);
+    let (key, n) = t.milestone();
+    let made = w.econ.made_of(key).min(n);
     let status = if w.progress.has(t) {
         "Researched.".to_string()
     } else if !w.progress.is_open(t.company()) {
@@ -2527,7 +2585,7 @@ fn tree_details(w: &World, t: Tech) -> Vec<(String, Style)> {
         let hints: Vec<String> = t.requires().iter().map(|k| key_hint(*k)).filter(|h| !h.is_empty()).collect();
         format!("Make {key} once: it opens {}, and then this. Made with the {}", t.company().name(), hints.join("; or the "))
     } else {
-        format!("Enter: research for {} RP (you have {rp}). Or free once you've made {n} {} ({made}/{n}).", grouped(t.cost()), item.name())
+        format!("Enter: research for {} RP (you have {rp}). Or free once you've made {n} {} ({made}/{n}).", grouped(t.cost()), key.name())
     };
     vec![(format!("{} · {}", t.name(), t.category().name()), head), (format!("{}.", capitalise(t.about())), Style::new()), (status, note)]
 }
@@ -2899,6 +2957,8 @@ fn draw_tree_graph(f: &mut Frame, area: Rect, app: &mut App) {
         };
         let name_style = match node {
             Node::Key(Made::Item(i)) => Style::new().fg(item_cell(i, Color::Reset).1.fg.unwrap_or(KEY_ITEM)),
+            // A fluid key reads in its own colour, like its pipes.
+            Node::Key(Made::Fluid(f)) => Style::new().fg(Color::Indexed(fluid_colour(f))),
             _ if section => Style::new().fg(Color::White),
             _ => Style::new(),
         };
@@ -2985,10 +3045,23 @@ fn graph_node_details(w: &World, id: usize) -> Vec<(String, Style)> {
             }
             lines
         }
-        Node::Key(Made::Fluid(fluid)) => vec![(
-            format!("{} · make 1 to open {} techs", fluid.name(), crate::research::hidden_descendants(id)),
-            Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD),
-        )],
+        Node::Key(Made::Fluid(fluid)) => {
+            let made = w.econ.made_fluid[fluid] > 0;
+            let mut lines = vec![(
+                format!(
+                    "{} · {} to open {} techs",
+                    fluid.name(),
+                    if made { "made ✓" } else { "make 1" },
+                    crate::research::hidden_descendants(id)
+                ),
+                Style::new().fg(KEY_ITEM).add_modifier(Modifier::BOLD),
+            )];
+            let companies: Vec<_> = Company::ALL.iter().filter(|c| c.key_items().contains(&Made::Fluid(fluid))).map(|c| c.name()).collect();
+            if !companies.is_empty() {
+                lines.push((format!("Company: {}", companies.join(", ")), Style::new().fg(RESEARCH)));
+            }
+            lines
+        }
         Node::Group(name) => vec![(
             format!("{name} · {} techs", crate::research::hidden_descendants(id)),
             Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD),
@@ -3002,8 +3075,8 @@ fn graph_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     let head = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
     let note = Style::new().fg(RESEARCH);
     let dim = Style::new().fg(Color::DarkGray);
-    let (item, n) = t.milestone();
-    let made = w.econ.made[item.idx()].min(n);
+    let (key, n) = t.milestone();
+    let made = w.econ.made_of(key).min(n);
     let status = if w.progress.has(t) {
         "researched".to_string()
     } else if w.econ.research + 1e-9 >= t.cost() {
@@ -3033,14 +3106,14 @@ fn graph_details(w: &World, t: Tech) -> Vec<(String, Style)> {
     };
     vec![
         (format!("{} · {} · {}", t.name(), t.category().name(), status), head),
-        (format!("{} RP · free at {} {} ({} made)", grouped(t.cost()), grouped(n as f64), item.name(), grouped(made as f64)), note),
+        (format!("{} RP · free at {} {} ({} made)", grouped(t.cost()), grouped(n as f64), key.name(), grouped(made as f64)), note),
         (format!("Path: {path}"), dim),
         (gate, dim),
     ]
 }
 
 /// Machines that craft, in the order the book lists them.
-const CRAFTERS: [Kind; 27] = [
+const CRAFTERS: [Kind; 28] = [
     Kind::Crusher,
     Kind::Furnace,
     Kind::Molder,
@@ -3068,6 +3141,7 @@ const CRAFTERS: [Kind; 27] = [
     Kind::LargeBasicAssembler,
     Kind::LargeAdvancedAssembler,
     Kind::LargePrecisionAssembler,
+    Kind::Still,
 ];
 
 /// One plain line on what a machine is for (the inspector and its book page show it).
@@ -3108,6 +3182,9 @@ fn blurb(kind: Kind) -> Option<&'static str> {
         Kind::LargeBasicDrill => "an 8x8 drill: 5x a basic drill's ore, burns 10x the coal",
         Kind::LargeAdvancedDrill => "an 8x8 drill on EC: 5x an advanced drill's ore",
         Kind::AdvancedPump => "a pump that gives four times the water",
+        Kind::OilExtractor => "draws crude oil out of the ground into a pipe at its front, faster on deeper floors",
+        Kind::LiquidTrader => "a trade post for fluids: it sells what the pipes it touches hold, for money or research",
+        Kind::Still => "splits crude oil into naphtha, and naphtha into ethylene, leaving waste out the back",
         _ => return None,
     })
 }
@@ -3426,7 +3503,7 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                 let text = format!("your first one brings {}{letter}{done}", next.join(", "));
                 labelled(&mut out, label(&mut first, "Unlocks"), GUTTER, vec![seg(text, key)]);
             }
-            for t in Tech::ALL.iter().filter(|t| t.milestone().0 == item && !w.progress.has(**t)) {
+            for t in Tech::ALL.iter().filter(|t| t.milestone().0 == Made::Item(item) && !w.progress.has(**t)) {
                 let n = t.milestone().1;
                 let text = format!("make {n} to unlock {} free ({}/{n})", t.name(), w.econ.made[item.idx()].min(n));
                 labelled(&mut out, label(&mut first, "Unlocks"), GUTTER, vec![seg(text, key)]);
@@ -3478,10 +3555,13 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                     }
                 }
                 if let Some(t) = k.tech().filter(|t| !w.progress.has(*t)) {
-                    let (item, n) = t.milestone();
+                    let (key, n) = t.milestone();
                     segs.push(seg(format!("research {} ({} RP) or make {n} ", t.name(), grouped(t.cost())), warn));
-                    segs.push(link(Entry::Item(item), e));
-                    segs.push(seg(format!(" ({}/{n})", w.econ.made[item.idx()].min(n)), warn));
+                    segs.push(match key {
+                        Made::Item(i) => link(Entry::Item(i), e),
+                        Made::Fluid(f) => seg(f.name(), warn),
+                    });
+                    segs.push(seg(format!(" ({}/{n})", w.econ.made_of(key).min(n)), warn));
                 }
                 segs
             };
@@ -3527,6 +3607,15 @@ fn book_page(w: &World, e: Entry, width: u16, setup_key: &str) -> Vec<Row> {
                         "Pumps",
                         GUTTER,
                         vec![seg(format!("{:.0} water a second, anywhere on the ground", k.pump_rate()), Style::new())],
+                    );
+                    labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
+                }
+                _ if k.is_extractor() => {
+                    labelled(
+                        &mut out,
+                        "Pumps",
+                        GUTTER,
+                        vec![seg("1 crude oil every 2 s, into a pipe at its front; richer below", Style::new())],
                     );
                     labelled(&mut out, "Runs on", GUTTER, vec![seg(format!("{:.0} EC", k.power_draw()), Style::new())]);
                 }
@@ -4053,7 +4142,7 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
                 let done = if made > 0 { " (done)" } else { "" };
                 out.push_str(&format!("Your first one brings {}{}{}.\n", next.join(", "), key_letter_text(Made::Item(item)), done));
             }
-            for tech in Tech::ALL.iter().filter(|tech| tech.milestone().0 == item && !world.progress.has(**tech)) {
+            for tech in Tech::ALL.iter().filter(|tech| tech.milestone().0 == Made::Item(item) && !world.progress.has(**tech)) {
                 let n = tech.milestone().1;
                 out.push_str(&format!("Make {n} to unlock {} free ({}/{n}).\n", tech.name(), made.min(n)));
             }

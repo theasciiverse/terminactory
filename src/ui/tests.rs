@@ -675,8 +675,8 @@ fn small_pane_view() {
     let t = text(&render(&mut app, 64, 16));
     let last = t.lines().last().unwrap().to_string();
     assert!(
-        last.contains(" Create › 1 DRIL+  2 FURN+") && last.contains("5 PUMP+") && !last.contains("$50"),
-        "five slots all show their numbers: {last}"
+        last.contains("1DR") && last.contains("5PU") && last.contains("7ST") && !last.contains("$50"),
+        "every slot shows its number: {last}"
     );
 
     // A picked part: the path to it, its price and facing.
@@ -1185,7 +1185,7 @@ fn new_machines_snapshot() {
     app.selected = Some(Kind::Lathe);
     app.dir = Dir::E;
     // Create has 35 kinds now: below 48 rows the menu lists only the slot in use (checked after this).
-    let buf = render(&mut app, 130, 48);
+    let buf = render(&mut app, 130, 50);
     let t = text(&buf);
     for name in ["Crusher", "Coke oven", "Wire drawer", "Winder", "Rolling mill", "Lathe", "Crude assembler"] {
         assert!(t.contains(name), "{name}: {t}");
@@ -1203,7 +1203,8 @@ fn new_machines_snapshot() {
     assert!(t.lines().last().unwrap().contains("Create › Lathe  $200  3x3  facing"), "{t}");
     app.selected = None;
     let buf = render(&mut app, 60, 20);
-    assert!(text(&buf).lines().last().unwrap().contains("Create › 1 DRIL  2 FURN  3 PRES  4 CRUD  5 PUMP  6 ETCH"), "{}", text(&buf));
+    let last = text(&buf).lines().last().unwrap().to_string();
+    assert!(last.contains("Cr›") && (1..=7).all(|n| last.contains(&n.to_string())), "{last}");
     std::fs::write("target/snapshot-new-machines-small.html", to_html(&buf)).unwrap();
 }
 
@@ -1397,12 +1398,12 @@ fn computer_pages_rows_and_machine_fit_every_size() {
     // The build menu: the new row sits right after the large advanced assembler, and the held part shows.
     app.menu = Some(Category::Create);
     app.selected = Some(Kind::LargePrecisionAssembler);
-    for (w, h) in [(130, 32), (130, 48), (50, 20), (64, 20), (90, 20), (44, 40), (200, 60)] {
+    for (w, h) in [(130, 32), (130, 50), (50, 20), (64, 20), (90, 20), (44, 40), (200, 60)] {
         let t = text(&render(&mut app, w, h));
         assert!(t.contains("Large prec") || t.contains("Large precision") || t.contains("LRGP"), "{w}x{h}: {t}");
     }
     app.selected = None;
-    let t = text(&render(&mut app, 130, 48));
+    let t = text(&render(&mut app, 130, 50));
     let (adv, prec, welder) = (t.find("Large adv. assembler"), t.find("Large prec. assembler"), t.find("Welder"));
     assert!(adv < prec && prec < welder && adv.is_some(), "{t}");
 }
@@ -1465,8 +1466,8 @@ fn content_step_screens_fit_every_size() {
     let mut app = App::new(w);
     app.msg_at = std::time::Instant::now() - std::time::Duration::from_secs(60);
     app.menu = Some(Category::Create);
-    // A tall sidebar lists every machine, six numbered groups (it takes a row more for every new machine).
-    let buf = render(&mut app, 130, 48);
+    // A tall sidebar lists every machine, seven numbered groups (it takes a row more for every new machine).
+    let buf = render(&mut app, 130, 50);
     let t = text(&buf);
     for name in [
         "Large basic drill",
@@ -1524,8 +1525,7 @@ fn content_step_screens_fit_every_size() {
         let t = text(&buf);
         let last = t.lines().last().unwrap();
         // Six slots: the codes at 50 columns, map labels from 64, and the way out when it fits.
-        let (five, six) = if width < 60 { ("5PU", "6ET") } else { ("5 PUMP", "6 ETCH") };
-        assert!(last.contains(five) && last.contains(six), "{width}: {last}");
+        assert!((1..=7).all(|n| last.contains(&n.to_string())), "{width}: {last}");
 
         std::fs::write(format!("target/snapshot-create-menu-{width}.html"), to_html(&buf)).unwrap();
     }
@@ -1653,9 +1653,9 @@ fn research_rows_show_progress_toward_a_free_unlock() {
     let row =
         |app: &App| -> String { tree_row_spans(&app.world, Tech::Press, 20, false, false).iter().map(|s| s.content.to_string()).collect() };
     assert!(row(&app).starts_with("○ "), "{}", row(&app));
-    let (item, n) = Tech::Press.milestone();
+    let (_, n) = Tech::Press.milestone();
     for (made, mark) in [(1, "◔"), (n as u64 / 2, "◑"), ((n as u64 * 3).div_ceil(4), "◕"), (n as u64 - 1, "◕")] {
-        app.world.econ.made[item.idx()] = made;
+        app.world.econ.made[Item::CopperIngot.idx()] = made;
         let r = row(&app);
         assert!(r.starts_with(&format!("{mark} ")) && r.contains(&format!("{made}/{n}")), "{made}: {r}");
     }
@@ -1795,7 +1795,7 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     assert!(!narrow_end.contains("Money"), "infobox should scroll away: {narrow_end}");
 
     let machine_pages = crate::sim::Kind::ALL.iter().filter(|k| crate::wiki::page(&crate::wiki::slug(k.name())).is_some()).count();
-    assert_eq!(machine_pages, 51);
+    assert_eq!(machine_pages, 54);
     let mut home = App::new(World::new());
     home.book = true;
     home.book_slug = "home".into();

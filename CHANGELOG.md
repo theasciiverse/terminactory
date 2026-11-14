@@ -8,6 +8,7 @@ version are refused, never deleted.
 Saves: format version 7 (older saves are refused; start a fresh game with `tfac --new`).
 
 ### Added
+- Oil (phase 1): crude oil, naphtha, fuel oil and ethylene, and three machines. The oil extractor (1×5, 6 EC, $400, Wellbourne; research 800 RP or make 200 copper pipe) draws crude oil into a pipe at its front, richer underground, and stops when the pipe is full. The still (2×3, no EC or fuel, $350, Halverson; 1,500 RP or pump 400 crude oil) splits crude oil into naphtha and naphtha into ethylene with waste out the back, and holds a carbon black recipe that waits for fuel oil; it sits in a new seventh Create slot, chemistry. The liquid trader (2×2, 2 EC, $300, Halverson; 1,200 RP or pump 300 crude oil) sells the fluid in the pipes it touches in the trade post's three modes, and shares the trade post's Misc slot. Halverson now opens on crude oil as well as silicon, with a letter for each, and carbon black is a new item ($3) with no use until the next phase. Saves are unchanged (format version 7; two new fluid counters default to zero in an older save).
 - Four oil fluids and a second fluid output on the back of a machine. Both fluid outputs are saved, counted, and must have room before a recipe runs. Saves are format version 7.
 - Earnings history: a History tab in the production panel, and a compact earnings graph under the build menu.
 - Settings pane (`g`): the sidebar graph and its range, the small-pane view and width, the telegram style (Sidebar, Note, Ticker) and Hints.

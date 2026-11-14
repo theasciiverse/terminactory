@@ -61,6 +61,12 @@ pub const DRILL_OUT_CAP: usize = 4;
 pub const CRAFTER_OUT_CAP: usize = 10;
 /// Units of fluid a machine holds waiting to leave its front.
 pub const CRAFTER_FLUID_OUT_CAP: u32 = 10;
+
+/// Ticks an oil extractor takes to draw one unit of crude oil (on the surface).
+pub const CRUDE_TICKS: f64 = 120.0;
+
+/// Units of fluid a liquid trader sells a second.
+pub const LIQUID_TRADE_RATE: f64 = 4.0;
 pub const CRATE_CAP: usize = 400;
 
 // Fluids and steam (per second unless noted).
@@ -218,6 +224,9 @@ pub enum Kind {
     WaferSaw,
     FineEtcher,
     LargePrecisionAssembler,
+    OilExtractor,
+    LiquidTrader,
+    Still,
 }
 
 // What each assembler above the crude one can make: its tiers, each at a speed
@@ -248,7 +257,7 @@ thread_local! {
 
 impl Kind {
     /// Every part (the build menu itself is laid out in app::slots).
-    pub const ALL: [Kind; 51] = [
+    pub const ALL: [Kind; 54] = [
         Kind::Drill,
         Kind::BasicDrill,
         Kind::Crusher,
@@ -300,6 +309,9 @@ impl Kind {
         Kind::WaferSaw,
         Kind::FineEtcher,
         Kind::LargePrecisionAssembler,
+        Kind::OilExtractor,
+        Kind::LiquidTrader,
+        Kind::Still,
     ];
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn category(self) -> Category {
@@ -337,6 +349,8 @@ impl Kind {
             | Kind::LargeBasicDrill
             | Kind::LargeAdvancedDrill
             | Kind::AdvancedPump
+            | Kind::OilExtractor
+            | Kind::Still
             | Kind::Pump => Category::Create,
             Kind::Belt
             | Kind::FastBelt
@@ -348,7 +362,7 @@ impl Kind {
             | Kind::Elevator
             | Kind::Pipe => Category::Transport,
             Kind::Solar | Kind::BasicSolar | Kind::Pole | Kind::Boiler | Kind::SteamEngine => Category::Power,
-            Kind::Crate | Kind::Warehouse | Kind::TradePost => Category::Misc,
+            Kind::Crate | Kind::Warehouse | Kind::TradePost | Kind::LiquidTrader => Category::Misc,
         }
     }
     pub fn name(self) -> &'static str {
@@ -391,6 +405,9 @@ impl Kind {
             Kind::Elevator => "Elevator",
             Kind::Pipe => "Pipe",
             Kind::Pump => "Water pump",
+            Kind::OilExtractor => "Oil extractor",
+            Kind::LiquidTrader => "Liquid trader",
+            Kind::Still => "Still",
             Kind::BlastFurnace => "Blast furnace",
             Kind::Boiler => "Boiler",
             Kind::SteamEngine => "Steam engine",
@@ -449,6 +466,9 @@ impl Kind {
             Kind::Elevator => 300.0,
             Kind::Pipe => 5.0,
             Kind::Pump => 80.0,
+            Kind::OilExtractor => 400.0,
+            Kind::LiquidTrader => 300.0,
+            Kind::Still => 350.0,
             Kind::BlastFurnace => 300.0,
             Kind::Boiler => 150.0,
             Kind::SteamEngine => 250.0,
@@ -493,6 +513,8 @@ impl Kind {
             Kind::LargeBasicDrill | Kind::LargeAdvancedDrill => (8, 8),
             Kind::Press | Kind::WireDrawer | Kind::Winder | Kind::WaferSaw => (2, 1),
             Kind::Pump => (1, 2),
+            Kind::OilExtractor => (1, 5),
+            Kind::Still => (2, 3),
             Kind::BasicAssembler
             | Kind::Mixer
             | Kind::Evacuator
@@ -509,6 +531,7 @@ impl Kind {
             | Kind::Elevator
             | Kind::Boiler
             | Kind::SteamEngine
+            | Kind::LiquidTrader
             | Kind::Warehouse => (2, 2),
             Kind::Belt
             | Kind::FastBelt
@@ -538,6 +561,8 @@ impl Kind {
             Kind::Splitter | Kind::Sorter | Kind::Molder => 2.0,
             Kind::Press => 2.0,
             Kind::Mixer | Kind::AdvancedDrill | Kind::AdvancedPump => 4.0,
+            Kind::OilExtractor => 6.0,
+            Kind::LiquidTrader => 2.0,
             Kind::Evacuator => 6.0,
             Kind::Etcher => 24.0,
             Kind::ArcFurnace => 40.0,
@@ -587,7 +612,17 @@ impl Kind {
     }
     /// Has a front that can be rotated (belts and arms move that way; buildings output there).
     pub fn directional(self) -> bool {
-        !matches!(self, Kind::Splitter | Kind::TradePost | Kind::Solar | Kind::BasicSolar | Kind::Pole | Kind::Pipe | Kind::SteamEngine)
+        !matches!(
+            self,
+            Kind::Splitter
+                | Kind::TradePost
+                | Kind::LiquidTrader
+                | Kind::Solar
+                | Kind::BasicSolar
+                | Kind::Pole
+                | Kind::Pipe
+                | Kind::SteamEngine
+        )
     }
     pub fn is_belt(self) -> bool {
         matches!(self, Kind::Belt | Kind::FastBelt)
@@ -607,6 +642,9 @@ impl Kind {
                 | Kind::Mixer
                 | Kind::Evacuator
                 | Kind::ArcFurnace
+                | Kind::OilExtractor
+                | Kind::LiquidTrader
+                | Kind::Still
         )
     }
     /// Not part of the current tier; nothing is a preview any more.
@@ -618,9 +656,9 @@ impl Kind {
         match self {
             Kind::Drill => Some(Company::Hollowmere),
             Kind::BasicDrill => Some(Company::Ashgrove),
-            Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer => Some(Company::Wellbourne),
+            Kind::Pipe | Kind::Pump | Kind::AdvancedPump | Kind::Mixer | Kind::OilExtractor => Some(Company::Wellbourne),
             Kind::Evacuator => Some(Company::Sablon),
-            Kind::ArcFurnace | Kind::CrystalGrower | Kind::WaferSaw => Some(Company::Halverson),
+            Kind::ArcFurnace | Kind::CrystalGrower | Kind::WaferSaw | Kind::LiquidTrader | Kind::Still => Some(Company::Halverson),
             Kind::FineEtcher | Kind::LargePrecisionAssembler => Some(Company::Meridian),
             Kind::BlastFurnace | Kind::CokeOven => Some(Company::Cinderhall),
             Kind::Boiler | Kind::SteamEngine | Kind::WireDrawer | Kind::Winder | Kind::BasicSolar => Some(Company::Kettering),
@@ -642,6 +680,9 @@ impl Kind {
             Kind::Press => Some(Tech::Press),
             Kind::BasicDrill => Some(Tech::BasicDrill),
             Kind::Pipe | Kind::Pump => Some(Tech::Pumps),
+            Kind::OilExtractor => Some(Tech::OilExtractor),
+            Kind::LiquidTrader => Some(Tech::LiquidTrader),
+            Kind::Still => Some(Tech::Still),
             Kind::AdvancedPump => Some(Tech::AdvancedPump),
             Kind::Mixer => Some(Tech::Mixer),
             Kind::Evacuator => Some(Tech::Evacuator),
@@ -714,6 +755,7 @@ impl Kind {
             Kind::RollingMill => ROLLING_MILL_RECIPES,
             Kind::Lathe => LATHE_RECIPES,
             Kind::Winder => WINDER_RECIPES,
+            Kind::Still => STILL_RECIPES,
             _ => &[],
         }
     }
@@ -730,12 +772,18 @@ impl Kind {
                 "No flow, no pressure, no direction.",
                 "Pumps and machines beside it join in.",
             ]),
+            Kind::LiquidTrader => Some(&[
+                "Sells whatever fluid touches it.",
+                "Water and steam cannot be sold.",
+                "A few units a second, at its price.",
+                "f switches money, split, research.",
+            ]),
             _ => None,
         }
     }
     /// Has a page in the recipe book: it crafts, mines, pumps, or has rules to read.
     pub fn has_book_page(self) -> bool {
-        !self.recipes().is_empty() || self.is_drill() || self.is_pump() || self.rules().is_some()
+        !self.recipes().is_empty() || self.is_drill() || self.is_pump() || self.is_extractor() || self.rules().is_some()
     }
     /// A solar panel (never joins another panel directly: poles go between them).
     pub fn is_solar(self) -> bool {
@@ -762,6 +810,14 @@ impl Kind {
     }
     pub fn is_pump(self) -> bool {
         matches!(self, Kind::Pump | Kind::AdvancedPump)
+    }
+    /// Draws crude oil out of the ground into a pipe at its front.
+    pub fn is_extractor(self) -> bool {
+        self == Kind::OilExtractor
+    }
+    /// A trade post that sells the fluid in the pipes it touches.
+    pub fn is_liquid_trader(self) -> bool {
+        self == Kind::LiquidTrader
     }
     /// Ticks per item mined by a drill doing one unit of work a tick (on the surface), and
     /// items mined per coal burned. A cheap drill cuts iron at half the speed of a basic one.
@@ -982,6 +1038,11 @@ pub enum St {
     Pump {
         busy: bool,
     },
+    /// Draws crude oil out of the ground: one unit every `CRUDE_TICKS` into a pipe at its front.
+    Extractor {
+        progress: f64,
+        busy: bool,
+    },
     /// Burns coal to turn water (from pipes) into steam (out of its front).
     Boiler {
         fuel: u32,
@@ -1065,13 +1126,25 @@ impl Building {
                 fluid_out: [0; 2],
             },
             Kind::Crate | Kind::Warehouse => St::Crate { items: VecDeque::new() },
+            Kind::Still => St::Crafter {
+                recipe: 0,
+                recipe_name: String::new(),
+                stock: PerItem::default(),
+                fuel: 0,
+                progress: 0.0,
+                busy: false,
+                out: VecDeque::new(),
+                fluid: 0,
+                fluid_out: [0; 2],
+            },
             Kind::Tunnel => St::Tunnel { exit: false, items: VecDeque::new() },
-            Kind::TradePost => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0, stuck: 0 },
+            Kind::TradePost | Kind::LiquidTrader => St::Trade { mode: SellMode::Money, money: 0.0, research: 0.0, count: 0, stuck: 0 },
             Kind::Solar | Kind::BasicSolar => St::Solar,
             Kind::Pole => St::Pole,
             Kind::Elevator => St::Elevator { inbox: VecDeque::new(), outbox: VecDeque::new(), mode: DoorMode::Load },
             Kind::Pipe => St::Pipe,
             Kind::Pump | Kind::AdvancedPump => St::Pump { busy: false },
+            Kind::OilExtractor => St::Extractor { progress: 0.0, busy: false },
             Kind::Boiler => St::Boiler { fuel: 0, coal: 0, busy: false },
             Kind::SteamEngine => St::Engine { steam: 0.0, output: 0.0 },
         };
@@ -1131,6 +1204,16 @@ pub struct Econ {
     /// Units of each fluid ever produced by a machine (a fluid can be a company's key).
     #[serde(default)]
     pub made_fluid: PerFluid<u64>,
+    /// Units of each fluid sold that earned research (drives the fading curve).
+    #[serde(default)]
+    pub research_sales_fluid: PerFluid<f64>,
+    /// This session only: units of each fluid sold, and what they brought in.
+    #[serde(skip)]
+    pub sold_fluid: PerFluid<f64>,
+    #[serde(skip)]
+    pub money_from_fluid: PerFluid<f64>,
+    #[serde(skip)]
+    pub research_from_fluid: PerFluid<f64>,
     /// This session only: units used up by machines (inputs and fuel), and what each
     /// item's sales brought in. They drive the production panel.
     #[serde(skip, default = "zeros")]
@@ -1168,6 +1251,10 @@ impl Default for Econ {
             sold: PerItem::default(),
             made: PerItem::default(),
             made_fluid: PerFluid::default(),
+            research_sales_fluid: PerFluid::default(),
+            sold_fluid: PerFluid::default(),
+            money_from_fluid: PerFluid::default(),
+            research_from_fluid: PerFluid::default(),
             used: [0; ITEMS],
             money_from: [0.0; ITEMS],
             research_from: [0.0; ITEMS],
@@ -1181,6 +1268,10 @@ impl Default for Econ {
 impl Econ {
     pub fn next_research(&self, item: Item) -> f64 {
         item.curve().value(self.research_sales[item.idx()])
+    }
+    /// The research the next unit of a fluid would bring (a liquid trader's next sale).
+    pub fn next_fluid_research(&self, fl: Fluid) -> f64 {
+        fl.curve().map_or(0.0, |c| c.value(self.research_sales_fluid[fl] as u64))
     }
     /// (money earned, waste fees paid) over the last minute. Fees aren't counted as earnings.
     pub fn last_minute(&self) -> (f64, f64) {
@@ -1208,6 +1299,28 @@ impl Econ {
         self.earned_money += fee;
         self.sold[Item::Waste.idx()] += n as u64;
         self.money_from[Item::Waste.idx()] += fee;
+    }
+    /// Sells some units of a fluid (a fraction is allowed). Water and steam have no price.
+    fn sell_fluid(&mut self, fl: Fluid, amount: f64, mode: SellMode) -> (f64, f64) {
+        let Some(price) = fl.price() else { return (0.0, 0.0) };
+        let (mf, rf) = mode.split();
+        let m = price * amount * mf;
+        let r = match fl.curve() {
+            Some(c) if rf > 0.0 => {
+                let v = c.total(self.research_sales_fluid[fl], amount) * rf;
+                self.research_sales_fluid[fl] += amount;
+                v
+            }
+            _ => 0.0,
+        };
+        self.money += m;
+        self.research += r;
+        self.earned_money += m;
+        self.earned_research += r;
+        self.sold_fluid[fl] += amount;
+        self.money_from_fluid[fl] += m;
+        self.research_from_fluid[fl] += r;
+        (m, r)
     }
     /// Sells one item. Waste costs money and earns no research.
     fn sell(&mut self, item: Item, mode: SellMode) -> (f64, f64) {
@@ -1248,6 +1361,18 @@ pub struct FlowSample {
     sold: [u64; ITEMS],
     money: [f64; ITEMS],
     research: [f64; ITEMS],
+    sold_fluid: [f64; FLUIDS],
+    money_fluid: [f64; FLUIDS],
+    research_fluid: [f64; FLUIDS],
+}
+
+/// One fluid's last minute, per minute.
+#[derive(Clone, Copy, Debug)]
+pub struct FluidFlow {
+    pub fluid: Fluid,
+    pub sold: f64,
+    pub money: f64,
+    pub research: f64,
 }
 
 /// One item's last minute, per minute.
@@ -1945,7 +2070,7 @@ impl World {
                 }
             }
         }
-        if (kind.is_drill() || kind.is_pump()) && self.floors[f].level > 0 {
+        if (kind.is_drill() || kind.is_pump() || kind.is_extractor()) && self.floors[f].level > 0 {
             return Err(PlaceErr::NotAboveGround(kind));
         }
         if kind.is_solar() && self.floors[f].level < 0 {
@@ -2600,6 +2725,9 @@ impl World {
             sold: e.sold.to_array(),
             money: e.money_from,
             research: e.research_from,
+            sold_fluid: e.sold_fluid.to_array(),
+            money_fluid: e.money_from_fluid.to_array(),
+            research_fluid: e.research_from_fluid.to_array(),
         });
         while self.flow_samples.len() > 61 {
             self.flow_samples.pop_front();
@@ -2650,6 +2778,32 @@ impl World {
             .filter(|f| f.made > 0.0 || f.used > 0.0 || f.sold > 0.0)
             .collect();
         (rows, secs)
+    }
+
+    /// Per fluid, over the same stretch as `flow`: units sold per minute and what they brought.
+    /// Only fluids with something going on.
+    pub fn flow_fluids(&self) -> Vec<FluidFlow> {
+        let (Some(a), Some(b)) = (self.flow_samples.front(), self.flow_samples.back()) else {
+            return Vec::new();
+        };
+        let secs = (self.flow_samples.len() - 1) as u64;
+        if secs == 0 {
+            return Vec::new();
+        }
+        let per_min = 60.0 / secs as f64;
+        Fluid::ALL
+            .iter()
+            .map(|&fluid| {
+                let i = fluid.idx();
+                FluidFlow {
+                    fluid,
+                    sold: (b.sold_fluid[i] - a.sold_fluid[i]) * per_min,
+                    money: (b.money_fluid[i] - a.money_fluid[i]) * per_min,
+                    research: (b.research_fluid[i] - a.research_fluid[i]) * per_min,
+                }
+            })
+            .filter(|f| f.sold > 0.0)
+            .collect()
     }
 
     /// Adds what the factory earned while the game was closed (no cap).
@@ -2776,10 +2930,10 @@ impl World {
             }
         }
         for t in Tech::ALL {
-            let (item, n) = t.milestone();
-            if !self.progress.has(t) && self.progress.is_open(t.company()) && self.econ.made[item.idx()] >= n {
+            let (key, n) = t.milestone();
+            if !self.progress.has(t) && self.progress.is_open(t.company()) && self.econ.made_of(key) >= n {
                 self.progress.researched[t.idx()] = true;
-                self.progress.notes.push_back(format!("{} unlocked for free: you've made {} {}", t.name(), n, item.name()));
+                self.progress.notes.push_back(format!("{} unlocked for free: you've made {} {}", t.name(), n, key.name()));
                 if matches!(t, Tech::SupportBeams | Tech::Excavation) {
                     self.add_new_floor_doors();
                 }
@@ -3004,7 +3158,10 @@ impl World {
             St::Boiler { busy: false, fuel, coal, .. } => Some(if *fuel == 0 && *coal == 0 { "COAL" } else { "WATR" }),
             St::Engine { steam, .. } if *steam <= 0.0 => Some("STM?"),
             St::Pump { busy: false } => Some(if powered { "FULL" } else { "EC?" }),
+            St::Extractor { busy: false, .. } => Some(if powered { "FLUD" } else { "EC?" }),
             St::Trade { stuck, .. } if *stuck > 0 => Some("WSTE"),
+            // A liquid trader with nothing sellable in reach says so.
+            St::Trade { .. } if b.kind.is_liquid_trader() => Some(if powered { "FLUD" } else { "EC?" }),
             _ => None,
         }
     }
@@ -3247,6 +3404,22 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
                 }
             }
         }
+        St::Extractor { progress, busy } => {
+            *busy = false;
+            if ratio > 0.0 {
+                if *progress < CRUDE_TICKS {
+                    // Deeper floors are richer, like the drills'.
+                    *progress = (*progress + richness(level) * ratio).min(CRUDE_TICKS);
+                    *busy = true;
+                }
+                // One unit goes into a pipe at the front; a full pipe stops it.
+                if *progress >= CRUDE_TICKS && push_fluid(tiles, owner, pipe_pool, pools, x, y, dims, dir, Fluid::CrudeOil, 1) > 0 {
+                    *progress = 0.0;
+                    econ.made_fluid[Fluid::CrudeOil] += 1;
+                    *busy = true;
+                }
+            }
+        }
         St::Boiler { fuel, coal, busy } => {
             *busy = false;
             let step = BOILER_RATE / TPS as f64;
@@ -3371,7 +3544,24 @@ fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
         St::Elevator { outbox, .. } => {
             push_front(tiles, owner, econ, x, y, dims, dir, outbox, rr);
         }
-        St::Trade { stuck, .. } => *stuck = stuck.saturating_sub(1),
+        St::Trade { mode, money, research, count, stuck } => {
+            *stuck = stuck.saturating_sub(1);
+            // A liquid trader pulls the fluid in the pipes it touches and sells it: up to
+            // 4 units a second, at that fluid's price. Water and steam have no price.
+            if kind.is_liquid_trader() && ratio > 0.0 {
+                let step = LIQUID_TRADE_RATE / TPS as f64 * ratio;
+                for p in pools_around(pipe_pool, x, y, dims, None, false) {
+                    let Some(fl) = pools[p].fluid.filter(|fl| fl.price().is_some()) else { continue };
+                    let amount = pools[p].take(fl, step);
+                    if amount > 0.0 {
+                        let (m, r) = econ.sell_fluid(fl, amount, *mode);
+                        *money += m;
+                        *research += r;
+                        *count += amount as u64;
+                    }
+                }
+            }
+        }
         St::Solar | St::Pole => {}
     }
 }
@@ -3711,7 +3901,7 @@ fn try_insert(tiles: &mut [Option<Building>], owner: &[Option<u32>], econ: &mut 
             // Waste is never fuel: it waits on the belt.
             _ => false,
         },
-        St::Arm { .. } | St::Solar | St::Pole | St::Pipe | St::Pump { .. } | St::Engine { .. } => false,
+        St::Arm { .. } | St::Solar | St::Pole | St::Pipe | St::Pump { .. } | St::Extractor { .. } | St::Engine { .. } => false,
     }
 }
 

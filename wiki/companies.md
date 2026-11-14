@@ -41,8 +41,8 @@ Key: [[control-board|control board]].
 **Sablon Glassworks** sells the evacuator.
 Key: [[tube]].
 
-**Halverson Smelting** sells the arc furnace, the crystal grower and the wafer saw.
-Key: [[silicon-ingot|silicon ingot]].
+**Halverson Smelting** sells the arc furnace, the crystal grower, the wafer saw, the still and the liquid trader.
+Key: [[silicon-ingot|silicon ingot]] or [[crude-oil|crude oil]].
 
 **Meridian Instruments** sells the fine etcher and the large precision assembler.
 Key: [[microprocessor-x4x1|microprocessor (x4x1)]].

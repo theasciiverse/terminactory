@@ -140,6 +140,13 @@ where
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PerFluid<T>([T; FLUIDS]);
 
+impl<T: Copy> PerFluid<T> {
+    /// The values as a plain array, for sampling.
+    pub fn to_array(&self) -> [T; FLUIDS] {
+        self.0
+    }
+}
+
 impl<T> Index<Fluid> for PerFluid<T> {
     type Output = T;
     fn index(&self, f: Fluid) -> &T {

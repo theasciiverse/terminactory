@@ -539,6 +539,157 @@ fn pump_is_one_by_two() {
 }
 
 #[test]
+fn the_oil_extractor_pumps_crude_oil_into_a_pipe_at_its_front() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::OilExtractor, Dir::E).unwrap(); // 1 wide, 5 tall: front is x=6
+    w.place(0, 6, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+    run(&mut w, 2);
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 1);
+    assert_eq!((w.fluids.pools[0].fluid, w.fluids.pools[0].amount), (Some(Fluid::CrudeOil), 1.0));
+    // Not every tick: the next unit takes another two seconds.
+    run(&mut w, 1);
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 1);
+    run(&mut w, 1);
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 2);
+    // No EC, no oil.
+    assert_eq!(w.remove(0, 7, 7), Some(Kind::Solar));
+    let made = w.econ.made_fluid[Fluid::CrudeOil];
+    run(&mut w, 4);
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], made);
+}
+
+#[test]
+fn the_oil_extractor_stops_when_the_pipe_in_front_is_full() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::OilExtractor, Dir::E).unwrap();
+    w.place(0, 6, 5, Kind::Pipe, Dir::E).unwrap(); // one pipe holds 20 units
+    w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+    run(&mut w, 60); // room for 30
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], PIPE_CAP as u64);
+    assert_eq!(w.fluids.pools[0].amount, PIPE_CAP);
+    assert_eq!(w.idle_reason(0, idx(5, 5)), Some("FLUD"));
+}
+
+#[test]
+fn deeper_floors_give_crude_oil_faster() {
+    // 80 ticks is not enough for a unit on the surface.
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::OilExtractor, Dir::E).unwrap();
+    w.place(0, 6, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 7, 7, Kind::Solar, Dir::E).unwrap();
+    for _ in 0..80 {
+        w.tick();
+    }
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 0, "the surface is slow");
+
+    // Underground the ground is richer (x1.5), so the same time gives one unit. An elevator
+    // carries the surface panel's power down to it.
+    let mut w = World::blank();
+    w.place(0, 10, 10, Kind::Elevator, Dir::E).unwrap();
+    w.place(0, 12, 9, Kind::Solar, Dir::E).unwrap();
+    let f = w.floor_of(-1).unwrap();
+    w.place(f, 9, 9, Kind::OilExtractor, Dir::E).unwrap();
+    w.place(f, 10, 9, Kind::Pipe, Dir::E).unwrap();
+    assert!(w.building_ratio(f, idx(9, 9)) > 0.0, "the elevator links the floors' grids");
+    for _ in 0..80 {
+        w.tick();
+    }
+    assert_eq!(w.econ.made_fluid[Fluid::CrudeOil], 1, "1.5x underground");
+}
+
+#[test]
+fn the_oil_extractor_needs_open_ground() {
+    let w = World::blank();
+    assert!(w.check_place(0, 5, 5, Kind::OilExtractor).is_ok());
+    // It cannot sit on an upper floor, like the pumps and drills.
+    let up = w.floor_of(1).unwrap();
+    assert!(w.check_place(up, 5, 5, Kind::OilExtractor).is_err());
+}
+
+#[test]
+fn the_liquid_trader_sells_the_fluid_in_the_pipe_it_touches() {
+    let mut w = World::blank();
+    for x in 5..=6 {
+        w.place(0, x, 5, Kind::Pipe, Dir::E).unwrap();
+    }
+    w.place(0, 7, 5, Kind::LiquidTrader, Dir::E).unwrap(); // covers 7-8, 5-6
+    w.place(0, 7, 8, Kind::Solar, Dir::E).unwrap();
+    let pool = w.fluids.pipe_pool[0][idx(6, 5)] as usize;
+    w.fluids.pools[pool].add(Fluid::CrudeOil, 40.0);
+    let money = w.econ.money;
+    run(&mut w, 1);
+    // Four units a second at crude oil's price.
+    assert!((w.econ.money - money - 8.0).abs() < 1e-6, "made {}", w.econ.money - money);
+    assert!((w.fluids.pools[pool].amount - 36.0).abs() < 1e-6);
+    // Water cannot be sold, and an empty pipe gives it nothing to do.
+    w.fluids.pools[pool].take(Fluid::CrudeOil, 36.0);
+    w.fluids.pools[pool].add(Fluid::Water, 10.0);
+    let money = w.econ.money;
+    run(&mut w, 2);
+    assert_eq!(w.econ.money, money);
+    assert_eq!(w.idle_reason(0, idx(7, 5)), Some("FLUD"));
+}
+
+#[test]
+fn the_liquid_trader_earns_research_that_fades() {
+    let mut w = World::blank();
+    w.place(0, 5, 5, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 6, 5, Kind::LiquidTrader, Dir::E).unwrap();
+    w.place(0, 6, 8, Kind::Solar, Dir::E).unwrap();
+    let pool = w.fluids.pipe_pool[0][idx(5, 5)] as usize;
+    w.fluids.pools[pool].add(Fluid::Ethylene, 60.0);
+    // Money -> split -> research.
+    w.configure(0, 6, 5);
+    w.configure(0, 6, 5);
+    let money = w.econ.money;
+    run(&mut w, 1);
+    assert!(w.econ.research > 0.0 && w.econ.research_sales_fluid[Fluid::Ethylene] > 0.0);
+    let first = w.econ.next_fluid_research(Fluid::Ethylene);
+    assert!(first < Fluid::Ethylene.curve().unwrap().worth, "the next unit pays less");
+    assert_eq!(w.econ.money, money, "research mode earns no money");
+}
+
+#[test]
+fn the_still_splits_crude_oil_into_naphtha_and_waste() {
+    let mut w = World::blank();
+    w.place(0, 10, 10, Kind::Still, Dir::E).unwrap(); // 2 wide, 3 tall: front is x=12, back is x=9
+    cycle_to(&mut w, 10, 10, "naphtha");
+    // Crude oil comes from a pipe on the side; the waste leaves by the back, into a crate.
+    w.place(0, 10, 9, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 9, 11, Kind::Crate, Dir::W).unwrap();
+    for y in 10..=12 {
+        w.place(0, 12, y, Kind::Pipe, Dir::E).unwrap();
+    }
+    let pool = w.fluids.pipe_pool[0][idx(10, 9)] as usize;
+    w.fluids.pools[pool].add(Fluid::CrudeOil, 30.0);
+    run(&mut w, 9);
+    assert_eq!(w.econ.made_fluid[Fluid::Naphtha], 0, "a run takes 10 s");
+    run(&mut w, 2);
+    assert_eq!(w.econ.made_fluid[Fluid::Naphtha], 2);
+    assert_eq!(crate_items(&w, 0, 9, 11), vec![Item::Waste]);
+}
+
+#[test]
+fn the_still_makes_ethylene_from_naphtha_and_carbon_black_waits_for_fuel_oil() {
+    let mut w = World::blank();
+    w.place(0, 10, 10, Kind::Still, Dir::E).unwrap();
+    cycle_to(&mut w, 10, 10, "ethylene");
+    w.place(0, 10, 9, Kind::Pipe, Dir::E).unwrap();
+    w.place(0, 9, 11, Kind::Crate, Dir::W).unwrap();
+    w.place(0, 12, 11, Kind::Pipe, Dir::E).unwrap();
+    let pool = w.fluids.pipe_pool[0][idx(10, 9)] as usize;
+    w.fluids.pools[pool].add(Fluid::Naphtha, 12.0);
+    run(&mut w, 11);
+    assert_eq!(w.econ.made_fluid[Fluid::Ethylene], 2);
+    // Carbon black: the recipe is there, but nothing makes fuel oil yet.
+    let black = STILL_RECIPES.iter().find(|r| r.name == "carbon black").unwrap();
+    assert_eq!(black.inputs, &[(Item::Coal, 4)]);
+    assert_eq!((black.fluid_in, black.outputs), (Some((Fluid::FuelOil, 1)), &[(Item::CarbonBlack, 2), (Item::Waste, 1)][..]));
+    assert!(Kind::ALL.iter().all(|k| k.recipes().iter().all(|r| r.fluid_out != Some((Fluid::FuelOil, 1)))));
+}
+
+#[test]
 fn press_output_leaves_from_the_front_tile() {
     // Facing east: crate -> press -> belt in front of its right-hand tile -> crate.
     let mut w = World::blank();
@@ -1457,7 +1608,7 @@ fn the_large_kiln_is_5x7_burns_coal_and_costs_a_few_minutes_of_income() {
     assert!(Kind::LargeKiln.cost() > 10.0 * Kind::Kiln.cost(), "it is something to save for");
     // Sold by whoever sells the kiln, from a tech that is free after 1,000 bricks.
     assert_eq!((Kind::LargeKiln.company(), Tech::LargeKiln.company()), (Kind::Kiln.company(), Kind::Kiln.company().unwrap()));
-    assert_eq!(Tech::LargeKiln.milestone(), (Item::Brick, 1000));
+    assert_eq!(Tech::LargeKiln.milestone(), (Made::Item(Item::Brick), 1000));
     assert_eq!(Kind::LargeKiln.tech(), Some(Tech::LargeKiln));
 }
 
@@ -1661,7 +1812,7 @@ fn sablons_key_item_can_be_made_without_anything_sablon_sells() {
     // The evacuator is not the way in: it is locked behind Sablon itself.
     assert_eq!(Tech::Evacuator.company(), Company::Sablon);
     assert_eq!(Tech::Evacuator.requires(), &[Made::Item(Item::Tube)]);
-    assert_eq!((Tech::Evacuator.cost(), Tech::Evacuator.milestone()), (30_000.0, (Item::Tube, 40)));
+    assert_eq!((Tech::Evacuator.cost(), Tech::Evacuator.milestone()), (30_000.0, (Made::Item(Item::Tube), 40)));
     // The baked recipe asks for no tech at all.
     let baked = KILN_RECIPES.iter().find(|r| r.name == "tube (baked)").unwrap();
     assert!(baked.needs.is_none());
@@ -1816,12 +1967,12 @@ fn the_advanced_assemblers_build_circuit_boards_transistors_and_transistor_board
 
 #[test]
 fn halversons_key_is_silicon_made_before_it_sells_anything() {
-    assert_eq!(Company::Halverson.key_items(), &[Made::Item(Item::SiliconIngot)]);
+    assert_eq!(Company::Halverson.key_items(), &[Made::Item(Item::SiliconIngot), Made::Fluid(Fluid::CrudeOil)]);
     // It sells exactly three techs and their machines: the arc furnace, crystal grower and wafer saw.
     let techs: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Halverson).collect();
-    assert_eq!(techs, [Tech::ArcFurnace, Tech::CrystalGrower, Tech::WaferSaw]);
+    assert_eq!(techs, [Tech::ArcFurnace, Tech::CrystalGrower, Tech::WaferSaw, Tech::LiquidTrader, Tech::Still]);
     let kinds: Vec<Kind> = Kind::ALL.iter().copied().filter(|k| k.company() == Some(Company::Halverson)).collect();
-    assert_eq!(kinds, [Kind::ArcFurnace, Kind::CrystalGrower, Kind::WaferSaw]);
+    assert_eq!(kinds, [Kind::ArcFurnace, Kind::CrystalGrower, Kind::WaferSaw, Kind::LiquidTrader, Kind::Still]);
     // Sand and coke melt in a blast furnace (Cinderhall), a crusher grinds the sand (Ashgrove),
     // and a molder casts it: with only the companies whose techs those need, the ingot is makeable.
     let mut open = [false; COMPANIES];
@@ -1917,7 +2068,7 @@ fn the_etcher_is_a_three_by_three_ec_machine_that_lattice_and_finch_sell() {
     assert_eq!(Kind::Etcher.category(), Category::Create);
     assert_eq!(
         (Tech::Etcher.company(), Tech::Etcher.cost(), Tech::Etcher.milestone()),
-        (Company::LatticeFinch, 80_000.0, (Item::TransistorBoard, 60))
+        (Company::LatticeFinch, 80_000.0, (Made::Item(Item::TransistorBoard), 60))
     );
     assert_eq!(Tech::Etcher.requires(), &[Made::Item(Item::ControlBoard)]);
     // The sixth slot of Create, first in it (the grower and the saw follow).
@@ -2050,7 +2201,9 @@ fn the_computers_new_items_have_their_recipes_prices_and_curves() {
     }
     let c = Item::Computer.curve();
     assert_eq!((c.decay, c.floor), (0.99, 0.3));
-    assert_eq!(ITEMS, 78);
+    assert_eq!(ITEMS, 79);
+    // Carbon black sells, and waits for its later machines.
+    assert_eq!((Item::CarbonBlack.price(), Item::CarbonBlack.curve().worth), (3.0, 10.0));
 }
 
 #[test]
@@ -2141,7 +2294,7 @@ fn meridian_sells_the_fine_etcher_and_the_large_precision_assembler() {
     let sold: Vec<Tech> = Tech::ALL.iter().copied().filter(|t| t.company() == Company::Meridian).collect();
     assert_eq!(sold, [Tech::FineEtcher, Tech::LargePrecisionAssembler]);
     let t = Tech::LargePrecisionAssembler;
-    assert_eq!((t.cost(), t.milestone()), (300_000.0, (Item::Mainboard, 40)));
+    assert_eq!((t.cost(), t.milestone()), (300_000.0, (Made::Item(Item::Mainboard), 40)));
     assert_eq!(Kind::LargePrecisionAssembler.tech(), Some(t));
     assert_eq!(Kind::LargePrecisionAssembler.company(), Some(Company::Meridian));
     assert_eq!(Kind::LargePrecisionAssembler.cost(), 100_000.0);
@@ -2535,7 +2688,7 @@ fn save_and_load_round_trip() {
 fn saves_round_trip_with_the_full_item_list() {
     let mut w = World::blank();
     let last = Item::ALL[ITEMS - 1];
-    assert_eq!(last, Item::Computer);
+    assert_eq!(last, Item::CarbonBlack);
     w.econ.made[last.idx()] = 7;
     w.econ.sold[last.idx()] = 5;
     w.econ.research_sales[last.idx()] = 3;
@@ -2551,7 +2704,7 @@ fn saves_round_trip_with_the_full_item_list() {
     w.save(&path).unwrap();
     // The file names each item that has a count, and leaves the zeros out.
     let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(json["econ"]["made"], serde_json::json!({"Computer": 7, "Gauge": 11}));
+    assert_eq!(json["econ"]["made"], serde_json::json!({"CarbonBlack": 7, "Gauge": 11}));
     assert_eq!(json["version"], SAVE_VERSION);
     let l = World::load(&path).unwrap();
     std::fs::remove_file(&path).ok();
@@ -2873,11 +3026,11 @@ fn new_machines_are_locked_until_their_company_opens_and_they_are_researched() {
     }
     // Or the milestone does it for free.
     let mut w = World::new();
-    let (item, n) = Tech::Crusher.milestone();
+    let (_key, n) = Tech::Crusher.milestone();
     w.econ.made[Item::CopperWire.idx()] = 1;
     w.tick();
     assert!(!w.progress.has(Tech::Crusher));
-    w.econ.made[item.idx()] = n;
+    w.econ.made[Item::CopperOre.idx()] = n;
     w.tick();
     assert!(w.progress.has(Tech::Crusher));
 }
@@ -2939,7 +3092,10 @@ fn new_techs_are_priced_by_depth() {
     }
     // The advanced assembler is the first thing Lattice & Finch sells: boards, not motors, open it.
     assert!((6000.0..=25_000.0).contains(&Tech::AdvancedAssembler.cost()));
-    assert_eq!((Tech::AdvancedAssembler.company(), Tech::AdvancedAssembler.milestone().0), (Company::LatticeFinch, Item::ControlBoard));
+    assert_eq!(
+        (Tech::AdvancedAssembler.company(), Tech::AdvancedAssembler.milestone().0),
+        (Company::LatticeFinch, Made::Item(Item::ControlBoard))
+    );
     for t in [Tech::PrecisionAssembler, Tech::Etcher, Tech::LargeAdvancedDrill, Tech::LargeAdvancedAssembler] {
         assert!((25_000.0..=100_000.0).contains(&t.cost()), "{t:?}");
         assert_eq!(t.company(), Company::LatticeFinch);
@@ -2981,6 +3137,9 @@ fn makeable(open: &[bool; COMPANIES]) -> ([bool; ITEMS], Vec<Fluid>) {
             }
             if k.is_pump() && !fluids.contains(&Fluid::Water) {
                 fluids.push(Fluid::Water);
+            }
+            if k.is_extractor() && !fluids.contains(&Fluid::CrudeOil) {
+                fluids.push(Fluid::CrudeOil);
             }
             for r in k.recipes().iter().filter(|r| r.needs.is_none_or(tech_ok)) {
                 let ok = r.inputs.iter().all(|(i, _)| have[i.idx()])
@@ -3060,6 +3219,10 @@ fn every_key_item_can_be_made_before_its_company_opens() {
     // With everything open, every item has a way to be made.
     let (have, fluids) = makeable(&open);
     for it in Item::ALL {
+        // Carbon black needs fuel oil, which only the refinery of a later phase makes.
+        if it == Item::CarbonBlack {
+            continue;
+        }
         assert!(have[it.idx()], "{it:?} can't be made");
     }
     assert!(fluids.contains(&Fluid::MoltenIron) && fluids.contains(&Fluid::MoltenSteel) && fluids.contains(&Fluid::Water));
@@ -3357,7 +3520,8 @@ fn assemblers_build_their_parts_and_the_big_goods() {
 
 #[test]
 fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
-    let crown = [Item::DrillingRig, Item::SteamTractor, Item::Computer];
+    // Carbon black waits for the plastic machines of a later oil phase; it sells until then.
+    let crown = [Item::DrillingRig, Item::SteamTractor, Item::Computer, Item::CarbonBlack];
     let mut used = [false; ITEMS];
     for k in Kind::ALL {
         for r in k.recipes() {
@@ -3373,7 +3537,7 @@ fn every_item_but_waste_and_the_crown_items_is_used_in_a_recipe() {
         assert!(used[it.idx()], "{it:?} is an input to nothing");
     }
     for c in crown {
-        assert!(!used[c.idx()], "{c:?} is a crown item: only for selling and research");
+        assert!(!used[c.idx()], "{c:?} has no recipe use yet: only for selling and research");
     }
     assert!(!used[Item::Waste.idx()]);
 }
@@ -3697,7 +3861,7 @@ fn the_fine_etcher_is_meridians_machine_and_a_better_route_not_the_only_one() {
     assert_eq!(Kind::FineEtcher.category(), Category::Create);
     assert_eq!(
         (Tech::FineEtcher.company(), Tech::FineEtcher.cost(), Tech::FineEtcher.milestone()),
-        (Company::Meridian, 150_000.0, (Item::Microprocessor, 100))
+        (Company::Meridian, 150_000.0, (Made::Item(Item::Microprocessor), 100))
     );
     assert_eq!(Tech::FineEtcher.requires(), &[Made::Item(Item::Microprocessor)]);
     // Create slot 6: the etcher is still the first pick.

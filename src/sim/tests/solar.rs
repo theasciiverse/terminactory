@@ -24,7 +24,7 @@ fn the_basic_solar_panel_has_the_asked_numbers() {
     assert_eq!(k.cost() / k.solar_output(), 15.0);
     assert_eq!(Kind::Solar.cost() / Kind::Solar.solar_output(), 10.0);
     // The tech: 1,800 RP, or make 60 glass.
-    assert_eq!((Tech::BasicSolar.cost(), Tech::BasicSolar.milestone()), (1800.0, (Item::Glass, 60)));
+    assert_eq!((Tech::BasicSolar.cost(), Tech::BasicSolar.milestone()), (1800.0, (Made::Item(Item::Glass), 60)));
     assert_eq!(Tech::BasicSolar.company(), Company::Kettering);
     assert_eq!(Tech::BasicSolar.category(), Category::Power);
 }

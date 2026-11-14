@@ -11,6 +11,7 @@
     "research_sales": {
       "Coal": "int"
     },
+    "research_sales_fluid": {},
     "sold": {
       "Coal": "int"
     }
@@ -760,6 +761,21 @@
             },
             {
               "dir": "\"E\"",
+              "kind": "\"LiquidTrader\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Trade": {
+                  "count": "int",
+                  "mode": "\"Money\"",
+                  "money": "float",
+                  "research": "float",
+                  "stuck": "int"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
               "kind": "\"LongArm\"",
               "rr": "int",
               "size": "int",
@@ -824,6 +840,18 @@
                   "stock": {
                     "Coal": "int"
                   }
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"OilExtractor\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Extractor": {
+                  "busy": "bool",
+                  "progress": "float"
                 }
               }
             },
@@ -990,6 +1018,34 @@
                 "Engine": {
                   "output": "float",
                   "steam": "float"
+                }
+              }
+            },
+            {
+              "dir": "\"E\"",
+              "kind": "\"Still\"",
+              "rr": "int",
+              "size": "int",
+              "st": {
+                "Crafter": {
+                  "busy": "bool",
+                  "fluid": "int",
+                  "fluid_out": {
+                    "len": 2,
+                    "of": [
+                      "int"
+                    ]
+                  },
+                  "fuel": "int",
+                  "out": {
+                    "len": 0,
+                    "of": []
+                  },
+                  "progress": "float",
+                  "recipe_name": "\"naphtha\"",
+                  "stock": {
+                    "Coal": "int"
+                  }
                 }
               }
             },
@@ -1347,7 +1403,7 @@
       ]
     },
     "researched": {
-      "len": 43,
+      "len": 46,
       "of": [
         "\"AdvancedAssembler\"",
         "\"AdvancedDrill\"",
@@ -1377,13 +1433,16 @@
         "\"LargeKiln\"",
         "\"LargePrecisionAssembler\"",
         "\"Lathe\"",
+        "\"LiquidTrader\"",
         "\"LongArms\"",
         "\"Mixer\"",
+        "\"OilExtractor\"",
         "\"PrecisionAssembler\"",
         "\"Press\"",
         "\"Pumps\"",
         "\"RollingMill\"",
         "\"Steam\"",
+        "\"Still\"",
         "\"SupportBeams\"",
         "\"Tunnels\"",
         "\"UpgradePlanner\"",

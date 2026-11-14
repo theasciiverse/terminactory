@@ -117,7 +117,7 @@ pub enum StatsHit {
 /// the menus are made to fit). Slots are filled in order with no gaps, so a category with fewer
 /// than its maximum simply has room: Misc slot 3 waits for rail, Create slot 6 for chemistry.
 /// The layout is temporary: it changes after a playtest.
-pub const MAX_SLOTS: [(Category, usize); 4] = [(Category::Create, 6), (Category::Transport, 5), (Category::Power, 4), (Category::Misc, 3)];
+pub const MAX_SLOTS: [(Category, usize); 4] = [(Category::Create, 7), (Category::Transport, 5), (Category::Power, 4), (Category::Misc, 3)];
 
 /// The most slots `cat` may have.
 pub fn max_slots(cat: Category) -> usize {
@@ -144,14 +144,16 @@ pub fn slots(cat: Category) -> &'static [&'static [Kind]] {
                 LargePrecisionAssembler,
                 Welder,
             ],
-            &[Pump, AdvancedPump, Mixer, Evacuator],
+            &[Pump, AdvancedPump, Mixer, Evacuator, OilExtractor],
             &[Etcher, CrystalGrower, WaferSaw, FineEtcher],
+            // Chemistry: the still, with the refinery and the bottler to come.
+            &[Still],
         ],
         // Pipes carry things, so they sit with the belts, in slot 5.
         Category::Transport => &[&[Belt, FastBelt, Tunnel], &[Splitter, Sorter], &[Arm, LongArm], &[Elevator], &[Pipe]],
         Category::Power => &[&[Solar, BasicSolar], &[Pole], &[Boiler], &[SteamEngine]],
         // Slot 3 is kept for rail.
-        Category::Misc => &[&[Crate, Warehouse], &[TradePost]],
+        Category::Misc => &[&[Crate, Warehouse], &[TradePost, LiquidTrader]],
     }
 }
 
@@ -2502,7 +2504,7 @@ mod tests {
     #[test]
     fn max_slots_is_a_table_for_every_category() {
         let got: Vec<usize> = Category::ALL.iter().map(|c| max_slots(*c)).collect();
-        assert_eq!(got, vec![6, 5, 4, 3], "Create, Transport, EC, Misc");
+        assert_eq!(got, vec![7, 5, 4, 3], "Create, Transport, EC, Misc");
         // Every category is in the table once.
         for c in Category::ALL {
             assert_eq!(MAX_SLOTS.iter().filter(|(k, _)| *k == c).count(), 1, "{c:?}");
@@ -2512,7 +2514,7 @@ mod tests {
     #[test]
     fn pipes_have_transport_slot_five_and_pumps_keep_create_five() {
         assert_eq!(slots(Category::Transport)[4], &[Kind::Pipe]);
-        assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer, Kind::Evacuator]);
+        assert_eq!(slots(Category::Create)[4], &[Kind::Pump, Kind::AdvancedPump, Kind::Mixer, Kind::Evacuator, Kind::OilExtractor]);
         assert_eq!(slots(Category::Create)[5], &[Kind::Etcher, Kind::CrystalGrower, Kind::WaferSaw, Kind::FineEtcher]);
         // The assembler slot: the large precision assembler right after the large advanced one, and the welder last.
         let asm = slots(Category::Create)[3];
@@ -2521,7 +2523,7 @@ mod tests {
         assert_eq!(asm.last(), Some(&Kind::Welder));
         assert_eq!(Kind::Pipe.category(), Category::Transport);
         assert!(!parts_in(Category::Create).contains(&Kind::Pipe));
-        assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost][..]]);
+        assert_eq!(slots(Category::Misc), &[&[Kind::Crate, Kind::Warehouse][..], &[Kind::TradePost, Kind::LiquidTrader][..]]);
         let mut app = App::new(World::new());
         app.world.progress.researched[Tech::Pumps.idx()] = true;
         app.world.progress.opened[Company::Wellbourne.idx()] = true;
@@ -2557,7 +2559,7 @@ mod tests {
     fn book_parts_come_from_what_each_part_can_show() {
         // Every crafter, drill and pump has a page, and so does every part with rules.
         for k in Kind::ALL {
-            let wants = !k.recipes().is_empty() || k.is_drill() || k.is_pump() || k.rules().is_some();
+            let wants = !k.recipes().is_empty() || k.is_drill() || k.is_pump() || k.is_extractor() || k.rules().is_some();
             assert_eq!(BOOK_PARTS.contains(&k), wants, "{k:?}");
         }
         for k in [Kind::Kiln, Kind::Welder, Kind::AdvancedPump, Kind::LargeAdvancedDrill, Kind::Pipe] {
@@ -2588,7 +2590,7 @@ mod tests {
         assert_eq!(names, ["Making", "Assembling", "Drilling", "Moving", "Pipes", "EC", "Floors", "Tools"]);
         assert!(UNLOCK_GROUPS.iter().all(|g| !g.1.is_empty()), "no empty group");
         let pipes = UNLOCK_GROUPS.iter().find(|g| g.0 == "Pipes").unwrap().1;
-        assert_eq!(pipes, &[Tech::Pumps, Tech::AdvancedPump]);
+        assert_eq!(pipes, &[Tech::Pumps, Tech::AdvancedPump, Tech::OilExtractor, Tech::LiquidTrader]);
         assert_eq!(tree_rows().len(), Tech::ALL.len());
     }
 
