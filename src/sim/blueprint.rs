@@ -15,7 +15,10 @@ use super::*;
 pub const BP_FORMAT: u32 = 1;
 
 /// The most parts a blueprint file may hold (a whole map is far fewer).
-pub const BP_MAX_PARTS: usize = (W * H) as usize;
+pub const BP_MAX_PARTS: usize = 20_000;
+
+/// The longest side a blueprint's box may have.
+pub const BP_MAX_SIDE: i32 = 1024;
 
 fn is_zero(n: &u8) -> bool {
     *n == 0
@@ -163,7 +166,7 @@ impl Blueprint {
     /// Whether a file's contents make sense: a sane box, parts inside it, none on top of another.
     /// A hand-edited file can break all of these.
     pub fn check(&self) -> Result<(), String> {
-        if self.w < 1 || self.h < 1 || self.w > W || self.h > H {
+        if self.w < 1 || self.h < 1 || self.w > BP_MAX_SIDE || self.h > BP_MAX_SIDE {
             return Err(format!("its box is {}x{}", self.w, self.h));
         }
         if self.parts.is_empty() {
@@ -273,7 +276,7 @@ pub struct PasteReport {
 }
 
 /// The nearest tunnel behind (x, y) facing `dir`, within reach: how far back, and whether it is an exit.
-fn tunnel_behind_at(tiles: &[Option<Building>], x: i32, y: i32, dir: Dir) -> Option<(i32, bool)> {
+fn tunnel_behind_at(tiles: &Tiles, x: i32, y: i32, dir: Dir) -> Option<(i32, bool)> {
     let (dx, dy) = dir.delta();
     for k in 1..=TUNNEL_REACH + 1 {
         let (tx, ty) = (x - dx * k, y - dy * k);

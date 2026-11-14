@@ -209,10 +209,23 @@ impl World {
     pub fn parts_in(&self, f: usize, r: TileRect) -> Vec<(i32, i32)> {
         let fl = &self.floors[f];
         let mut found: Vec<u32> = Vec::new();
-        for y in r.1.max(0)..=r.3.min(H - 1) {
-            for x in r.0.max(0)..=r.2.min(W - 1) {
-                if let Some(a) = fl.owner[idx(x, y)] {
-                    found.push(a);
+        let cells = (r.2 - r.0 + 1).max(0) as i64 * (r.3 - r.1 + 1).max(0) as i64;
+        if cells > 4 * fl.owner.written() as i64 {
+            // A huge rectangle: look at what is built, not at every tile it covers.
+            for (i, a) in fl.owner.entries() {
+                let (x, y) = pos_of(i);
+                if a.is_some() && x >= r.0 && x <= r.2 && y >= r.1 && y <= r.3 {
+                    found.extend(*a);
+                }
+            }
+        } else {
+            for y in r.1..=r.3 {
+                for x in r.0..=r.2 {
+                    if in_bounds(x, y) {
+                        if let Some(a) = fl.owner[idx(x, y)] {
+                            found.push(a);
+                        }
+                    }
                 }
             }
         }

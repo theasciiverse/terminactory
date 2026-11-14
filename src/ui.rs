@@ -842,8 +842,6 @@ fn update_camera(app: &mut App, area: Rect) {
     if cy > app.cam.1 + vh - 1 - my {
         app.cam.1 = cy - vh + 1 + my;
     }
-    app.cam.0 = app.cam.0.clamp(0, (W - vw).max(0));
-    app.cam.1 = app.cam.1.clamp(0, (H - vh).max(0));
 }
 
 fn draw_map(buf: &mut Buffer, area: Rect, app: &App) {

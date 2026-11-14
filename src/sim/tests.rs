@@ -497,12 +497,12 @@ fn press_blocks_two_tiles_and_turns_to_one_by_two() {
 fn placing_off_the_map_is_refused_for_long_machines() {
     let w = World::blank();
     let fit = |x, y, k, d| w.check_place_sized(0, x, y, k, d, 0);
-    assert!(fit(W - 2, 5, Kind::Press, Dir::E).is_ok());
-    assert_eq!(fit(W - 1, 5, Kind::Press, Dir::E), Err("Doesn't fit on the map here".into()));
-    assert!(fit(W - 1, 5, Kind::Press, Dir::N).is_ok());
-    assert_eq!(fit(5, H - 1, Kind::Press, Dir::N), Err("Doesn't fit on the map here".into()));
-    assert!(fit(5, H - 1, Kind::Press, Dir::E).is_ok());
-    assert_eq!(fit(W - 2, 5, Kind::Furnace, Dir::E), Err("Doesn't fit on the map here".into()));
+    assert!(fit(EDGE - 2, 5, Kind::Press, Dir::E).is_ok());
+    assert_eq!(fit(EDGE - 1, 5, Kind::Press, Dir::E), Err("Doesn't fit on the map here".into()));
+    assert!(fit(EDGE - 1, 5, Kind::Press, Dir::N).is_ok());
+    assert_eq!(fit(5, EDGE - 1, Kind::Press, Dir::N), Err("Doesn't fit on the map here".into()));
+    assert!(fit(5, EDGE - 1, Kind::Press, Dir::E).is_ok());
+    assert_eq!(fit(EDGE - 2, 5, Kind::Furnace, Dir::E), Err("Doesn't fit on the map here".into()));
 }
 
 #[test]
@@ -3953,4 +3953,31 @@ fn a_mirrored_blueprint_swaps_sides_and_facings_and_mirroring_twice_is_the_ident
     assert_eq!(v.mirrored(true), bp);
     // A mirrored copy still pastes cleanly.
     assert!(m.check().is_ok() && v.check().is_ok());
+}
+
+#[test]
+fn the_map_has_no_edge_to_meet_a_factory_can_stand_far_out_and_below_zero() {
+    for (ox, oy) in [(-300, -200), (5000, 4000), (-20_000, 12_000)] {
+        let mut w = World::blank();
+        w.econ.money = 1e6;
+        // A drill straight into a trade post, nowhere near the start.
+        w.place(0, ox, oy, Kind::Drill, Dir::E).unwrap();
+        w.place(0, ox + 2, oy, Kind::TradePost, Dir::E).unwrap();
+        let before = w.econ.money;
+        for _ in 0..TPS * 60 {
+            w.tick();
+        }
+        assert!(w.econ.money > before, "it sells at {ox},{oy}");
+        // The area tool, a save and a load all find it again.
+        assert_eq!(w.parts_in(0, (ox - 5, oy - 5, ox + 5, oy + 5)), vec![(ox, oy), (ox + 2, oy)]);
+        assert_eq!(w.parts_in(0, (-30_000, -30_000, 30_000, 30_000)).len(), 2, "a huge rectangle is cheap");
+        let path = std::env::temp_dir().join(format!("factory-far-{}-{ox}.json", std::process::id()));
+        w.save(&path).unwrap();
+        let l = World::load(&path).unwrap();
+        let _ = std::fs::remove_file(&path);
+        assert!(l.tile(0, ox, oy).is_some_and(|b| b.kind == Kind::Drill) && l.tile(0, ox + 2, oy).is_some());
+    }
+    // The only edge is far past anything a factory needs.
+    let mut w = World::blank();
+    assert_eq!(w.place(0, EDGE, 0, Kind::Belt, Dir::E), Err("Doesn't fit on the map here".to_string()));
 }

@@ -23,7 +23,7 @@ fn number(name: &str) -> Option<u32> {
 /// What to tell the player when a save is from another version of the game and can't be opened.
 pub fn version_problem(path: &Path, name: &str) -> Option<String> {
     let v = crate::sim::World::file_version(path)?;
-    if v < crate::sim::SAVE_VERSION {
+    if v < crate::sim::OLDEST_OPENABLE {
         Some(format!(
             "{name} is from an older version of Terminactory and can't be opened. It's still at {}.\nStart a fresh game with: tfac --new",
             path.display()
@@ -203,7 +203,7 @@ pub fn describe(data: &Path) -> String {
     let mut out = format!("Your saves (in {}):\n", dir(data).display());
     for s in &saves {
         let version = crate::sim::World::file_version(&s.path);
-        let old = version.is_some_and(|v| v < crate::sim::SAVE_VERSION);
+        let old = version.is_some_and(|v| v < crate::sim::OLDEST_OPENABLE);
         let newer = version.is_some_and(|v| v > crate::sim::SAVE_VERSION);
         let stats = match crate::sim::World::load(&s.path) {
             _ if old => "(old version)".to_string(),

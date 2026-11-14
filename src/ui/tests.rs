@@ -720,7 +720,7 @@ fn small_pane_view() {
 
     // The power figure is global away from power, regional on a pole or panel.
     assert!(t.lines().next().unwrap().contains("EC 20/14") && !t.contains("global"), "{t}");
-    let pole = (0..(W * H) as usize).map(pos_of).find(|&(x, y)| app.world.tile(0, x, y).is_some_and(|b| b.kind == Kind::Pole)).unwrap();
+    let pole = app.world.floors[0].tiles.occupied().into_iter().find(|(_, b)| b.kind == Kind::Pole).map(|(i, _)| pos_of(i)).unwrap();
     app.cursor = pole;
     let t = text(&render(&mut app, 64, 16));
     assert!(t.lines().next().unwrap().contains(" regional"), "{t}");
@@ -2752,4 +2752,28 @@ fn m_mirrors_the_part_or_blueprint_in_hand_and_no_longer_toggles_the_small_pane(
     key(&mut app, 'm');
     render(&mut app, 130, 40);
     assert_eq!(app.compact_now, before);
+}
+
+#[test]
+fn the_cursor_and_the_screen_follow_the_player_off_the_old_edges() {
+    let mut app = App::new(World::new());
+    app.cursor = (0, 0);
+    let key = |app: &mut App, c: char| app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    // Past the old top-left corner, into negative coordinates.
+    for _ in 0..10 {
+        key(&mut app, 'w');
+        key(&mut app, 'a');
+    }
+    assert_eq!(app.cursor, (-10, -10));
+    let t = text(&render(&mut app, 120, 40));
+    assert!(t.contains("Empty ground") || t.contains("Solid rock"), "{t}");
+    // Far out, building works and the map still draws.
+    app.cursor = (4000, -2500);
+    app.world.econ.money = 1e6;
+    app.selected = Some(Kind::Belt);
+    app.on_key(KeyEvent::from(KeyCode::Char(' ')));
+    assert!(app.world.tile(app.floor, 4000, -2500).is_some());
+    app.selected = None;
+    let t = text(&render(&mut app, 120, 40));
+    assert!(t.contains("Basic belt"), "the sidebar names what is under the cursor out there:\n{t}");
 }

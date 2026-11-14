@@ -5,7 +5,7 @@ version are refused, never deleted.
 
 ## 0.1.0 (unreleased)
 
-First public version. Saves are format version 7.
+First public version. Saves are format version 8 (version 7 saves still open and are converted as they are read).
 
 ### The game
 - Phase 1: drills, furnaces, molders and presses; trade posts that sell for money, research or a split; a research tree with free unlocks for making enough of an item; companies that open when you make their key item and send a letter.
@@ -15,6 +15,7 @@ First public version. Saves are format version 7.
 - Oil: crude oil, naphtha, fuel oil and ethylene, the oil extractor, the still and the liquid trader, and a seventh Create slot for chemistry.
 - Tools: the area tool (`c`) to remove, copy or upgrade a rectangle, blueprints saved to `~/.terminactory/blueprints` that can be turned (`r`) and mirrored (`m`), and the upgrade planner (`u`).
 - Offline earnings: the factory earns while the game is closed, with no cap.
+- An unbounded map: build in any direction, as far as you like. A floor stores only what is on it, so saves stay small and the simulation only visits buildings.
 
 ### The interface
 - **termweb**, the in-game browser (`b`): a search start page, tabs, bookmarks, search history, an address bar, a wiki with a page for every item and machine (recipes, prices, research path, a chart of how research fades with sales), and a small web of other sites. Research (`t`) and production (`o`) open as sites in it. Pages can be copied to the clipboard.

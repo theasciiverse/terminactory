@@ -117,7 +117,7 @@ fn place_cost_ignores_money_and_place_errors_read_as_before() {
     w.econ.money = 1e6;
     w.place(0, 5, 5, Kind::Furnace, Dir::E).unwrap();
     assert_eq!(w.place_cost(0, 6, 6, Kind::Belt, Dir::E, 0), Err(PlaceErr::Blocked));
-    assert_eq!(w.place_cost(0, W - 1, 3, Kind::Furnace, Dir::E, 0), Err(PlaceErr::OffMap));
+    assert_eq!(w.place_cost(0, EDGE - 1, 3, Kind::Furnace, Dir::E, 0), Err(PlaceErr::OffMap));
     assert_eq!(w.place_cost(2, 3, 3, Kind::Drill, Dir::E, 0), Err(PlaceErr::NotAboveGround(Kind::Drill)));
     assert_eq!(w.place_cost(1, 3, 3, Kind::Solar, Dir::E, 0), Err(PlaceErr::NeedsSun));
     assert_eq!(w.place_cost(0, 5, 5, Kind::Elevator, Dir::E, 3), Err(PlaceErr::Blocked));

@@ -11,7 +11,7 @@ use crate::history::Range;
 use crate::settings::{Settings, ROWS};
 use crate::sim::{
     in_bounds, money_text, rect_of, rect_size, Blueprint, Category, Dir, Kind, PasteReport, Removed, Tech, TileRect, UpState,
-    UpgradeReport, Upgraded, World, H, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS, W,
+    UpgradeReport, Upgraded, World, EDGE, MAX_LIFT, MIN_LIFT, SPAWN, UNLOCK_GROUPS,
 };
 
 /// Where the area tool is. It marks a rectangle on one floor; the verb comes after.
@@ -2153,7 +2153,7 @@ impl App {
 
     fn move_cursor(&mut self, d: Dir) {
         let (dx, dy) = d.delta();
-        self.cursor = ((self.cursor.0 + dx).clamp(0, W - 1), (self.cursor.1 + dy).clamp(0, H - 1));
+        self.cursor = ((self.cursor.0 + dx).clamp(-EDGE, EDGE - 1), (self.cursor.1 + dy).clamp(-EDGE, EDGE - 1));
     }
 
     /// Places a belt facing `d` (or turns the belt already here), then steps forward.

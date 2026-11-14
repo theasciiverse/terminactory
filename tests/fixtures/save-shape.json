@@ -21,1252 +21,1561 @@
     "of": [
       {
         "dug": {
-          "len": 9600,
-          "of": [
-            "bool"
-          ]
+          "len": 0,
+          "of": []
         },
+        "dug_default": "bool",
         "level": "int",
-        "owner": {
-          "len": 9600,
-          "of": [
-            "int",
-            "null"
-          ]
-        },
         "tiles": {
-          "len": 9600,
+          "len": 0,
+          "of": []
+        }
+      },
+      {
+        "dug": {
+          "len": 0,
+          "of": []
+        },
+        "dug_default": "bool",
+        "level": "int",
+        "tiles": {
+          "len": 1,
           "of": [
-            "null",
             {
-              "dir": "\"E\"",
-              "kind": "\"AdvancedAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"valve\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"AdvancedDrill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Drill": {
-                  "coal": "int",
-                  "fuel": "int",
-                  "mines": "\"CopperOre\"",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"AdvancedPump\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Pump": {
-                  "busy": "bool"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"ArcFurnace\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"molten silicon\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Arm\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Arm": {
-                  "filter": "\"CopperOre\"",
-                  "hold": "null",
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"BasicAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"valve\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"BasicDrill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Drill": {
-                  "coal": "int",
-                  "fuel": "int",
-                  "mines": "\"CopperOre\"",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"BasicSolar\"",
-              "rr": "int",
-              "size": "int",
-              "st": "\"Solar\""
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Belt\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Belt": {
-                  "items": {
-                    "len": 1,
-                    "of": [
-                      {
-                        "item": "\"Stone\"",
-                        "pos": "float"
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Elevator\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Elevator": {
+                      "inbox": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "mode": "\"Unload\"",
+                      "outbox": {
+                        "len": 0,
+                        "of": []
                       }
-                    ]
+                    }
                   }
                 }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"BlastFurnace\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"molten iron\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Boiler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Boiler": {
-                  "busy": "bool",
-                  "coal": "int",
-                  "fuel": "int"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"CokeOven\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"coke\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Crate\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crate": {
-                  "items": {
-                    "len": 0,
-                    "of": []
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Crate\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crate": {
-                  "items": {
-                    "len": 2,
-                    "of": [
-                      "\"Coal\"",
-                      "\"Waste\""
-                    ]
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"CrudeAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"valve\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Crusher\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper grit\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"CrystalGrower\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"silicon crystal\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Drill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Drill": {
-                  "coal": "int",
-                  "fuel": "int",
-                  "mines": "\"CopperOre\"",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Elevator\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Elevator": {
-                  "inbox": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "mode": "\"Load\"",
-                  "outbox": {
-                    "len": 0,
-                    "of": []
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Etcher\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"die\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Evacuator\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"tube\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"FastBelt\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Belt": {
-                  "items": {
-                    "len": 0,
-                    "of": []
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"FineEtcher\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"fine die\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Furnace\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"molten copper\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Kiln\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"brick\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargeAdvancedAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"pump unit\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargeAdvancedDrill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Drill": {
-                  "coal": "int",
-                  "fuel": "int",
-                  "mines": "\"CopperOre\"",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargeBasicAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"pump unit\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargeBasicDrill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Drill": {
-                  "coal": "int",
-                  "fuel": "int",
-                  "mines": "\"CopperOre\"",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargeKiln\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"brick\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LargePrecisionAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"generator\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Lathe\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"iron rod\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LiquidTrader\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Trade": {
-                  "count": "int",
-                  "mode": "\"Money\"",
-                  "money": "float",
-                  "research": "float",
-                  "stuck": "int"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"LongArm\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Arm": {
-                  "filter": "\"CopperOre\"",
-                  "hold": "null",
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Mixer\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"concrete\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Molder\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper ingot\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"OilExtractor\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Extractor": {
-                  "busy": "bool",
-                  "progress": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Pipe\"",
-              "rr": "int",
-              "size": "int",
-              "st": "\"Pipe\""
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Pole\"",
-              "rr": "int",
-              "size": "int",
-              "st": "\"Pole\""
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"PrecisionAssembler\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"control board\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Press\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper plate\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Pump\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Pump": {
-                  "busy": "bool"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"RollingMill\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper sheet\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Solar\"",
-              "rr": "int",
-              "size": "int",
-              "st": "\"Solar\""
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Sorter\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Splitter": {
-                  "buf": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "cooldown": "float",
-                  "filter": "\"CopperOre\"",
-                  "last_in": "null",
-                  "tried": "int",
-                  "tried_prev": "int"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Splitter\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Splitter": {
-                  "buf": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "cooldown": "float",
-                  "filter": "null",
-                  "last_in": "null",
-                  "tried": "int",
-                  "tried_prev": "int"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"SteamEngine\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Engine": {
-                  "output": "float",
-                  "steam": "float"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Still\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"naphtha\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"TradePost\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Trade": {
-                  "count": "int",
-                  "mode": "\"Money\"",
-                  "money": "float",
-                  "research": "float",
-                  "stuck": "int"
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Tunnel\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Tunnel": {
-                  "exit": "bool",
-                  "items": {
-                    "len": 0,
-                    "of": []
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"WaferSaw\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"wafer\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Warehouse\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crate": {
-                  "items": {
-                    "len": 0,
-                    "of": []
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Welder\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"boiler shell\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"Winder\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper coil\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
-            },
-            {
-              "dir": "\"E\"",
-              "kind": "\"WireDrawer\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Crafter": {
-                  "busy": "bool",
-                  "fluid": "int",
-                  "fluid_out": {
-                    "len": 2,
-                    "of": [
-                      "int"
-                    ]
-                  },
-                  "fuel": "int",
-                  "out": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "progress": "float",
-                  "recipe_name": "\"copper wire\"",
-                  "stock": {
-                    "Coal": "int"
-                  }
-                }
-              }
+              ]
             }
           ]
         }
       },
       {
         "dug": {
-          "len": 9600,
-          "of": [
-            "bool"
-          ]
+          "len": 0,
+          "of": []
         },
+        "dug_default": "bool",
         "level": "int",
-        "owner": {
-          "len": 9600,
-          "of": [
-            "int",
-            "null"
-          ]
-        },
         "tiles": {
-          "len": 9600,
+          "len": 55,
           "of": [
-            "null",
             {
-              "dir": "\"E\"",
-              "kind": "\"Elevator\"",
-              "rr": "int",
-              "size": "int",
-              "st": {
-                "Elevator": {
-                  "inbox": {
-                    "len": 0,
-                    "of": []
-                  },
-                  "mode": "\"Unload\"",
-                  "outbox": {
-                    "len": 0,
-                    "of": []
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"AdvancedAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"valve\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
                   }
                 }
-              }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"AdvancedDrill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Drill": {
+                      "coal": "int",
+                      "fuel": "int",
+                      "mines": "\"CopperOre\"",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"AdvancedPump\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Pump": {
+                      "busy": "bool"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"ArcFurnace\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"molten silicon\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Arm\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Arm": {
+                      "filter": "\"CopperOre\"",
+                      "hold": "null",
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"BasicAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"valve\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"BasicDrill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Drill": {
+                      "coal": "int",
+                      "fuel": "int",
+                      "mines": "\"CopperOre\"",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"BasicSolar\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": "\"Solar\""
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Belt\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Belt": {
+                      "items": {
+                        "len": 1,
+                        "of": [
+                          {
+                            "item": "\"Stone\"",
+                            "pos": "float"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"BlastFurnace\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"molten iron\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Boiler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Boiler": {
+                      "busy": "bool",
+                      "coal": "int",
+                      "fuel": "int"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"CokeOven\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"coke\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Crate\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crate": {
+                      "items": {
+                        "len": 0,
+                        "of": []
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Crate\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crate": {
+                      "items": {
+                        "len": 2,
+                        "of": [
+                          "\"Coal\"",
+                          "\"Waste\""
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"CrudeAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"valve\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Crusher\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper grit\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"CrystalGrower\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"silicon crystal\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Drill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Drill": {
+                      "coal": "int",
+                      "fuel": "int",
+                      "mines": "\"CopperOre\"",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Elevator\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Elevator": {
+                      "inbox": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "mode": "\"Load\"",
+                      "outbox": {
+                        "len": 0,
+                        "of": []
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Etcher\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"die\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Evacuator\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"tube\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"FastBelt\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Belt": {
+                      "items": {
+                        "len": 0,
+                        "of": []
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"FineEtcher\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"fine die\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Furnace\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"molten copper\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Kiln\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"brick\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargeAdvancedAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"pump unit\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargeAdvancedDrill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Drill": {
+                      "coal": "int",
+                      "fuel": "int",
+                      "mines": "\"CopperOre\"",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargeBasicAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"pump unit\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargeBasicDrill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Drill": {
+                      "coal": "int",
+                      "fuel": "int",
+                      "mines": "\"CopperOre\"",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargeKiln\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"brick\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LargePrecisionAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"generator\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Lathe\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"iron rod\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LiquidTrader\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Trade": {
+                      "count": "int",
+                      "mode": "\"Money\"",
+                      "money": "float",
+                      "research": "float",
+                      "stuck": "int"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"LongArm\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Arm": {
+                      "filter": "\"CopperOre\"",
+                      "hold": "null",
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Mixer\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"concrete\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Molder\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper ingot\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"OilExtractor\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Extractor": {
+                      "busy": "bool",
+                      "progress": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Pipe\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": "\"Pipe\""
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Pole\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": "\"Pole\""
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"PrecisionAssembler\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"control board\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Press\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper plate\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Pump\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Pump": {
+                      "busy": "bool"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"RollingMill\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper sheet\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Solar\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": "\"Solar\""
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Sorter\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Splitter": {
+                      "buf": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "cooldown": "float",
+                      "filter": "\"CopperOre\"",
+                      "last_in": "null",
+                      "tried": "int",
+                      "tried_prev": "int"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Splitter\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Splitter": {
+                      "buf": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "cooldown": "float",
+                      "filter": "null",
+                      "last_in": "null",
+                      "tried": "int",
+                      "tried_prev": "int"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"SteamEngine\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Engine": {
+                      "output": "float",
+                      "steam": "float"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Still\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"naphtha\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"TradePost\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Trade": {
+                      "count": "int",
+                      "mode": "\"Money\"",
+                      "money": "float",
+                      "research": "float",
+                      "stuck": "int"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Tunnel\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Tunnel": {
+                      "exit": "bool",
+                      "items": {
+                        "len": 0,
+                        "of": []
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"WaferSaw\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"wafer\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Warehouse\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crate": {
+                      "items": {
+                        "len": 0,
+                        "of": []
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Welder\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"boiler shell\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"Winder\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper coil\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "len": 3,
+              "of": [
+                "int",
+                {
+                  "dir": "\"E\"",
+                  "kind": "\"WireDrawer\"",
+                  "rr": "int",
+                  "size": "int",
+                  "st": {
+                    "Crafter": {
+                      "busy": "bool",
+                      "fluid": "int",
+                      "fluid_out": {
+                        "len": 2,
+                        "of": [
+                          "int"
+                        ]
+                      },
+                      "fuel": "int",
+                      "out": {
+                        "len": 0,
+                        "of": []
+                      },
+                      "progress": "float",
+                      "recipe_name": "\"copper wire\"",
+                      "stock": {
+                        "Coal": "int"
+                      }
+                    }
+                  }
+                }
+              ]
             }
-          ]
-        }
-      },
-      {
-        "dug": {
-          "len": 9600,
-          "of": [
-            "bool"
-          ]
-        },
-        "level": "int",
-        "owner": {
-          "len": 9600,
-          "of": [
-            "null"
-          ]
-        },
-        "tiles": {
-          "len": 9600,
-          "of": [
-            "null"
           ]
         }
       }

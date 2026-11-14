@@ -188,8 +188,7 @@ impl Facts {
         }
         for (fl, floor) in w.floors.iter().enumerate() {
             let mut any = false;
-            for (a, tile) in floor.tiles.iter().enumerate() {
-                let Some(b) = tile else { continue };
+            for (a, b) in floor.tiles.occupied() {
                 any = true;
                 f.buildings += 1;
                 match b.kind {

@@ -301,7 +301,7 @@ fn blocked_parts_are_skipped_and_pasting_again_fills_the_gap() {
     assert_eq!((rep.placed, rep.blocked, rep.short), (3, 1, 0), "{rep:?}");
     assert!((before - w.econ.money - 3.0 * Kind::Belt.cost()).abs() < 1e-9);
     // Off the map counts as blocked too.
-    let edge = w.paste(0, W - 2, 3, &bp);
+    let edge = w.paste(0, EDGE - 2, 3, &bp);
     assert_eq!((edge.placed, edge.blocked), (2, 2));
     w.remove(0, 12, 20);
     let money = w.econ.money;

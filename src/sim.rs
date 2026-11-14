@@ -13,17 +13,28 @@ use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 
 mod blueprint;
+mod grid;
 mod serde_util;
 mod tools;
 pub use blueprint::{Blueprint, PasteReport, PlanState, BP_FORMAT};
 use serde_util::{de_set, ser_set};
+
+pub use grid::{idx, in_bounds, pos_of, Sparse, EDGE};
+
+/// The old fixed map, kept for tests that want a rectangle covering their whole scene.
+#[cfg(test)]
+pub const W: i32 = 120;
+#[cfg(test)]
+pub const H: i32 = 80;
+
+/// Every building of a floor at its anchor tile, and which anchor covers each tile.
+pub type Tiles = Sparse<Option<Building>>;
+pub type Owners = Sparse<Option<u32>>;
 pub use serde_util::{PerFluid, PerItem};
 pub use tools::{rect_of, rect_size, Removed, TileRect, UpState, UpgradeReport, Upgraded};
 
 pub use crate::content::*;
 
-pub const W: i32 = 120;
-pub const H: i32 = 80;
 pub const TPS: u64 = 60;
 pub const SPAWN: (i32, i32) = (60, 40);
 pub const START_MONEY: f64 = 1000.0;
@@ -79,7 +90,11 @@ pub const ENGINE_BUF: f64 = 20.0;
 pub const BOILER_COAL_CAP: u32 = 10;
 pub const ENGINE_REACH: i32 = 2;
 /// Bump when the save format changes: older saves are not loaded.
-pub const SAVE_VERSION: u32 = 7;
+pub const SAVE_VERSION: u32 = 8;
+
+/// The oldest save format that still opens: version 7 kept a floor as three fixed grids of
+/// 120 by 80 tiles, and is converted to the unbounded map as it is read.
+pub const OLDEST_OPENABLE: u32 = 7;
 /// The game version, saved in every file.
 pub const GAME_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -1185,20 +1200,73 @@ impl Building {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+/// One floor of the map: unbounded, and only the tiles that hold something are stored.
 pub struct Floor {
     pub level: i32,
-    pub dug: Vec<bool>,
+    /// Whether a tile is dug (ground) or decked (above). Most tiles share the floor's default.
+    pub dug: Sparse<bool>,
     /// Buildings, stored at their anchor (top-left) tile.
-    pub tiles: Vec<Option<Building>>,
-    /// For every tile: the anchor index of the building covering it.
-    pub owner: Vec<Option<u32>>,
+    pub tiles: Sparse<Option<Building>>,
+    /// For every covered tile: the anchor index of the building covering it.
+    pub owner: Sparse<Option<u32>>,
+}
+
+/// How a floor is written to a save: lists, not grids, so a save is as big as the factory.
+#[derive(Serialize, Deserialize)]
+struct FloorSave {
+    level: i32,
+    /// What every tile that is not listed in `dug` is.
+    dug_default: bool,
+    /// Tiles that differ from `dug_default`: (x, y).
+    dug: Vec<(i32, i32)>,
+    /// Every building at its anchor tile: (x, y, building), in reading order.
+    tiles: Vec<(i32, i32, Building)>,
+}
+
+impl Serialize for Floor {
+    fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        let default = *self.dug.default_value();
+        FloorSave {
+            level: self.level,
+            dug_default: default,
+            dug: self.dug.entries().into_iter().filter(|(_, v)| **v != default).map(|(i, _)| pos_of(i)).collect(),
+            tiles: self.tiles.occupied().into_iter().map(|(i, b)| (pos_of(i).0, pos_of(i).1, b.clone())).collect(),
+        }
+        .serialize(ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for Floor {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let save = FloorSave::deserialize(de)?;
+        let mut floor = Floor::new(save.level, save.dug_default);
+        for (x, y) in save.dug {
+            if !in_bounds(x, y) {
+                return Err(serde::de::Error::custom(format!("a dug tile at {x},{y} is off the map")));
+            }
+            floor.dug[idx(x, y)] = !save.dug_default;
+        }
+        for (x, y, b) in save.tiles {
+            if !in_bounds(x, y) {
+                return Err(serde::de::Error::custom(format!("a building at {x},{y} is off the map")));
+            }
+            let (w, h) = b.dims();
+            let a = idx(x, y);
+            for (tx, ty) in footprint(x, y, w, h) {
+                if !in_bounds(tx, ty) {
+                    return Err(serde::de::Error::custom(format!("a building at {x},{y} runs off the map")));
+                }
+                floor.owner[idx(tx, ty)] = Some(a as u32);
+            }
+            floor.tiles[a] = Some(b);
+        }
+        Ok(floor)
+    }
 }
 
 impl Floor {
     fn new(level: i32, dug: bool) -> Self {
-        let n = (W * H) as usize;
-        Floor { level, dug: vec![dug; n], tiles: vec![None; n], owner: vec![None; n] }
+        Floor { level, dug: Sparse::new(dug), tiles: Sparse::new(None), owner: Sparse::new(None) }
     }
     pub fn anchor_at(&self, x: i32, y: i32) -> Option<usize> {
         if !in_bounds(x, y) {
@@ -1479,7 +1547,7 @@ pub struct Net {
 #[derive(Default)]
 pub struct Grid {
     /// Per floor, per tile: which grid powers it (-1 = none).
-    pub cover: Vec<Vec<i32>>,
+    pub cover: Vec<Sparse<i32>>,
     pub nets: Vec<Net>,
     /// Electric parts outside every range.
     pub unpowered: u32,
@@ -1545,13 +1613,13 @@ pub struct PipeFill {
 #[derive(Default)]
 pub struct Fluids {
     /// Per floor, per tile: which pipe network a pipe belongs to (-1 = not a pipe).
-    pub pipe_pool: Vec<Vec<i32>>,
+    pub pipe_pool: Vec<Sparse<i32>>,
     pub pools: Vec<Pool>,
 }
 
 /// Which grid powers a building: the first of its tiles that's in range (-1 = none).
 /// A big building counts as powered when any part of it is in range.
-fn grid_of(cover: &[i32], x: i32, y: i32, (w, h): (i32, i32)) -> i32 {
+fn grid_of(cover: &Sparse<i32>, x: i32, y: i32, (w, h): (i32, i32)) -> i32 {
     footprint(x, y, w, h).filter(|&(tx, ty)| in_bounds(tx, ty)).map(|(tx, ty)| cover[idx(tx, ty)]).find(|&id| id >= 0).unwrap_or(-1)
 }
 
@@ -1693,18 +1761,6 @@ pub fn now_secs() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
 }
 
-pub fn in_bounds(x: i32, y: i32) -> bool {
-    x >= 0 && y >= 0 && x < W && y < H
-}
-
-pub fn idx(x: i32, y: i32) -> usize {
-    (y * W + x) as usize
-}
-
-pub fn pos_of(i: usize) -> (i32, i32) {
-    ((i as i32) % W, (i as i32) / W)
-}
-
 /// Every tile a building `w` wide and `h` tall covers when its top-left is at (x, y).
 pub fn footprint(x: i32, y: i32, w: i32, h: i32) -> impl Iterator<Item = (i32, i32)> {
     (0..h).flat_map(move |dy| (0..w).map(move |dx| (x + dx, y + dy)))
@@ -1843,12 +1899,18 @@ impl World {
 
     /// Loads a save. Saves from another version of the format aren't loaded.
     pub fn load(path: &Path) -> std::io::Result<World> {
-        if let Some(v) = World::file_version(path).filter(|v| *v != SAVE_VERSION) {
+        if let Some(v) = World::file_version(path).filter(|v| !(OLDEST_OPENABLE..=SAVE_VERSION).contains(v)) {
             let why = if v < SAVE_VERSION { "from an older version" } else { "from a newer version" };
             return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, format!("this save is {why}")));
         }
         let json = std::fs::read_to_string(path)?;
-        let mut w: World = serde_json::from_str(&json).map_err(std::io::Error::other)?;
+        let mut w: World = if World::file_version(path) == Some(7) {
+            let mut value: serde_json::Value = serde_json::from_str(&json).map_err(std::io::Error::other)?;
+            migrate_v7(&mut value);
+            serde_json::from_value(value).map_err(std::io::Error::other)?
+        } else {
+            serde_json::from_str(&json).map_err(std::io::Error::other)?
+        };
         w.resolve_recipes();
         w.rebuild_grid();
         w.restore_pipe_fluid();
@@ -1876,8 +1938,7 @@ impl World {
     fn resolve_recipes(&mut self) {
         let mut lost = Vec::new();
         for (f, fl) in self.floors.iter_mut().enumerate() {
-            for (i, b) in fl.tiles.iter_mut().enumerate() {
-                let Some(b) = b else { continue };
+            for (i, b) in fl.tiles.occupied_mut() {
                 let list = b.kind.recipes();
                 if let St::Crafter { recipe, recipe_name, .. } = &mut b.st {
                     match list.iter().position(|r| r.name == recipe_name.as_str()) {
@@ -1901,7 +1962,7 @@ impl World {
         for (f, fl) in self.floors.iter().enumerate() {
             let Some(ids) = self.fluids.pipe_pool.get(f) else { continue };
             let mut seen = vec![false; self.fluids.pools.len()];
-            for (i, &id) in ids.iter().enumerate() {
+            for (i, &id) in ids.entries() {
                 if id < 0 || std::mem::replace(&mut seen[id as usize], true) {
                     continue;
                 }
@@ -2416,12 +2477,10 @@ impl World {
         // Every power source, with the floor it's on and the tiles it reaches.
         let mut nodes = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
-            for (i, b) in fl.tiles.iter().enumerate() {
-                if let Some(b) = b {
-                    let (x, y) = pos_of(i);
-                    if let Some(r) = coverage(b.kind, b.dims(), x, y) {
-                        nodes.push((f, i, r, b.kind));
-                    }
+            for (i, b) in fl.tiles.occupied() {
+                let (x, y) = pos_of(i);
+                if let Some(r) = coverage(b.kind, b.dims(), x, y) {
+                    nodes.push((f, i, r, b.kind));
                 }
             }
         }
@@ -2462,12 +2521,14 @@ impl World {
             *net = net_of_root[r];
         }
         // Paint each grid's reach, and add up supply and demand.
-        let mut cover = vec![vec![-1i32; (W * H) as usize]; self.floors.len()];
+        let mut cover: Vec<Sparse<i32>> = (0..self.floors.len()).map(|_| Sparse::new(-1)).collect();
         for (k, &(f, _, (x0, y0, x1, y1), kind)) in nodes.iter().enumerate() {
             let id = node_net[k];
-            for y in y0.max(0)..=y1.min(H - 1) {
-                for x in x0.max(0)..=x1.min(W - 1) {
-                    cover[f][idx(x, y)] = id as i32;
+            for y in y0..=y1 {
+                for x in x0..=x1 {
+                    if in_bounds(x, y) {
+                        cover[f][idx(x, y)] = id as i32;
+                    }
                 }
             }
             if kind.is_solar() && self.floors[f].level >= 0 {
@@ -2478,8 +2539,7 @@ impl World {
         let mut unpowered = 0;
         let mut bursts = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
-            for (i, b) in fl.tiles.iter().enumerate() {
-                let Some(b) = b else { continue };
+            for (i, b) in fl.tiles.occupied() {
                 if b.kind.electric() {
                     let (x, y) = pos_of(i);
                     match grid_of(&cover[f], x, y, b.dims()) {
@@ -2496,11 +2556,7 @@ impl World {
         }
         let sources = nodes.iter().enumerate().map(|(k, n)| (n.0, n.1, node_net[k])).collect();
         self.grid = Grid { cover, nets, unpowered, engines, sources, bursts };
-        self.active = self
-            .floors
-            .iter()
-            .map(|fl| fl.tiles.iter().enumerate().filter(|(_, b)| b.is_some()).map(|(i, _)| i as u32).collect())
-            .collect();
+        self.active = self.floors.iter().map(|fl| fl.tiles.occupied().into_iter().map(|(i, _)| i as u32).collect()).collect();
         self.update_power(false);
         self.rebuild_fluids();
     }
@@ -2556,13 +2612,13 @@ impl World {
     /// Works out the pipe networks, keeping the fluid that was already in them.
     fn rebuild_fluids(&mut self) {
         let old = std::mem::take(&mut self.fluids);
-        let n = (W * H) as usize;
-        let mut pipe_pool = vec![vec![-1i32; n]; self.floors.len()];
+        let mut pipe_pool: Vec<Sparse<i32>> = (0..self.floors.len()).map(|_| Sparse::new(-1)).collect();
         let mut pools: Vec<Pool> = Vec::new();
         for (f, fl) in self.floors.iter().enumerate() {
             let is_pipe = |i: usize| matches!(fl.tiles[i], Some(Building { kind: Kind::Pipe, .. }));
-            for start in 0..n {
-                if !is_pipe(start) || pipe_pool[f][start] >= 0 {
+            let pipes: Vec<usize> = fl.tiles.occupied().into_iter().filter(|(_, b)| b.kind == Kind::Pipe).map(|(i, _)| i).collect();
+            for start in pipes {
+                if pipe_pool[f][start] >= 0 {
                     continue;
                 }
                 let id = pools.len();
@@ -2573,7 +2629,7 @@ impl World {
                 pipe_pool[f][start] = id as i32;
                 while let Some(i) = stack.pop() {
                     pool.pipes += 1;
-                    if let Some(&o) = old.pipe_pool.get(f).and_then(|v| v.get(i)) {
+                    if let Some(&o) = old.pipe_pool.get(f).map(|v| &v[i]) {
                         if o >= 0 {
                             match olds.iter_mut().find(|(k, _)| *k == o as usize) {
                                 Some((_, c)) => *c += 1,
@@ -2673,6 +2729,13 @@ impl World {
     }
 
     pub fn tick(&mut self) {
+        // Looking at a tile to change it leaves an empty entry behind; sweep them up now and then.
+        if self.tick % 600 == 0 {
+            for fl in &mut self.floors {
+                fl.tiles.prune();
+                fl.owner.prune();
+            }
+        }
         self.update_power(true);
         for f in 0..self.floors.len() {
             let level_of = self.floors[f].level;
@@ -3062,7 +3125,7 @@ impl World {
         let Some(b) = self.floors[f].tiles[a].as_ref() else {
             return word;
         };
-        let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
+        let (ax, ay) = pos_of(a);
         let dims = b.dims();
         let edge = port.edge(b.dir);
         let mut belts = 0;
@@ -3098,7 +3161,7 @@ impl World {
         let Some(b) = self.floors[f].tiles[a].as_ref() else {
             return false;
         };
-        let (ax, ay) = ((a % W as usize) as i32, (a / W as usize) as i32);
+        let (ax, ay) = pos_of(a);
         let dims = b.dims();
         let edge = Port::Front.edge(b.dir);
         (0..edge_len(dims, edge)).all(|j| {
@@ -3111,10 +3174,7 @@ impl World {
     pub fn idle_summary(&self) -> (usize, Option<&'static str>) {
         let mut counts: Vec<(&'static str, usize)> = Vec::new();
         for f in 0..self.floors.len() {
-            for a in 0..self.floors[f].tiles.len() {
-                if self.floors[f].tiles[a].is_none() {
-                    continue;
-                }
+            for (a, _) in self.floors[f].tiles.occupied() {
                 if let Some(r) = self.idle_reason(f, a) {
                     match counts.iter_mut().find(|c| c.0 == r) {
                         Some(c) => c.1 += 1,
@@ -3227,19 +3287,39 @@ impl World {
     }
 }
 
+/// Turns a version 7 save (each floor three fixed 120 by 80 grids) into the version 8 layout (lists
+/// of what is there). Coordinates are unchanged: the old map's top-left corner is still (0, 0).
+fn migrate_v7(save: &mut serde_json::Value) {
+    use serde_json::{json, Value};
+    const OLD_W: usize = 120;
+    let Some(floors) = save.get_mut("floors").and_then(Value::as_array_mut) else { return };
+    for floor in floors.iter_mut() {
+        let level = floor["level"].clone();
+        let dug: Vec<bool> = floor["dug"].as_array().map_or_else(Vec::new, |a| a.iter().map(|v| v.as_bool().unwrap_or(false)).collect());
+        let default = dug.iter().filter(|d| **d).count() * 2 >= dug.len();
+        let dug_list: Vec<Value> =
+            dug.iter().enumerate().filter(|(_, d)| **d != default).map(|(i, _)| json!([i % OLD_W, i / OLD_W])).collect();
+        let tiles: Vec<Value> = floor["tiles"].as_array().map_or_else(Vec::new, |a| {
+            a.iter().enumerate().filter(|(_, t)| !t.is_null()).map(|(i, t)| json!([i % OLD_W, i / OLD_W, t])).collect()
+        });
+        *floor = json!({ "level": level, "dug_default": default, "dug": dug_list, "tiles": tiles });
+    }
+    save["version"] = json!(SAVE_VERSION);
+}
+
 /// What a building can reach while it ticks.
 struct Ctx<'a> {
-    tiles: &'a mut [Option<Building>],
-    owner: &'a [Option<u32>],
+    tiles: &'a mut Tiles,
+    owner: &'a Owners,
     econ: &'a mut Econ,
-    pipe_pool: &'a [i32],
+    pipe_pool: &'a Sparse<i32>,
     pools: &'a mut [Pool],
     /// The floor's level (deeper ore mines faster).
     level: i32,
 }
 
 /// The pipe networks touching a building's edges, optionally skipping one side.
-fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, dims: (i32, i32), skip: Option<Dir>, skip_back: bool) -> Vec<usize> {
+fn pools_around(pipe_pool: &Sparse<i32>, ax: i32, ay: i32, dims: (i32, i32), skip: Option<Dir>, skip_back: bool) -> Vec<usize> {
     let mut out = Vec::new();
     for d in Dir::ALL {
         if Some(d) == skip || (skip_back && skip.is_some_and(|side| d == side.opposite())) {
@@ -3261,7 +3341,7 @@ fn pools_around(pipe_pool: &[i32], ax: i32, ay: i32, dims: (i32, i32), skip: Opt
 fn tick_building(b: &mut Building, x: i32, y: i32, ctx: &mut Ctx, ratio: f64) {
     let Ctx { tiles, owner, econ, pipe_pool, pools, level } = ctx;
     let level = *level;
-    let (tiles, owner, econ): (&mut [Option<Building>], &[Option<u32>], &mut Econ) = (tiles, owner, econ);
+    let (tiles, owner, econ): (&mut Tiles, &Owners, &mut Econ) = (tiles, owner, econ);
     let dir = b.dir;
     let kind = b.kind;
     let dims = b.dims();
@@ -3595,8 +3675,8 @@ fn belt_accept(items: &mut Vec<BeltItem>, item: Item) -> bool {
 /// the next building. Takes turns between the spots along the edge.
 #[allow(clippy::too_many_arguments)]
 fn push_front(
-    tiles: &mut [Option<Building>],
-    owner: &[Option<u32>],
+    tiles: &mut Tiles,
+    owner: &Owners,
     econ: &mut Econ,
     ax: i32,
     ay: i32,
@@ -3644,8 +3724,8 @@ impl Port {
 /// ever sends its own, so a stuck waste item never holds up the products.
 #[allow(clippy::too_many_arguments)]
 fn push_port(
-    tiles: &mut [Option<Building>],
-    owner: &[Option<u32>],
+    tiles: &mut Tiles,
+    owner: &Owners,
     econ: &mut Econ,
     ax: i32,
     ay: i32,
@@ -3666,8 +3746,8 @@ fn push_port(
 /// building there. Takes turns between the spots along the edge.
 #[allow(clippy::too_many_arguments)]
 fn push_edge(
-    tiles: &mut [Option<Building>],
-    owner: &[Option<u32>],
+    tiles: &mut Tiles,
+    owner: &Owners,
     econ: &mut Econ,
     ax: i32,
     ay: i32,
@@ -3731,9 +3811,9 @@ fn input_cap(per_run: u32, batch: u32) -> u32 {
 /// there that takes it. Returns how many units went.
 #[allow(clippy::too_many_arguments)]
 fn push_fluid(
-    tiles: &mut [Option<Building>],
-    owner: &[Option<u32>],
-    pipe_pool: &[i32],
+    tiles: &mut Tiles,
+    owner: &Owners,
+    pipe_pool: &Sparse<i32>,
     pools: &mut [Pool],
     ax: i32,
     ay: i32,
@@ -3780,14 +3860,7 @@ fn push_fluid(
 /// Splitters send items, in turn, onto every neighbouring belt that leads away from them.
 /// `only`: a filter splitter's front and filter: the filtered item goes out the front only,
 /// everything else out the other sides only.
-fn split_out(
-    tiles: &mut [Option<Building>],
-    x: i32,
-    y: i32,
-    q: &mut VecDeque<Item>,
-    rr: &mut u8,
-    only: Option<(Dir, Option<Item>)>,
-) -> bool {
+fn split_out(tiles: &mut Tiles, x: i32, y: i32, q: &mut VecDeque<Item>, rr: &mut u8, only: Option<(Dir, Option<Item>)>) -> bool {
     let Some(&item) = q.front() else { return false };
     for k in 0..4 {
         let d = Dir::ALL[(*rr as usize + k) % 4];
@@ -3816,7 +3889,7 @@ fn split_out(
 }
 
 /// Something moving in direction `travel` arrives at tile (tx, ty).
-fn try_insert(tiles: &mut [Option<Building>], owner: &[Option<u32>], econ: &mut Econ, tx: i32, ty: i32, item: Item, travel: Dir) -> bool {
+fn try_insert(tiles: &mut Tiles, owner: &Owners, econ: &mut Econ, tx: i32, ty: i32, item: Item, travel: Dir) -> bool {
     if !in_bounds(tx, ty) {
         return false;
     }
@@ -3924,7 +3997,7 @@ fn try_insert(tiles: &mut [Option<Building>], owner: &[Option<u32>], econ: &mut 
 
 /// How far ahead a tunnel entrance's exit is: the first tunnel ahead facing the same way,
 /// if it's an exit, within reach.
-fn tunnel_partner(tiles: &[Option<Building>], x: i32, y: i32, dir: Dir) -> Option<i32> {
+fn tunnel_partner(tiles: &Tiles, x: i32, y: i32, dir: Dir) -> Option<i32> {
     let (dx, dy) = dir.delta();
     for k in 1..=TUNNEL_REACH + 1 {
         let (tx, ty) = (x + dx * k, y + dy * k);
@@ -3941,7 +4014,7 @@ fn tunnel_partner(tiles: &[Option<Building>], x: i32, y: i32, dir: Dir) -> Optio
 }
 
 /// The nearest tunnel behind (x, y) facing `dir`, within reach: Some(is it an exit).
-fn tunnel_behind(tiles: &[Option<Building>], x: i32, y: i32, dir: Dir) -> Option<bool> {
+fn tunnel_behind(tiles: &Tiles, x: i32, y: i32, dir: Dir) -> Option<bool> {
     let (dx, dy) = dir.delta();
     for k in 1..=TUNNEL_REACH + 1 {
         let (tx, ty) = (x - dx * k, y - dy * k);

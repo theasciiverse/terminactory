@@ -150,6 +150,11 @@ const fn test_recipe(name: &'static str, tag: char) -> Recipe {
         tag,
     }
 }
+/// The saved building at (x, y) on floor `f`: a floor lists its buildings as [x, y, building].
+fn tile_json(json: &mut Value, f: usize, x: i32, y: i32) -> &mut Value {
+    let tiles = json["floors"][f]["tiles"].as_array_mut().unwrap();
+    tiles.iter_mut().find(|t| t[0] == x && t[1] == y).unwrap_or_else(|| panic!("no building saved at {x},{y}")).get_mut(2).unwrap()
+}
 static LIST_ABC: [Recipe; 3] = [test_recipe("alpha", 'A'), test_recipe("beta", 'B'), test_recipe("gamma", 'C')];
 /// The same machine after an update: a recipe added in front and the others shuffled.
 static LIST_NEW: [Recipe; 4] = [test_recipe("zeta", 'Z'), test_recipe("gamma", 'C'), test_recipe("alpha", 'A'), test_recipe("beta", 'B')];
@@ -164,8 +169,8 @@ fn a_recipe_is_saved_by_name_so_a_reordered_or_extended_list_changes_nothing() {
     w.place(0, 10, 5, Kind::Molder, Dir::E).unwrap();
     set_recipe(&mut w, 5, 5, 2);
     set_recipe(&mut w, 10, 5, 1);
-    let (path, json) = save_json(&mut w, &data, "save1");
-    let machine = &json["floors"][0]["tiles"][idx(5, 5)]["st"]["Crafter"];
+    let (path, mut json) = save_json(&mut w, &data, "save1");
+    let machine = &tile_json(&mut json, 0, 5, 5)["st"]["Crafter"];
     assert_eq!(machine["recipe_name"], "gamma");
     assert!(machine.get("recipe").is_none(), "the index itself is not saved");
     // The game is updated: the list now starts with a new recipe and the old ones moved.
@@ -200,8 +205,8 @@ fn a_recipe_that_is_gone_falls_back_to_the_first_with_a_note_and_does_not_panic(
     // A name that never existed, and a machine whose name is missing from the file.
     RECIPE_OVERRIDE.with(|o| o.set(Some((Kind::Molder, &LIST_ABC))));
     let mut bad = json.clone();
-    bad["floors"][0]["tiles"][idx(5, 5)]["st"]["Crafter"]["recipe_name"] = json!("no such recipe");
-    bad["floors"][0]["tiles"][idx(10, 5)]["st"]["Crafter"].as_object_mut().unwrap().remove("recipe_name");
+    tile_json(&mut bad, 0, 5, 5)["st"]["Crafter"]["recipe_name"] = json!("no such recipe");
+    tile_json(&mut bad, 0, 10, 5)["st"]["Crafter"].as_object_mut().unwrap().remove("recipe_name");
     let mut l = load_json(&path, &bad).unwrap();
     assert_eq!((recipe_name_at(&l, 5, 5), recipe_name_at(&l, 10, 5)), ("alpha", "alpha"));
     assert_eq!(l.progress.notes.len(), 2);
@@ -300,11 +305,10 @@ fn a_world_with_every_part_round_trips_exactly() {
     assert!(l.progress.is_open(Company::ALL[COMPANIES - 1]) && !l.progress.is_open(closed));
     let pool = l.fluids.pipe_pool[up][idx(21, 20)] as usize;
     assert_eq!((l.fluids.pools[pool].fluid, l.fluids.pools[pool].amount), (Some(Fluid::MoltenSteel), 12.5));
-    for (a, b) in w.floors[0].tiles.iter().zip(&l.floors[0].tiles) {
-        let (Some(a), Some(b)) = (a, b) else {
-            assert!(a.is_none() && b.is_none());
-            continue;
-        };
+    let (before, after) = (w.floors[0].tiles.occupied(), l.floors[0].tiles.occupied());
+    assert_eq!(before.len(), after.len());
+    for ((ia, a), (ib, b)) in before.into_iter().zip(after) {
+        assert_eq!(ia, ib, "every building is where it was");
         assert_eq!(a.kind, b.kind);
         if let (St::Crafter { recipe: ra, stock: sa, fluid: fa, .. }, St::Crafter { recipe: rb, stock: sb, fluid: fb, .. }) = (&a.st, &b.st)
         {

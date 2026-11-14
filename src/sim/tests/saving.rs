@@ -319,3 +319,50 @@ fn a_current_save_without_history_still_loads() {
     assert_eq!(back.econ.earned_money, w.econ.earned_money);
     let _ = std::fs::remove_dir_all(&data);
 }
+
+/// The version 7 layout of a floor: three fixed 120 by 80 grids, as that game wrote them.
+fn as_v7(save: &Value) -> Value {
+    let mut old = save.clone();
+    for floor in old["floors"].as_array_mut().unwrap() {
+        let default = floor["dug_default"].as_bool().unwrap();
+        let mut dug = vec![json!(default); 120 * 80];
+        for p in floor["dug"].as_array().unwrap() {
+            dug[p[1].as_u64().unwrap() as usize * 120 + p[0].as_u64().unwrap() as usize] = json!(!default);
+        }
+        let mut tiles = vec![Value::Null; 120 * 80];
+        for t in floor["tiles"].as_array().unwrap() {
+            tiles[t[1].as_u64().unwrap() as usize * 120 + t[0].as_u64().unwrap() as usize] = t[2].clone();
+        }
+        let level = floor["level"].clone();
+        *floor = json!({ "level": level, "dug": dug, "tiles": tiles, "owner": vec![Value::Null; 120 * 80] });
+    }
+    old["version"] = json!(7);
+    old
+}
+
+#[test]
+fn a_version_7_save_opens_and_comes_out_the_same() {
+    let mut w = World::new();
+    w.build_demo().unwrap();
+    for _ in 0..TPS * 20 {
+        w.tick();
+    }
+    let dir = std::env::temp_dir().join(format!("factory-v7-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let new_path = dir.join("save-new.json");
+    w.save(&new_path).unwrap();
+    let new: Value = serde_json::from_str(&std::fs::read_to_string(&new_path).unwrap()).unwrap();
+    let old_path = dir.join("save-old.json");
+    std::fs::write(&old_path, as_v7(&new).to_string()).unwrap();
+    assert_eq!(World::file_version(&old_path), Some(7));
+    let mut loaded = World::load(&old_path).expect("a version 7 save still opens");
+    assert_eq!(loaded.version, SAVE_VERSION);
+    // The same factory: every building where it was, and saving it again gives the same file.
+    let (a, b) = (w.floors[0].tiles.occupied(), loaded.floors[0].tiles.occupied());
+    assert_eq!(a.iter().map(|(i, bl)| (*i, bl.kind)).collect::<Vec<_>>(), b.iter().map(|(i, bl)| (*i, bl.kind)).collect::<Vec<_>>());
+    let again = dir.join("save-again.json");
+    loaded.save(&again).unwrap();
+    let again: Value = serde_json::from_str(&std::fs::read_to_string(&again).unwrap()).unwrap();
+    assert_eq!(again["floors"], new["floors"]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
