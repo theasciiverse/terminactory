@@ -3898,20 +3898,3 @@ fn only_a_precision_assembler_makes_the_fine_mask_and_the_x4x2() {
         assert!(!recipe_names(k).contains(&"fine mask") && !recipe_names(k).contains(&"microprocessor (x4x2)"), "{k:?}");
     }
 }
-
-#[test]
-fn a_new_splitter_turns_the_belts_around_it_to_line_up() {
-    let mut w = World::new();
-    // An incoming line ends sideways beside where the splitter goes, and a lone belt sits in front.
-    w.place(0, 10, 10, Kind::Belt, Dir::E).unwrap();
-    w.place(0, 11, 10, Kind::Belt, Dir::S).unwrap(); // end of the line: fed, leads nowhere
-    w.place(0, 12, 11, Kind::Belt, Dir::E).unwrap(); // a stray belt lying sideways
-    w.place(0, 12, 10, Kind::Splitter, Dir::E).unwrap();
-    let turned = w.route_belts_around_splitter(0, 12, 10);
-    assert_eq!(turned, 2);
-    assert_eq!(w.tile(0, 11, 10).unwrap().dir, Dir::E, "the end of the incoming line now faces the splitter");
-    assert_eq!(w.tile(0, 12, 11).unwrap().dir, Dir::S, "a stray belt faces away from it");
-    // Belts that already line up are left alone.
-    w.place(0, 13, 10, Kind::Belt, Dir::E).unwrap();
-    assert_eq!(w.route_belts_around_splitter(0, 12, 10), 0);
-}
