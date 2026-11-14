@@ -826,6 +826,7 @@ impl App {
             Action::Place => self.place_here(),
             Action::Rotate => self.rotate(shift),
             Action::Remove => self.remove_here(true),
+            Action::Setup if self.selected.is_some_and(|k| self.cycle_hand_setting(k)) => {}
             Action::Setup => {
                 let (x, y) = self.cursor;
                 match self.world.configure(self.floor, x, y) {
@@ -2229,6 +2230,66 @@ impl App {
             }
             Err(e) => self.say(e),
         }
+    }
+
+    /// `f` with a part in hand: changes the setting it will have when placed (a drill's ore, a
+    /// machine's recipe, a trade post's mode, an arm's filter), the way `f` does on a placed part.
+    /// Returns false when the part has no setting, so `f` falls through to what is under the cursor.
+    fn cycle_hand_setting(&mut self, kind: Kind) -> bool {
+        use crate::sim::{Item, SellMode, Setting};
+        let progress = &self.world.progress;
+        let msg = if kind.is_drill() {
+            let ores = kind.ores();
+            if ores.len() < 2 {
+                return false;
+            }
+            let cur = match self.paste {
+                Some(Setting::Mines(m)) => ores.iter().position(|&o| o == m).unwrap_or(0),
+                _ => 0,
+            };
+            let next = ores[(cur + 1) % ores.len()];
+            self.paste = Some(Setting::Mines(next));
+            format!("{} will mine {}", kind.name(), next.name())
+        } else if matches!(kind, Kind::TradePost | Kind::LiquidTrader) {
+            let cur = match self.paste {
+                Some(Setting::Sell(m)) => m,
+                _ => SellMode::Money,
+            };
+            let next = cur.next();
+            self.paste = Some(Setting::Sell(next));
+            format!("{} will be set to {}", kind.name(), next.label())
+        } else if matches!(kind, Kind::Arm | Kind::LongArm | Kind::Sorter) {
+            let next = match self.paste {
+                Some(Setting::Filter(Some(i))) => Item::ALL.get(i.idx() + 1).copied(),
+                Some(Setting::Filter(None)) | None => Some(Item::ALL[0]),
+                Some(_) => Some(Item::ALL[0]),
+            };
+            self.paste = Some(Setting::Filter(next));
+            match next {
+                Some(i) => format!("{} will filter {}", kind.name(), i.name()),
+                None => format!("{} will have no filter", kind.name()),
+            }
+        } else {
+            let list = kind.recipes();
+            let usable = |r: &crate::sim::Recipe| r.needs.is_none_or(|t| progress.has(t));
+            if list.iter().filter(|r| usable(r)).count() < 2 {
+                return false;
+            }
+            let mut n = match self.paste {
+                Some(Setting::Recipe(r)) => r as usize,
+                _ => 0,
+            };
+            loop {
+                n = (n + 1) % list.len();
+                if usable(&list[n]) {
+                    break;
+                }
+            }
+            self.paste = Some(Setting::Recipe(n as u8));
+            format!("{} will make {}", kind.name(), list[n].name)
+        };
+        self.say(msg);
+        true
     }
 
     /// Middle-click: picks up the part under the cursor, facing and settings included,

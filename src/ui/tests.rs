@@ -2692,3 +2692,36 @@ fn an_address_typed_in_the_search_box_opens_like_one_in_the_address_bar() {
     app.book_submit_search("north belt");
     assert_eq!(app.book_slug, "search?q=north belt");
 }
+
+#[test]
+fn f_with_a_part_in_hand_changes_what_it_will_be_when_placed() {
+    use crate::sim::Setting;
+    let mut app = App::new(World::new());
+    app.world.progress.researched = [true; crate::sim::TECHS];
+    let key = |app: &mut App, c: char| app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    // 1 then 1: the cheap drill. f cycles its ore before it is placed.
+    key(&mut app, '1');
+    key(&mut app, '1');
+    assert_eq!(app.selected, Some(Kind::Drill));
+    key(&mut app, 'f');
+    let Some(Setting::Mines(first)) = app.paste else { panic!("{:?}", app.paste) };
+    key(&mut app, 'f');
+    let Some(Setting::Mines(second)) = app.paste else { panic!("{:?}", app.paste) };
+    assert_ne!(first, second);
+    let screen = text(&render(&mut app, 150, 45));
+    assert!(screen.contains(&format!("mines {}", second.name())), "the hand shows the ore:\n{screen}");
+    // Placing applies it.
+    let (x, y) = app.cursor;
+    key(&mut app, ' ');
+    assert!(matches!(app.world.setting_at(app.floor, x, y), Some(Setting::Mines(m)) if m == second));
+    // Machines: f cycles the recipe it will make.
+    app.selected = Some(Kind::Press);
+    app.paste = None;
+    key(&mut app, 'f');
+    assert!(matches!(app.paste, Some(Setting::Recipe(1))), "{:?}", app.paste);
+    // A part with nothing to set leaves f to the part under the cursor.
+    app.selected = Some(Kind::Belt);
+    app.paste = None;
+    key(&mut app, 'f');
+    assert!(app.paste.is_none());
+}

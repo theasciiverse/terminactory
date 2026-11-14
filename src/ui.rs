@@ -402,6 +402,19 @@ fn category_spans(app: &App, cat: Category, room: usize) -> Vec<Span<'static>> {
 
 /// The picked part in the status line: price (or "locked") and facing matter most, so a long
 /// name is shortened, and the keys go before the numbers do.
+/// The setting the part in hand will have when placed (`f` changes it), as a few words.
+fn hand_setting(app: &App, k: Kind) -> Option<String> {
+    use crate::sim::Setting;
+    Some(match app.paste? {
+        Setting::Mines(i) => format!("mines {}", i.name()),
+        Setting::Recipe(r) if k.recipes().len() > 1 => format!("makes {}", k.recipes().get(r as usize)?.name),
+        Setting::Sell(m) => m.label().to_string(),
+        Setting::Filter(Some(i)) => format!("filter {}", i.name()),
+        Setting::Filter(None) => "no filter".to_string(),
+        _ => return None,
+    })
+}
+
 fn part_spans(app: &App, cat: Category, k: Kind, room: usize) -> Vec<Span<'static>> {
     let dim = Style::new().fg(Color::DarkGray);
     let bold = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
@@ -450,6 +463,11 @@ fn part_spans(app: &App, cat: Category, k: Kind, room: usize) -> Vec<Span<'stati
             spans.push(Span::raw(format!("  facing {}", app.dir.arrow())));
             if with_rot {
                 spans.push(Span::styled(format!(" ({rot})"), dim));
+            }
+        }
+        if keys >= 1 {
+            if let Some(set) = hand_setting(app, k) {
+                spans.push(Span::styled(format!("  ·  {set}"), Style::new().fg(Color::Yellow)));
             }
         }
         match keys {
@@ -1776,6 +1794,9 @@ fn side_lines(app: &App, full_h: u16) -> (Vec<Line<'static>>, usize) {
     if let Some(k) = app.selected {
         if k.directional() {
             lines.push(Line::styled(format!(" facing {}  ({} rotates)", app.dir.arrow(), app.controls.key(Action::Rotate)), dim));
+        }
+        if let Some(set) = hand_setting(app, k) {
+            lines.push(Line::styled(format!(" {set}  ({} changes)", app.controls.key(Action::Setup)), Style::new().fg(Color::Yellow)));
         }
     }
 
