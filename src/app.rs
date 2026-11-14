@@ -1018,7 +1018,8 @@ impl App {
         if let Some(e) = Self::book_entry_for_slug(&self.book_slug) {
             self.book_entry = e;
         }
-        self.book_opened = Some(std::time::Instant::now());
+        // Switching tabs shows a page already loaded: no progress bar.
+        self.book_opened = None;
         self.book_land();
     }
 
@@ -1030,6 +1031,7 @@ impl App {
         self.book_tabs.push(t);
         let i = self.book_tabs.len() - 1;
         self.book_load_tab(i);
+        self.book_opened = Some(std::time::Instant::now());
     }
 
     /// Switches to a tab by its place in the strip.

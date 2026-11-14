@@ -2530,3 +2530,16 @@ fn clicking_away_unfocuses_the_box_and_digits_pick_tabs() {
     assert_eq!(app.book_active, 1);
     assert!(app.book_query.ends_with('1'));
 }
+
+#[test]
+fn switching_tabs_shows_no_progress_bar_but_a_new_tab_does() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_new_tab("boiler");
+    assert!(app.book_opened.is_some(), "a new tab loads");
+    app.book_opened = None;
+    app.book_switch(0);
+    assert!(app.book_opened.is_none());
+    app.book_switch(1);
+    assert!(app.book_opened.is_none());
+}
