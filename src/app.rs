@@ -1133,7 +1133,7 @@ impl App {
             .map(|(i, _)| i)
     }
 
-    fn book_go_slug(&mut self, slug: &str) {
+    pub(crate) fn book_go_slug(&mut self, slug: &str) {
         // Signing out shows the domain's index: the login is gone before the page is opened.
         if let Some(domain) = slug.trim_end_matches('/').strip_suffix("/logout").map(str::to_string) {
             self.book_logins.retain(|(d, _)| *d != domain);
@@ -1180,6 +1180,11 @@ impl App {
         self.book_results.clear();
         self.book_login = None;
         self.book_login_typing = false;
+        // A sign-in form has the keys from the start: the player opens it to type in it.
+        if self.book_asks_login() {
+            self.book_typing = false;
+            self.start_login();
+        }
     }
 
     /// The user signed in on a domain, if there is one.
@@ -1403,6 +1408,11 @@ impl App {
 
     #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
+        // Whatever else had the keys, a sign-in form on the page takes them.
+        if self.book_asks_login() && !self.book_login_typing && matches!(k.code, KeyCode::Char(_)) {
+            self.book_typing = false;
+            self.start_login();
+        }
         if self.book_typing {
             match k.code {
                 KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => self.book_query.push(c),

@@ -2298,3 +2298,18 @@ fn the_copy_button_is_in_the_status_bar_and_the_page_text_is_plain() {
     let thread = app.book_page_text().expect("thread text");
     assert!(thread.contains(" · "), "{thread}");
 }
+
+#[test]
+fn a_sign_in_form_takes_typing_even_when_the_search_box_had_the_keys() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    app.book_typing = true;
+    app.book_go_slug("portal.plant3.lan/login");
+    for c in "ab".chars() {
+        app.on_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    assert_eq!(app.book_login.as_ref().map(|f| f.user.as_str()), Some("ab"));
+    assert!(app.book_query.is_empty());
+}
