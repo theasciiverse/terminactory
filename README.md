@@ -4,6 +4,8 @@ A cozy factory game for your terminal. Dig copper, coal and iron, melt it, press
 
 It is made to sit in a split next to your AI agents. They can send you short messages that show up in the game, so you can play while they work.
 
+![A factory running in the terminal](docs/screenshots/map.webp)
+
 ```
 tfac --demo     # a small working factory to look at
 ```
@@ -72,6 +74,16 @@ Keys can be changed in `~/.terminactory/controls.json`.
 ### The browser
 
 `b` opens **termweb**, the game's own browser. It has a search page, tabs, bookmarks, history and an address bar. It holds the game's wiki (every item and machine, with recipes, prices and where it sits in the research tree) and a small web of other sites you can look through as you play. Research (`t`) and production (`o`) open in it too.
+
+![termweb searching for coal](docs/screenshots/search.webp)
+
+![An item page in the wiki, with its recipe and how its research fades](docs/screenshots/wiki.webp)
+
+Research (`t`) and production (`o`) are sites in the browser, so they sit in their own tabs:
+
+![The research tree](docs/screenshots/research.webp)
+
+![Production, per item, over the last minute](docs/screenshots/production.webp)
 
 Inside the browser, `b` opens a new tab, `Esc` puts it away with your tabs kept, and `1`–`9` switch tabs. "Copy page" in the bottom bar puts a page's text on your clipboard.
 
