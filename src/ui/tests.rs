@@ -1802,7 +1802,7 @@ fn wiki_scrolls_the_complete_copper_coil_page_and_counts_all_machine_pages() {
     assert!(wide_top.contains("Recipes"), "{wide_top}");
     wide.book_scroll = u16::MAX;
     let wide_end = text(&render(&mut wide, 140, 45));
-    for heading in ["Unlock", "Tips", "See also"] {
+    for heading in ["Research", "Tips", "See also"] {
         assert!(wide_end.contains(heading), "missing {heading}: {wide_end}");
     }
     assert!(wide.book_scroll > 0);
@@ -2604,4 +2604,28 @@ fn reopening_the_browser_never_overwrites_a_tab_and_research_is_a_site() {
     assert!(t.contains("research.lan") && t.contains("Research") && !t.contains("Copy page"), "{t}");
     app.book_submit_address("research.lan");
     assert_eq!(app.book_slug, "research");
+}
+
+#[test]
+fn item_and_machine_pages_show_their_place_in_the_research_tree() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    for slug in ["coke", "computer", "press", "furnace", "copper-ore"] {
+        app.book_slug = slug.into();
+        let screen = text(&render(&mut app, 140, 60));
+        assert!(screen.contains("Research") && screen.contains("Unlock"), "{slug} has a Research section:\n{screen}");
+    }
+    for (name, must) in [("Coke", "Coking"), ("Computer", "this page"), ("Press", "Press")] {
+        let entry =
+            Entry::list("", false).into_iter().chain(Entry::list("", true)).find(|e| e.name().eq_ignore_ascii_case(name)).expect(name);
+        let graph = crate::ui::research_graph(&app.world, entry).expect(name);
+        println!("{name}:\n{graph}");
+        assert!(graph.contains(must), "{name}: {graph}");
+    }
+    // Every item and machine with a page gets one, and the path always ends at the page itself.
+    for entry in Entry::list("", false).into_iter().chain(Entry::list("", true)) {
+        if let Some(graph) = crate::ui::research_graph(&app.world, entry) {
+            assert!(graph.starts_with("Copper Works\n") && graph.contains("◀ this page"), "{}: {graph}", entry.name());
+        }
+    }
 }

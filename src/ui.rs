@@ -4347,6 +4347,10 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
             out.push_str(if world.progress.part_unlocked(k) { "Ready to build.\n" } else { "Locked by research or company progress.\n" });
         }
     }
+    if let Some(graph) = research_graph(world, entry) {
+        out.push_str("\n## Research\n");
+        out.push_str(&graph);
+    }
     for line in rest {
         if !line.trim().is_empty() {
             out.push_str(line);
@@ -4372,6 +4376,64 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
         "─".repeat(width.saturating_sub(2))
     ));
     out
+}
+
+/// Where a page's item or machine sits in the research tree: its node, if it has one.
+fn research_node(entry: Entry) -> Option<usize> {
+    let tech_node = |k: Kind| k.tech().and_then(crate::research::node_id_for_tech);
+    match entry {
+        Entry::Part(k) => tech_node(k),
+        Entry::Item(item) => TREE.iter().position(|(n, _)| *n == Node::Key(Made::Item(item))).or_else(|| {
+            CRAFTERS
+                .iter()
+                .filter(|k| k.recipes().iter().any(|r| r.outputs.iter().any(|o| o.0 == item)))
+                .chain(Kind::ALL.iter().filter(|k| k.is_drill() && k.ores().contains(&item)))
+                .find_map(|&k| tech_node(k))
+        }),
+    }
+}
+
+/// The page's place in the research tree as an indented path: from Copper Works down to it,
+/// then what it opens. Done parts are ticked.
+pub(crate) fn research_graph(world: &World, entry: Entry) -> Option<String> {
+    let id = research_node(entry)?;
+    let mut path = crate::research::ancestors(id);
+    path.reverse();
+    let label = |i: usize, here: bool| {
+        let (name, done, link) = match TREE[i].0 {
+            Node::Tech(t) => {
+                let slug = crate::wiki::slug(t.name());
+                (t.name().to_string(), world.progress.has(t), crate::wiki::page(&slug).is_some().then_some(slug))
+            }
+            Node::Key(k) => {
+                let made = match k {
+                    Made::Item(item) => world.econ.made[item.idx()] > 0,
+                    Made::Fluid(_) => world.econ.made_of(k) > 0,
+                };
+                let slug = crate::wiki::slug(k.name());
+                (k.name().to_string(), made, crate::wiki::page(&slug).is_some().then_some(slug))
+            }
+            n => (node_name(n), true, None),
+        };
+        let shown = match link {
+            Some(slug) if !here => format!("[[{slug}|{name}]]"),
+            _ => name,
+        };
+        format!("{} {shown}{}", if done { "✓" } else { "○" }, if here { "   ◀ this page" } else { "" })
+    };
+    let nbsp = '\u{a0}';
+    let mut out = format!("Copper Works\n");
+    for (depth, &i) in path.iter().enumerate() {
+        out.push_str(&format!("{}└─ {}\n", nbsp.to_string().repeat(depth * 3), label(i, false)));
+    }
+    let depth = path.len();
+    out.push_str(&format!("{}└─ {}\n", nbsp.to_string().repeat(depth * 3), label(id, true)));
+    let kids = tree_children(id);
+    for (n, &k) in kids.iter().enumerate() {
+        let branch = if n + 1 == kids.len() { "└─" } else { "├─" };
+        out.push_str(&format!("{}{branch} {}\n", nbsp.to_string().repeat((depth + 1) * 3), label(k, false)));
+    }
+    Some(out)
 }
 
 /// The address a page shows in the address field and the status bar.
