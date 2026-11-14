@@ -4104,7 +4104,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
-fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
+fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry, world: &World) {
     if area.width < 12 || area.height < 6 {
         return;
     }
@@ -4163,6 +4163,33 @@ fn draw_wiki_infobox(f: &mut Frame, area: Rect, entry: Entry) {
         f.buffer_mut().set_string(area.x + 1, y, label, Style::new().fg(Color::Gray).bold());
         let val_x = area.x + area.width.saturating_sub(value.len() as u16).saturating_sub(1);
         f.buffer_mut().set_string(val_x, y, value, Style::new().fg(if label == "Money" { Color::Yellow } else { Color::Gray }));
+    }
+    // Under the RP row, in the research blue: how the research per unit fades as more is sold.
+    if let Entry::Item(item) = entry {
+        let top = area.y + 8;
+        let rows = area.bottom().saturating_sub(1).saturating_sub(top).min(2) as usize;
+        let cols = area.width.saturating_sub(2) as usize;
+        if rows > 0 {
+            if let Some((lines, mark)) = fade_chart(item, world.econ.research_sales[item.idx()], cols, rows) {
+                let blue = Style::new().fg(Color::Indexed(75));
+                for (i, line) in lines.iter().enumerate() {
+                    f.buffer_mut().set_string(area.x + 1, top + i as u16, line, blue);
+                }
+                // The sales so far: that column of the chart drawn bright.
+                if let Some(col) = mark {
+                    for (i, line) in lines.iter().enumerate() {
+                        if let Some(ch) = line.chars().nth(col).filter(|c| *c != ' ') {
+                            f.buffer_mut().set_string(
+                                area.x + 1 + col as u16,
+                                top + i as u16,
+                                ch.to_string(),
+                                Style::new().fg(Color::White).bold(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -4385,8 +4412,8 @@ fn book_page_markdown(world: &World, entry: Entry, md: &str, width: usize) -> St
     out
 }
 
-/// How much research each unit sold brings, and how it fades: a few lines of numbers and a small
-/// chart of research per unit against units sold, with a mark at how many you have sold.
+/// How much research each unit sold brings, and how it fades, in words. The chart of it is in the
+/// infobox (`fade_chart`).
 pub(crate) fn research_fade(world: &World, item: Item, width: usize) -> Option<String> {
     let c = item.curve();
     if c.worth <= 0.0 {
@@ -4406,51 +4433,33 @@ pub(crate) fn research_fade(world: &World, item: Item, width: usize) -> Option<S
         c.worth * c.floor,
         grouped(knee as f64)
     ));
-    out.push_str(&format!("You have sold {}; the next one brings {:.2}.\n\n", grouped(sold as f64), c.value(sold)));
-    // The chart: units sold across, research per unit up, a little past the knee.
-    let span = knee + knee / 4;
-    let cols = width.saturating_sub(8).clamp(16, 48);
-    let rows = 4usize;
+    out.push_str(&format!("You have sold {}; the next one brings {:.2}.\n", grouped(sold as f64), c.value(sold)));
+    Some(out)
+}
+
+/// Research per unit against units sold, as `cols` columns of `rows` text rows (8 levels each),
+/// top row first, a little past the point where it settles at the floor. The second value is
+/// the column for how many have been sold, if it is on the chart.
+fn fade_chart(item: Item, sold: u64, cols: usize, rows: usize) -> Option<(Vec<String>, Option<usize>)> {
+    let c = item.curve();
+    if c.worth <= 0.0 || c.decay >= 1.0 || c.floor >= 1.0 || cols == 0 {
+        return None;
+    }
+    let knee = (c.floor.ln() / c.decay.ln()).ceil().max(1.0) as u64;
+    let span = (knee + knee / 4) as f64;
     let heights: Vec<usize> = (0..cols)
         .map(|x| {
-            let n = (x as f64 + 0.5) / cols as f64 * span as f64;
-            let part = c.value(n as u64) / c.worth;
-            (part * (rows * 8) as f64).round().clamp(1.0, (rows * 8) as f64) as usize
+            let n = (x as f64 + 0.5) / cols as f64 * span;
+            (c.value(n as u64) / c.worth * (rows * 8) as f64).round().clamp(1.0, (rows * 8) as f64) as usize
         })
         .collect();
     const BLOCKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-    for r in (0..rows).rev() {
-        let line: String = heights
-            .iter()
-            .map(|&h| {
-                let here = h.saturating_sub(r * 8).min(8);
-                if here == 0 {
-                    ' '
-                } else {
-                    BLOCKS[here - 1]
-                }
-            })
-            .collect();
-        let label = if r == rows - 1 {
-            format!("{:.1}", c.worth)
-        } else if r == 0 {
-            format!("{:.1}", c.worth * c.floor)
-        } else {
-            String::new()
-        };
-        out.push_str(&format!("│{line} {label}\n"));
-    }
-    out.push_str(&format!("└{}\n", "─".repeat(cols)));
-    let mark = ((sold as f64 / span as f64) * cols as f64).round() as usize;
-    if mark < cols {
-        out.push_str(&format!("{}▲ you are here\n", "\u{a0}".repeat(mark + 1)));
-    } else {
-        out.push_str(&format!("{}you are past the end of the chart\n", "\u{a0}".repeat(1)));
-    }
-    let end = format!("{} sold", grouped(span as f64));
-    let gap = (cols + 1).saturating_sub(1 + end.chars().count());
-    out.push_str(&format!("0{}{end}\n", "\u{a0}".repeat(gap)));
-    Some(out)
+    let lines = (0..rows)
+        .rev()
+        .map(|r| heights.iter().map(|&h| if h <= r * 8 { ' ' } else { BLOCKS[h.saturating_sub(r * 8).min(8) - 1] }).collect())
+        .collect();
+    let mark = (sold as f64 / span * cols as f64) as usize;
+    Some((lines, (mark < cols).then_some(mark)))
 }
 
 /// Where a page's item or machine sits in the research tree: its node, if it has one.
@@ -5237,7 +5246,7 @@ fn render_wiki_text(f: &mut Frame, area: Rect, md: &str, app: &mut App, info_are
                 let info_area = info_area.unwrap_or(area);
                 Rect::new(info_area.x, y, info_area.width, 11.min(area.bottom() - y))
             };
-            draw_wiki_infobox(f, box_area, entry);
+            draw_wiki_infobox(f, box_area, entry, &app.world);
         }
     }
 }

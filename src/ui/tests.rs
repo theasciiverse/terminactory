@@ -2640,7 +2640,7 @@ fn item_pages_chart_how_research_fades_with_sales() {
         fade.contains("The first unit sold brings 8.00") && fade.contains("down to 0.24") && fade.contains("You have sold 100"),
         "{fade}"
     );
-    assert!(fade.contains('█') && fade.contains("you are here") && fade.contains("sold"), "{fade}");
+    assert!(!fade.contains('█'), "the chart lives in the infobox: {fade}");
     // Waste earns nothing, so it has no chart.
     assert!(crate::ui::research_fade(&w, Item::Waste, 80).is_none());
     // On the page itself.
@@ -2648,8 +2648,20 @@ fn item_pages_chart_how_research_fades_with_sales() {
     app.book = true;
     app.book_slug = "coke".into();
     app.book_scroll = u16::MAX;
-    let screen = text(&render(&mut app, 140, 45));
-    assert!(screen.contains("Research"), "{screen}");
+    app.book_scroll = 0;
+    let buf = render(&mut app, 140, 45);
+    // The chart sits in the infobox in the research blue, under the RP row.
+    let blue_blocks = (0..buf.area.height)
+        .flat_map(|y| (0..buf.area.width).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            let c = &buf[(x, y)];
+            "▁▂▃▄▅▆▇█".contains(c.symbol()) && c.fg == Color::Indexed(75)
+        })
+        .count();
+    assert!(blue_blocks >= 10, "{blue_blocks} blue chart cells in the infobox");
+    let t = text(&buf);
+    let rp_row = t.lines().position(|l| l.contains("RP 8.0x")).expect("the RP row");
+    assert!(t.lines().skip(rp_row + 1).take(2).any(|l| l.contains('█') || l.contains('▁')), "chart under the RP row: {t}");
 }
 
 #[test]
