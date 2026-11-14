@@ -260,8 +260,8 @@ impl Tab {
         match self.slug.as_str() {
             "start" => "termweb".into(),
             "home" => "Home".into(),
-            "history" => "Search history".into(),
-            s if s.starts_with("search?q=") => format!("{} - termweb", &s["search?q=".len()..]),
+            "history" => "History".into(),
+            s if s.starts_with("search?q=") => s["search?q=".len()..].to_string(),
             "items" => "Items".into(),
             "machines" => "Machines".into(),
             "topics" => "Topics".into(),
