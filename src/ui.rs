@@ -3789,7 +3789,8 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
         let title = tab.title();
         let tail = if close_chips { " ✕ " } else { " " };
         let fixed = 1 + tail.chars().count();
-        let mut label: String = title.chars().take(room.saturating_sub(fixed).max(1)).collect();
+        // A tab's name stays short, whatever the page is called.
+        let mut label: String = title.chars().take(room.saturating_sub(fixed).clamp(1, 16)).collect();
         if label.chars().count() < title.chars().count() {
             label.push('…');
         }
@@ -3832,22 +3833,37 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     // The address field, a rounded box with a lock and no https://.
     // Below 40 columns the lock and the star step aside so the address itself still fits.
     let phone = inner.width < 40;
-    let url = format!(
-        "{}{}",
-        book_url(&app.book_slug),
-        if app.book_typing && app.book_slug != "start" && !app.book_slug.starts_with("search?q=") {
-            format!("?{}▏", app.book_query)
+    let editing = app.book_url_edit.is_some();
+    let url = if let Some(text) = &app.book_url_edit {
+        if app.book_url_fresh {
+            text.clone()
         } else {
-            String::new()
+            format!("{text}▏")
         }
-    );
+    } else {
+        format!(
+            "{}{}",
+            book_url(&app.book_slug),
+            if app.book_typing && app.book_slug != "start" && !app.book_slug.starts_with("search?q=") {
+                format!("?{}▏", app.book_query)
+            } else {
+                String::new()
+            }
+        )
+    };
     let field_x = inner.x + 9;
     let field_w = inner.width.saturating_sub(if phone { 9 } else { 13 });
     if field_w >= 4 {
-        let field = Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(238));
+        let mut field = Style::new().fg(Color::Indexed(252)).bg(Color::Indexed(238));
+        if editing {
+            // A field being edited is brighter; its text is reversed while it is all selected.
+            field = Style::new().fg(Color::Indexed(255)).bg(Color::Indexed(240));
+        }
         f.buffer_mut().set_string(field_x, bar_y, " ".repeat(field_w as usize), field);
         let text = fit_left(&url, field_w.saturating_sub(2) as usize);
-        f.buffer_mut().set_stringn(field_x + 1, bar_y, &text, field_w.saturating_sub(2) as usize, field);
+        let text_style = if editing && app.book_url_fresh { field.reversed() } else { field };
+        f.buffer_mut().set_stringn(field_x + 1, bar_y, &text, field_w.saturating_sub(2) as usize, text_style);
+        app.book_buttons.push((Rect::new(field_x, bar_y, field_w, 1), crate::app::BookButton::Address));
     }
     // The star that toggles a bookmark: filled when this page is on the bar.
     if !phone && inner.width >= 14 {

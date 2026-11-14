@@ -223,6 +223,8 @@ pub enum BookButton {
     /// The start page's History button and the history page's Clear button.
     History,
     ClearHistory,
+    /// The address field: click it to type an address or a search.
+    Address,
 }
 
 /// One browser tab: a page, its own history and where it was scrolled and picked.
@@ -358,6 +360,9 @@ pub struct App {
     pub book_buttons: Vec<(Rect, BookButton)>,
     /// Fullscreen, the places on the title bar and toolbar a double click can land, and the last click.
     pub book_full: bool,
+    /// The address field while it is being edited, and whether its text is still all selected.
+    pub book_url_edit: Option<String>,
+    pub book_url_fresh: bool,
     pub book_nav: Vec<Rect>,
     pub book_last_click: Option<(Instant, u16, u16)>,
     /// The browser's tabs, and which one is showing. The `book_*` page fields below are the
@@ -506,6 +511,8 @@ impl App {
             book_area: Rect::default(),
             book_buttons: Vec::new(),
             book_full: false,
+            book_url_edit: None,
+            book_url_fresh: false,
             book_nav: Vec::new(),
             book_last_click: None,
             book_tabs: vec![Tab::home()],
@@ -1421,6 +1428,55 @@ impl App {
         true
     }
 
+    /// What a typed address means: a page of termweb, a wiki page, a site, or a search.
+    pub fn book_submit_address(&mut self, text: &str) {
+        let t = text.trim();
+        let t = t.strip_prefix("https://").or_else(|| t.strip_prefix("http://")).unwrap_or(t).trim_end_matches('/');
+        if t.is_empty() {
+            return;
+        }
+        if t == "termweb.search" {
+            self.book_go_slug("start");
+        } else if let Some(rest) = t.strip_prefix("termweb.search/") {
+            self.book_go_slug(if rest == "history" { "history" } else { rest });
+        } else if let Some(slug) = t.strip_prefix("terminactory.wiki/") {
+            self.book_go_slug(slug);
+        } else if t == "terminactory.wiki" {
+            self.book_go_slug("home");
+        } else {
+            self.book_submit_search(t);
+        }
+    }
+
+    /// Keys while the address field is being edited.
+    fn url_key(&mut self, k: KeyEvent) {
+        let Some(text) = self.book_url_edit.as_mut() else { return };
+        match k.code {
+            KeyCode::Esc => self.book_url_edit = None,
+            KeyCode::Enter => {
+                let t = text.clone();
+                self.book_url_edit = None;
+                self.book_submit_address(&t);
+            }
+            KeyCode::Backspace => {
+                if self.book_url_fresh {
+                    text.clear();
+                } else {
+                    text.pop();
+                }
+                self.book_url_fresh = false;
+            }
+            KeyCode::Char(c) if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) => {
+                if self.book_url_fresh {
+                    text.clear();
+                }
+                text.push(c);
+                self.book_url_fresh = false;
+            }
+            _ => {}
+        }
+    }
+
     /// Yellow dot, `b`, Esc: put the browser away. The tabs stay as they are.
     pub fn book_minimize(&mut self) {
         self.book_store();
@@ -1451,6 +1507,10 @@ impl App {
 
     #[allow(dead_code)]
     fn book_key(&mut self, k: KeyEvent, action: Option<Action>) {
+        if self.book_url_edit.is_some() {
+            self.url_key(k);
+            return;
+        }
         // Whatever else had the keys, a sign-in form on the page takes them.
         if self.book_asks_login() && !self.book_login_typing && matches!(k.code, KeyCode::Char(_)) {
             self.book_typing = false;
@@ -1517,6 +1577,15 @@ impl App {
         if self.book_asks_login() && matches!(k.code, KeyCode::Char('i') | KeyCode::Enter) {
             self.start_login();
             return;
+        }
+        // With nothing focused, a digit picks a tab.
+        if let KeyCode::Char(c @ '1'..='9') = k.code {
+            if !k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::CONTROL) {
+                self.book_switch(c as usize - '1' as usize);
+                // Landing on a start page would focus its box; the next digit should still pick a tab.
+                self.book_typing = false;
+                return;
+            }
         }
         match (k.code, action) {
             // In the browser, b opens a new tab and Esc puts the browser away.
@@ -1686,6 +1755,14 @@ impl App {
                     self.book_minimize();
                     return;
                 }
+                // A click anywhere but the box being typed in takes the keys away from it.
+                let on = |b: BookButton| self.book_buttons.iter().any(|(r, x)| *x == b && r.contains(at));
+                if !on(BookButton::Edit) {
+                    self.book_typing = false;
+                }
+                if !on(BookButton::Address) {
+                    self.book_url_edit = None;
+                }
                 if let Some((_, i)) = self.book_tab_close.iter().find(|(r, _)| r.contains(at)) {
                     self.book_switch(*i);
                     self.book_close_tab();
@@ -1715,6 +1792,11 @@ impl App {
                         }
                         BookButton::Copy => self.book_copy(),
                         BookButton::History => self.book_go_slug("history"),
+                        BookButton::Address => {
+                            self.book_typing = false;
+                            self.book_url_edit = Some(crate::ui::book_url(&self.book_slug));
+                            self.book_url_fresh = true;
+                        }
                         BookButton::ClearHistory => {
                             self.settings.search_history.clear();
                             if let Some(path) = &self.settings_path {

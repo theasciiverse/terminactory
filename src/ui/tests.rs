@@ -2463,3 +2463,70 @@ fn b_opens_a_new_tab_and_esc_minimizes_in_the_browser() {
     assert!(!app.book);
     assert_eq!(app.book_tabs.len(), 2, "the tabs are kept");
 }
+
+#[test]
+fn the_address_field_takes_addresses_and_searches() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "boiler".into();
+    render(&mut app, 140, 45);
+    let click_field = |app: &mut App| {
+        let (r, _) = app.book_buttons.iter().find(|(_, b)| *b == crate::app::BookButton::Address).cloned().expect("the address field");
+        left_click(app, r.x + 2, r.y);
+    };
+    let type_text = |app: &mut App, t: &str| {
+        for c in t.chars() {
+            app.on_key(KeyEvent::from(KeyCode::Char(c)));
+        }
+    };
+    // The first key replaces the whole address.
+    click_field(&mut app);
+    assert!(app.book_url_edit.is_some());
+    type_text(&mut app, "gazette.city");
+    assert_eq!(app.book_url_edit.as_deref(), Some("gazette.city"));
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "gazette.city");
+    render(&mut app, 140, 45);
+    // Backspace on a fresh field deletes the whole address; Esc leaves it be.
+    click_field(&mut app);
+    app.on_key(KeyEvent::from(KeyCode::Backspace));
+    assert_eq!(app.book_url_edit.as_deref(), Some(""));
+    app.on_key(KeyEvent::from(KeyCode::Esc));
+    assert!(app.book_url_edit.is_none() && app.book_slug == "gazette.city");
+    // A wiki address and plain words.
+    click_field(&mut app);
+    type_text(&mut app, "terminactory.wiki/coal");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "coal");
+    render(&mut app, 140, 45);
+    click_field(&mut app);
+    type_text(&mut app, "north belt");
+    app.on_key(KeyEvent::from(KeyCode::Enter));
+    assert_eq!(app.book_slug, "search?q=north belt");
+}
+
+#[test]
+fn clicking_away_unfocuses_the_box_and_digits_pick_tabs() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    app.book_typing = true;
+    render(&mut app, 140, 45);
+    let (cx, cy) = (app.book_area.x + 3, app.book_area.bottom() - 4);
+    left_click(&mut app, cx, cy);
+    assert!(!app.book_typing, "a click elsewhere takes the keys away");
+    app.on_key(KeyEvent::from(KeyCode::Char('b')));
+    assert_eq!(app.book_tabs.len(), 2, "b opens a tab");
+    app.book_typing = false;
+    app.on_key(KeyEvent::from(KeyCode::Char('1')));
+    assert_eq!(app.book_active, 0);
+    app.on_key(KeyEvent::from(KeyCode::Char('2')));
+    assert_eq!(app.book_active, 1);
+    // While a box has the keys, digits are text.
+    app.book_typing = true;
+    app.on_key(KeyEvent::from(KeyCode::Char('1')));
+    assert_eq!(app.book_active, 1);
+    assert!(app.book_query.ends_with('1'));
+}
