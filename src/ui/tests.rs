@@ -2556,7 +2556,7 @@ fn the_production_site_has_two_tabs_an_address_and_no_copy_button() {
     app.on_key(KeyEvent::from(KeyCode::Tab));
     assert!(app.stats_history && app.book_slug == "production");
     let t = text(&render(&mut app, 140, 45));
-    assert!(t.contains("Money ·"), "{t}");
+    assert!(t.contains("Earnings show up here"), "{t}");
     // Typing the address finds it too.
     app.book_submit_address("terminactory.wiki/coal");
     app.book_submit_address("production.lan");
