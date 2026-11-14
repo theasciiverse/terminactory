@@ -1355,7 +1355,7 @@ impl App {
         }
         // A domain or address typed into the box opens it, rather than searching for it.
         if crate::web::is_addr(&q) {
-            self.book_go_slug(&q);
+            self.book_submit_address(&q);
             return;
         }
         self.book_go_slug(&format!("search?q={q}"));
@@ -1484,6 +1484,8 @@ impl App {
             self.book_go_slug("research");
         } else if t == "terminactory.wiki" {
             self.book_go_slug("home");
+        } else if crate::web::is_addr(t) {
+            self.book_go_slug(t);
         } else {
             self.book_submit_search(t);
         }

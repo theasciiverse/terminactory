@@ -2680,3 +2680,15 @@ fn the_contents_column_never_overlaps_the_text_of_a_plain_page() {
     }
     assert!(!screen.contains("See alsoer"), "{screen}");
 }
+
+#[test]
+fn an_address_typed_in_the_search_box_opens_like_one_in_the_address_bar() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_submit_search("terminactory.wiki/coal");
+    assert_eq!(app.book_slug, "coal");
+    app.book_submit_search("gazette.city");
+    assert_eq!(app.book_slug, "gazette.city");
+    app.book_submit_search("north belt");
+    assert_eq!(app.book_slug, "search?q=north belt");
+}
