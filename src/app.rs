@@ -214,6 +214,10 @@ pub enum BookButton {
     Search,
     Lucky,
     Edit,
+    /// The window's three dots: close (forget the tabs), minimize (keep them), fullscreen.
+    CloseWindow,
+    Minimize,
+    Fullscreen,
     /// The status bar's Copy button: the page's text goes to the clipboard.
     Copy,
 }
@@ -348,6 +352,10 @@ pub struct App {
     pub book_area: Rect,
     /// The browser's toolbar buttons, with where they were drawn, for clicks.
     pub book_buttons: Vec<(Rect, BookButton)>,
+    /// Fullscreen, the places on the title bar and toolbar a double click can land, and the last click.
+    pub book_full: bool,
+    pub book_nav: Vec<Rect>,
+    pub book_last_click: Option<(Instant, u16, u16)>,
     /// The browser's tabs, and which one is showing. The `book_*` page fields below are the
     /// active tab's live copy; they are saved into its `Tab` whenever another tab takes over.
     pub book_tabs: Vec<Tab>,
@@ -493,6 +501,9 @@ impl App {
             book_sel_seen: 0,
             book_area: Rect::default(),
             book_buttons: Vec::new(),
+            book_full: false,
+            book_nav: Vec::new(),
+            book_last_click: None,
             book_tabs: vec![Tab::home()],
             book_active: 0,
             book_tab_hits: Vec::new(),
@@ -1341,6 +1352,14 @@ impl App {
         if q.is_empty() {
             return;
         }
+        if !crate::web::is_addr(&q) {
+            self.settings.search_history.retain(|h| !h.eq_ignore_ascii_case(&q));
+            self.settings.search_history.insert(0, q.clone());
+            self.settings.search_history.truncate(20);
+            if let Some(path) = &self.settings_path {
+                let _ = self.settings.save(path);
+            }
+        }
         // A domain or address typed into the box opens it, rather than searching for it.
         if crate::web::is_addr(&q) {
             self.book_go_slug(&q);
@@ -1396,6 +1415,21 @@ impl App {
             _ => return false,
         }
         true
+    }
+
+    /// Yellow dot, `b`, Esc: put the browser away. The tabs stay as they are.
+    pub fn book_minimize(&mut self) {
+        self.book_store();
+        self.book = false;
+    }
+
+    /// Red dot: close the browser and forget its tabs.
+    pub fn book_close_window(&mut self) {
+        self.book = false;
+        self.book_full = false;
+        self.book_tabs = vec![Tab::home()];
+        self.book_active = 0;
+        self.book_load_tab(0);
     }
 
     /// Adds the page being read to the bookmarks bar, or takes it off, and saves the list.
@@ -1482,7 +1516,7 @@ impl App {
         }
         match (k.code, action) {
             (KeyCode::Char('b'), _) | (_, Some(Action::Book | Action::Back)) => {
-                self.book = false;
+                self.book_minimize();
             }
             (KeyCode::Enter, _) if k.modifiers.contains(ratatui::crossterm::event::KeyModifiers::SHIFT) => {
                 // Shift+Enter: the selected link opens in a tab of its own.
@@ -1645,7 +1679,7 @@ impl App {
         match m.kind {
             MouseEventKind::Down(MouseButton::Left) => {
                 if !inside {
-                    self.book = false;
+                    self.book_minimize();
                     return;
                 }
                 if let Some((_, i)) = self.book_tab_close.iter().find(|(r, _)| r.contains(at)) {
@@ -1676,10 +1710,24 @@ impl App {
                             }
                         }
                         BookButton::Copy => self.book_copy(),
+                        BookButton::CloseWindow => self.book_close_window(),
+                        BookButton::Minimize => self.book_minimize(),
+                        BookButton::Fullscreen => self.book_full = !self.book_full,
                         BookButton::Edit => {
                             self.book_typing = true;
                             self.book_query = self.book_slug.strip_prefix("search?q=").unwrap_or("").to_string();
                         }
+                    }
+                    return;
+                }
+                // A double click on the blank part of the title bar or toolbar toggles fullscreen.
+                if self.book_nav.iter().any(|r| r.contains(at)) {
+                    let double =
+                        self.book_last_click.is_some_and(|(t, x, y)| t.elapsed().as_millis() < 450 && x.abs_diff(at.x) <= 2 && y == at.y);
+                    self.book_last_click = Some((Instant::now(), at.x, at.y));
+                    if double {
+                        self.book_full = !self.book_full;
+                        self.book_last_click = None;
                     }
                     return;
                 }

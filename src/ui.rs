@@ -3744,7 +3744,7 @@ fn research_chart(w: &World, item: Item, width: u16) -> Vec<Line<'static>> {
 /// The recipe book: a tab of items and a tab of machines (Tab switches), each a grid
 /// (searchable with /), and the selected page under it. Names in blue are links: click them.
 fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
-    let frame = if !app.compact_now && area.width >= 90 && area.height >= 30 {
+    let frame = if !app.book_full && !app.compact_now && area.width >= 90 && area.height >= 30 {
         centered(area, (area.width * 4 / 5).min(120), (area.height * 85 / 100).min(50))
     } else {
         area
@@ -3767,6 +3767,15 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     f.buffer_mut().set_stringn(frame.x + 8, frame.y, " termweb ", 9, Style::new().fg(Color::Indexed(249)).bold());
     let inner = Block::bordered().inner(frame);
     app.book_buttons.clear();
+    app.book_nav.clear();
+    for (i, button) in
+        [crate::app::BookButton::CloseWindow, crate::app::BookButton::Minimize, crate::app::BookButton::Fullscreen].into_iter().enumerate()
+    {
+        app.book_buttons.push((Rect::new(frame.x + 2 + i as u16 * 2, frame.y, 1, 1), button));
+    }
+    // Blank bits of the title bar, the tab strip and the toolbar take a double click.
+    app.book_nav.push(Rect::new(frame.x + 17, frame.y, frame.width.saturating_sub(18), 1));
+    app.book_nav.push(Rect::new(inner.x, inner.y, inner.width, 1));
     // The tab strip: a chip per tab, above the toolbar.
     app.book_tab_hits.clear();
     app.book_tab_close.clear();
@@ -3805,6 +3814,7 @@ fn draw_book(f: &mut Frame, area: Rect, app: &mut App) {
     }
     // The toolbar: back, forward, reload and home, each two cells wide.
     let bar_y = inner.y + 1;
+    app.book_nav.push(Rect::new(inner.x, bar_y, inner.width, 1));
     let dim = |on: bool| Style::new().fg(if on { Color::Indexed(250) } else { Color::Indexed(240) }).bg(Color::Indexed(236));
     for (i, (glyph, on, button)) in [
         ('◀', !app.book_history.is_empty(), crate::app::BookButton::Back),
@@ -4677,6 +4687,24 @@ fn draw_book_start(f: &mut Frame, area: Rect, app: &mut App) {
     }
     if !app.book_urls.is_empty() {
         app.book_selected = app.book_selected.min(app.book_urls.len() - 1);
+    }
+    // Recent searches, newest first, under the links: a click runs the search again.
+    y += 2;
+    let recent: Vec<String> = app.settings.search_history.iter().take(5).cloned().collect();
+    if !recent.is_empty() && y < area.bottom() {
+        let w = 40.min(area.width.saturating_sub(4)) as usize;
+        let x = area.x + area.width.saturating_sub(w as u16) / 2;
+        f.buffer_mut().set_string(x, y, "Recent searches", Style::new().fg(Color::Indexed(243)));
+        y += 1;
+        for q in recent {
+            if y >= area.bottom() {
+                break;
+            }
+            let label = fit_left(&format!("↺ {q}"), w);
+            f.buffer_mut().set_stringn(x, y, &label, w, Style::new().fg(Color::Indexed(247)));
+            app.book_click_only.push((Rect::new(x, y, w as u16, 1), format!("search?q={q}")));
+            y += 1;
+        }
     }
     app.book_max_scroll = 0;
 }

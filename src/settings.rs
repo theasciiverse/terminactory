@@ -187,6 +187,8 @@ pub struct Settings {
     pub hints: OnOff,
     /// T Web bookmarks: wiki page slugs, in the order the bar shows them.
     pub bookmarks: Vec<String>,
+    /// T Web searches, newest first.
+    pub search_history: Vec<String>,
 }
 
 impl Default for Settings {
@@ -199,6 +201,7 @@ impl Default for Settings {
             telegram_style: TelegramStyle::default(),
             hints: OnOff::default(),
             bookmarks: DEFAULT_BOOKMARKS.iter().map(|s| s.to_string()).collect(),
+            search_history: Vec::new(),
         }
     }
 }
@@ -321,6 +324,9 @@ impl Settings {
         if map.contains_key("bookmarks") {
             s.bookmarks = field(map, "bookmarks", &mut problems);
         }
+        if map.contains_key("search_history") {
+            s.search_history = field(map, "search_history", &mut problems);
+        }
         let note = (!problems.is_empty()).then(|| format!("settings.json: {}; using the default there", problems.join(", ")));
         (s, note)
     }
@@ -371,6 +377,7 @@ mod tests {
             telegram_style: TelegramStyle::Ticker,
             hints: OnOff::Off,
             bookmarks: vec!["power".to_string(), "waste".to_string()],
+            search_history: vec!["coal".to_string(), "belt".to_string()],
         };
         s.save(&path).unwrap();
         let (back, note) = Settings::load_or_create(&path);

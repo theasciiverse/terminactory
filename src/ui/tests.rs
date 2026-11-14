@@ -2344,3 +2344,70 @@ fn a_wide_table_wraps_its_long_cells_instead_of_cutting_them() {
         assert!(screen.contains(tail), "{tail} was cut off:\n{screen}");
     }
 }
+
+fn left_click(app: &mut App, x: u16, y: u16) {
+    use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    app.on_mouse(MouseEvent { kind: MouseEventKind::Down(MouseButton::Left), column: x, row: y, modifiers: KeyModifiers::NONE });
+}
+
+#[test]
+fn the_window_dots_close_minimize_and_fullscreen() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    render(&mut app, 140, 45);
+    app.book_new_tab("boiler");
+    render(&mut app, 140, 45);
+    let dot = |app: &App, b: crate::app::BookButton| app.book_buttons.iter().find(|(_, x)| *x == b).map(|(r, _)| *r).unwrap();
+    let windowed = app.book_area;
+    // Green: fullscreen, and again to go back.
+    let r = dot(&app, crate::app::BookButton::Fullscreen);
+    left_click(&mut app, r.x, r.y);
+    render(&mut app, 140, 45);
+    assert!(app.book_full && app.book_area.width > windowed.width);
+    let r = dot(&app, crate::app::BookButton::Fullscreen);
+    left_click(&mut app, r.x, r.y);
+    render(&mut app, 140, 45);
+    assert_eq!(app.book_area, windowed);
+    // Yellow: the browser goes away with its two tabs.
+    let r = dot(&app, crate::app::BookButton::Minimize);
+    left_click(&mut app, r.x, r.y);
+    assert!(!app.book);
+    assert_eq!(app.book_tabs.len(), 2);
+    app.book = true;
+    render(&mut app, 140, 45);
+    // Red: it goes away and the tabs are forgotten.
+    let r = dot(&app, crate::app::BookButton::CloseWindow);
+    left_click(&mut app, r.x, r.y);
+    assert!(!app.book);
+    assert_eq!(app.book_tabs.len(), 1);
+}
+
+#[test]
+fn a_double_click_on_blank_navbar_toggles_fullscreen() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    render(&mut app, 140, 45);
+    let strip = app.book_nav.iter().copied().find(|r| r.y == app.book_area.y + 1).expect("the tab strip");
+    let x = strip.right() - 3;
+    left_click(&mut app, x, strip.y);
+    assert!(!app.book_full, "one click does nothing");
+    left_click(&mut app, x, strip.y);
+    assert!(app.book_full);
+}
+
+#[test]
+fn searches_are_remembered_and_listed_on_the_start_page() {
+    let mut app = App::new(World::new());
+    app.book = true;
+    app.book_slug = "start".into();
+    app.book_submit_search("coal");
+    app.book_submit_search("boiler waste");
+    app.book_submit_search("COAL");
+    assert_eq!(app.settings.search_history, vec!["COAL".to_string(), "boiler waste".to_string()]);
+    app.book_go_slug("start");
+    let screen = text(&render(&mut app, 140, 45));
+    assert!(screen.contains("Recent searches") && screen.contains("↺ boiler waste"), "{screen}");
+    let (r, _) = app.book_click_only.iter().find(|(_, s)| s == "search?q=boiler waste").cloned().expect("a clickable entry");
+    left_click(&mut app, r.x, r.y);
+    assert_eq!(app.book_slug, "search?q=boiler waste");
+}
