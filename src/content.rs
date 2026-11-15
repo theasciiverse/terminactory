@@ -9,7 +9,7 @@ pub const ITEMS: usize = 79;
 pub const COMPANIES: usize = 15;
 pub const TECHS: usize = 46;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum Item {
     CopperOre,
     Coal,

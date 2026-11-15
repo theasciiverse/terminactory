@@ -153,9 +153,12 @@ fn hints_off_shows_none_and_nor_do_asides() {
     app.settings.hints = OnOff::On;
     tick(&mut app, t, 601, 625);
     assert!(app.hints.current.is_some());
-    // Turning it off in the settings pane (the Hints row is the last) removes it on the next tick.
+    // Turning it off in the settings pane removes it on the next tick.
     press(&mut app, 'g');
-    key(&mut app, KeyCode::Up); // wraps to the last row
+    let hints_row = crate::settings::ROWS.iter().position(|r| r.name == "Hints").unwrap();
+    for _ in 0..hints_row {
+        key(&mut app, KeyCode::Down);
+    }
     assert_eq!(crate::settings::ROWS[app.settings_pick].name, "Hints");
     key(&mut app, KeyCode::Right);
     assert_eq!(app.settings.hints, OnOff::Off);

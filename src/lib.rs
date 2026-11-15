@@ -5,6 +5,7 @@ mod app;
 mod clip;
 mod content;
 mod controls;
+mod glyphs;
 mod hints;
 mod history;
 mod library;
@@ -182,6 +183,10 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
     app.settings = settings;
     app.settings_path = Some(settings_path);
     if let Some(p) = problem {
+        app.say(p);
+    }
+    // Item glyphs: the Icons setting and glyphs.json.
+    if let Some(p) = glyphs::apply(app.settings.icons == settings::Icons::Nerd, &dir.join("glyphs.json")) {
         app.say(p);
     }
 

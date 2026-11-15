@@ -648,6 +648,11 @@ impl App {
         };
         if change != 0 {
             (ROWS[self.settings_pick].change)(&mut self.settings, change);
+            if let Some(dir) = self.settings_path.as_ref().and_then(|p| p.parent()) {
+                if let Some(note) = crate::glyphs::apply(self.settings.icons == crate::settings::Icons::Nerd, &dir.join("glyphs.json")) {
+                    self.say(note);
+                }
+            }
             if let Some(path) = &self.settings_path {
                 if let Err(e) = self.settings.save(path) {
                     self.say(format!("Couldn't save settings.json ({e})"));

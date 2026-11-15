@@ -144,6 +144,27 @@ impl Choice for OnOff {
     }
 }
 
+/// Which glyphs items use.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Icons {
+    /// Plain characters that every terminal has.
+    #[default]
+    Ascii,
+    /// Nerd Font icons where there is a fitting one (needs a Nerd Font in the terminal).
+    Nerd,
+}
+
+impl Choice for Icons {
+    const ALL: &'static [Self] = &[Icons::Ascii, Icons::Nerd];
+    fn name(self) -> &'static str {
+        match self {
+            Icons::Ascii => "ASCII",
+            Icons::Nerd => "Nerd Font",
+        }
+    }
+}
+
 /// How much time each bar of the sidebar chart covers.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -185,6 +206,8 @@ pub struct Settings {
     pub telegram_style: TelegramStyle,
     /// Quiet hints and asides on the idle status line.
     pub hints: OnOff,
+    /// Item glyphs: ASCII, or Nerd Font icons.
+    pub icons: Icons,
     /// T Web bookmarks: wiki page slugs, in the order the bar shows them.
     pub bookmarks: Vec<String>,
     /// T Web searches, newest first.
@@ -200,6 +223,7 @@ impl Default for Settings {
             small_width: Cols::default(),
             telegram_style: TelegramStyle::default(),
             hints: OnOff::default(),
+            icons: Icons::default(),
             bookmarks: DEFAULT_BOOKMARKS.iter().map(|s| s.to_string()).collect(),
             search_history: Vec::new(),
         }
@@ -278,6 +302,13 @@ pub const ROWS: &[Row] = &[
         change: |s, d| s.hints = s.hints.step(d),
         enabled: |_| true,
     },
+    Row {
+        name: "Icons",
+        help: "Item glyphs: ASCII, or Nerd Font icons (needs a Nerd Font; glyphs.json overrides either)",
+        value: |s| s.icons.name(),
+        change: |s, d| s.icons = s.icons.step(d),
+        enabled: |_| true,
+    },
 ];
 
 impl Settings {
@@ -321,6 +352,7 @@ impl Settings {
         s.small_width = field(map, "small_width", &mut problems);
         s.telegram_style = field(map, "telegram_style", &mut problems);
         s.hints = field(map, "hints", &mut problems);
+        s.icons = field(map, "icons", &mut problems);
         if map.contains_key("bookmarks") {
             s.bookmarks = field(map, "bookmarks", &mut problems);
         }
@@ -376,6 +408,7 @@ mod tests {
             small_width: Cols(140),
             telegram_style: TelegramStyle::Ticker,
             hints: OnOff::Off,
+            icons: Icons::Nerd,
             bookmarks: vec!["power".to_string(), "waste".to_string()],
             search_history: vec!["coal".to_string(), "belt".to_string()],
         };

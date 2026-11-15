@@ -1099,6 +1099,7 @@ fn item_cell(item: Item, bg: Color) -> (char, Style) {
         Item::Computer => ('&', 226),
         Item::CarbonBlack => ('#', 243),
     };
+    let c = crate::glyphs::replacement(item).unwrap_or(c);
     (c, Style::new().fg(Color::Indexed(fg)).bg(bg).add_modifier(Modifier::BOLD))
 }
 
