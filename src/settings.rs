@@ -165,6 +165,28 @@ impl Choice for Icons {
     }
 }
 
+/// A named bundle of the busy-ness settings: Dense is the full game, Calm turns the noise down.
+/// Changing any of the settings in a bundle by hand moves the layout to Custom.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Layout {
+    #[default]
+    Dense,
+    Calm,
+    Custom,
+}
+
+impl Choice for Layout {
+    const ALL: &'static [Self] = &[Layout::Dense, Layout::Calm, Layout::Custom];
+    fn name(self) -> &'static str {
+        match self {
+            Layout::Dense => "Dense",
+            Layout::Calm => "Calm",
+            Layout::Custom => "Custom",
+        }
+    }
+}
+
 /// How much time each bar of the sidebar chart covers.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -199,6 +221,8 @@ impl GraphRange {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Dense, Calm or Custom: which bundle the settings below (down to hints) are in.
+    pub layout: Layout,
     pub sidebar_graph: GraphShow,
     pub sidebar_graph_range: GraphRange,
     pub small_view: SmallView,
@@ -217,6 +241,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            layout: Layout::default(),
             sidebar_graph: GraphShow::default(),
             sidebar_graph_range: GraphRange::default(),
             small_view: SmallView::default(),
@@ -234,6 +259,37 @@ impl Default for Settings {
 pub const DEFAULT_BOOKMARKS: &[&str] = &["home", "getting-started", "machines", "items"];
 
 impl Settings {
+    /// Sets the settings a preset bundles. Custom leaves them as they are.
+    pub fn apply_layout(&mut self, layout: Layout) {
+        match layout {
+            Layout::Dense => {
+                self.sidebar_graph = GraphShow::default();
+                self.sidebar_graph_range = GraphRange::default();
+                self.small_view = SmallView::default();
+                self.small_width = Cols::default();
+                self.telegram_style = TelegramStyle::default();
+                self.hints = OnOff::default();
+            }
+            Layout::Calm => {
+                self.sidebar_graph = GraphShow::Off;
+                self.sidebar_graph_range = GraphRange::default();
+                self.small_view = SmallView::Always;
+                self.small_width = Cols::default();
+                self.telegram_style = TelegramStyle::Note;
+                self.hints = OnOff::Off;
+            }
+            Layout::Custom => {}
+        }
+        self.layout = layout;
+    }
+
+    /// True when the bundled settings are exactly what `layout` sets.
+    fn matches_layout(&self, layout: Layout) -> bool {
+        let mut b = self.clone();
+        b.apply_layout(layout);
+        b == *self
+    }
+
     /// Whether a pane of this size gets the small-pane view (before `m`'s session override).
     pub fn small_pane(&self, width: u16, height: u16) -> bool {
         match self.small_view {
@@ -261,45 +317,73 @@ pub struct Row {
 /// The rows of the settings pane, top to bottom.
 pub const ROWS: &[Row] = &[
     Row {
+        name: "Layout",
+        help: "Dense is the full screen, Calm is quieter; changing a setting below makes it Custom",
+        value: |s| s.layout.name(),
+        change: |s, d| {
+            let next = s.layout.step(d);
+            s.apply_layout(next);
+        },
+        enabled: |_| true,
+    },
+    Row {
         name: "Sidebar graph",
         help: "Earnings charts under the build menu (full view only)",
         value: |s| s.sidebar_graph.name(),
-        change: |s, d| s.sidebar_graph = s.sidebar_graph.step(d),
+        change: |s, d| {
+            s.sidebar_graph = s.sidebar_graph.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |_| true,
     },
     Row {
         name: "Graph range",
         help: "What each bar of the sidebar graph covers",
         value: |s| s.sidebar_graph_range.name(),
-        change: |s, d| s.sidebar_graph_range = s.sidebar_graph_range.step(d),
+        change: |s, d| {
+            s.sidebar_graph_range = s.sidebar_graph_range.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |_| true,
     },
     Row {
         name: "Small-pane view",
         help: "Compact view: Auto, Always or Never (m toggles it for now)",
         value: |s| s.small_view.name(),
-        change: |s, d| s.small_view = s.small_view.step(d),
+        change: |s, d| {
+            s.small_view = s.small_view.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |_| true,
     },
     Row {
         name: "Small-pane width",
         help: "Auto switches below this many columns (Auto only)",
         value: |s| s.small_width.name(),
-        change: |s, d| s.small_width = s.small_width.step(d),
+        change: |s, d| {
+            s.small_width = s.small_width.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |s| s.small_view == SmallView::Auto,
     },
     Row {
         name: "Telegram style",
         help: "Sidebar box, a short Note, or just a mail count (Ticker)",
         value: |s| s.telegram_style.name(),
-        change: |s, d| s.telegram_style = s.telegram_style.step(d),
+        change: |s, d| {
+            s.telegram_style = s.telegram_style.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |_| true,
     },
     Row {
         name: "Hints",
         help: "Quiet diagnoses and asides on the idle status line",
         value: |s| s.hints.name(),
-        change: |s, d| s.hints = s.hints.step(d),
+        change: |s, d| {
+            s.hints = s.hints.step(d);
+            s.layout = Layout::Custom;
+        },
         enabled: |_| true,
     },
     Row {
@@ -346,6 +430,7 @@ impl Settings {
                 }),
             }
         }
+        s.layout = field(map, "layout", &mut problems);
         s.sidebar_graph = field(map, "sidebar_graph", &mut problems);
         s.sidebar_graph_range = field(map, "sidebar_graph_range", &mut problems);
         s.small_view = field(map, "small_view", &mut problems);
@@ -353,6 +438,10 @@ impl Settings {
         s.telegram_style = field(map, "telegram_style", &mut problems);
         s.hints = field(map, "hints", &mut problems);
         s.icons = field(map, "icons", &mut problems);
+        // A preset whose settings were edited by hand in the file is Custom.
+        if s.layout != Layout::Custom && !s.matches_layout(s.layout) {
+            s.layout = Layout::Custom;
+        }
         if map.contains_key("bookmarks") {
             s.bookmarks = field(map, "bookmarks", &mut problems);
         }
@@ -402,6 +491,7 @@ mod tests {
     fn settings_round_trip() {
         let path = temp("round");
         let s = Settings {
+            layout: Layout::Custom,
             sidebar_graph: GraphShow::Both,
             sidebar_graph_range: GraphRange::Hours,
             small_view: SmallView::Never,
@@ -504,13 +594,13 @@ mod tests {
     #[test]
     fn the_width_row_is_only_live_in_auto() {
         let mut s = Settings::default();
-        assert!((ROWS[3].enabled)(&s));
-        (ROWS[2].change)(&mut s, 1);
-        assert_eq!(s.small_view, SmallView::Always);
-        assert!(!(ROWS[3].enabled)(&s));
+        assert!((ROWS[4].enabled)(&s));
         (ROWS[3].change)(&mut s, 1);
+        assert_eq!(s.small_view, SmallView::Always);
+        assert!(!(ROWS[4].enabled)(&s));
+        (ROWS[4].change)(&mut s, 1);
         assert_eq!(s.small_width, Cols(140)); // still changeable, it just has no effect now
-        assert!(ROWS[3].help.contains("Auto only"));
+        assert!(ROWS[4].help.contains("Auto only"));
     }
 
     #[test]
@@ -533,12 +623,38 @@ mod tests {
     #[test]
     fn rows_cycle_both_ways() {
         let mut s = Settings::default();
-        (ROWS[0].change)(&mut s, 1);
+        (ROWS[1].change)(&mut s, 1);
         assert_eq!(s.sidebar_graph, GraphShow::Research);
-        (ROWS[0].change)(&mut s, -1);
-        (ROWS[0].change)(&mut s, -1);
-        (ROWS[0].change)(&mut s, -1);
+        (ROWS[1].change)(&mut s, -1);
+        (ROWS[1].change)(&mut s, -1);
+        (ROWS[1].change)(&mut s, -1);
         assert_eq!(s.sidebar_graph, GraphShow::Both); // Money -> Research -> Money -> Off -> Both (wraps)
-        assert_eq!((ROWS[1].value)(&s), "Minutes");
+        assert_eq!((ROWS[2].value)(&s), "Minutes");
     }
+    #[test]
+    fn calm_layout_quiets_things_and_hand_edits_make_it_custom() {
+        let mut s = Settings::default();
+        assert_eq!(s.layout, Layout::Dense);
+        let row = &ROWS[0];
+        (row.change)(&mut s, 1);
+        assert_eq!(s.layout, Layout::Calm);
+        assert_eq!((s.sidebar_graph, s.hints, s.telegram_style), (GraphShow::Off, OnOff::Off, TelegramStyle::Note));
+        // Changing a bundled setting by hand moves to Custom and keeps the value.
+        (ROWS[5].change)(&mut s, 1);
+        assert_eq!(s.layout, Layout::Custom);
+        // Going back round to Dense restores the defaults.
+        (row.change)(&mut s, 1);
+        assert_eq!(s.layout, Layout::Dense);
+        assert_eq!(s, Settings::default());
+    }
+
+    #[test]
+    fn old_settings_without_layout_load_as_dense_or_custom() {
+        let path = temp("old");
+        std::fs::write(&path, "{\"sidebar_graph\": \"off\"}").unwrap();
+        let (s, _) = Settings::load_or_create(&path);
+        std::fs::remove_file(&path).ok();
+        assert_eq!(s.layout, Layout::Custom);
+    }
+
 }

@@ -11,6 +11,7 @@ First public version. Saves are format version 8 (version 7 saves still open and
 - Phase 1: drills, furnaces, molders and presses; trade posts that sell for money, research or a split; a research tree with free unlocks for making enough of an item; companies that open when you make their key item and send a letter.
 - Phase 2: pumps and pipes with one fluid per network, solar panels and EC poles, boilers and steam engines, the blast furnace and its waste, which leaves a machine by its back edge.
 - Phase 3: floors and elevators, assemblers from crude to precision (and large ones), kilns, mixers, welders, belt tunnels, long arms, filter splitters, overflow gates and warehouses.
+- Layout presets in the settings (`g`): Dense (the full screen, the default), Calm (compact view, no sidebar graph, no hints, telegrams as a short note) and Custom, which you get by changing any of those settings yourself.
 - Item glyphs can be Nerd Font icons (settings, Icons), and `glyphs.json` in `~/.terminactory` replaces any item's glyph with a character of your choice. Machines keep their ASCII pictures.
 - Silicon, chips and computers: wafers, etchers, microprocessors, and the computer as the branch's crown item.
 - Oil: crude oil, naphtha, fuel oil and ethylene, the oil extractor, the still and the liquid trader, and a seventh Create slot for chemistry.

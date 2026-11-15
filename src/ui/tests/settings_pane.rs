@@ -54,7 +54,8 @@ fn g_opens_and_closes_the_pane_and_nothing_pauses() {
 fn keys_move_between_rows_and_change_values() {
     let mut app = app();
     press(&mut app, 'g');
-    assert_eq!(app.settings_pick, 0);
+    assert_eq!(app.settings_pick, 0); // the first row is Layout; this test starts from the one below
+    key(&mut app, KeyCode::Down);
     // Enter and Right go on, Left goes back, and both wrap.
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.settings.sidebar_graph, GraphShow::Research);
@@ -66,16 +67,18 @@ fn keys_move_between_rows_and_change_values() {
     assert_eq!(app.settings.sidebar_graph, GraphShow::Both);
     // Down and j pick the next row; up and k the one before (wrapping).
     key(&mut app, KeyCode::Down);
-    assert_eq!(app.settings_pick, 1);
+    assert_eq!(app.settings_pick, 2);
     key(&mut app, KeyCode::Right);
     assert_eq!(app.settings.sidebar_graph_range, GraphRange::Hours);
     press(&mut app, 'j');
-    assert_eq!(app.settings_pick, 2);
+    assert_eq!(app.settings_pick, 3);
     press(&mut app, 'k');
+    assert_eq!(app.settings_pick, 2);
+    key(&mut app, KeyCode::Up);
     assert_eq!(app.settings_pick, 1);
+    // The ends wrap.
     key(&mut app, KeyCode::Up);
     assert_eq!(app.settings_pick, 0);
-    // The ends wrap.
     key(&mut app, KeyCode::Up);
     assert_eq!(app.settings_pick, crate::settings::ROWS.len() - 1);
     key(&mut app, KeyCode::Down);
@@ -96,6 +99,7 @@ fn changes_are_saved_when_there_is_a_file() {
     let mut app = app();
     app.settings_path = Some(path.clone());
     press(&mut app, 'g');
+    key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Right);
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::remove_file(&path).ok();

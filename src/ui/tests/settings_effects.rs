@@ -33,7 +33,7 @@ fn the_new_rows_show_with_their_hints() {
         assert!(t.contains(want), "{want}: {t}");
     }
     // The picked row's hint shows under the list; the width row's says it is for Auto only.
-    for _ in 0..3 {
+    for _ in 0..4 {
         key(&mut app, KeyCode::Down);
     }
     let t = text(&render(&mut app, 120, 40));
@@ -53,6 +53,7 @@ fn the_width_row_greys_out_when_the_view_is_not_auto() {
     };
     let live = colour_of(&mut app, "Small-pane width");
     assert_ne!(live, Color::DarkGray);
+    key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Right); // Always
@@ -121,6 +122,7 @@ fn changing_the_view_in_the_pane_takes_effect_at_once() {
     press(&mut app, 'g');
     render(&mut app, 130, 40);
     assert!(!app.compact_now);
+    key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Right); // Always
