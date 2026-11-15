@@ -1,101 +1,87 @@
 # Terminactory
 
-A cozy factory game for your terminal. Dig copper, coal and iron, melt it, press it, sell it, and research your way up to computers and oil. There is nothing to fight and nothing breaks at random: you build at your own pace, and the factory keeps earning while you are away.
+An idle factory game that runs in your terminal, meant to be played alongside your agents. You can acquire minerals, process said minerals, sell your products (or) research your way up to computers and oil. nothing attacks you and nothing breaks at random, and the factory keeps earning while you're away.
 
-It is made to sit in a split next to your AI agents. They can send you short messages that show up in the game, so you can play while they work.
+As for the agent part, there's an in-built Claude Code hook (works out of the box), and an optional `tfac msg` command that you can configure any agent to use, which sends you a "telegram" straight to your active save.
 
-![A factory running in the terminal](docs/screenshots/factory.webp)
+![Animated sample factory](docs/screenshots/factory.webp)
 
-```
-tfac --demo     # a small working factory to look at
-```
+For lore divers: there's a LOT of lore in the in-game browser, so.. you might like that too; it's completely optional, you can play only the factory game with minimal browser usage (wiki, production stats, research) or use the browser with minimal / no factory gameplay. Or, just have a mix of both; it's your choice, really.
+
+I made this with major AI assistance (Claude, mainly). The design, what goes in the game, a few specifics, and the overall general idea is almost completely mine. The implementation isn't.
 
 ## Install
 
-You need [Rust](https://rustup.rs) 1.88 or newer and a UTF-8 terminal. macOS and Linux are supported; on Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install).
+You'll need [Rust](https://rustup.rs) 1.88+ and a UTF-8 terminal. macOS and Linux work; on Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install).
 
 ```bash
+# Installation procedure
 git clone https://gitlab.com/snipedbywifi/terminactory
 cd terminactory
 cargo install --path .
 ```
 
-This installs two commands, `terminactory` and the shortcut `tfac`. Make sure `~/.cargo/bin` is on your `PATH` (rustup normally does this), then check it:
+Above commands give you `terminactory` and the shortcut `tfac`. Make sure `~/.cargo/bin` is on your `PATH`, and then:
 
 ```bash
+# Runs the demo
 tfac --version
 tfac --demo
 ```
 
-To update, pull and run `cargo install --path . --force`. To remove it, `cargo uninstall terminactory`; your saves in `~/.terminactory` stay.
+To update, pull and run `cargo install --path . --force`. To uninstall, `cargo uninstall terminactory` 
+NOTE: Saves in `~/.terminactory` stay post-uninstall.
 
 ## Playing
 
-`tfac` continues the save you played last.
+`tfac` continues your last save. `tfac --saves` lists them, `tfac [x]` opens save X (rename X to your save number), `tfac --new` starts a fresh one, `tfac --help` is self-explanatory.
 
-![A big factory in the game](docs/screenshots/map.webp)
+![Large Example Factory](docs/screenshots/map.webp)
 
-```bash
-tfac --saves    # list your saves
-tfac 2          # open save 2
-tfac --new      # start a fresh save; the others are kept
-tfac --help     # everything tfac can do
-```
+120x40 (or higher) is the recommended terminal size. in a smaller pane (maybe windowed, or split view) it switches to a compact view (no sidebar. if you'd like the sidebar on compact viewports, press g [settings] and configure "small pane view" to "never"). 
 
-The game looks best in a terminal of at least 120×40. In a narrower or shorter pane, such as a split beside an agent, it switches to a compact view by itself. Mouse works in most terminals (iTerm2, Terminal.app, WezTerm, Kitty). `?` shows every key in the game.
+`?` shows every key and some additional help. Mouse is accepted in most terminals.
 
-### The first hour
+Once you start up the game, try placing down a few drills, a few machines, and connect them with belts. The trade post lets you sell items, and you'd usually want this:
 
-1. Press `1` for the Create menu and place a **drill** on the ground, a **furnace** in front of it, and a **molder** after that. Drills mine anywhere; `f` on a drill picks the ore.
-2. Lay **belts** (hold Shift with the arrow keys, or drag) to a **trade post** in the Misc menu. Items sell for money, research, or a split.
-3. Open research with `t` and buy the press. From there it is a tree: new machines open as you research them, or free once you have made enough of an item.
-4. Make a company's **key item** and it sends you a letter and opens its machines.
+Cheap Drill (Copper) --> Furnace --> Molder (Copper Ingots) --> Sell.
 
-Machines need **EC** (electric charge): solar panels and EC poles first, steam engines later. Idle machines flash a short word saying why (`FULL`, `NEED`, `EC?`, ...).
+Most machines need **EC** (electric charge, naming inspired by Kerbal Space Program). To get EC in the early game, use solar panels and poles. Steam engines are better, but unlock later. Idle machines flash a short word saying why (`FULL` (output is full), `NEED` (needs a material it doesn't have. if you face this, it's likely because the machine isn't configured. Press F to switch modes of a machine), `EC?` (not enough Electric Charge)).
 
-### Keys you will use
+Main keys:
 
-| Key | Does |
+| key | does |
 | --- | --- |
-| arrows / WASD | move the cursor |
-| `1`–`4`, then a number | pick something to build (Create, Transport, EC, Misc) |
-| Space or click / `x` or right-click | place / remove |
-| `r` / `f` | rotate / set up a machine (recipe, filter, mode) |
-| `t` | research |
-| `o` | production and earnings history |
-| `b` | the in-game browser, on whatever is under the cursor |
-| `c` | area tool: copy, remove or upgrade a rectangle |
-| `m` | mirror what is in your hand, such as a copied blueprint (Shift: top to bottom) |
+| arrows / WASD | move |
+| `1` through `4` for groups | pick a group of items |
+| `1` through `whatever the group's length is` | pick an item |
+| Space or LMB | place |
+| `x` or RMB | remove |
+| `r` | rotate |
+| `f` | switch machine modes |
+| `t` / `o` | research pane / production pane (these are shortcuts to websites in the in-game browser)|
+| `b` | the in-game browser |
+| `c` | area tool: copy, remove, upgrade |
 | `g` | settings |
 | `p`, `[` `]` | pause, speed |
-| `?` | help |
+| `z` | undo last removal |
 | Ctrl+C | save and quit |
 
-Keys can be changed in `~/.terminactory/controls.json`.
+ONLY FOR NERDS: Rebind keys/controls in `~/.terminactory/controls.json`. in settings (`g`) you can switch icons to Nerd Font if your terminal has one, or set your own glyphs in `~/.terminactory/glyphs.json`.
 
-### The browser
+## The browser
 
-`b` opens **termweb**, the game's own browser. It has a search page, tabs, bookmarks, history and an address bar. It holds the game's wiki (every item and machine, with recipes, prices and where it sits in the research tree) and a small web of other sites you can look through as you play. Research (`t`) and production (`o`) open in it too.
+`b` opens **termweb**, the in-game browser with search, tabs, bookmarks, history. It has a wiki for every item and machine (recipes, prices, where they sit in research; Also, research fades over time to a floor. Selling more variations of items earns more than focusing on only one item.) and a small fake web of other sites, forums included (*subtle lore mention*).
 
-![termweb searching for coal](docs/screenshots/search.webp)
+![termweb search results](docs/screenshots/search.webp)
 
-![An item page in the wiki, with its recipe and how its research fades](docs/screenshots/wiki.webp)
-
-Research (`t`) and production (`o`) are sites in the browser, so they sit in their own tabs:
-
-![The research tree](docs/screenshots/research.webp)
-
-![Production, per item, over the last minute](docs/screenshots/production.webp)
-
-Inside the browser, `b` opens a new tab, `Esc` puts it away with your tabs kept, and `1`–`9` switch tabs. "Copy page" in the bottom bar puts a page's text on your clipboard.
+The forums, sites, intranets, wiki, all collate to form the in-game internet. It's useful not just for lore-divers, forums have tips, sites have explanations of companies, and so on and so forth.
 
 ## Agent messages
 
-Your AI agents can message you inside the game. A message costs the agent only the words in it, and nothing prints on success. Messages wait while the game is closed.
+This is one of the reasons I made tfac / terminactory. Your agent finishes, and its last reply shows up in the game as a message (ONLY CLAUDE CODE has been tested for the hook. Other agents can use "tfac msg"). It costs the agent nothing extra. Messages build up while the game is closed, to be shown once opened.
 
-### Claude Code
-
-Add this to `~/.claude/settings.json`. When an agent finishes, its last reply becomes a message; when it needs permission or input, you get a "needs you" message.
+**Claude Code:** Add the below JSON to `~/.claude/settings.json` for the hook functionality I mentioned earlier. If you don't want that, check below for the terminal command your agent can run.
 
 ```json
 {
@@ -106,54 +92,32 @@ Add this to `~/.claude/settings.json`. When an agent finishes, its last reply be
 }
 ```
 
-Test it with the game open:
+**anything else** can run this shell command:
 
 ```bash
-printf '%s' '{"hook_event_name":"Stop","cwd":"/tmp/demo","last_assistant_message":"## It works\n- a message from the hook"}' | tfac hook
+tfac msg --from [agent-name] "message"
+echo "[completion-message]" | tfac msg
 ```
 
-### Any other agent
+Markdown renders in these telegrams (headings, lists, checkboxes, code, tables). You can also drop any `*.md` file into `~/.terminactory/inbox/` to view it (idk why you'd want to, but you can).
 
-Anything that can run a shell command can send one:
+If you're not receiving telegrams, check if `tfac --version` works in the agent's shell. Messages appear at the bottom of the sidebar (or a corner notification in compact view). `n` reads the next telegram and `i` opens the log of telegrams to view any one you desire. Change styles in settings, if you want to.
 
-```bash
-tfac msg --from my-agent "## Tests fixed\n- 3 flaky tests\n- [ ] needs review"
-echo "## Done" | tfac msg        # or read Markdown from stdin
-```
+## Saves
 
-`\n` is a line break and `--from` says who it is from (the default is the current folder's name). Markdown is rendered: headings, lists, checkboxes, quotes, code and tables. You can also drop a `*.md` file into `~/.terminactory/inbox/`.
-
-Either tell the agent to run `tfac msg` when it finishes (put a line in `AGENTS.md` or its system prompt), or point the agent's own notify hook at it, which costs no tokens. Only Claude Code's hook has been tested so far.
-
-If nothing shows up, check that `tfac --version` works in the shell the agent uses and that its `PATH` includes `~/.cargo/bin`. Messages appear at the bottom of the sidebar; in the compact view, a note in the corner. `n` reads the next one and `i` opens a log of all of them. Quieter styles are in the settings (`g`).
-
-## Saves and settings
-
-Everything lives in `~/.terminactory`: saves in `saves/`, `controls.json`, `settings.json` and your blueprints. The game saves every 30 seconds, when you quit or close the terminal, and with Ctrl+S. A save can be open in one window at a time. Saves carry a format version: a save from an older version of the game is never opened or deleted, and `tfac` tells you. See [CHANGELOG.md](CHANGELOG.md) for what changed between versions.
-
-## More
-
-- [docs/REFERENCE.md](docs/REFERENCE.md): every machine, recipe, price and key, written as the game grew.
-- The in-game wiki (`b`) is the page to trust for current numbers.
+Every save lives in `~/.terminactory`. It autosaves, saves on quit, and Ctrl+S saves manually. One window per save at a time.
 
 ## Development
+NOTE: This section was written by an LLM.
 
 ```bash
-cargo run --release     # same as tfac, from the source folder
-cargo test              # simulation tests and screen snapshots
+cargo run --release
+cargo test
 cargo clippy --all-targets
-cargo fmt
 ```
 
-- `src/sim.rs`: the simulation. 60 ticks per second, no randomness, no drawing.
-- `src/content.rs`: items, companies, research and recipes, kept apart from mechanics.
-- `src/ui.rs`, `src/app.rs`: terminal drawing, and keyboard and mouse.
-- `src/web.rs`, `src/search.rs`, `src/wiki.rs`: the in-game browser's pages and search.
-- `src/mail.rs`, `src/hints.rs`: agent messages, and the quiet hints on the status line.
-- `wiki/`, `forums/`, `sites/`, `intranets/`: Markdown pages for the in-game browser, embedded at build time (`build.rs`).
-
-The simulation is deterministic and separate from the drawing code, so most changes can be tested without a screen.
+The sim (`src/sim.rs`) is deterministic and has no drawing code, so most changes are testable without a screen. content lives in `src/content.rs`. Full machine and recipe list: [docs/REFERENCE.md](docs/REFERENCE.md), but the in-game wiki is the one to trust for current numbers.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+[Apache 2.0](LICENSE).
