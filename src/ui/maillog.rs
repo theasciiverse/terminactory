@@ -21,6 +21,12 @@ fn preview(md: &str) -> String {
 }
 
 /// One row of the log, `width` columns wide: marker, sender, kind, what it says, age.
+/// What the empty log says: company letters always come; agent telegrams only when built in.
+#[cfg(feature = "agent-mail")]
+const EMPTY: &str = " Nothing yet. Agent telegrams and company letters are kept here.";
+#[cfg(not(feature = "agent-mail"))]
+const EMPTY: &str = " Nothing yet. Company letters are kept here.";
+
 fn row(e: &crate::mail::LogEntry, width: usize, now: u64) -> Vec<Span<'static>> {
     let dim = Style::new().fg(Color::DarkGray);
     let (mark, name_style) = if e.read {
@@ -65,7 +71,7 @@ pub fn draw_log(f: &mut Frame, area: Rect, app: &mut App) {
     let [list, foot] = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(inner);
     if n == 0 {
         f.render_widget(
-            Paragraph::new(" Nothing yet. Agent telegrams and company letters are kept here.").style(dim).wrap(Wrap { trim: true }),
+            Paragraph::new(EMPTY).style(dim).wrap(Wrap { trim: true }),
             list,
         );
     } else {

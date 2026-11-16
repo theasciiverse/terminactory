@@ -5779,7 +5779,7 @@ CONTROLS
                  at the same spot for the rest, nothing is charged twice.
                  Esc empties the hand. l opens the library: Enter takes
                  one, f saves your hand under a name, x twice deletes.
-                 Files live in ~/.terminactory/blueprints, for every save.
+                 Files live in blueprints/ in the save folder (tfac --help).
   EC range ..... v                   Floors ....... < >
   Pause ........ p                   Speed ........ [ ]
   Save ......... Ctrl+S (it also saves every 2 minutes and when you quit)

@@ -27,18 +27,71 @@ use ratatui::crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, E
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::SetTitle;
 
-/// Where saves and key settings live: ~/.terminactory, so the game finds them from any folder.
-/// `HOME` first; on Windows it is usually unset, so then `USERPROFILE`, then `APPDATA`.
+/// Where saves and key settings live (Asciiverse): `$XDG_STATE_HOME/terminactory` when
+/// `XDG_STATE_HOME` is set, else `~/.local/state/terminactory` on Linux and the BSDs, else
+/// upstream's `~/.terminactory` (macOS, Windows). An upstream `~/.terminactory` found there
+/// is moved across the first time, so its saves carry on.
 fn data_dir() -> PathBuf {
-    data_dir_from(|name| std::env::var_os(name))
+    let var = |name: &str| std::env::var_os(name);
+    let old = data_dir_from(var);
+    let dir = state_dir_from(var).unwrap_or_else(|| old.clone());
+    move_old_folder(&old, &dir);
+    dir
 }
 
+/// The state folder, when there is one: `XDG_STATE_HOME` (absolute) first, then
+/// `~/.local/state` on Linux and the BSDs. None means upstream's folder.
+fn state_dir_from(var: impl Fn(&str) -> Option<std::ffi::OsString>) -> Option<PathBuf> {
+    let xdg = var("XDG_STATE_HOME").map(PathBuf::from).filter(|p| p.is_absolute());
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let xdg = xdg.or_else(|| var("HOME").filter(|h| !h.is_empty()).map(|h| PathBuf::from(h).join(".local/state")));
+    xdg.map(|d| d.join("terminactory"))
+}
+
+/// Upstream's folder: `~/.terminactory`, from `HOME`; on Windows it is usually unset, so
+/// then `USERPROFILE`, then `APPDATA`.
 fn data_dir_from(var: impl Fn(&str) -> Option<std::ffi::OsString>) -> PathBuf {
     ["HOME", "USERPROFILE", "APPDATA"]
         .iter()
         .find_map(|name| var(name).filter(|v| !v.is_empty()))
         .map(|h| PathBuf::from(h).join(".terminactory"))
         .unwrap_or_else(|| PathBuf::from("."))
+}
+
+/// Moves upstream's folder to the state folder, once: only when the old one exists and the
+/// new one does not. A rename first; across file systems, a copy (the old folder is then
+/// left where it was).
+fn move_old_folder(old: &Path, new: &Path) {
+    if old == new || !old.is_dir() || new.exists() {
+        return;
+    }
+    if let Some(parent) = new.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    match std::fs::rename(old, new) {
+        Ok(()) => log::info!("moved {} to {}", old.display(), new.display()),
+        Err(e) => {
+            log::info!("could not rename {} ({e}), copying it", old.display());
+            match copy_dir(old, new) {
+                Ok(()) => log::info!("copied {} to {}", old.display(), new.display()),
+                Err(e) => log::warn!("could not copy {} to {}: {e}", old.display(), new.display()),
+            }
+        }
+    }
+}
+
+fn copy_dir(from: &Path, to: &Path) -> io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
 }
 
 /// Copies the key settings from the old place (the folder the game was run from) the first time.
@@ -61,19 +114,28 @@ Playing
   tfac --demo       start next to a small working factory (its own save)
   tfac --version    print the version (also -V)
 
+In the game, ? shows every key.
+";
+
+/// The agent commands, for `--help` when they are built in.
+#[cfg(feature = "agent-mail")]
+const AGENT_HELP: &str = "\
 Agent telegrams (they show up in the game as you play)
   tfac msg TEXT     send Markdown to the game; \\n is a line break
   tfac msg          read the Markdown from stdin
   tfac msg --from NAME TEXT   say who it's from (default: this folder's name)
   tfac hook         for Claude Code's Stop / Notification hooks (reads their JSON)
 
-In the game, ? shows every key. Saves, controls.json and settings.json live in ~/.terminactory.
 ";
 
 /// Starts the game. (`--help` mentions that `tfac` is a shortcut, so the first message doesn't.)
 pub fn start(_as_full_name: bool) -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    // Session log (Asciiverse): RUST_LOG=debug tfac 2>tfac.log. Errors only otherwise.
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("error")).try_init();
+    log::info!("terminactory {} started: {:?}", env!("CARGO_PKG_VERSION"), &args[1..]);
     // `tfac msg` and `tfac hook` post agent mail and return without starting the game.
+    #[cfg(feature = "agent-mail")]
     if mail::run_cli(&args, &data_dir()) {
         return Ok(());
     }
@@ -83,6 +145,9 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
     }
     if args.iter().skip(1).any(|a| matches!(a.as_str(), "--help" | "-h" | "help")) {
         print!("{HELP}");
+        #[cfg(feature = "agent-mail")]
+        print!("\n{AGENT_HELP}");
+        println!("Saves, blueprints, controls.json and settings.json live in {}", data_dir().display());
         return Ok(());
     }
     if let Some(bad) = args.iter().skip(1).find(|a| a.starts_with('-') && !matches!(a.as_str(), "--demo" | "--new" | "--saves")) {
@@ -193,15 +258,28 @@ pub fn start(_as_full_name: bool) -> io::Result<()> {
     let mut terminal = ratatui::init();
     let title = if demo { "Terminactory · demo".to_string() } else { format!("Terminactory · {name}") };
     execute!(io::stdout(), EnableMouseCapture, SetTitle(title))?;
+    #[cfg(feature = "agent-mail")]
     let inbox_from = if demo { None } else { Some(dir.clone()) };
+    #[cfg(not(feature = "agent-mail"))]
+    let inbox_from: Option<PathBuf> = None;
+    log::info!("folder {}, save {}{}", dir.display(), save_path.display(), if demo { " (demo)" } else { "" });
     let result = run(&mut terminal, &mut app, &save_path, inbox_from.as_deref());
     let _ = execute!(io::stdout(), DisableMouseCapture);
     ratatui::restore();
     // Always save on the way out.
-    if let Err(e) = app.world.save(&save_path) {
-        eprintln!("could not save the game: {e}");
+    match app.world.save(&save_path) {
+        Ok(()) => log::info!("saved on quit: {}", snapshot(&app.world)),
+        Err(e) => {
+            log::error!("could not save on quit: {e}");
+            eprintln!("could not save the game: {e}");
+        }
     }
     result
+}
+
+/// One line about the factory, for the session log.
+fn snapshot(w: &sim::World) -> String {
+    format!("tick {} money {:.0} research {:.1} floors {}", w.tick, w.econ.money, w.econ.research, w.floors.len())
 }
 
 /// A brand-new world, with the welcome telegram waiting in the sidebar (the demo doesn't get one).
@@ -267,6 +345,9 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
             acc -= tick;
         }
         // Agent mail: check the inbox about once a second; show one message at a time.
+        #[cfg(not(feature = "agent-mail"))]
+        let _ = (inbox, &mut last_mail_check);
+        #[cfg(feature = "agent-mail")]
         if let Some(dir) = inbox {
             if last_mail_check.elapsed() >= Duration::from_secs(1) {
                 last_mail_check = Instant::now();
@@ -288,15 +369,25 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
         // Autosave every couple of minutes, quietly, so a crash loses little.
         if last_autosave.elapsed() >= AUTOSAVE {
             last_autosave = Instant::now();
-            if let Err(e) = app.world.save(save_path) {
-                app.say(format!("Could not autosave: {e}"));
+            match app.world.save(save_path) {
+                Ok(()) => log::debug!("autosaved: {}", snapshot(&app.world)),
+                Err(e) => {
+                    log::error!("could not autosave: {e}");
+                    app.say(format!("Could not autosave: {e}"));
+                }
             }
         }
         if app.save_requested {
             app.save_requested = false;
             match app.world.save(save_path) {
-                Ok(()) => app.say("Game saved"),
-                Err(e) => app.say(format!("Could not save: {e}")),
+                Ok(()) => {
+                    log::info!("saved: {}", snapshot(&app.world));
+                    app.say("Game saved");
+                }
+                Err(e) => {
+                    log::error!("could not save: {e}");
+                    app.say(format!("Could not save: {e}"));
+                }
             }
         }
 
@@ -309,7 +400,9 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut app::App, save_path: &
         let wait = tick.saturating_sub(acc).min(frame.saturating_sub(last_draw.elapsed()));
         if event::poll(wait)? {
             loop {
-                match event::read()? {
+                let ev = event::read()?;
+                log::debug!("input {ev:?}");
+                match ev {
                     Event::Key(k) => app.on_key(k),
                     Event::Mouse(m) => app.on_mouse(m),
                     _ => {}
@@ -347,7 +440,31 @@ mod tests {
         assert_eq!(data_dir_from(env(&windows)), Path::new("C:/u").join(".terminactory"));
         let empty_home = [("HOME", ""), ("APPDATA", "C:/a")];
         assert_eq!(data_dir_from(env(&empty_home)), Path::new("C:/a").join(".terminactory"));
+        // Asciiverse: the state folder, from XDG_STATE_HOME when it is absolute.
+        let xdg = [("XDG_STATE_HOME", "/s"), ("HOME", "/h")];
+        assert_eq!(state_dir_from(env(&xdg)), Some(Path::new("/s").join("terminactory")));
+        let relative = [("XDG_STATE_HOME", "s"), ("HOME", "/h")];
+        #[cfg(all(unix, not(target_os = "macos")))]
+        assert_eq!(state_dir_from(env(&relative)), Some(Path::new("/h/.local/state").join("terminactory")));
+        #[cfg(not(all(unix, not(target_os = "macos"))))]
+        assert_eq!(state_dir_from(env(&relative)), None);
         assert_eq!(data_dir_from(env(&[])), Path::new("."));
+    }
+
+    #[test]
+    fn the_old_folder_moves_to_the_state_folder_once() {
+        let root = std::env::temp_dir().join(format!("tfac-move-{}", std::process::id()));
+        let (old, new) = (root.join("home/.terminactory"), root.join("state/terminactory"));
+        std::fs::create_dir_all(old.join("saves")).unwrap();
+        std::fs::write(old.join("saves/save1.json"), "{}").unwrap();
+        move_old_folder(&old, &new);
+        assert!(new.join("saves/save1.json").is_file() && !old.exists());
+        // Once the state folder exists, an old folder is left alone.
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("controls.json"), "{}").unwrap();
+        move_old_folder(&old, &new);
+        assert!(old.join("controls.json").is_file() && !new.join("controls.json").exists());
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

@@ -84,7 +84,7 @@ fn the_library_opens_lists_and_closes_without_pausing_the_game() {
     assert!(app.library.is_some());
     assert!(names(&app).is_empty());
     let t = text(&render(&mut app, 130, 42));
-    assert!(t.contains("Library · saved in ~/.terminactory/blueprints"), "{t}");
+    assert!(t.contains("Library · blueprints are shared by every save"), "{t}");
     assert!(t.contains("In hand: Blueprint · 7x3 · 4 parts · f saves it"), "{t}");
     assert!(t.contains("No blueprints saved yet") && t.contains("Esc close"), "{t}");
     // The game keeps running: nothing paused by it, and the pause key still works inside it.

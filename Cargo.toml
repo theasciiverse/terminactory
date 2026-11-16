@@ -15,10 +15,19 @@ default-run = "terminactory"
 ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
+log = "0.4"
+env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"
 libc = "0.2"
+
+[features]
+default = ["agent-mail"]
+# Agent telegrams: `tfac msg`, `tfac hook` (the Claude Code hook) and the inbox
+# folder the game reads them from. Off, the game has neither command and reads no
+# inbox; company letters still arrive as telegrams.
+agent-mail = []
 
 [profile.release]
 opt-level = 3

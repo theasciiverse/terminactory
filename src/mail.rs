@@ -5,7 +5,9 @@
 //! File format: any `*.md` file. An optional first line `from: <name>` names the sender.
 
 use std::collections::VecDeque;
+#[cfg(feature = "agent-mail")]
 use std::io::{self, Read};
+#[cfg(feature = "agent-mail")]
 use std::path::{Path, PathBuf};
 
 use ratatui::style::{Color, Modifier, Style};
@@ -14,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::content::{Company, Tech};
 
+#[cfg_attr(not(feature = "agent-mail"), allow(dead_code))]
 /// Longest message kept, in characters (an agent's final reply can be long).
 const MAX_CHARS: usize = 6000;
 
@@ -42,10 +45,12 @@ pub struct LogEntry {
     pub read: bool,
 }
 
+#[cfg(feature = "agent-mail")]
 pub fn inbox(data_dir: &Path) -> PathBuf {
     data_dir.join("inbox")
 }
 
+#[cfg(feature = "agent-mail")]
 /// Writes a message into the inbox. Written under a hidden name, then renamed, so the game never reads half a file.
 pub fn post(data_dir: &Path, from: &str, event: &str, md: &str) -> io::Result<PathBuf> {
     let dir = inbox(data_dir);
@@ -64,10 +69,12 @@ pub fn post(data_dir: &Path, from: &str, event: &str, md: &str) -> io::Result<Pa
     Ok(path)
 }
 
+#[cfg(feature = "agent-mail")]
 fn one_line(s: &str) -> String {
     s.lines().next().unwrap_or("").trim().chars().take(60).collect()
 }
 
+#[cfg(feature = "agent-mail")]
 /// Takes every message waiting in the inbox, oldest first, and removes the files.
 pub fn collect(data_dir: &Path, now: u64) -> Vec<Message> {
     let Ok(entries) = std::fs::read_dir(inbox(data_dir)) else {
@@ -89,6 +96,7 @@ pub fn collect(data_dir: &Path, now: u64) -> Vec<Message> {
     out
 }
 
+#[cfg_attr(not(feature = "agent-mail"), allow(dead_code))]
 /// Reads the optional `from:` / `event:` header lines, then the Markdown body.
 pub fn parse(text: &str, now: u64) -> Message {
     let (mut from, mut event) = (String::from("your agent"), String::new());
@@ -114,6 +122,7 @@ pub fn parse(text: &str, now: u64) -> Message {
     Message { from, event, md, at: now, gift: None, id: 0 }
 }
 
+#[cfg(feature = "agent-mail")]
 /// Turns a Claude Code hook's JSON (Stop or Notification) into (sender, event, Markdown).
 /// The Stop hook reuses the agent's own last reply, so it costs no extra tokens.
 pub fn from_hook(json: &str) -> Option<(String, String, String)> {
@@ -133,6 +142,7 @@ pub fn from_hook(json: &str) -> Option<(String, String, String)> {
     }
 }
 
+#[cfg(feature = "agent-mail")]
 /// The text of the last assistant reply in a Claude Code transcript (JSON lines).
 fn last_reply(path: &str) -> Option<String> {
     if path.is_empty() {
@@ -164,6 +174,7 @@ fn last_reply(path: &str) -> Option<String> {
     None
 }
 
+#[cfg(feature = "agent-mail")]
 /// `tfac msg ...` and `tfac hook`. Returns true if the arguments were a mail command.
 /// Prints nothing on success, so an agent that runs it spends no tokens reading output.
 pub fn run_cli(args: &[String], data_dir: &Path) -> bool {
@@ -598,6 +609,7 @@ mod tests {
         assert_eq!((m.from.as_str(), m.md.as_str()), ("your agent", "just text"));
     }
 
+    #[cfg(feature = "agent-mail")]
     #[test]
     fn hook_json_becomes_a_message() {
         let j = r#"{"hook_event_name":"Stop","cwd":"/Users/a/proj","last_assistant_message":"Done: **3 tests** fixed"}"#;
@@ -607,6 +619,7 @@ mod tests {
         assert_eq!(from_hook(r#"{"hook_event_name":"SubagentStop"}"#), None);
     }
 
+    #[cfg(feature = "agent-mail")]
     #[test]
     fn hook_falls_back_to_the_transcript() {
         let path = std::env::temp_dir().join(format!("tfac-transcript-{}.jsonl", std::process::id()));
@@ -627,6 +640,7 @@ mod tests {
         std::fs::remove_file(path).ok();
     }
 
+    #[cfg(feature = "agent-mail")]
     #[test]
     fn post_then_collect() {
         let dir = std::env::temp_dir().join(format!("tfac-mail-{}", std::process::id()));

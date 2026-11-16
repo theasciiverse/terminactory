@@ -63,7 +63,7 @@ pub(super) fn draw_library(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_widget(Clear, area);
     let Some(lib) = app.library.as_ref() else { return };
     let (n, pick, typing, armed) = (lib.entries.len(), lib.pick.min(lib.entries.len().saturating_sub(1)), lib.typing.clone(), lib.armed);
-    let title = if area.width >= 64 { " Library · saved in ~/.terminactory/blueprints " } else { " Library " };
+    let title = if area.width >= 64 { " Library · blueprints are shared by every save " } else { " Library " };
     let block = Block::new().title(title).title_style(head);
     let inner = block.inner(area);
     f.render_widget(block, area);

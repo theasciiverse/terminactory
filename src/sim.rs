@@ -1756,6 +1756,7 @@ const RATE_MIN_SAMPLES: usize = 30;
 /// Time constant, in seconds, of the slow earning average used for offline pay.
 const RATE_LONG_SECS: f64 = 600.0;
 
+#[cfg_attr(not(feature = "agent-mail"), allow(dead_code))]
 /// Seconds between company deliveries that come with agent messages.
 pub const GIFT_GAP: u64 = 180;
 /// Most agent messages kept waiting to be read.
@@ -2937,6 +2938,7 @@ impl World {
         r
     }
 
+    #[cfg_attr(not(feature = "agent-mail"), allow(dead_code))]
     /// An agent message arrives. At most once every few minutes a company sends a
     /// delivery with it: about a minute of the factory's earnings (at least $25).
     pub fn receive(&mut self, mut msg: crate::mail::Message, now: u64) {
